@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.MQTT;
 using Xunit;
@@ -27,7 +29,7 @@ public class When_mqtt_channel_factory_creates_channel_should_use_consumer_facto
             ClientID = "test-client"
         };
 
-        _consumerFactory = new MqttMessageConsumerFactory(configuration);
+        _consumerFactory = new MqttMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance);
         _channelFactory = new ChannelFactory(_consumerFactory);
     }
 

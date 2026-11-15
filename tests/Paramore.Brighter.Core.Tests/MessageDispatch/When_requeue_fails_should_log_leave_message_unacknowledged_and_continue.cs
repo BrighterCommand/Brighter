@@ -93,15 +93,11 @@ public class MessagePumpRequeueFailureTests
         var contextFactory = new InMemoryRequestContextFactory();
         var processor = new Brighter.CommandProcessor(
             subscribers, handlers, contextFactory, new PolicyRegistry(),
-            new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+            new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         var channelName = new ChannelName("requeue-failure");
         IAmAMessagePump pump = useProactor
-            ? new ServiceActivator.Proactor(processor, _ => typeof(TRequest), mappers,
-                new EmptyMessageTransformerFactoryAsync(), contextFactory,
-                new ChannelAsync(channelName, topic, consumer)) { RequeueCount = -1, DontAckDelay = TimeSpan.Zero }
-            : new ServiceActivator.Reactor(processor, _ => typeof(TRequest), mappers,
-                new EmptyMessageTransformerFactory(), contextFactory,
-                new Channel(channelName, topic, consumer)) { RequeueCount = -1, DontAckDelay = TimeSpan.Zero };
+            ? new ServiceActivator.Proactor(commandProcessor: processor, mapRequestType: _ => typeof(TRequest), messageMapperRegistry: mappers, messageTransformerFactory: new EmptyMessageTransformerFactoryAsync(), requestContextFactory: contextFactory, channel: new ChannelAsync(channelName, topic, consumer), loggerFactory: Initializer.TestLoggerFactory) { RequeueCount = -1, DontAckDelay = TimeSpan.Zero }
+            : new ServiceActivator.Reactor(commandProcessor: processor, mapRequestType: _ => typeof(TRequest), messageMapperRegistry: mappers, messageTransformerFactory: new EmptyMessageTransformerFactory(), requestContextFactory: contextFactory, channel: new Channel(channelName, topic, consumer), loggerFactory: Initializer.TestLoggerFactory) { RequeueCount = -1, DontAckDelay = TimeSpan.Zero };
 
         //Act
         var exception = Record.Exception(pump.Run);

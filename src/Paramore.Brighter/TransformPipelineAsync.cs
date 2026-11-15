@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -19,10 +20,12 @@ namespace Paramore.Brighter
         private readonly IAmAMessageMapperRegistryAsync? _mapperRegistry;
         private readonly IAmAScope? _pipelineScope;
         private int _released;
+        private readonly ILogger _drainLogger;
 
         protected TransformPipelineAsync(
             Lease<IAmAMessageMapperAsync<TRequest>> messageMapperLease,
             IEnumerable<Lease<IAmAMessageTransformAsync>> transformLeases,
+            ILoggerFactory loggerFactory,
             IAmAMessageMapperRegistryAsync? mapperRegistry = null,
             IAmAScope? pipelineScope = null)
         {
@@ -32,6 +35,7 @@ namespace Paramore.Brighter
             Transforms = TransformLeases.Select(lease => lease.Instance).ToArray();
             _mapperRegistry = mapperRegistry;
             _pipelineScope = pipelineScope;
+            _drainLogger = loggerFactory.CreateLogger(typeof(TransformPipelineDrain));
         }
 
         /// <summary>
@@ -90,7 +94,7 @@ namespace Paramore.Brighter
                         if (_pipelineScope is not null)
                             await _pipelineScope.DisposeAsync().ConfigureAwait(false);
                     },
-                    requestType: typeof(TRequest).Name).ConfigureAwait(false);
+                    requestType: typeof(TRequest).Name, logger: _drainLogger).ConfigureAwait(false);
             }
             finally
             {
@@ -125,7 +129,7 @@ namespace Paramore.Brighter
                 disposeScope: () => InstanceScope?.Dispose(),
                 releaseMapper: () => _mapperRegistry?.Release(MapperLease),
                 releaseScope: () => _pipelineScope?.Dispose(),
-                requestType: typeof(TRequest).Name);
+                requestType: typeof(TRequest).Name, logger: _drainLogger);
         }
     }
 }

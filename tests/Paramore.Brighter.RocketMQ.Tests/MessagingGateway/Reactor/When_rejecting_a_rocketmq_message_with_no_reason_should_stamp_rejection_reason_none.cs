@@ -76,7 +76,7 @@ public class RocketMqRejectWithNoReasonTests : IDisposable
             receiveMessageTimeout: s_receiveMessageTimeout,
             deadLetterRoutingKey: new RoutingKey(DlqTopic));
 
-        _consumer = new RocketMessageConsumerFactory(_connection).Create(subscription);
+        _consumer = new RocketMessageConsumerFactory(connection: _connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(subscription);
     }
 
     public void Dispose()
@@ -102,7 +102,7 @@ public class RocketMqRejectWithNoReasonTests : IDisposable
         // Assert — the message reaches the dead-letter queue stamped rejectionReason="None"
         using var dlqSimpleConsumer = GatewayFactory.CreateSimpleConsumer(_connection, DlqTopic)
             .GetAwaiter().GetResult();
-        using var dlqConsumer = new RocketMessageConsumer(dlqSimpleConsumer, 1, TimeSpan.FromSeconds(30));
+        using var dlqConsumer = new RocketMessageConsumer(consumer: dlqSimpleConsumer, bufferSize: 1, invisibilityTimeout: TimeSpan.FromSeconds(30), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var dlqMessage = ReceiveOurs(dlqConsumer, message.Id, s_receiveCeiling);
         Assert.NotNull(dlqMessage);

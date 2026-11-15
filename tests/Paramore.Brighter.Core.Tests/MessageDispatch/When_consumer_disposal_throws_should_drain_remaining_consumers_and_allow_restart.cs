@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -76,7 +76,7 @@ public class DispatcherConsumerDisposalFailureTests
             new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
         mappers.Register<MyEvent, MyEventMessageMapper>();
         mappers.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
-        using var dispatcher = new Dispatcher(new SpyCommandProcessor(), subscriptions, mappers, mappers);
+        using var dispatcher = new Dispatcher(commandProcessor: new SpyCommandProcessor(), subscriptions: subscriptions, messageMapperRegistry: mappers, messageMapperRegistryAsync: mappers, loggerFactory: Initializer.TestLoggerFactory);
         dispatcher.Receive();
         var jobs = dispatcher.Consumers.Select(consumer => consumer.Job!).ToList();
 

@@ -80,16 +80,14 @@ public class MessagePumpMetricsTests
         var contextFactory = new InMemoryRequestContextFactory();
         var processor = new Brighter.CommandProcessor(
             subscribers, handlerFactory, contextFactory,
-            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(),
-            tracer: telemetry.Tracer, instrumentationOptions: InstrumentationOptions.All);
+            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+            tracer: telemetry.Tracer, instrumentationOptions: InstrumentationOptions.All, loggerFactory: Initializer.TestLoggerFactory);
 
         IAmAMessagePump pump = useProactor
-            ? new Proactor(processor, _ => typeof(MyEvent), mappers, new EmptyMessageTransformerFactoryAsync(),
-                contextFactory, new ChannelAsync(new ChannelName("pump-metrics"), topic, consumer), telemetry.Tracer)
-                { EmptyChannelDelay = TimeSpan.Zero, ChannelFailureDelay = TimeSpan.Zero }
-            : new Reactor(processor, _ => typeof(MyEvent), mappers, new EmptyMessageTransformerFactory(),
-                contextFactory, new Channel(new ChannelName("pump-metrics"), topic, consumer), telemetry.Tracer)
-                { EmptyChannelDelay = TimeSpan.Zero, ChannelFailureDelay = TimeSpan.Zero };
+            ? new Proactor(commandProcessor: processor, mapRequestType: _ => typeof(MyEvent), messageMapperRegistry: mappers, messageTransformerFactory: new EmptyMessageTransformerFactoryAsync(), requestContextFactory: contextFactory, channel: new ChannelAsync(new ChannelName("pump-metrics"), topic, consumer), tracer: telemetry.Tracer, loggerFactory: Initializer.TestLoggerFactory)
+            { EmptyChannelDelay = TimeSpan.Zero, ChannelFailureDelay = TimeSpan.Zero }
+            : new Reactor(commandProcessor: processor, mapRequestType: _ => typeof(MyEvent), messageMapperRegistry: mappers, messageTransformerFactory: new EmptyMessageTransformerFactory(), requestContextFactory: contextFactory, channel: new Channel(new ChannelName("pump-metrics"), topic, consumer), tracer: telemetry.Tracer, loggerFactory: Initializer.TestLoggerFactory)
+            { EmptyChannelDelay = TimeSpan.Zero, ChannelFailureDelay = TimeSpan.Zero };
 
         //Act
         pump.Run();

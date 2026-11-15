@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -61,7 +61,7 @@ public class TopicWithoutAnAgeTests
                 {
                     {
                         new RoutingKey("orders"),
-                        new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = new RoutingKey("orders"), StaleMessageAge = null })
+                        new InMemoryMessageProducer(new InternalBus(), publication:new Publication { Topic = new RoutingKey("orders"), StaleMessageAge = null },loggerFactory:Initializer.TestLoggerFactory)
                     }
                 });
                 configuration.Outbox = outbox;

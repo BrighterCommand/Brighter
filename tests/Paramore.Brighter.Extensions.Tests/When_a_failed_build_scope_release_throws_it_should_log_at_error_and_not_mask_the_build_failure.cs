@@ -44,7 +44,7 @@ public class FailedBuildScopeDisposalLoggingTests
         //branch, after the mapper has already been built into the same scope
         TransformPipelineBuilder.ClearPipelineCache();
 
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         collection.AddScoped<IPoisonedDependency, PoisonedDependency>();
         collection.AddScoped<PoisonedScopeMapper>();
         collection.AddScoped<PoisonedTransform>();
@@ -61,15 +61,17 @@ public class FailedBuildScopeDisposalLoggingTests
         var mapperRegistry = new MessageMapperRegistry(mapperFactory, null);
         mapperRegistry.Register<PoisonedScopeCommand, PoisonedScopeMapper>();
 
-        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactory);
+        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactory, loggerFactory: Initializer.Factory);
 
-        using var logs = new InMemoryLogCapture();
+        // Capture both pipeline and scope-disposal logs through the explicitly registered factory.
+        var loggerProvider = new CapturingLoggerProvider();
+        Initializer.Factory.AddProvider(loggerProvider);
 
         //act
         Assert.Throws<ConfigurationException>(() => pipelineBuilder.BuildWrapPipeline<PoisonedScopeCommand>());
 
         //assert — the no-pipeline-constructed branch's own Error message fired once, naming the request type
-        var disposalFailures = logs.Entries
+        var disposalFailures = loggerProvider.Entries
             .Where(e => e.EventId.Name == "FailedToDisposePipelineScopeAfterFailedBuild")
             .ToList();
         var disposalFailure = Assert.Single(disposalFailures);
@@ -77,6 +79,6 @@ public class FailedBuildScopeDisposalLoggingTests
         Assert.Contains(nameof(PoisonedScopeCommand), disposalFailure.Message);
 
         //assert — the outer cleanup guard did not also log a Warning for the same event
-        Assert.DoesNotContain(logs.Entries, e => e.EventId.Name == "FailedToCleanUpAfterFailedBuild");
+        Assert.DoesNotContain(loggerProvider.Entries, e => e.EventId.Name == "FailedToCleanUpAfterFailedBuild");
     }
 }

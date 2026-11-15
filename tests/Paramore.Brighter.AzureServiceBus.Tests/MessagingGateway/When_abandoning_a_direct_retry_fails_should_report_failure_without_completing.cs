@@ -47,7 +47,7 @@ public class AzureServiceBusDirectRetryAbandonFailureTests
             properties: new Dictionary<string, object> { ["MessageType"] = "MT_COMMAND" });
         var receiver = new InMemoryRetryServiceBusReceiver(delivery) { AbandonFailure = failure };
         await using var client = new InMemoryLockingServiceBusClient(receiver);
-        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(client));
+        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         var subscription = new AzureServiceBusSubscription(new SubscriptionName("retry"),
             new ChannelName("consumer"), new RoutingKey("orders"), requestType: typeof(Command),
             timeOut: TimeSpan.FromSeconds(1),

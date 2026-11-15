@@ -56,11 +56,11 @@ public sealed partial class GcpIamCallTolerance
     /// Initialises a new instance of <see cref="GcpIamCallTolerance"/>.
     /// </summary>
     /// <param name="logger">
-    /// Optional logger. When <c>null</c>, the ambient <see cref="ApplicationLogging"/> logger is used.
+    /// The application-owned logger for IAM diagnostics.
     /// </param>
-    public GcpIamCallTolerance(ILogger? logger = null)
+    public GcpIamCallTolerance(ILogger logger)
     {
-        _logger = logger ?? ApplicationLogging.CreateLogger<GcpIamCallTolerance>();
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>

@@ -135,7 +135,7 @@ public class StoppedSweeperFailuresAndTrippedTopicsTests
 
         public StoppedSweeperRig(IAmAnOutboxProducerMediator mediator, string? trippedTopic)
         {
-            var breaker = new InMemoryOutboxCircuitBreaker();
+            var breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
             if (trippedTopic is not null) breaker.TripTopic(new RoutingKey(trippedTopic));
             var services = SweeperContainer.Create(new InMemoryLock(), _timeProvider, useOutboxSweeper: true,
                 configureSweeper: options => options.TimerInterval = 10);

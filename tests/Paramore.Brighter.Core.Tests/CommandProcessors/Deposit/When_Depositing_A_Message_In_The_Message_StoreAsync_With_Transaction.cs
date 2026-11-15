@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
         {
             _myCommand.Value = "Hello World";
 
-            InMemoryMessageProducer messageProducer = new(_internalBus, new Publication{Topic = _routingKey, RequestType = typeof(MyCommand)});
+            InMemoryMessageProducer messageProducer = new(_internalBus, Initializer.TestLoggerFactory, new Publication{Topic = _routingKey, RequestType = typeof(MyCommand)});
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, _routingKey, MessageType.MT_COMMAND),
@@ -47,33 +47,33 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 {
                     { _routingKey, messageProducer },
                 });
- 
+
             var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
                 .AddBrighterDefault();
 
             var tracer = new BrighterTracer();
             _spyOutbox = new SpyOutbox {Tracer = tracer};
-            
+
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, SpyTransaction>(
-                producerRegistry, 
+                producerRegistry,
                 resiliencePipelineRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _spyOutbox
+                Initializer.TestLoggerFactory, _spyOutbox
             );
-        
-            var scheduler = new InMemorySchedulerFactory();
+
+            var scheduler = new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory);
             _commandProcessor = new CommandProcessor(
-                new InMemoryRequestContextFactory(), 
+                new InMemoryRequestContextFactory(),
                 new DefaultPolicy(),
                 resiliencePipelineRegistry,
                 bus,
                 scheduler,
-                typeof(SpyTransaction)
-            );
+                Initializer.TestLoggerFactory, typeof(SpyTransaction)
+);
         }
 
 

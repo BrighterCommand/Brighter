@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
 using System;
 using Events.Ports.Commands;
 using Microsoft.Extensions.Configuration;
@@ -50,8 +51,10 @@ var configuration = new RelationalDatabaseConfiguration(
     inboxTableName: SampleDatabase.InboxTable,
     queueStoreTable: SampleDatabase.QueueTable);
 
-builder.Services.AddConsumers(options =>
+builder.Services.AddConsumers(provider =>
 {
+    var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+    var options = new ConsumersOptions();
     options.Subscriptions =
     [
         // MsSqlSubscription, not Subscription — the MSSQL ChannelFactory downcasts.
@@ -63,15 +66,16 @@ builder.Services.AddConsumers(options =>
             messagePumpType: MessagePumpType.Reactor)
     ];
     options.DefaultChannelFactory = new ChannelFactory(
-        new MsSqlMessageConsumerFactory(configuration)
-    );
+        new MsSqlMessageConsumerFactory(configuration, loggerFactory: loggerFactory)
+        , logger: loggerFactory.CreateLogger<ChannelFactory>());
 
     // Supplies the Inbox store. The policy lives on GreetingEventHandler's [UseInbox].
-    options.InboxConfiguration = new InboxConfiguration(new MsSqlInbox(configuration));
+    options.InboxConfiguration = new InboxConfiguration(new MsSqlInbox(configuration, logger: loggerFactory.CreateLogger<MsSqlInbox>()));
+    return options;
 })
 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-.UseScheduler(new InMemorySchedulerFactory())
+.UseScheduler(provider => new InMemorySchedulerFactory(provider.GetRequiredService<ILoggerFactory>()))
 // Before AddHostedService<ServiceActivatorHostedService>(): hosted services start in
 // registration order, so reversing these two starts the pump against a missing Inbox table.
 .UseBoxProvisioning(options => options.AddMsSqlInbox(configuration))

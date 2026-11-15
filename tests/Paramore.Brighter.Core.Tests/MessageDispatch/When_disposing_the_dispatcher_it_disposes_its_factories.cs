@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var dispatcher = new Dispatcher(
                 commandProcessor,
                 new List<Subscription>(),
-                mapperRegistry,
+                Initializer.TestLoggerFactory, mapperRegistry,
                 mapperRegistry,
                 syncTransformerFactory,
                 asyncTransformerFactory,
@@ -65,7 +65,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var dispatcher = new Dispatcher(
                 commandProcessor,
                 new List<Subscription>(),
-                mapperRegistry,
+                Initializer.TestLoggerFactory, mapperRegistry,
                 mapperRegistry,
                 syncTransformerFactory,
                 asyncTransformerFactory,

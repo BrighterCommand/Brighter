@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly.Registry;
@@ -9,7 +9,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
     public class CommandProcessorSendViaAgreementTests
     {
         private readonly CommandProcessor _commandProcessor;
-        private readonly MyCommand _myCommand; 
+        private readonly MyCommand _myCommand;
         private readonly MyCommandHandler _myCommandHandler;
 
         public CommandProcessorSendViaAgreementTests()
@@ -20,19 +20,19 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
                     var command = request as MyCommand;
                     if (command.Value == "new")
                         return [typeof(MyCommandHandler)];
-                    
+
                     return [typeof(MyObsoleteCommandHandler)];
-                    
+
                 }, [typeof(MyCommandHandler), typeof(MyObsoleteCommandHandler)]
             );
             _myCommandHandler = new MyCommandHandler(new Dictionary<string, string>());
             var handlerFactory = new SimpleHandlerFactorySync(_ => _myCommandHandler);
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
+                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
-            
-            _myCommand = new MyCommand {Value = "new"};
+
+            _myCommand = new MyCommand { Value = "new" };
         }
 
         [Fact]

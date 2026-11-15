@@ -47,38 +47,20 @@ public class When_an_outbox_add_fails_should_not_count_added
         var producerAsync = new NonConfirmingProducerAsync(_topic);
         var producerSync = new NonConfirmingProducerSync(_topic);
         return new OutboxProducerMediator<Message, CommittableTransaction>(
-            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
+producerRegistry: new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { _topic, producerAsync }
-            }),
-            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
-            new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => null!), null),
-            new EmptyMessageTransformerFactory(),
-            new EmptyMessageTransformerFactoryAsync(),
-            tracer: null,
-            new FindPublicationByPublicationTopicOrRequestType(),
-            outbox: outbox,
-            timeProvider: _timeProvider,
-            outboxMeter: _meter);
+            }), resiliencePipelineRegistry: new ResiliencePipelineRegistry<string>().AddBrighterDefault(), mapperRegistry: new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => null!), null), messageTransformerFactory: new EmptyMessageTransformerFactory(), messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: null, publicationFinder: new FindPublicationByPublicationTopicOrRequestType(), outbox: outbox, timeProvider: _timeProvider, outboxMeter: _meter, loggerFactory: Initializer.TestLoggerFactory);
     }
 
     private OutboxProducerMediator<Message, CommittableTransaction> BuildSyncMediator(CountingOutbox outbox)
     {
         var producer = new NonConfirmingProducerSync(_topic);
         return new OutboxProducerMediator<Message, CommittableTransaction>(
-            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
+producerRegistry: new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { _topic, producer }
-            }),
-            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
-            new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => null!), null),
-            new EmptyMessageTransformerFactory(),
-            new EmptyMessageTransformerFactoryAsync(),
-            tracer: null,
-            new FindPublicationByPublicationTopicOrRequestType(),
-            outbox: outbox,
-            timeProvider: _timeProvider,
-            outboxMeter: _meter);
+            }), resiliencePipelineRegistry: new ResiliencePipelineRegistry<string>().AddBrighterDefault(), mapperRegistry: new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => null!), null), messageTransformerFactory: new EmptyMessageTransformerFactory(), messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: null, publicationFinder: new FindPublicationByPublicationTopicOrRequestType(), outbox: outbox, timeProvider: _timeProvider, outboxMeter: _meter, loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

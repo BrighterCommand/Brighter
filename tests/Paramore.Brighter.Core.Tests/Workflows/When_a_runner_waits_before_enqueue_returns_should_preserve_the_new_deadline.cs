@@ -46,7 +46,7 @@ public class SchedulerWaitDeadlineHandoffTests
     {
         //Arrange
         var clock = new FakeTimeProvider();
-        var store = new InMemoryStateStoreAsync(clock);
+        var store = new InMemoryStateStoreAsync(timeProvider: clock, loggerFactory: Initializer.TestLoggerFactory);
         var channel = new InMemoryRunnerCoordinatedJobChannel();
         var scheduler = new Scheduler<WorkflowTestData>(channel, store, clock);
         var processor = new CommandProcessor(
@@ -55,20 +55,17 @@ public class SchedulerWaitDeadlineHandoffTests
             new InMemoryRequestContextFactory(),
             new PolicyRegistry(),
             new ResiliencePipelineRegistry<string>(),
-            new InMemorySchedulerFactory());
-        var runner = new Runner<WorkflowTestData>(channel, store, processor, scheduler);
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
+        var runner = new Runner<WorkflowTestData>(channel: channel, stateStore: store, commandProcessor: processor, scheduler: scheduler, loggerFactory: Initializer.TestLoggerFactory);
         var job = new Job<WorkflowTestData>(new WorkflowTestData());
         var delay = TimeSpan.FromMinutes(5);
         var completion = new Sequential<WorkflowTestData>(
-            "Complete",
-            new ChangeAsync<WorkflowTestData>(data =>
+name: "Complete", stepTask: new ChangeAsync<WorkflowTestData>(data =>
             {
                 data.Bag["completed"] = true;
                 return Task.CompletedTask;
-            }),
-            null,
-            null);
-        job.InitSteps(new Wait<WorkflowTestData>("Wait", delay, completion));
+            }), onCompletion: null, next: null, loggerFactory: Initializer.TestLoggerFactory);
+        job.InitSteps(new Wait<WorkflowTestData>(name: "Wait", duration: delay, next: completion, loggerFactory: Initializer.TestLoggerFactory));
         if (alreadyScheduled)
         {
             await scheduler.ScheduleAtAsync(job, TimeSpan.FromMinutes(1));

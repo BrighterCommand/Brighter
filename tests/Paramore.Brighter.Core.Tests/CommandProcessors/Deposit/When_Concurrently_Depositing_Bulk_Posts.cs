@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,7 +28,7 @@ public class ConcurrentBulkDepositPostTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { topic, new InMemoryMessageProducer(bus, new Publication { Topic = topic, RequestType = typeof(MyCommand) }) }
+            { topic, new InMemoryMessageProducer(bus, Initializer.TestLoggerFactory, new Publication { Topic = topic, RequestType = typeof(MyCommand) }) }
         });
 
         var mapperRegistry = new MessageMapperRegistry(
@@ -50,14 +50,14 @@ public class ConcurrentBulkDepositPostTests
             new EmptyMessageTransformerFactoryAsync(),
             new BrighterTracer(),
             new FindPublicationByPublicationTopicOrRequestType(),
-            outbox);
+            Initializer.TestLoggerFactory, outbox);
 
         var commandProcessor = new CommandProcessor(
             new InMemoryRequestContextFactory(),
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             mediator,
-            new InMemorySchedulerFactory());
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
         var errors = new ConcurrentQueue<Exception>();
         var depositedIds = new ConcurrentBag<Id[]>();
@@ -100,5 +100,3 @@ public class ConcurrentBulkDepositPostTests
         Assert.Equal(expectedMessageCount, flushedMessages.Select(m => m.Id).Distinct().Count());
     }
 }
-
-

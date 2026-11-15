@@ -1,4 +1,6 @@
-﻿using System.Net.Sockets;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.Redis;
@@ -10,7 +12,8 @@ public class RedisMessageConsumerSocketErrorOnGetClient(
     RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration,
     ChannelName queueName,
     RoutingKey topic)
-    : RedisMessageConsumer(redisMessagingGatewayConfiguration, queueName, topic)
+    : RedisMessageConsumer(redisMessagingGatewayConfiguration, queueName, topic,
+        NullLoggerFactory.Instance)
 {
     private const string SocketException =
         "localhost:6379";

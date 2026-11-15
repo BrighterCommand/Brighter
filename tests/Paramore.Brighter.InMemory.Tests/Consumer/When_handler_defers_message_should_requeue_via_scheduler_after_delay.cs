@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using Microsoft.Extensions.Time.Testing;
@@ -61,7 +63,7 @@ public class InMemoryConsumerRequeueWithDelayTests
             _routingKey,
             _bus,
             _timeProvider,
-            scheduler: _scheduler);
+            scheduler: _scheduler, loggerFactory: NullLoggerFactory.Instance);
 
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),

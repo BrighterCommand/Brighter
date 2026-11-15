@@ -129,7 +129,7 @@ public class SweepersSharingALockTrippedTopicsTests
 
         public SweeperHost(IDistributedLock distributedLock, IAmAnOutboxProducerMediator mediator, TimeProvider timeProvider)
         {
-            Breaker = new InMemoryOutboxCircuitBreaker();
+            Breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
             var services = SweeperContainer.Create(distributedLock, timeProvider, useOutboxSweeper: true,
                 configureSweeper: options => options.TimerInterval = 10);
             services.AddSingleton(mediator);

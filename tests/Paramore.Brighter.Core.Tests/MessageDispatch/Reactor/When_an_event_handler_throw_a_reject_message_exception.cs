@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
@@ -45,14 +45,13 @@ public class MessageDispatchRejectMessageExceptionTests
             new InMemoryRequestContextFactory(),
             new PolicyRegistry(),
             resiliencePipelineRegistry,
-            new InMemorySchedulerFactory()
-        );
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
         var subscription = new InMemorySubscription<MyRejectedEvent>(
             new SubscriptionName("test"),
             noOfPerformers: 1,
             timeOut: TimeSpan.FromMilliseconds(1000),
-            channelFactory: new InMemoryChannelFactory(_bus, _timeProvider),
+            channelFactory: new InMemoryChannelFactory(_bus, _timeProvider, loggerFactory: Initializer.TestLoggerFactory),
             channelName: new ChannelName("myChannel"),
             messagePumpType: MessagePumpType.Reactor,
             routingKey: _routingKey
@@ -63,12 +62,12 @@ public class MessageDispatchRejectMessageExceptionTests
         _dispatcher = new Dispatcher(
             commandProcessor,
             new List<Subscription> { subscription },
-            messageMapperRegistry,
+            Initializer.TestLoggerFactory, messageMapperRegistry,
             requestContextFactory: new InMemoryRequestContextFactory()
         );
 
         var @event = new MyRejectedEvent(Id.Random());
-        var message = new MyRejectedEventHandlerMessageMapper().MapToMessage(@event, new Publication{Topic = _routingKey});
+        var message = new MyRejectedEventHandlerMessageMapper().MapToMessage(@event, new Publication { Topic = _routingKey });
         _bus.Enqueue(message);
 
         _dispatcher.Receive();
@@ -88,6 +87,6 @@ public class MessageDispatchRejectMessageExceptionTests
         var rejectionReason = $"Message rejected reason: {RejectionReason.DeliveryError} Description: {MyRejectedEventHandlerAsync.TestOfRejectionFlow}";
         Assert.Equal(rejectionReason, message.Header.Bag[Message.RejectionReasonHeaderName]);
     }
-    
-    
+
+
 }

@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Amazon;
@@ -60,15 +61,18 @@ var host = new HostBuilder()
         };
 
         //create the gateway
-        var serviceURL = "http://localhost:4566/"; 
+        var serviceURL = "http://localhost:4566/";
         var region = RegionEndpoint.USEast1;
         var awsConnection = new AWSMessagingGatewayConnection(new BasicAWSCredentials("test", "test"), region,
             cfg => { cfg.ServiceURL = serviceURL; });
 
-        services.AddConsumers(options =>
+        services.AddConsumers(provider =>
             {
+                var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+                var options = new ConsumersOptions();
                 options.Subscriptions = subscriptions;
-                options.DefaultChannelFactory = new ChannelFactory(awsConnection);
+                options.DefaultChannelFactory = new ChannelFactory(awsConnection, loggerFactory: loggerFactory);
+                return options;
             })
             .AutoFromAssemblies();
 

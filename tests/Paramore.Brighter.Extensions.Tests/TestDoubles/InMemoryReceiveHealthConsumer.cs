@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Extensions.Tests.TestDoubles;
 internal sealed class InMemoryReceiveHealthConsumer(RoutingKey routingKey, InternalBus bus, int failures, bool brokenCircuit = false)
     : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
 {
-    private readonly InMemoryMessageConsumer _inner = new(routingKey, bus, TimeProvider.System);
+    private readonly InMemoryMessageConsumer _inner = new(routingKey, bus, TimeProvider.System, Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     private readonly TaskCompletionSource<bool> _failuresObserved = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource<bool> _recovered = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource<bool> _recoveryObserved = new(TaskCreationOptions.RunContinuationsAsynchronously);

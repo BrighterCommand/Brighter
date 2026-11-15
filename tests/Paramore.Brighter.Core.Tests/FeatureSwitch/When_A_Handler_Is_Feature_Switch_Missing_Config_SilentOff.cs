@@ -25,7 +25,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
             registry.Register<MyCommand, MyFeatureSwitchedConfigHandler>();
             registry.RegisterAsync<MyCommandAsync, MyFeatureSwitchedConfigHandlerAsync>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddSingleton<MyFeatureSwitchedConfigHandler>();
             container.AddSingleton<MyFeatureSwitchedConfigHandlerAsync>();
             container.AddTransient<FeatureSwitchHandler<MyCommand>>();
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
             {
                 MissingConfigStrategy = MissingConfigStrategy.SilentOff
             };
-            
+
             _commandProcessor = CommandProcessorBuilder
                 .StartNew()
                 .ConfigureFeatureSwitches(featureSwitchRegistry)
@@ -48,9 +48,10 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
                 .NoExternalBus()
                 .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
-                .RequestSchedulerFactory(new InMemorySchedulerFactory())
+                .RequestSchedulerFactory(new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory))
+                .ConfigureLogging(Initializer.TestLoggerFactory)
                 .Build();
-        }        
+        }
 
         [Fact]
         public void When_Sending_A_Command_To_The_Processor_When_A_Feature_Switch_Has_No_Config_And_Strategy_Is_SilentOff()

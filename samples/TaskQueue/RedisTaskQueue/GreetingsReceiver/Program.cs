@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System;
 using Greetings.Ports.Events;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,15 +28,18 @@ var redisConnection = new RedisMessagingGatewayConfiguration
     MessageTimeToLive = TimeSpan.FromMinutes(10)
 };
 
-var redisConsumerFactory = new RedisMessageConsumerFactory(redisConnection);
-builder.Services.AddConsumers(options =>
+builder.Services.AddConsumers(provider =>
 {
+    var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+    var redisConsumerFactory = new RedisMessageConsumerFactory(redisConnection, loggerFactory: loggerFactory);
+    var options = new ConsumersOptions();
     options.Subscriptions = subscriptions;
     options.DefaultChannelFactory = new ChannelFactory(redisConsumerFactory);
+    return options;
 })
 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-.UseScheduler(new InMemorySchedulerFactory())
+.UseScheduler(provider => new InMemorySchedulerFactory(provider.GetRequiredService<ILoggerFactory>()))
 .AutoFromAssemblies();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();

@@ -37,7 +37,7 @@ public class TransformerResolvabilityProbeTests
     {
         // Arrange — a service collection with one transformer registered; a second transformer
         // type whose constructor throws is also registered to prove the probe never instantiates.
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddTransient(typeof(CompressPayloadTransformer));
         services.AddTransient(typeof(ThrowOnConstructTransformer));
 
@@ -58,7 +58,7 @@ public class TransformerResolvabilityProbeTests
     public void When_probing_an_empty_service_collection_should_not_resolve_any_transformer()
     {
         // Arrange — no transformers registered
-        var probe = new ServiceCollectionTransformerResolvabilityProbe(new ServiceCollection());
+        var probe = new ServiceCollectionTransformerResolvabilityProbe(new ServiceCollection().AddLogging());
 
         // Act + Assert — nothing resolves
         Assert.False(probe.Resolves(typeof(CompressPayloadTransformer)));

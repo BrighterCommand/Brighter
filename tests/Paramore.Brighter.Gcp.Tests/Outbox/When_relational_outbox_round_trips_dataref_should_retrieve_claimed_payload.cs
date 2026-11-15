@@ -57,5 +57,5 @@ public class SpannerOutboxDataRefTests : RelationalOutboxDataRefTests
     protected override string CreateTableSql(bool binary) => SpannerOutboxBuilder.GetDDL(TableName, binary);
     /// <inheritdoc />
     protected override RelationDatabaseOutbox CreateOutbox(RelationalDatabaseConfiguration configuration) =>
-        new SpannerOutbox(configuration);
+        new SpannerOutbox(configuration: configuration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<SpannerOutbox>.Instance);
 }

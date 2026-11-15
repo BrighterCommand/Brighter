@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Xunit;
@@ -52,9 +54,7 @@ public class When_mssql_consumer_creates_producer_should_configure_and_dispose_c
         // Arrange
         var scheduler = new SpySchedulerSync();
         var consumer = new MsSqlMessageConsumer(
-            _testHelper.QueueConfiguration,
-            _topicName,
-            scheduler);
+            _testHelper.QueueConfiguration,_topicName,NullLoggerFactory.Instance,scheduler);
 
         var topic = new RoutingKey(_topicName);
         var message = new Message(
@@ -79,9 +79,7 @@ public class When_mssql_consumer_creates_producer_should_configure_and_dispose_c
         // Arrange
         var scheduler = new SpySchedulerSync();
         var consumer = new MsSqlMessageConsumer(
-            _testHelper.QueueConfiguration,
-            _topicName,
-            scheduler);
+            _testHelper.QueueConfiguration,_topicName,NullLoggerFactory.Instance,scheduler);
 
         var topic = new RoutingKey(_topicName);
         var message = new Message(
@@ -101,9 +99,7 @@ public class When_mssql_consumer_creates_producer_should_configure_and_dispose_c
         // Arrange - create consumer but never requeue (producer never created)
         var scheduler = new SpySchedulerSync();
         var consumer = new MsSqlMessageConsumer(
-            _testHelper.QueueConfiguration,
-            _topicName,
-            scheduler);
+            _testHelper.QueueConfiguration,_topicName,NullLoggerFactory.Instance,scheduler);
 
         // Act & Assert - dispose without producer creation should not throw
         var exception = Record.Exception(() => consumer.Dispose());

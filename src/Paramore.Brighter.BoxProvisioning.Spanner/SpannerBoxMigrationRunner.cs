@@ -29,9 +29,7 @@ using System.Threading.Tasks;
 using Google.Cloud.Spanner.Data;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Inbox.Spanner;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Spanner;
 
@@ -79,16 +77,18 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     /// ADR 0057 §6 (no V_k chain), so the BASE detection-helper interface is sufficient —
     /// no version inference is performed.
     /// </summary>
+    /// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
     public SpannerBoxMigrationRunner(
         IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction> detectionHelper,
         IAmARelationalDatabaseConfiguration configuration,
+        ILoggerFactory loggerFactory,
         IAmABrighterTracer? tracer = null,
         ILogger? logger = null)
     {
         _detectionHelper = detectionHelper;
         _configuration = configuration;
         _tracer = tracer;
-        _logger = logger ?? ApplicationLogging.CreateLogger<SpannerBoxMigrationRunner>();
+        _logger = logger ?? loggerFactory.CreateBrighterLogger<SpannerBoxMigrationRunner>();
     }
 
     /// <summary>
@@ -96,11 +96,13 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     /// <see cref="SpannerBoxDetectionHelper"/> so test arrange blocks don't have to
     /// construct one explicitly.
     /// </summary>
+    /// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
     public SpannerBoxMigrationRunner(
         IAmARelationalDatabaseConfiguration configuration,
+        ILoggerFactory loggerFactory,
         IAmABrighterTracer? tracer = null,
         ILogger? logger = null)
-        : this(new SpannerBoxDetectionHelper(), configuration, tracer, logger)
+        : this(new SpannerBoxDetectionHelper(), configuration, loggerFactory, tracer, logger)
     {
     }
 
@@ -168,7 +170,8 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
         var activity = _tracer?.ActivitySource.StartActivity(
             $"{BrighterSemanticConventions.BoxMigration} {tableName}",
             ActivityKind.Internal);
-        if (activity is null) return null;
+        if (activity is null)
+            return null;
         activity.SetTag(BrighterSemanticConventions.DbSystem, DbSystem.Spanner.ToDbName());
         activity.SetTag(BrighterSemanticConventions.DbTable, tableName);
         if (schemaName is not null)
@@ -237,7 +240,8 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
 
     private static void VerifyAtLatestVersionOrThrow(string tableName, int vLatest, int currentVersion)
     {
-        if (currentVersion == vLatest) return;
+        if (currentVersion == vLatest)
+            return;
 
         throw new ConfigurationException(
             $"Migration list out of sync for table '{tableName}': " +

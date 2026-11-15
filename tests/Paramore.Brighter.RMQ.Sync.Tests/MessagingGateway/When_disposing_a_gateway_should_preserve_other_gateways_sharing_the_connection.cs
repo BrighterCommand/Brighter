@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -53,10 +53,10 @@ public class RmqSharedConnectionDisposalTests
         };
         var routingKey = new RoutingKey(Guid.NewGuid().ToString());
         var queueName = new ChannelName(Guid.NewGuid().ToString());
-        using var producer = new RmqMessageProducer(connection);
-        using var consumer = new RmqMessageConsumer(connection, queueName, routingKey, isDurable: true);
-        using var siblingProducer = new RmqMessageProducer(connection);
-        using var siblingConsumer = new RmqMessageConsumer(connection, queueName, routingKey, isDurable: true);
+        using var producer = new RmqMessageProducer(connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        using var consumer = new RmqMessageConsumer(connection, queueName, routingKey, isDurable: true, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        using var siblingProducer = new RmqMessageProducer(connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        using var siblingConsumer = new RmqMessageConsumer(connection, queueName, routingKey, isDurable: true, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         consumer.Purge();
 
         var warmup = new Message(new MessageHeader(Id.Random(), routingKey, MessageType.MT_COMMAND),
@@ -80,7 +80,7 @@ public class RmqSharedConnectionDisposalTests
         }
 
         var factory = new ConnectionFactory { Uri = connection.AmpqUri.Uri };
-        var pool = new RmqMessageGatewayConnectionPool(connection.Name, connection.Heartbeat);
+        var pool = new RmqMessageGatewayConnectionPool(connection.Name, connection.Heartbeat, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var sharedConnection = pool.GetConnection(factory);
         Assert.NotNull(sharedConnection);
         Assert.True(sharedConnection.IsOpen);

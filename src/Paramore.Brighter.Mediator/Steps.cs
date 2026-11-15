@@ -28,14 +28,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Mediator;
 
 public enum StepState
 {
     Queued,
-    Running, 
+    Running,
     Done,
     Faulted
 }
@@ -48,30 +47,32 @@ public enum StepState
 /// <param name="stepTask">The action to be taken with the step, null if no action</param>
 /// <param name="onCompletion">An optional callback to run, following completion of the step</param>
 /// <typeparam name="TData">The data that the step operates over</typeparam>
+/// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
 public abstract class Step<TData>(
     string name,
     Sequential<TData>? next,
+    ILoggerFactory loggerFactory,
     IStepTask<TData>? stepTask = null,
-    Action? onCompletion = null) 
+    Action? onCompletion = null)
 {
     /// <summary> Which job is being executed by the step. </summary>
-    protected Job<TData>? Job ;
+    protected Job<TData>? Job;
 
     /// <summary> The logger for the step. </summary>
-    protected static readonly ILogger s_logger = ApplicationLogging.CreateLogger<Step<TData>>();
-    
+    protected readonly ILogger Logger = loggerFactory.CreateBrighterLogger<Step<TData>>();
+
     /// <summary>The name of the step, used for tracing execution</summary>
     public string Name { get; init; } = name;
-    
+
     /// <summary>The next step in the sequence, null if this is the last step</summary>
     protected internal Step<TData>? Next { get; } = next;
 
     /// <summary>An optional callback to be run, following completion of the step.</summary>
     protected internal Action? OnCompletion { get; } = onCompletion;
-    
+
     /// <summary>The action to be taken with the step.</summary>
     protected readonly IStepTask<TData>? StepTask = stepTask;
-    
+
     public StepState? State { get; set; }
 
     /// <summary>
@@ -85,12 +86,12 @@ public abstract class Step<TData>(
     /// <param name="cancellationToken">The cancellation token, to end this workflow</param>
     /// <returns></returns>
     public abstract Task ExecuteAsync(
-        IAmAStateStoreAsync stateStore, 
-        IAmACommandProcessor? commandProcessor = null, 
+        IAmAStateStoreAsync stateStore,
+        IAmACommandProcessor? commandProcessor = null,
         Scheduler<TData>? scheduler = null,
         CancellationToken cancellationToken = default(CancellationToken)
         );
-    
+
     /// <summary>
     /// Sets the job that is executing us
     /// </summary>
@@ -103,7 +104,7 @@ public abstract class Step<TData>(
 }
 
 /// <summary>
-/// Allows the workflow to branch on a choice, taking either a right or left path. 
+/// Allows the workflow to branch on a choice, taking either a right or left path.
 /// </summary>
 /// <param name="name">The name of the step, used for tracing execution</param>
 /// <param name="predicate">A composite specification that can be evaluated to determine the path to choose</param>
@@ -111,14 +112,16 @@ public abstract class Step<TData>(
 /// <param name="nextTrue">The next step in the sequence, if the predicate evaluates to true, null if this is the last step.</param>
 /// <param name="nextFalse">The next step in the sequence, if the predicate evaluates to false, null if this is the last step.</param>
 /// <typeparam name="TData">The data that the step operates over</typeparam>
+/// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
 public class ExclusiveChoice<TData>(
     string name,
     ISpecification<TData> predicate,
     Action? onCompletion,
     Sequential<TData>? nextTrue,
-    Sequential<TData>? nextFalse
+    Sequential<TData>? nextFalse,
+    ILoggerFactory loggerFactory
 )
-    : Step<TData>(name, null, null, onCompletion)
+    : Step<TData>(name, null, loggerFactory, null, onCompletion)
 {
     /// <summary>
     ///  The work of the step is done here. Note that this is an abstract method, so it must be implemented by the derived class.
@@ -131,35 +134,36 @@ public class ExclusiveChoice<TData>(
     /// <param name="cancellationToken">The cancellation token, to end this workflow</param>
     /// <returns></returns>
     public override async Task ExecuteAsync(
-        IAmAStateStoreAsync stateStore, 
-        IAmACommandProcessor? commandProcessor = null, 
+        IAmAStateStoreAsync stateStore,
+        IAmACommandProcessor? commandProcessor = null,
         Scheduler<TData>? scheduler = null,
         CancellationToken cancellationToken = default(CancellationToken)
-    )   
+    )
     {
         if (Job is null)
             throw new InvalidOperationException("Job is null");
-        
+
         State = StepState.Running;
-        
+
         var step = predicate.IsSatisfiedBy(Job.Data) ? nextTrue : nextFalse;
 
         State = StepState.Done;
-        
+
         if (step != null)
             step.State = StepState.Queued;
-        
+
         Job.NextStep(step);
         OnCompletion?.Invoke();
         await stateStore.SaveJobAsync(Job, cancellationToken);
-        
+
     }
 }
 
 public class ParallelSplit<TData>(
     string name,
-    Func<TData, IEnumerable<Step<TData>>>? onMap)
-    : Step<TData>(name, null)
+    Func<TData, IEnumerable<Step<TData>>>? onMap,
+    ILoggerFactory loggerFactory)
+    : Step<TData>(name, null, loggerFactory: loggerFactory)
 {
     /// <summary>
     ///  The work of the step is done here. Note that this is an abstract method, so it must be implemented by the derived class.
@@ -172,39 +176,39 @@ public class ParallelSplit<TData>(
     /// <param name="cancellationToken">The cancellation token, to end this workflow</param>
     /// <returns></returns>
     public override async Task ExecuteAsync(
-        IAmAStateStoreAsync stateStore, 
-        IAmACommandProcessor? commandProcessor = null, 
+        IAmAStateStoreAsync stateStore,
+        IAmACommandProcessor? commandProcessor = null,
         Scheduler<TData>? scheduler = null,
         CancellationToken cancellationToken = default(CancellationToken)
-    )   
+    )
     {
         if (Job is null)
             throw new InvalidOperationException("Job is null");
-        
+
         if (onMap is null)
            throw new InvalidOperationException("onMap is null; a ParallelSplit Step must have a mapping function to map to multiple branches");
-           
+
         if (scheduler is null)
             throw new InvalidOperationException("Scheduler is null; a ParallelSplit Step must have a scheduler to schedule the next step");
-        
+
         State = StepState.Running;
-        
+
         //Map to multiple branches
         var branches = onMap?.Invoke(Job.Data);
-        
+
         if (branches is null)
             return;
-        
+
         foreach (Step<TData> branch in branches)
         {
             var childJob = new Job<TData>(Job.Data);
             childJob.AddChildJob(Job);
             childJob.InitSteps(branch);
-            await scheduler.ScheduleAsync(childJob, cancellationToken);    
+            await scheduler.ScheduleAsync(childJob, cancellationToken);
         }
-        
+
         State = StepState.Done;
-        
+
         //NOTE: parallel split is a final step - this might change when we bring in merge
         Job.NextStep(null);
         await stateStore.SaveJobAsync(Job, cancellationToken);
@@ -222,15 +226,17 @@ public class ParallelSplit<TData>(
 /// <param name="onFaulted">An optional callback to run, following a faulted execution of the step</param>
 /// <param name="faultNext">The next step in the sequence, following a faulted execution of the step</param>
 /// <typeparam name="TData">The data that the step operates over</typeparam>
+/// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
 public class Sequential<TData>(
-    string name, 
-    IStepTask<TData> stepTask, 
-    Action? onCompletion, 
-    Sequential<TData>? next, 
-    Action? onFaulted = null, 
+    string name,
+    IStepTask<TData> stepTask,
+    Action? onCompletion,
+    Sequential<TData>? next,
+    ILoggerFactory loggerFactory,
+    Action? onFaulted = null,
     Sequential<TData>? faultNext = null
-) 
-    : Step<TData>(name, next, stepTask, onCompletion)
+)
+    : Step<TData>(name, next, loggerFactory, stepTask, onCompletion)
 {
     /// <summary>
     ///  The work of the step is done here. Note that this is an abstract method, so it must be implemented by the derived class.
@@ -243,23 +249,23 @@ public class Sequential<TData>(
     /// <param name="cancellationToken">The cancellation token, to end this workflow</param>
     /// <returns></returns>
     public override async Task ExecuteAsync(
-        IAmAStateStoreAsync stateStore, 
-        IAmACommandProcessor? commandProcessor = null, 
+        IAmAStateStoreAsync stateStore,
+        IAmACommandProcessor? commandProcessor = null,
         Scheduler<TData>? scheduler = null,
         CancellationToken cancellationToken = default(CancellationToken)
-    )    
+    )
     {
         if (Job is null)
             throw new InvalidOperationException("Job is null");
-        
+
         if (StepTask is null)
         {
-            s_logger.LogWarning("No task to execute for {Name}", Name);
+            Logger.LogWarning("No task to execute for {Name}", Name);
             State = StepState.Done;
             await stateStore.SaveJobAsync(Job, cancellationToken);
             return;
         }
-        
+
         State = StepState.Running;
 
         try
@@ -267,10 +273,10 @@ public class Sequential<TData>(
             await StepTask.HandleAsync(Job, commandProcessor, stateStore, cancellationToken);
             OnCompletion?.Invoke();
             State = StepState.Done;
-            
-            if(Next != null)
+
+            if (Next != null)
                 Next.State = StepState.Queued;
-            
+
             Job.NextStep(Next);
             await stateStore.SaveJobAsync(Job, cancellationToken);
         }
@@ -278,11 +284,11 @@ public class Sequential<TData>(
         {
             Job.State = JobState.Faulted;
             onFaulted?.Invoke();
-            
+
             if (faultNext != null)
                 faultNext.State = StepState.Queued;
-            
-            Job.NextStep(faultNext); 
+
+            Job.NextStep(faultNext);
             State = StepState.Faulted;
             await stateStore.SaveJobAsync(Job, cancellationToken);
         }
@@ -303,9 +309,10 @@ public class Wait<TData> : Step<TData>
     /// <param name="name">The name of the step, used for tracing execution</param>
     /// <param name="duration">The period for which we pause</param>
     /// <param name="next">The next step in the sequence, null if this is the last step.</param>
+    /// <param name="loggerFactory">The factory used to create the logger for this step.</param>
     /// <typeparam name="TData">The data that the step operates over</typeparam>
-    public Wait(string name, TimeSpan duration, Sequential<TData>? next) 
-        : base(name, next)
+    public Wait(string name, TimeSpan duration, Sequential<TData>? next, ILoggerFactory loggerFactory)
+        : base(name, next, loggerFactory: loggerFactory)
     {
         _duration = duration;
     }
@@ -321,36 +328,34 @@ public class Wait<TData> : Step<TData>
     /// <param name="cancellationToken">The cancellation token, to end this workflow</param>
     /// <returns></returns>
     public override async Task ExecuteAsync(
-        IAmAStateStoreAsync stateStore, 
-        IAmACommandProcessor? commandProcessor = null, 
+        IAmAStateStoreAsync stateStore,
+        IAmACommandProcessor? commandProcessor = null,
         Scheduler<TData>? scheduler = null,
         CancellationToken cancellationToken = default(CancellationToken)
-    )   
+    )
     {
         if (Job is null)
             throw new InvalidOperationException("Job is null");
-        
+
         if (scheduler is null)
             throw new InvalidOperationException("Scheduler is null; a Wait Step must have a scheduler to schedule the next step");
 
         if (Next == null)
             throw new InvalidOperationException("Next step is empty; wait schedule the next step, so it cannot be empty");
-        
+
         State = StepState.Running;
-        
+
         Job.DueTime = DateTime.UtcNow.Add(_duration);
-        
+
         State = StepState.Done;
-        
+
         Next.State = StepState.Queued;
-        
+
         Job.NextStep(Next);
-        
+
         Job.State = JobState.Waiting;
-        
+
         //this call will save the state of the Job, so no need to do it twice
         await scheduler.ScheduleAtAsync(Job, _duration, cancellationToken);
     }
 }
-
-

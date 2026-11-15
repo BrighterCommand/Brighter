@@ -49,7 +49,7 @@ public class ServiceActivatorThrowOnErrorTests
         var validator = SpyPipelineValidator.WithErrors(actionLog, error);
         var diagnosticWriter = new SpyPipelineDiagnosticWriter(actionLog);
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddSingleton<IAmAPipelineValidator>(validator);
         services.AddSingleton<IAmAPipelineDiagnosticWriter>(diagnosticWriter);
         var provider = services.BuildServiceProvider();
@@ -81,7 +81,7 @@ public class ServiceActivatorThrowOnErrorTests
         var validator = SpyPipelineValidator.WithErrors(actionLog, error);
         var diagnosticWriter = new SpyPipelineDiagnosticWriter(actionLog);
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddSingleton<IAmAPipelineValidator>(validator);
         services.AddSingleton<IAmAPipelineDiagnosticWriter>(diagnosticWriter);
         var provider = services.BuildServiceProvider();
@@ -109,7 +109,7 @@ public class ServiceActivatorThrowOnErrorTests
         var validator = SpyPipelineValidator.WithNoErrors(actionLog);
         var diagnosticWriter = new SpyPipelineDiagnosticWriter(actionLog);
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddSingleton<IAmAPipelineValidator>(validator);
         services.AddSingleton<IAmAPipelineDiagnosticWriter>(diagnosticWriter);
         var provider = services.BuildServiceProvider();
@@ -142,7 +142,7 @@ public class ServiceActivatorThrowOnErrorTests
         var validator = new SpyPipelineValidator(new PipelineValidationResult([error], [warning]), actionLog);
         var diagnosticWriter = new SpyPipelineDiagnosticWriter(actionLog);
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddSingleton<IAmAPipelineValidator>(validator);
         services.AddSingleton<IAmAPipelineDiagnosticWriter>(diagnosticWriter);
         var provider = services.BuildServiceProvider();

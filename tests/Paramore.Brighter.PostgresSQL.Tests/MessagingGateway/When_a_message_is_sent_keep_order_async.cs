@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -30,16 +32,16 @@ public class OrderTestAsync : IAsyncDisposable, IDisposable
 
         _producerRegistry = new PostgresProducerRegistryFactory(
             new PostgresMessagingGatewayConnection(testHelper.Configuration),
-            [new PostgresPublication { Topic = routingKey }]
-        ).CreateAsync().GetAwaiter().GetResult();
-            
-        _consumer = new PostgresConsumerFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration)).CreateAsync(sub);
+            [new PostgresPublication { Topic = routingKey }],
+            loggerFactory: NullLoggerFactory.Instance).CreateAsync().GetAwaiter().GetResult();
+
+        _consumer = new PostgresConsumerFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration), loggerFactory: NullLoggerFactory.Instance).CreateAsync(sub);
     }
 
     [Fact]
     public async Task When_a_message_is_sent_keep_order()
     {
-        //Send a sequence of messages to postgres 
+        //Send a sequence of messages to postgres
         var msgId = await SendMessageAsync();
         var msgId2 = await SendMessageAsync();
         var msgId3 = await SendMessageAsync();

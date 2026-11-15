@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
@@ -18,7 +20,7 @@ public class RmqMessageConsumerConnectionClosedTests : IDisposable
 
     public RmqMessageConsumerConnectionClosedTests()
     {
-        var messageHeader = new MessageHeader(Guid.NewGuid().ToString(),  
+        var messageHeader = new MessageHeader(Guid.NewGuid().ToString(),
             new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND);
 
         messageHeader.UpdateHandledCount();
@@ -30,10 +32,10 @@ public class RmqMessageConsumerConnectionClosedTests : IDisposable
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        _sender = new RmqMessageProducer(rmqConnection);
+        _sender = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
         var queueName = new ChannelName(Guid.NewGuid().ToString());
-            
-        _receiver = new RmqMessageConsumer(rmqConnection, queueName, _sentMessage.Header.Topic, false, false);
+
+        _receiver = new RmqMessageConsumer(rmqConnection, queueName, _sentMessage.Header.Topic, false, NullLoggerFactory.Instance, false);
         _badReceiver = new AlreadyClosedRmqMessageConsumer(rmqConnection, queueName, _sentMessage.Header.Topic, false, 1, false);
 
     }
@@ -42,7 +44,7 @@ public class RmqMessageConsumerConnectionClosedTests : IDisposable
     public void When_a_message_consumer_throws_an_already_closed_exception_when_connecting()
     {
         _sender.Send(_sentMessage);
-            
+
         bool exceptionHappened = false;
         try
         {
@@ -53,7 +55,7 @@ public class RmqMessageConsumerConnectionClosedTests : IDisposable
             exceptionHappened = true;
             Assert.True((cfe.InnerException) is AlreadyClosedException);
         }
-           
+
         Assert.True(exceptionHappened);
     }
 

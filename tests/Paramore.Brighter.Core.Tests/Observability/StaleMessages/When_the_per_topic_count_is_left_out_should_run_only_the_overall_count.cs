@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -123,7 +123,7 @@ public class OnlyTheOverallCountRunsTests
     };
 
     private static InMemoryMessageProducer Producer(RoutingKey topic) =>
-        new(new InternalBus(), new Publication { Topic = topic });
+        new InMemoryMessageProducer(new InternalBus(), publication: new Publication { Topic = topic }, loggerFactory: Initializer.TestLoggerFactory);
 
     private void WaitUntilTheMonitorWaits(int timers) =>
         Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));

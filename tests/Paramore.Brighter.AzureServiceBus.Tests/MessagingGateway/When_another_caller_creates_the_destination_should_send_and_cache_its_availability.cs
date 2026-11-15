@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -213,8 +215,8 @@ public class AzureServiceBusProducerCreationRaceTests
         var publication = new AzureServiceBusPublication { MakeChannels = mode };
         var provider = new FakeServiceBusSenderProvider(sender);
         return useQueue
-            ? new AzureServiceBusQueueMessageProducer(administration, provider, publication)
-            : new AzureServiceBusTopicMessageProducer(administration, provider, publication);
+            ? new AzureServiceBusQueueMessageProducer(administration, provider, publication, loggerFactory: NullLoggerFactory.Instance)
+            : new AzureServiceBusTopicMessageProducer(administration, provider, publication, loggerFactory: NullLoggerFactory.Instance);
     }
 
     private static async Task SendAsync(AzureServiceBusMessageProducer producer, Message message, bool useAsync)

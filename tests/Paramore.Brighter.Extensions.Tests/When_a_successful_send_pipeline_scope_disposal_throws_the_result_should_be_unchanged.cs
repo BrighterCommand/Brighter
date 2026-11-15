@@ -45,8 +45,9 @@ public class SuccessfulSendPipelineScopeDisposalLoggingTests
     {
         // Arrange — a handler that completes normally; its Scoped dependency's Dispose() throws when
         // the pipeline's owned scope is released
+        using var logs = new InMemoryLogCapture();
         var recorder = new HandlerCompletionRecorder();
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(logs.Factory);
         services.AddScoped<IPoisonedDependency, PoisonedDependency>();
         services.AddSingleton(recorder);
         services.AddBrighter(options =>
@@ -57,7 +58,6 @@ public class SuccessfulSendPipelineScopeDisposalLoggingTests
         });
         var commandProcessor = services.BuildServiceProvider().GetRequiredService<IAmACommandProcessor>();
 
-        using var logs = new InMemoryLogCapture();
 
         // Act — the first Send completes despite its owned pipeline scope's disposal throwing
         commandProcessor.Send(new PoisonedScopeCompletingHandlerCommand());

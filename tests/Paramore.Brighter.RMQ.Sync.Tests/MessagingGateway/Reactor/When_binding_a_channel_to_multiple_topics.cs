@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
@@ -9,7 +11,7 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 [Trait("Category", "RMQ")]
 [Collection("RMQ")]
 public class RmqMessageConsumerMultipleTopicTests : IDisposable
-{        
+{
     private readonly IAmAMessageProducerSync _messageProducer;
     private readonly IAmAMessageConsumerSync _messageConsumer;
     private readonly Message _messageTopic1, _messageTopic2;
@@ -18,12 +20,12 @@ public class RmqMessageConsumerMultipleTopicTests : IDisposable
     {
         var routingKeyOne = new RoutingKey(Guid.NewGuid().ToString());
         var routingKeyTwo = new RoutingKey(Guid.NewGuid().ToString());
-            
+
         _messageTopic1 = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKeyOne, MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(), routingKeyOne, MessageType.MT_COMMAND),
             new MessageBody("test content for topic test 1"));
         _messageTopic2 = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKeyTwo, MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(), routingKeyTwo, MessageType.MT_COMMAND),
             new MessageBody("test content for topic test 2"));
 
         var rmqConnection = new RmqMessagingGatewayConnection
@@ -33,13 +35,13 @@ public class RmqMessageConsumerMultipleTopicTests : IDisposable
         };
 
         var topics = new RoutingKeys([
-            routingKeyOne, 
+            routingKeyOne,
             routingKeyTwo
         ]);
         var queueName = new ChannelName(Guid.NewGuid().ToString());
 
-        _messageProducer = new RmqMessageProducer(rmqConnection);
-        _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName , topics, false, false);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
+        _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName , topics, false, NullLoggerFactory.Instance, false);
 
         new QueueFactory(rmqConnection, queueName, topics).Create(TimeSpan.FromMilliseconds(1000));
     }
@@ -55,7 +57,7 @@ public class RmqMessageConsumerMultipleTopicTests : IDisposable
 
         var topic1Result = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
         _messageConsumer.Acknowledge(topic1Result);
-        
+
         var topic2Result = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
         _messageConsumer.Acknowledge(topic2Result);
 
@@ -65,7 +67,7 @@ public class RmqMessageConsumerMultipleTopicTests : IDisposable
 
         // should_received_a_message_from_test2_with_same_topic_and_body
         Assert.Equal(_messageTopic2.Header.Topic, topic2Result.Header.Topic);
-        Assert.Equivalent(_messageTopic2.Body.Value, topic2Result.Body.Value);            
+        Assert.Equivalent(_messageTopic2.Body.Value, topic2Result.Body.Value);
     }
 
     public void Dispose()

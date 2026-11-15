@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
@@ -32,16 +34,16 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 
             _producerRegistry = new MsSqlProducerRegistryFactory(
                 testHelper.QueueConfiguration,
-                [new() { Topic = routingKey }]
-            ).Create();
-            _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).Create(sub);
+                [new() { Topic = routingKey }],
+                loggerFactory: NullLoggerFactory.Instance).Create();
+            _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration, loggerFactory: NullLoggerFactory.Instance).Create(sub);
         }
 
         [Fact]
         public void When_a_message_is_sent_keep_order()
         {
             IAmAMessageConsumerSync consumer = _consumer;
-            
+
             var messageId = Guid.NewGuid().ToString();
             var messageType = MessageType.MT_COMMAND;
             var source = new Uri("http://testing.example");
@@ -79,7 +81,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                 baggage: baggage);
 
             var body = new MessageBody($"test content [{_queueName}]");
-            
+
             ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(new Message(
                 header,
                 body));

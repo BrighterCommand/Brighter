@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -39,7 +39,7 @@ public class AzureServiceBusDelayedRetryConfigurationTests
 {
     private static readonly InMemoryServiceBusLogProvider s_logs = new();
 
-    static AzureServiceBusDelayedRetryConfigurationTests() => ApplicationLogging.LoggerFactory.AddProvider(s_logs);
+    private static readonly Microsoft.Extensions.Logging.ILoggerFactory s_factory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddProvider(s_logs));
 
     [Theory]
     [InlineData(OnMissingChannel.Create, false)]
@@ -55,7 +55,7 @@ public class AzureServiceBusDelayedRetryConfigurationTests
         var provider = ASBCreds.ASBClientProvider;
         var administration = provider.GetServiceBusAdministrationClient();
         var topicName = $"unsafe-retry-{Guid.NewGuid():N}";
-        var factory = new AzureServiceBusConsumerFactory(provider);
+        var factory = new AzureServiceBusConsumerFactory(clientProvider: provider, loggerFactory: s_factory);
         var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
             channelName: new ChannelName("a"), routingKey: new RoutingKey(topicName),
             requeueCount: 3, requeueDelay: TimeSpan.FromSeconds(2), makeChannels: makeChannels);
@@ -99,7 +99,7 @@ public class AzureServiceBusDelayedRetryConfigurationTests
                     DefaultMessageTimeToLive = TimeSpan.FromHours(1)
                 });
             }
-            var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(provider));
+            var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider: provider, loggerFactory: s_factory));
             var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
                 channelName: new ChannelName("a"), routingKey: new RoutingKey(topicName),
                 makeChannels: OnMissingChannel.Validate);

@@ -44,7 +44,7 @@ public class When_an_active_sweeper_has_topics_tripped_should_report_the_tripped
     {
         //Arrange
         var state = ActiveState();
-        var breaker = new InMemoryOutboxCircuitBreaker();
+        var breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         breaker.TripTopic(new RoutingKey("topic-one"));
         breaker.TripTopic(new RoutingKey("topic-two"));
 
@@ -62,7 +62,7 @@ public class When_an_active_sweeper_has_topics_tripped_should_report_the_tripped
     {
         //Arrange
         var state = ActiveState();
-        var breaker = new InMemoryOutboxCircuitBreaker();
+        var breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
 
         //Act
         var observed = Observe(state, () => breaker);
@@ -88,7 +88,7 @@ public class When_an_active_sweeper_has_topics_tripped_should_report_the_tripped
     public void When_the_meter_has_no_state_should_report_a_zero_tripped_topics_gauge_even_if_topics_are_tripped()
     {
         //Arrange
-        var breaker = new InMemoryOutboxCircuitBreaker();
+        var breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         breaker.TripTopic(new RoutingKey("topic-one"));
 
         //Act
@@ -111,7 +111,7 @@ public class When_an_active_sweeper_has_topics_tripped_should_report_the_tripped
     {
         using var metrics = new ServiceCollection().AddMetrics().BuildServiceProvider();
         var meterFactory = metrics.GetRequiredService<IMeterFactory>();
-        var meter = new SweeperMeter(meterFactory, state, findCircuitBreaker);
+        var meter = new SweeperMeter(meterFactory: meterFactory, state: state, findCircuitBreaker: findCircuitBreaker, loggerFactory: Initializer.TestLoggerFactory);
         var observation = new Observation();
         using var listener = new MeterListener();
         listener.InstrumentPublished = (instrument, l) =>

@@ -30,7 +30,7 @@ namespace Paramore.Brighter
     /// The name of a channel used to wrap communication with a Broker.
     /// </summary>
     /// <remarks>
-    /// Channel names typically represent queue names or other addressing mechanisms 
+    /// Channel names typically represent queue names or other addressing mechanisms
     /// used by messaging infrastructure to route messages.
     /// </remarks>
     public class ChannelName
@@ -69,7 +69,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="rhs">The <see cref="ChannelName"/> to convert.</param>
         /// <returns>The <see cref="string"/> result of the conversion.</returns>
-        public static implicit operator string?(ChannelName rhs)
+        public static implicit operator string?(ChannelName? rhs)
         {
             return rhs?.ToString();
         }

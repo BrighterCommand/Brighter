@@ -58,8 +58,8 @@ public class InMemoryTripRacesEndingCallTests
     {
         var clock = new FakeTimeProvider();
         var breaker = new InMemoryOutboxCircuitBreaker(
-            new OutboxCircuitBreakerOptions { CooldownCount = COOLDOWN_COUNT, MaximumTripDuration = s_maximumTripDuration },
-            timeProvider: clock);
+options: new OutboxCircuitBreakerOptions { CooldownCount = COOLDOWN_COUNT, MaximumTripDuration = s_maximumTripDuration },
+            timeProvider: clock, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         breaker.TripTopic(topic);
         for (var cycle = 0; cycle < COOLDOWN_COUNT; cycle++)
             breaker.CoolDown();

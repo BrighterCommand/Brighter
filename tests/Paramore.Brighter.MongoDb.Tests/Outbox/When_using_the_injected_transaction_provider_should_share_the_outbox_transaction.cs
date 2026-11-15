@@ -57,16 +57,14 @@ public class MongoDbInjectedTransactionTests
         var outbox = new MongoDbOutbox(configuration);
         var bus = new InternalBus();
         var topic = new RoutingKey("mongodb-transaction");
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         services.AddSingleton<IAmAMongoDbConfiguration>(configuration);
         services.AddBrighter().AddProducers(options =>
         {
             options.Outbox = outbox;
             options.ConnectionProvider = typeof(MongoDbConnectionProvider);
             options.TransactionProvider = typeof(MongoDbUnitOfWork);
-            options.ProducerRegistry = new InMemoryProducerRegistryFactory(bus,
-                [new Publication { Topic = topic, RequestType = typeof(MongoDbTransactionCommand) }],
-                InstrumentationOptions.None).Create();
+            options.ProducerRegistry = new InMemoryProducerRegistryFactory(bus: bus, publications: [new Publication { Topic = topic, RequestType = typeof(MongoDbTransactionCommand) }], instrumentationOptions: InstrumentationOptions.None, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
         });
         using var serviceProvider = services.BuildServiceProvider();
         var processor = serviceProvider.GetRequiredService<IAmACommandProcessor>();

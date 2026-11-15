@@ -1,4 +1,5 @@
-﻿using Greeting.Models;
+﻿using Microsoft.Extensions.Logging;
+using Greeting.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
@@ -12,7 +13,6 @@ using TickerQ.EntityFrameworkCore.DependencyInjection;
 using TickerQ.Utilities.Entities;
 using TickerQ.Utilities.Interfaces;
 using TickerQ.Utilities.Interfaces.Managers;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,8 +45,10 @@ var rmqConnection = new RmqMessagingGatewayConnection
     Exchange = new Exchange("paramore.brighter.exchange"),
 };
 
-builder.Services.AddBrighter().AddProducers(c =>
+builder.Services.AddBrighter().AddProducers(provider =>
 {
+    var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+    var c = new ProducersConfiguration();
     c.ProducerRegistry = new RmqProducerRegistryFactory(
                             rmqConnection,
                              [
@@ -56,8 +58,8 @@ builder.Services.AddBrighter().AddProducers(c =>
                                     RequestType = typeof(GreetingEvent),
                                     MakeChannels = OnMissingChannel.Create
                                 }
-                             ]).Create();
-
+                             ], loggerFactory: loggerFactory).Create();
+    return c;
 }).UseScheduler(provider =>
 {
     var timeTickerManager = provider.GetRequiredService<ITimeTickerManager<TimeTickerEntity>>();
@@ -65,7 +67,6 @@ builder.Services.AddBrighter().AddProducers(c =>
     var timeprovider = provider.GetRequiredService<TimeProvider>();
     return new TickerQSchedulerFactory(timeTickerManager, persistenceProvider, timeprovider);
 });
-
 
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())
@@ -92,7 +93,7 @@ app.MapPost("/send-one", async (IAmACommandProcessor commandProcessor) =>
 
 app.MapPost("/send-multiple", async (IAmACommandProcessor commandProcessor) =>
 {
-    var iterations =  5;
+    var iterations = 5;
     for (int i = 1; i <= iterations; i++)
     {
         var content = $"Manual multiple message #{i}";

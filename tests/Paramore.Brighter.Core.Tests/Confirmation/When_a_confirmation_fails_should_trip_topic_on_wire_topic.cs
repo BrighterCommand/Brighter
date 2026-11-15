@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,14 +44,14 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
         private readonly RoutingKey _publicationTopic = new("Confirmation.Publication.Topic");
 
         private readonly InternalBus _bus = new();
-        private readonly InMemoryOutboxCircuitBreaker _circuitBreaker = new();
+        private readonly InMemoryOutboxCircuitBreaker _circuitBreaker = new(logger: LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>( Initializer.TestLoggerFactory ));
         private readonly InMemoryMessageProducer _producer;
 
         public ConfirmationFailureBreakerTripTests()
         {
             // Arrange: an InMemory producer whose publish confirmation always fails, wired to a
             // mediator that owns a real circuit breaker.
-            _producer = new InMemoryMessageProducer(_bus, new Publication { Topic = _publicationTopic })
+            _producer = new InMemoryMessageProducer(_bus, Initializer.TestLoggerFactory, new Publication { Topic = _publicationTopic })
             {
                 UseAsyncPublishConfirmation = true,
                 PublishFailurePredicate = _ => true
@@ -72,7 +74,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer: null,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outboxCircuitBreaker: _circuitBreaker);
+                outboxCircuitBreaker: _circuitBreaker, loggerFactory: Initializer.TestLoggerFactory);
         }
 
         private static Message MessageWithWireTopic(RoutingKey wireTopic) =>

@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -36,7 +38,7 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor
             _parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("RmqMessageProducerTests");
 
             _parentActivity!.TraceStateString = "brighter=00f067aa0ba902b7,congo=t61rcWkgMzE";
-            
+
             Baggage.SetBaggage("key", "value");
             Baggage.SetBaggage("key2", "value2");
 
@@ -55,7 +57,7 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor
                 Exchange = new Exchange("paramore.brighter.exchange")
             };
 
-            _messageProducer = new RmqMessageProducer(rmqConnection)
+            _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance)
             {
                 Span = _parentActivity
             };
@@ -65,7 +67,7 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor
         public void When_Sending_A_Message_Should_Propagate_Context()
         {
             //arrange
-            
+
             //act
             _messageProducer.Send(_message);
             _parentActivity?.Stop();
@@ -75,7 +77,7 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor
             var producerEvent = _exportedActivities
                 .SelectMany(a => a.Events)
                 .FirstOrDefault(e => e.Name == $"{_message.Header.Topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}");
-            
+
             Assert.NotNull(_message.Header.TraceParent);
             Assert.Equal("brighter=00f067aa0ba902b7,congo=t61rcWkgMzE", _message.Header.TraceState);
             Assert.Equal("key=value,key2=value2", _message.Header.Baggage.ToString());

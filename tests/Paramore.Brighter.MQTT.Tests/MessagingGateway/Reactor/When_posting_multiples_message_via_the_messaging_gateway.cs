@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -48,8 +48,8 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
         /// Gets the synchronous message producer instance derived from the asynchronous message producer.
         /// </summary>
         /// <remarks>
-        /// This property casts the asynchronous message producer (<see cref="IAmAMessageProducerAsync"/>) 
-        /// to a synchronous message producer (<see cref="IAmAMessageProducerSync"/>). 
+        /// This property casts the asynchronous message producer (<see cref="IAmAMessageProducerAsync"/>)
+        /// to a synchronous message producer (<see cref="IAmAMessageProducerSync"/>).
         /// It is used to send messages synchronously in the test scenarios.
         /// </remarks>
         /// <value>

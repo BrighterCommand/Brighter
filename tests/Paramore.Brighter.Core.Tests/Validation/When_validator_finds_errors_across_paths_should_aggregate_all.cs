@@ -40,7 +40,7 @@ public class PipelineValidatorErrorAggregationTests
         // Handler path: internal handler triggers HandlerTypeVisibility error
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyDescribableCommand), typeof(MyInternalHandler));
-        var pipelineBuilder = new PipelineBuilder<IRequest>(registry);
+        var pipelineBuilder = new PipelineBuilder<IRequest>(registry, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<IRequest>.ClearPipelineCache();
 
         // Producer path: null RequestType triggers PublicationRequestTypeSet error

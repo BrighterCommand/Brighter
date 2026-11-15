@@ -34,12 +34,12 @@ internal sealed class AzureServiceBusRequeueScheduler(
     TimeProvider timeProvider,
     IServiceBusClientProvider clientProvider,
     ServiceBusSenderOptions? senderOptions,
-    InstrumentationOptions instrumentationOptions)
-    : AzureServiceBusScheduler(sender, schedulerTopic, timeProvider),
+    InstrumentationOptions instrumentationOptions, Microsoft.Extensions.Logging.ILoggerFactory loggerFactory)
+    : AzureServiceBusScheduler(sender, schedulerTopic, timeProvider, loggerFactory),
         IAmAMessageRequeueSchedulerAsync, IAmAMessageRequeueSchedulerSync
 {
     private readonly MessagingGateway.AzureServiceBus.AzureServiceBusRequeueScheduler _requeueScheduler =
-        new(clientProvider, timeProvider, senderOptions, instrumentationOptions);
+        new(clientProvider, loggerFactory, timeProvider, senderOptions, instrumentationOptions);
 
     public Task RequeueAsync(Message message, ChannelName destination, TimeSpan delay,
         CancellationToken cancellationToken = default)

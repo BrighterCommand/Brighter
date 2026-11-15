@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Xunit;
 
@@ -25,33 +25,33 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
         _publication = new Publication { Topic = new RoutingKey("MyTransformableCommand") };
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, null);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, null, loggerFactory: Initializer.TestLoggerFactory);
     }
-    
+
     [Fact]
     public void When_Creating_A_Wrap_Without_A_Factory()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
-        
+
         // If no factory we default to just them mapper
         Assert.Equal("MyTransformableCommandMessageMapper", TraceFilters().ToString());
 
-        //wrap should just do message mapper                                          
+        //wrap should just do message mapper
         var message = _transformPipeline.Wrap(_myCommand,new RequestContext(), _publication);
-        
+
         //assert
         Assert.Equal(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)).ToString(), message.Body.Value);
-        
+
         //we won't run a transform
         Assert.Equal(false, message.Header.Bag.ContainsKey(MySimpleTransformAsync.HEADER_KEY));
     }
-    
+
     private TransformPipelineTracer TraceFilters()
     {
         var pipelineTracer = new TransformPipelineTracer();
         _transformPipeline.DescribePath(pipelineTracer);
         return pipelineTracer;
     }
-    
+
 }

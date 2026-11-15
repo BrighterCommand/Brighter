@@ -64,7 +64,7 @@ public class TornReadTests
         var mediator = new SwitchableOutboxProducerMediator();
         mediator.Complete();
         var sweepLock = new SwitchableDistributedLock();
-        var breaker = new InMemoryOutboxCircuitBreaker();
+        var breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         breaker.TripTopic(new RoutingKey("orders"));
         var services = SweeperContainer.Create(sweepLock, countingTimeProvider, useOutboxSweeper: true,
             configureSweeper: options => options.TimerInterval = 10);

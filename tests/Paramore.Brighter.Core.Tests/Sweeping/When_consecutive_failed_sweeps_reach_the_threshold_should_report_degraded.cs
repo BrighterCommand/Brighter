@@ -18,7 +18,7 @@ public class When_consecutive_failed_sweeps_reach_the_threshold_should_report_de
     {
         //Arrange
         var options = new TimedOutboxSweeperOptions { TimerInterval = 10 };
-        var check = new OutboxSweeperInvestigateHealthCheck(FailedSweeps(2), options, null, 3);
+        var check = new OutboxSweeperInvestigateHealthCheck(state: FailedSweeps(2), options: options, findCircuitBreaker: null, failureThreshold: 3, loggerFactory: Initializer.TestLoggerFactory);
 
         //Act
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
@@ -37,7 +37,7 @@ public class When_consecutive_failed_sweeps_reach_the_threshold_should_report_de
     {
         //Arrange
         var options = new TimedOutboxSweeperOptions { TimerInterval = 10 };
-        var check = new OutboxSweeperInvestigateHealthCheck(FailedSweeps(failures), options, null, 3);
+        var check = new OutboxSweeperInvestigateHealthCheck(state: FailedSweeps(failures), options: options, findCircuitBreaker: null, failureThreshold: 3, loggerFactory: Initializer.TestLoggerFactory);
 
         //Act
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
@@ -59,7 +59,7 @@ public class When_consecutive_failed_sweeps_reach_the_threshold_should_report_de
     public async Task When_options_are_null_should_use_the_default_timer_interval()
     {
         //Arrange
-        var check = new OutboxSweeperInvestigateHealthCheck(FailedSweeps(3), null, null, 3);
+        var check = new OutboxSweeperInvestigateHealthCheck(state: FailedSweeps(3), options: null, findCircuitBreaker: null, failureThreshold: 3, loggerFactory: Initializer.TestLoggerFactory);
 
         //Act
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);

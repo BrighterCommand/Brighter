@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MongoDb.Tests.TestDoubles;
@@ -10,7 +12,7 @@ using Xunit;
 namespace Paramore.Brighter.MongoDb.Tests.Transformers;
 
 [Trait("Category", "MongoDb")]
-public class LargeMessagePayloadAsyncWrapTests : IAsyncDisposable 
+public class LargeMessagePayloadAsyncWrapTests : IAsyncDisposable
 {
     private string? _id;
     private WrapPipelineAsync<MyLargeCommand>? _transformPipeline;
@@ -28,22 +30,22 @@ public class LargeMessagePayloadAsyncWrapTests : IAsyncDisposable
             new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync(
                 _ => new MyLargeCommandMessageMapperAsync())
             );
-           
+
         mapperRegistry.RegisterAsync<MyLargeCommand, MyLargeCommandMessageMapperAsync>();
-            
+
         _myCommand = new MyLargeCommand(6000);
 
         string bucketName = $"brightertestbucket-{Guid.NewGuid()}";
 
         _luggageStore = new MongoDbLuggageStore(new MongoDbLuggageStoreOptions(Configuration.ConnectionString, Configuration.DatabaseName, bucketName));
-            
+
         _luggageStore.EnsureStoreExists();
 
         var transformerFactoryAsync = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
         _publication = new Publication { Topic = new RoutingKey("MyLargeCommand"), RequestType = typeof(MyLargeCommand) };
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, InstrumentationOptions.All);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, NullLoggerFactory.Instance, InstrumentationOptions.All);
     }
 
     [Fact]
@@ -58,7 +60,7 @@ public class LargeMessagePayloadAsyncWrapTests : IAsyncDisposable
         Assert.NotNull(message.Header.DataRef);
         _id = (string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
         Assert.Equal($"Claim Check {_id}", message.Body.Value);
-            
+
         Assert.True(await _luggageStore.HasClaimAsync(_id));
     }
 

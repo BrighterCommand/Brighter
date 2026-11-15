@@ -49,24 +49,24 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         {
             SpyRequeueCommandProcessor commandProcessor = new();
 
-            _channel = new ChannelAsync(new(ChannelName),_routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)));
-            
+            _channel = new ChannelAsync(new(ChannelName),_routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory));
+
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
                 new SimpleMessageMapperFactoryAsync(_ => new MyCommandMessageMapperAsync()));
             messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
-             
-            _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyCommand), messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel)
+
+            _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyCommand), messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel, loggerFactory: Initializer.TestLoggerFactory)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = _requeueCount
             };
 
-            var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null, InstrumentationOptions.All)
+            var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null, Initializer.TestLoggerFactory, InstrumentationOptions.All)
                 .BuildWrapPipeline<MyCommand>()
                 .WrapAsync(new MyCommand(), new RequestContext(), new Publication{Topic = _routingKey})
                 .Result;
             _bus.Enqueue(msg);
-            
+
         }
 
         [Fact]
@@ -74,7 +74,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             await Task.Delay(1000);
-            
+
             _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
             var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);

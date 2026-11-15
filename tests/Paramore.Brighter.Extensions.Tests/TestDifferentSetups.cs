@@ -1,4 +1,5 @@
-﻿using System;
+using Microsoft.Extensions.Logging.Abstractions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,7 +19,7 @@ namespace Tests
         [Fact]
         public void BasicSetup()
         {
-            var serviceCollection = new ServiceCollection();
+            var serviceCollection = new ServiceCollection().AddLogging();
 
             serviceCollection.AddBrighter().AutoFromAssemblies();
 
@@ -34,7 +35,7 @@ namespace Tests
         [InlineData(typeof(Paramore.Brighter.Extensions.Tests.TestDoubles.TestBrighterExtension.StubSqlTransactionProvider), typeof(Paramore.Brighter.Extensions.Tests.TestDoubles.TestBrighterExtension.StubSqlTransactionProvider))]
         public void WithExternalBus(Type connectionProvider, Type transactionProvider)
         {
-            var serviceCollection = new ServiceCollection();
+            var serviceCollection = new ServiceCollection().AddLogging();
             const string mytopic = "MyTopic";
             var routingKey = new RoutingKey(mytopic);
 
@@ -42,7 +43,7 @@ namespace Tests
                 new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
                     {
-                        routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication{ Topic = routingKey})
+                        routingKey, new InMemoryMessageProducer(new InternalBus(), NullLoggerFactory.Instance, new Publication{ Topic = routingKey})
                     },
                 });
 
@@ -82,7 +83,7 @@ namespace Tests
         [Fact]
         public void WithCustomPolicy()
         {
-            var serviceCollection = new ServiceCollection();
+            var serviceCollection = new ServiceCollection().AddLogging();
 
             var retryPolicy = Policy.Handle<Exception>().WaitAndRetry([TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150)]);
             var circuitBreakerPolicy = Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
@@ -110,7 +111,7 @@ namespace Tests
         [Fact]
         public void WithScopedLifetime()
         {
-            var serviceCollection = new ServiceCollection();
+            var serviceCollection = new ServiceCollection().AddLogging();
 
             serviceCollection.AddBrighter(
                 ).AutoFromAssemblies();

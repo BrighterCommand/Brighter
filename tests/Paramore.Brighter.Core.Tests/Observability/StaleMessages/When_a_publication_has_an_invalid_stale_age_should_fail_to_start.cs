@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -60,11 +60,11 @@ public class StaleMessageMonitorInvalidPublicationStaleAgeTests
         {
             {
                 routingKey,
-                new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey, StaleMessageAge = staleMessageAge })
+                new InMemoryMessageProducer(new InternalBus(), publication:new Publication { Topic = routingKey, StaleMessageAge = staleMessageAge },loggerFactory:Initializer.TestLoggerFactory)
             }
         });
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddSingleton<TimeProvider>(timeProvider);
         var builder = new ServiceCollectionBrighterBuilder(
             services,

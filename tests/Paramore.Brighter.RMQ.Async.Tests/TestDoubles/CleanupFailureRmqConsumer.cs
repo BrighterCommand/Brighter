@@ -35,7 +35,7 @@ namespace Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 public class CleanupFailureRmqConsumer(
     RmqMessagingGatewayConnection connection, ChannelName queue, RoutingKey routingKey, Func<string?> failingOperation,
     int batchSize = 1, QueueType queueType = QueueType.Classic)
-    : RmqMessageConsumer(connection, queue, routingKey, isDurable: true, batchSize: batchSize, queueType: queueType)
+    : RmqMessageConsumer(connection, queue, routingKey, isDurable: true, batchSize: batchSize, queueType: queueType, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
 {
     protected override async Task ConnectToBrokerAsync(OnMissingChannel makeExchange, CancellationToken cancellationToken = default)
     {

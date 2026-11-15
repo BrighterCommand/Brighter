@@ -78,21 +78,17 @@ public class SqsMessageConsumerFailedDlqSendReleasesSourceTests : IDisposable, I
         var awsConnection = GatewayFactory.CreateFactory();
 
         // Create the source queue only; the DLQ is deliberately never created.
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection: awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _channelFactory.CreateSyncChannel(subscription);
 
         _messageProducer = new SqsMessageProducer(
-            awsConnection,
-            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create));
+connection: awsConnection, publication: new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Built directly (not via the subscription/ChannelFactory) so the DLQ producer uses
         // Validate — it must fail against the DLQ, not silently create it, to exercise the
         // failed-send branch under test.
         _consumer = new SqsMessageConsumer(
-            awsConnection,
-            channelName.Value,
-            deadLetterRoutingKey: dlqRoutingKey,
-            makeChannels: OnMissingChannel.Validate);
+awsConnection: awsConnection, queueName: channelName.Value, deadLetterRoutingKey: dlqRoutingKey, makeChannels: OnMissingChannel.Validate, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

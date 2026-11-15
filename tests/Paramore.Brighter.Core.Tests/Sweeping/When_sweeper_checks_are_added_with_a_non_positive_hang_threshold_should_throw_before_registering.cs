@@ -40,7 +40,7 @@ public class NonPositiveHangThresholdTests
     public void When_sweeper_checks_are_added_with_a_non_positive_hang_threshold_should_throw_before_registering(int seconds)
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddOptions();
         var builder = services.AddHealthChecks();
 
@@ -57,7 +57,7 @@ public class NonPositiveHangThresholdTests
     public void When_sweeper_checks_are_added_with_a_positive_hang_threshold_should_not_throw()
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddOptions();
         var builder = services.AddHealthChecks();
 

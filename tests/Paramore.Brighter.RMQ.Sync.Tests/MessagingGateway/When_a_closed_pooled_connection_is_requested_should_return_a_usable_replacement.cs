@@ -45,7 +45,7 @@ public class RmqClosedPooledConnectionReplacementTests
             Uri = new Uri("amqp://guest:guest@localhost:5672/%2f"),
             AutomaticRecoveryEnabled = automaticRecoveryEnabled
         };
-        var pool = new RmqMessageGatewayConnectionPool($"pool-replacement-{Guid.NewGuid()}", 20);
+        var pool = new RmqMessageGatewayConnectionPool(connectionName: $"pool-replacement-{Guid.NewGuid()}", connectionHeartbeat: 20, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         try
         {

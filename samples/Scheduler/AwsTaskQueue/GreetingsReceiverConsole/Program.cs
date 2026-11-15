@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Amazon;
@@ -104,13 +105,18 @@ public class Program
                             }
                         });
 
-                    services.AddConsumers(options =>
+                    services.AddConsumers(provider =>
                         {
+                            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+                            var options = new ConsumersOptions();
                             options.Subscriptions = subscriptions;
-                            options.DefaultChannelFactory = new ChannelFactory(awsConnection);
+                            options.DefaultChannelFactory = new ChannelFactory(awsConnection, loggerFactory: loggerFactory);
+                            return options;
                         })
-                        .AddProducers(configure =>
+                        .AddProducers(provider =>
                         {
+                            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+                            var configure = new ProducersConfiguration();
                             configure.ProducerRegistry = new SnsProducerRegistryFactory(
                                 awsConnection,
                                 [
@@ -132,8 +138,9 @@ public class Program
                                         Topic = new RoutingKey("message-scheduler-topic"),
                                         RequestType = typeof(FireAwsScheduler)
                                     }
-                                ]
-                            ).Create();
+                                ],
+                                loggerFactory: loggerFactory).Create();
+                            return configure;
                         })
                         .AutoFromAssemblies();
                 }

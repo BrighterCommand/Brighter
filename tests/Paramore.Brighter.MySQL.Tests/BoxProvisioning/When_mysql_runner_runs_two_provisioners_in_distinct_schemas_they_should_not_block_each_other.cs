@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using MySqlConnector;
@@ -64,13 +66,9 @@ public class MySqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
             new MySqlOutboxMigrationCatalog(),
             new MySqlPayloadModeValidator(),
             configA,
-            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), configA, TimeSpan.FromSeconds(30), holdingLock));
+            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), configA, TimeSpan.FromSeconds(30), NullLoggerFactory.Instance, holdingLock), loggerFactory: NullLoggerFactory.Instance);
         var provisionerB = new MySqlOutboxProvisioner(
-            new MySqlBoxDetectionHelper(),
-            new MySqlOutboxMigrationCatalog(),
-            new MySqlPayloadModeValidator(),
-            configB,
-            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), configB, s_timeoutBWouldHitIfContending));
+detectionHelper: new MySqlBoxDetectionHelper(), catalog: new MySqlOutboxMigrationCatalog(), payloadValidator: new MySqlPayloadModeValidator(), configuration: configB, migrationRunner: new MySqlBoxMigrationRunner(catalog: new MySqlOutboxMigrationCatalog(), configuration: configB, lockTimeout: s_timeoutBWouldHitIfContending, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act
         var taskA = Task.Run(() => provisionerA.ProvisionAsync());

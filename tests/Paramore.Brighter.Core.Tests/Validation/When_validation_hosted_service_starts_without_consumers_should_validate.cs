@@ -41,7 +41,7 @@ public class ValidationHostedServiceTests
         IAmAPipelineValidator validator,
         IAmAPipelineDiagnosticWriter? diagnosticWriter = null)
     {
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         if (diagnosticWriter != null)
             services.AddSingleton(diagnosticWriter);
 

@@ -14,8 +14,8 @@ public class InMemoryReTripRestartsBothLimitsTests
         var orders = new RoutingKey("orders");
         var clock = new FakeTimeProvider();
         var breaker = new InMemoryOutboxCircuitBreaker(
-            new OutboxCircuitBreakerOptions { CooldownCount = 10, MaximumTripDuration = TimeSpan.FromMinutes(5) },
-            timeProvider: clock);
+options: new OutboxCircuitBreakerOptions { CooldownCount = 10, MaximumTripDuration = TimeSpan.FromMinutes(5) },
+            timeProvider: clock, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         breaker.TripTopic(orders);
         clock.Advance(TimeSpan.FromMinutes(4));
 
@@ -36,8 +36,8 @@ public class InMemoryReTripRestartsBothLimitsTests
         // Arrange
         var orders = new RoutingKey("orders");
         var breaker = new InMemoryOutboxCircuitBreaker(
-            new OutboxCircuitBreakerOptions { CooldownCount = 2, MaximumTripDuration = TimeSpan.FromMinutes(5) },
-            timeProvider: new FakeTimeProvider());
+options: new OutboxCircuitBreakerOptions { CooldownCount = 2, MaximumTripDuration = TimeSpan.FromMinutes(5) },
+            timeProvider: new FakeTimeProvider(), logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         breaker.TripTopic(orders);
         breaker.CoolDown();
         breaker.CoolDown();

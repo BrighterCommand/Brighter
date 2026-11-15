@@ -34,7 +34,7 @@ using RabbitMQ.Client;
 namespace Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 
 public class ConfirmCountingRmqProducer(RmqMessagingGatewayConnection connection)
-    : RmqMessageProducer(connection)
+    : RmqMessageProducer(connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
 {
     private readonly List<ConfirmCountingRmqChannel> _channels = [];
 

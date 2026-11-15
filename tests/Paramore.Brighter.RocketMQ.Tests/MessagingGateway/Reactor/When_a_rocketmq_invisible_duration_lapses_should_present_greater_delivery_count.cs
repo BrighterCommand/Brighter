@@ -81,7 +81,7 @@ public class RocketMqLeaseLapseDeliveryCountTests : IDisposable
             receiveMessageTimeout: s_receiveMessageTimeout,
             invisibilityTimeout: s_invisibilityTimeout);
 
-        _consumer = new RocketMessageConsumerFactory(_connection).Create(subscription);
+        _consumer = new RocketMessageConsumerFactory(connection: _connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(subscription);
     }
 
     public void Dispose()

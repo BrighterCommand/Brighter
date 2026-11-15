@@ -60,7 +60,7 @@ public class SqsNativeRedriveLimitBelowBudgetProactorTests : IDisposable, IAsync
     {
         ConformanceDeferredPump.ResetDispatchCount();
         _awsConnection = GatewayFactory.CreateFactory();
-        _channelFactory = new ChannelFactory(_awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection: _awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     /// <summary>
@@ -120,7 +120,7 @@ public class SqsNativeRedriveLimitBelowBudgetProactorTests : IDisposable, IAsync
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create);
 
-        _dlqChannelFactory = new ChannelFactory(_awsConnection);
+        _dlqChannelFactory = new ChannelFactory(awsConnection: _awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _dlqChannelFactory.CreateAsyncChannel(dlqSubscription);
 
         // Create a reader channel for the native target (already provisioned by redrivePolicy above)
@@ -132,19 +132,19 @@ public class SqsNativeRedriveLimitBelowBudgetProactorTests : IDisposable, IAsync
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create);
 
-        _nativeTargetChannelFactory = new ChannelFactory(_awsConnection);
+        _nativeTargetChannelFactory = new ChannelFactory(awsConnection: _awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var nativeTargetChannel = _nativeTargetChannelFactory.CreateAsyncChannel(nativeTargetSubscription);
 
         // Wrap the underlying async consumer in a recording decorator so dispatch counts are observable
-        var asyncConsumer = new SqsMessageConsumerFactory(_awsConnection).CreateAsync(subscription);
+        var asyncConsumer = new SqsMessageConsumerFactory(awsConnection: _awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync(subscription);
         var channel = ConformanceDeferredPump.CreateRecordingChannelAsync(channelName, routingKey, asyncConsumer);
 
-        var producer = new SnsMessageProducer(_awsConnection, new SnsPublication
+        var producer = new SnsMessageProducer(connection: _awsConnection, publication: new SnsPublication
         {
             Topic = routingKey,
             RequestType = typeof(ConformanceDeferredCommand),
             MakeChannels = OnMissingChannel.Validate
-        });
+        }, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var cmd = new ConformanceDeferredCommand { Value = "native redrive limit below budget test async" };
         var message = new Message(

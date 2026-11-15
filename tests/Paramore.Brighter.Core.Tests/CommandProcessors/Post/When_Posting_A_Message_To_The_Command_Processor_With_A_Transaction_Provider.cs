@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -53,11 +53,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             var timeProvider = new FakeTimeProvider();
             var routingKey = new RoutingKey(Topic);
-            
-            InMemoryMessageProducer messageProducer = new(_internalBus, new Publication  {Topic = routingKey, RequestType = typeof(MyCommand)});
+
+            InMemoryMessageProducer messageProducer = new(_internalBus, Initializer.TestLoggerFactory, new Publication  {Topic = routingKey, RequestType = typeof(MyCommand)});
 
             _message = new Message(
-                new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, contentType: new ContentType(MediaTypeNames.Application.Json) {CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()}), 
+                new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, contentType: new ContentType(MediaTypeNames.Application.Json) {CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()}),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
@@ -67,34 +67,34 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{routingKey, messageProducer},});
-            
+
             var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
                 .AddBrighterDefault();
 
             var tracer = new BrighterTracer(timeProvider);
             _spyOutbox = new SpyOutbox {Tracer = tracer};
             _transactionProvider = new SpyTransactionProvider();
-            
+
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, SpyTransaction>(
-                producerRegistry, 
-                resiliencePipelineRegistry, 
+                producerRegistry,
+                resiliencePipelineRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _spyOutbox
+                Initializer.TestLoggerFactory, _spyOutbox
             );
 
-            var scheduler = new InMemorySchedulerFactory();
+            var scheduler = new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory);
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new DefaultPolicy(),
                 new ResiliencePipelineRegistry<string>(),
                 bus,
                 scheduler,
-                typeof(SpyTransaction)
-            );
+                Initializer.TestLoggerFactory, typeof(SpyTransaction)
+);
         }
 
         [Fact]
@@ -109,7 +109,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             //message should have been posted
             Assert.True(_internalBus.Stream(new RoutingKey(Topic)).Any());
-            
+
             //message should be in the outbox
             var message = _spyOutbox.Get(_myCommand.Id, requestContext);
             Assert.NotNull(message);

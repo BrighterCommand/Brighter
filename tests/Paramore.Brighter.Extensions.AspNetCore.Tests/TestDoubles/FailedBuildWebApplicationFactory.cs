@@ -78,7 +78,7 @@ public sealed class FailedBuildWebApplicationFactory : WebApplicationFactory<Fai
             var routingKey = new RoutingKey("failed-build");
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(FailedBuildPostedCommand) }) }
+                { routingKey, new InMemoryMessageProducer(new InternalBus(),Initializer.Factory, new Publication { Topic = routingKey, RequestType = typeof(FailedBuildPostedCommand) }) }
             });
 
             services.AddBrighterRequestScope();

@@ -44,7 +44,7 @@ public class AzureSchedulerDeadlineTests
 
     public AzureSchedulerDeadlineTests()
     {
-        _scheduler = new AzureServiceBusScheduler(_backend, new RoutingKey("deadline"), _clock);
+        _scheduler = new AzureServiceBusScheduler(sender: _backend, schedulerTopic: new RoutingKey("deadline"), timeProvider: _clock, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _context.Bag[RequestContextBagNames.PartitionKey] = new PartitionKey("deadline-partition");
     }
 

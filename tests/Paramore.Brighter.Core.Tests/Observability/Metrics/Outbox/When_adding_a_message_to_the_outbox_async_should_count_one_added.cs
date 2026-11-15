@@ -47,16 +47,7 @@ public class When_adding_a_message_to_the_outbox_async_should_count_one_added
         _outbox = new CountingOutbox(_timeProvider);
 
         _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
-            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { _topic, producer } }),
-            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
-            new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => null!), null),
-            new EmptyMessageTransformerFactory(),
-            new EmptyMessageTransformerFactoryAsync(),
-            tracer: null,
-            new FindPublicationByPublicationTopicOrRequestType(),
-            outbox: _outbox,
-            timeProvider: _timeProvider,
-            outboxMeter: _meter);
+producerRegistry: new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { _topic, producer } }), resiliencePipelineRegistry: new ResiliencePipelineRegistry<string>().AddBrighterDefault(), mapperRegistry: new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => null!), null), messageTransformerFactory: new EmptyMessageTransformerFactory(), messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: null, publicationFinder: new FindPublicationByPublicationTopicOrRequestType(), outbox: _outbox, timeProvider: _timeProvider, outboxMeter: _meter, loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

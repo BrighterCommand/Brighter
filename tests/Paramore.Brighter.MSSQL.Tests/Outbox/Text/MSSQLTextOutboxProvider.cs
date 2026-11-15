@@ -1,4 +1,6 @@
-﻿using System;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
@@ -21,12 +23,12 @@ public class MSSQLTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
 
     public IAmAnOutboxSync<Message, DbTransaction> CreateOutbox()
     {
-        return new MsSqlOutbox(_configuration);
+        return new MsSqlOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<MsSqlOutbox>());
     }
 
     public IAmAnOutboxAsync<Message, DbTransaction> CreateOutboxAsync()
     {
-        return new MsSqlOutbox(_configuration);
+        return new MsSqlOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<MsSqlOutbox>());
     }
 
     public void CreateStore()
@@ -76,20 +78,20 @@ public class MSSQLTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
 
     public IEnumerable<Message> GetAllMessages()
     {
-        var outbox = new MsSqlOutbox(_configuration);
+        var outbox = new MsSqlOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<MsSqlOutbox>());
         return outbox.Get(new RequestContext());
     }
 
     public async Task<IEnumerable<Message>> GetAllMessagesAsync()
     {
-        var outbox = new MsSqlOutbox(_configuration);
+        var outbox = new MsSqlOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<MsSqlOutbox>());
         return await outbox.GetAsync(new RequestContext());
     }
 
     public IAmAnOutboxAsync<Message, DbTransaction> CreateOutstandingCountStore()
     {
         CreateStore();
-        return new MsSqlOutbox(_configuration);
+        return new MsSqlOutbox(configuration: _configuration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<MsSqlOutbox>.Instance);
     }
 
     public void DeleteOutstandingCountStore()

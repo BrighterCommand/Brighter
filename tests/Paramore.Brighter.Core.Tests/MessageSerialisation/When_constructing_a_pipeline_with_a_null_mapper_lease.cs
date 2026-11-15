@@ -15,7 +15,7 @@ public class TransformPipelineNullMapperLeaseTests
             messageMapperLease: null!,
             messageTransformerFactory: null,
             transformLeases: Array.Empty<Lease<IAmAMessageTransform>>(),
-            instrumentationOptions: InstrumentationOptions.All));
+            instrumentationOptions: InstrumentationOptions.All, loggerFactory: Initializer.TestLoggerFactory));
 
         //assert
         Assert.Equal("messageMapperLease", exception.ParamName);
@@ -29,7 +29,7 @@ public class TransformPipelineNullMapperLeaseTests
             messageMapperLease: null!,
             messageTransformerFactoryAsync: null,
             transformLeases: Array.Empty<Lease<IAmAMessageTransformAsync>>(),
-            instrumentationOptions: InstrumentationOptions.All));
+            instrumentationOptions: InstrumentationOptions.All, loggerFactory: Initializer.TestLoggerFactory));
 
         //assert
         Assert.Equal("messageMapperLease", exception.ParamName);

@@ -21,7 +21,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         public DispatcherAddNewConnectionTests()
         {
             _bus = new InternalBus();
-            
+
             IAmACommandProcessor commandProcessor = new SpyCommandProcessor();
 
             var messageMapperRegistry = new MessageMapperRegistry(
@@ -30,16 +30,16 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
             Subscription subscription = new Subscription<MyEvent>(
-                new SubscriptionName("test"), noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(1000), 
-                channelFactory: new InMemoryChannelFactory(_bus, TimeProvider.System), channelName: new ChannelName("fakeChannel"), 
+                new SubscriptionName("test"), noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(1000),
+                channelFactory: new InMemoryChannelFactory(_bus, TimeProvider.System, loggerFactory: Initializer.TestLoggerFactory), channelName: new ChannelName("fakeChannel"),
                 messagePumpType: MessagePumpType.Reactor, routingKey: _routingKey
             );
-            
+
             _newSubscription = new Subscription<MyEvent>(
-                new SubscriptionName("newTest"), noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(1000), 
-                channelFactory: new InMemoryChannelFactory(_bus, TimeProvider.System), 
+                new SubscriptionName("newTest"), noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(1000),
+                channelFactory: new InMemoryChannelFactory(_bus, TimeProvider.System, loggerFactory: Initializer.TestLoggerFactory),
                 channelName: new ChannelName("fakeChannelTwo"), messagePumpType: MessagePumpType.Reactor, routingKey: _routingKeyTwo);
-            _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { subscription }, messageMapperRegistry);
+            _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { subscription }, Initializer.TestLoggerFactory, messageMapperRegistry);
 
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event, new Publication{Topic = _routingKey});
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 
             Assert.Equal(DispatcherState.DS_AWAITING, _dispatcher.State);
             _dispatcher.Receive();
-            
+
         }
 
         [Fact]

@@ -80,14 +80,14 @@ public class AzureServiceBusRetryInstrumentationOptionsTests
             RequeueScheduler = global ? RequeueSchedulerMode.Global : RequeueSchedulerMode.Native
         };
         var factory = new AzureServiceBusChannelFactory(
-            new AzureServiceBusConsumerFactory(client, publication, options));
+            new AzureServiceBusConsumerFactory(clientProvider: client, publication: publication, instrumentationOptions: options, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         if (global)
         {
             var processor = new CommandProcessor(new SubscriberRegistry(),
                 new SimpleHandlerFactoryAsync(_ => throw new InvalidOperationException()),
                 new InMemoryRequestContextFactory(), new DefaultPolicy(),
-                new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
-            factory.Scheduler = new AzureServiceBusSchedulerFactory(client, new RoutingKey("scheduler"))
+                new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+            factory.Scheduler = new AzureServiceBusSchedulerFactory(client: client, topic: new RoutingKey("scheduler"), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
             {
                 InstrumentationOptions = options
             }.Create(processor);

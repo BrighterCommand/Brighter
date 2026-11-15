@@ -76,7 +76,7 @@ public sealed class AccumulationWebApplicationFactory : WebApplicationFactory<Ac
             var routingKey = new RoutingKey("accumulation-posted");
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(AccumulationPostedCommand) }) }
+                { routingKey, new InMemoryMessageProducer(new InternalBus(),Initializer.Factory, new Publication { Topic = routingKey, RequestType = typeof(AccumulationPostedCommand) }) }
             });
 
             services.AddBrighterRequestScope();

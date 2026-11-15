@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -103,7 +105,7 @@ public class BrokerStyleAsyncConfirmationTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer: null,
             new FindPublicationByPublicationTopicOrRequestType(),
-            outbox,
-            new InMemoryOutboxCircuitBreaker());
+            Initializer.TestLoggerFactory, outbox,
+            new InMemoryOutboxCircuitBreaker(logger: LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>( Initializer.TestLoggerFactory )));
     }
 }

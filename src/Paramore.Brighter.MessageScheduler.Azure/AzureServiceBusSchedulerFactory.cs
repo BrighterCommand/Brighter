@@ -1,4 +1,5 @@
 using Azure.Messaging.ServiceBus;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 using Paramore.Brighter.Observability;
 
@@ -11,7 +12,8 @@ namespace Paramore.Brighter.MessageScheduler.Azure;
 /// </summary>
 /// <param name="client"></param>
 /// <param name="topic"></param>
-public class AzureServiceBusSchedulerFactory(IServiceBusClientProvider client, RoutingKey topic)
+/// <param name="loggerFactory">The factory used to create loggers.</param>
+public class AzureServiceBusSchedulerFactory(IServiceBusClientProvider client, RoutingKey topic, ILoggerFactory loggerFactory)
     : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
 {
     private readonly object _lock = new();
@@ -49,7 +51,7 @@ public class AzureServiceBusSchedulerFactory(IServiceBusClientProvider client, R
         => Create();
 
     /// <inheritdoc />
-    public IAmARequestSchedulerAsync CreateAsync(IAmACommandProcessor processor) 
+    public IAmARequestSchedulerAsync CreateAsync(IAmACommandProcessor processor)
         => Create();
 
     private AzureServiceBusScheduler Create()
@@ -62,7 +64,7 @@ public class AzureServiceBusSchedulerFactory(IServiceBusClientProvider client, R
                     .CreateSender(Topic, SenderOptions);
             }
         }
-        
-        return new AzureServiceBusRequeueScheduler(_sender, Topic, TimeProvider, ClientProvider, SenderOptions, InstrumentationOptions);
+
+        return new AzureServiceBusRequeueScheduler(_sender, Topic, TimeProvider, ClientProvider, SenderOptions, InstrumentationOptions, loggerFactory);
     }
 }

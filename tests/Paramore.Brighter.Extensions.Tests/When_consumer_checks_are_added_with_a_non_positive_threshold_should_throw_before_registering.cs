@@ -50,7 +50,7 @@ public class ConsumerHealthChecksThresholdValidationTests
     public void When_consumer_checks_are_added_with_a_non_positive_threshold_should_throw_before_registering(int threshold)
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         var builder = services.AddHealthChecks();
         services.AddOptions();
 
@@ -73,7 +73,7 @@ public class ConsumerHealthChecksThresholdValidationTests
         while (host.Transports("orders").Count < 2)
             await Task.Delay(5);
         await Task.WhenAll(host.Transports("orders").Select(transport => transport.FailuresObserved)).WaitAsync(TimeSpan.FromSeconds(10));
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddSingleton<IDispatcher>(host.Dispatcher);
 
         //Act

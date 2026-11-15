@@ -48,7 +48,7 @@ public class StaleMessageMonitorMissingProducersTests
         var interval = TimeSpan.FromMinutes(1);
         var timeProvider = new FakeTimeProvider();
         var outbox = new StaleMessageCountingOutbox();
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddSingleton<TimeProvider>(timeProvider);
         if (missingRegistration == nameof(IAmProducersConfiguration))
             services.AddSingleton<IAmAnOutbox>(outbox);

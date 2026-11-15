@@ -57,7 +57,7 @@ public class SqsBudgetMinusOneNeverRejectsReactorTests : IDisposable, IAsyncDisp
     {
         ConformanceDeferredPump.ResetDispatchCount();
         _awsConnection = GatewayFactory.CreateFactory();
-        _channelFactory = new ChannelFactory(_awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection: _awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     /// <summary>
@@ -109,19 +109,19 @@ public class SqsBudgetMinusOneNeverRejectsReactorTests : IDisposable, IAsyncDisp
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create);
 
-        _dlqChannelFactory = new ChannelFactory(_awsConnection);
+        _dlqChannelFactory = new ChannelFactory(awsConnection: _awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var dlqChannel = _dlqChannelFactory.CreateSyncChannel(dlqSubscription);
 
         // Wrap the underlying consumer in a recording decorator so dispatch counts are observable.
-        var consumer = new SqsMessageConsumerFactory(_awsConnection).Create(subscription);
+        var consumer = new SqsMessageConsumerFactory(awsConnection: _awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(subscription);
         var channel = ConformanceDeferredPump.CreateRecordingChannel(channelName, routingKey, consumer);
 
-        var producer = new SnsMessageProducer(_awsConnection, new SnsPublication
+        var producer = new SnsMessageProducer(connection: _awsConnection, publication: new SnsPublication
         {
             Topic = routingKey,
             RequestType = typeof(ConformanceDeferredCommand),
             MakeChannels = OnMissingChannel.Validate
-        });
+        }, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var cmd = new ConformanceDeferredCommand { Value = "budget minus one never rejects test" };
         var message = new Message(

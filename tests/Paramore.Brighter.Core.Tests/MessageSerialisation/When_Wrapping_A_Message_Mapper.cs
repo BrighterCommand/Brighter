@@ -22,21 +22,21 @@ public class MessageWrapRequestTests
          mapperRegistry.Register<MyTransformableCommand, MyTransformableCommandMessageMapper>();
 
         _myCommand = new MyTransformableCommand();
-        
+
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransform()));
-        
+
         _publication = new Publication { Topic = new RoutingKey("MyTransformableCommand") };
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, loggerFactory: Initializer.TestLoggerFactory);
     }
-    
+
     [Fact]
     public void When_Wrapping_A_Message_Mapper()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
         var message = _transformPipeline.Wrap(_myCommand, new RequestContext(), _publication);
-        
+
         //assert
         Assert.Equal(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)).ToString(), message.Body.Value);
         Assert.Equal(MySimpleTransformAsync.TRANSFORM_VALUE, message.Header.Bag[MySimpleTransformAsync.HEADER_KEY]);

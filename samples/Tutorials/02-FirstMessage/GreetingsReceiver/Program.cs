@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
 using System;
 using Greetings;
 using Microsoft.Extensions.DependencyInjection;
@@ -60,10 +61,13 @@ var rmqConnection = new RmqMessagingGatewayConnection
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services
-    .AddConsumers(options =>
+    .AddConsumers(provider =>
     {
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        var options = new ConsumersOptions();
         options.Subscriptions = subscriptions;
-        options.DefaultChannelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection));
+        options.DefaultChannelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection,loggerFactory:loggerFactory));
+        return options;
     })
     .AutoFromAssemblies();
 

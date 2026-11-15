@@ -1,18 +1,20 @@
-﻿using MySqlConnector;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using MySqlConnector;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.MySql;
 
 namespace Paramore.Brighter.MySQL.Tests.Inbox;
 
-public class MySqlTextInboxTest : RelationalDatabaseInboxTests 
+public class MySqlTextInboxTest : RelationalDatabaseInboxTests
 {
     protected override string DefaultConnectingString => Const.DefaultConnectingString;
     protected override string TableNamePrefix => Const.TablePrefix;
     protected override bool BinaryMessagePayload => false;
     protected override bool JsonMessagePayload => false;
 
-    protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration) 
-        => new MySqlInbox(configuration);
+    protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
+        => new MySqlInbox(configuration, logger: NullLoggerFactory.Instance.CreateLogger<MySqlInbox>());
 
     protected override void CreateInboxTable(RelationalDatabaseConfiguration configuration)
     {

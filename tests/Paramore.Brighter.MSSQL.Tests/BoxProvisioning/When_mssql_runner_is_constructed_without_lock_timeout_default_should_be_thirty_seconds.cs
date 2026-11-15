@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
@@ -56,7 +58,7 @@ public class MsSqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
         var shortCircuit = new MigrationLockDeadlockException("short-circuit to read captured timeout");
         var fakeLock = new FakeMsSqlAdvisoryLock(throwOnAcquire: shortCircuit);
 
-        var runner = new MsSqlBoxMigrationRunner(new MsSqlBoxDetectionHelper(), new MsSqlOutboxMigrationCatalog(), config, advisoryLock: fakeLock);
+        var runner = new MsSqlBoxMigrationRunner(new MsSqlBoxDetectionHelper(), new MsSqlOutboxMigrationCatalog(), config, advisoryLock: fakeLock, loggerFactory: NullLoggerFactory.Instance);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act

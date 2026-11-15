@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia
@@ -80,7 +80,7 @@ public class GcpPurgeConcurrentPublicationTests
             new RoutingKey(id), makeChannels: OnMissingChannel.Assume, subscriptionMode: mode,
             messagePumpType: useAsync ? MessagePumpType.Proactor : MessagePumpType.Reactor,
             timeProvider: new LaggingTimeProvider(TimeSpan.FromMinutes(5)));
-        var factory = new GcpPubSubChannelFactory(connection);
+        var factory = new GcpPubSubChannelFactory(connection: connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         IAmAChannelSync? syncChannel = null;
         IAmAChannelAsync? asyncChannel = null;
         using var stopPublishing = new CancellationTokenSource();

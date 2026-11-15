@@ -27,6 +27,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Observability;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter;
 
@@ -51,6 +52,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     private readonly TimeSpan _ackTimeout;
     private readonly ITimer _lockTimer;
     private readonly IAmAMessageScheduler? _scheduler;
+    private readonly ILoggerFactory _loggerFactory;
     private InMemoryMessageProducer? _requeueProducer;
     private volatile bool _requeueProducerInitialized;
     private object? _requeueProducerLock;
@@ -69,6 +71,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// <param name="topic">The <see cref="Paramore.Brighter.RoutingKey"/> that we want to consume from</param>
     /// <param name="bus">The <see cref="Paramore.Brighter.InternalBus"/> that we want to read the messages from</param>
     /// <param name="timeProvider">Allows us to use a timer that can be controlled from tests</param>
+    /// <param name="loggerFactory">The factory used to create loggers.</param>
     /// <param name="deadLetterTopic">If a dead letter channel is required, then provide a topic to use</param>
     /// <param name="invalidMessageTopic">If an invalid message channel is required, then provide a topic to use</param>
     /// <param name="ackTimeout">The period before we requeue an unacknowledged message; defaults to -1ms or infinite</param>
@@ -76,6 +79,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     public InMemoryMessageConsumer(RoutingKey topic,
         InternalBus bus,
         TimeProvider timeProvider,
+        ILoggerFactory loggerFactory,
         RoutingKey? deadLetterTopic = null,
         RoutingKey? invalidMessageTopic = null,
         TimeSpan? ackTimeout = null,
@@ -86,6 +90,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
         _invalidMessageTopic = invalidMessageTopic;
         _bus = bus;
         _timeProvider = timeProvider;
+        _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
         _scheduler = scheduler;
         ackTimeout ??= TimeSpan.FromMilliseconds(-1);
         _ackTimeout = ackTimeout.Value;
@@ -98,7 +103,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
         );
 
     }
-    
+
     /// <summary>
     /// Disposes of the consumer, will remove timers, producers, etc.
     /// </summary>
@@ -130,7 +135,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     {
         await Task.Run(() => Acknowledge(message), cancellationToken);
     }
-  
+
     /// <summary>
     /// Nacks the specified message, removing it from the locked messages and re-enqueuing it to the bus
     /// so it is immediately available for redelivery.
@@ -159,13 +164,14 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     public void Purge()
     {
         Message message;
-        do {
+        do
+        {
             message = _bus.Dequeue(_topic);
 #pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
         } while (message.Header.MessageType != MessageType.MT_NONE);
 #pragma warning restore CS0618
     }
-    
+
     /// <summary>
     /// Purges the specified queue name.
     /// We use Task.Run here to emulate async
@@ -186,8 +192,8 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     public Message[] Receive(TimeSpan? timeOut = null)
     {
         timeOut ??= TimeSpan.FromSeconds(1);
-        
-        var messages = new[] {_bus.Dequeue(_topic, timeOut)};
+
+        var messages = new[] { _bus.Dequeue(_topic, timeOut) };
         foreach (var message in messages)
         {
             //don't lock empty messages
@@ -205,7 +211,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// Receives the specified queue name.
     /// An abstraction over a third-party messaging library. Used to read messages from the broker and to acknowledge the processing of those messages or requeue them.
     /// Used by a <see cref="Paramore.Brighter.Channel"/> to provide access to a third-party message queue.
-    /// We use Task.Run here to emulate async 
+    /// We use Task.Run here to emulate async
     /// </summary>
     /// <param name="timeOut">The <see cref="TimeSpan"/> timeout</param>
     /// <param name="cancellationToken">Cancel in the receive operation</param>
@@ -214,7 +220,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     {
         return Task.Run(() => Receive(timeOut), cancellationToken);
     }
-    
+
       /// <summary>
     /// Rejects the specified message.
     /// </summary>
@@ -229,13 +235,14 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
 
         if (reason is { RejectionReason: RejectionReason.DeliveryError })
         {
-            if ( _deadLetterTopic is null) return true;
+            if (_deadLetterTopic is null)
+                return true;
 
             message.Header.Topic = _deadLetterTopic;
         }
         else if (reason is { RejectionReason: RejectionReason.Unacceptable })
         {
-            if (_invalidMessageTopic is not null) 
+            if (_invalidMessageTopic is not null)
                 message.Header.Topic = _invalidMessageTopic;
             else if (_deadLetterTopic is not null)
                 message.Header.Topic = _deadLetterTopic;
@@ -244,10 +251,11 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
         }
         else if (reason is null)
         {
-            if ( _deadLetterTopic is null) return true;
+            if (_deadLetterTopic is null)
+                return true;
 
             message.Header.Topic = _deadLetterTopic;
-        }    
+        }
 
         _bus.Enqueue(message);
 
@@ -343,7 +351,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
             }
         }
 
-        throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration."); 
+        throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration.");
     }
 
     /// <inheritdoc cref="IDisposable"/>
@@ -353,13 +361,13 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
         GC.SuppressFinalize(this);
     }
 
-    /// <inheritdoc cref="IAsyncDisposable"/> 
+    /// <inheritdoc cref="IAsyncDisposable"/>
     public async ValueTask DisposeAsync()
     {
         await DisposeAsyncCore().ConfigureAwait(false);
-        GC.SuppressFinalize(this); 
+        GC.SuppressFinalize(this);
     }
-    
+
 
     private void CheckLockedMessages()
     {
@@ -382,20 +390,21 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     private async ValueTask DisposeAsyncCore()
     {
         await _lockTimer.DisposeAsync().ConfigureAwait(false);
-        if (_requeueProducer != null) await _requeueProducer.DisposeAsync().ConfigureAwait(false);
+        if (_requeueProducer != null)
+            await _requeueProducer.DisposeAsync().ConfigureAwait(false);
     }
 
     private void EnsureProducer(RoutingKey topic)
     {
 #pragma warning disable CS0420 // LazyInitializer handles the memory barrier for the volatile field
         LazyInitializer.EnsureInitialized(ref _requeueProducer, ref _requeueProducerInitialized,
-            ref _requeueProducerLock, () => new InMemoryMessageProducer(_bus, new Publication { Topic = topic })
+            ref _requeueProducerLock, () => new InMemoryMessageProducer(_bus, _loggerFactory, new Publication { Topic = topic })
             {
                 Scheduler = _scheduler
             });
 #pragma warning restore CS0420
     }
-    
+
     private bool RequeueNoDelay(Message message)
     {
         _lockedMessages.TryRemove(message.Id.Value, out _); //--allow requeue even if not from locked msg in bus

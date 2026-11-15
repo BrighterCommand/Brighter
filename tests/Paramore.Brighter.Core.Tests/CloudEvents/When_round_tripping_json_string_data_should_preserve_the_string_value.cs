@@ -50,7 +50,7 @@ public class CloudEventsJsonStringRoundTripTests
             new MessageHeader(Id.Random(), new RoutingKey("Test.Topic"), MessageType.MT_EVENT,
                 contentType: new ContentType(contentType)),
             new MessageBody(payload));
-        var transformer = new CloudEventsTransformer();
+        var transformer = new CloudEventsTransformer(loggerFactory: Initializer.TestLoggerFactory);
         transformer.InitializeWrapFromAttributeParams(null, null, null, null, null, null, CloudEventFormat.Json);
         transformer.InitializeUnwrapFromAttributeParams(CloudEventFormat.Json);
         var publication = new Publication();

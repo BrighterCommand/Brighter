@@ -20,9 +20,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
-
 #nullable enable
-
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -31,7 +29,6 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter;
-
 /// <summary>
 /// Coordinates claim-check cleanup with the outcome of one received message.
 /// </summary>
@@ -44,26 +41,25 @@ namespace Paramore.Brighter;
 /// </remarks>
 public sealed partial class MessageDelivery : IDisposable
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessageDelivery>();
+    private readonly ILogger _logger; private readonly ILoggerFactory _loggerFactory;
     private readonly RequestContext _context;
     private readonly List<(Action Delete, Func<CancellationToken, Task> DeleteAsync)> _cleanup = new();
     private bool _ended;
-
     /// <summary>Begins a delivery associated with the supplied request context.</summary>
-    /// <param name="context">The context passed to the unwrap and handler pipelines.</param>
-    /// <exception cref="ArgumentNullException">The context is null.</exception>
-    /// <exception cref="InvalidOperationException">The context already has an active delivery.</exception>
-    public MessageDelivery(RequestContext context)
+    /// <param name = "context">The context passed to the unwrap and handler pipelines.</param>
+    /// <exception cref = "ArgumentNullException">The context is null.</exception>
+    /// <exception cref = "InvalidOperationException">The context already has an active delivery.</exception>
+    public MessageDelivery(RequestContext context, ILoggerFactory loggerFactory)
     {
+        _loggerFactory = loggerFactory ?? throw new System.ArgumentNullException(nameof(loggerFactory));
+        _logger = loggerFactory.CreateLogger<MessageDelivery>();
         _context = context ?? throw new ArgumentNullException(nameof(context));
         if (context.Delivery is not null)
             throw new InvalidOperationException("The request context already has an active message delivery.");
         context.Delivery = this;
     }
 
-    internal void OnAcknowledged(Action delete, Func<CancellationToken, Task> deleteAsync) =>
-        _cleanup.Add((delete, deleteAsync));
-
+    internal void OnAcknowledged(Action delete, Func<CancellationToken, Task> deleteAsync) => _cleanup.Add((delete, deleteAsync));
     /// <summary>Whether cleanup still needs the unwrap pipeline's scoped dependencies.</summary>
     /// <remarks>After unwrapping, a pipeline with no pending cleanup can be released before dispatch.</remarks>
     public bool HasPendingCleanup => _cleanup.Count > 0;
@@ -72,29 +68,45 @@ public sealed partial class MessageDelivery : IDisposable
     /// <remarks>Cleanup failures are logged; an acknowledged message cannot be redelivered to retry cleanup.</remarks>
     public void Complete()
     {
-        if (_ended) return;
+        if (_ended)
+            return;
         _ended = true;
         foreach (var cleanup in _cleanup)
         {
-            try { cleanup.Delete(); }
-            catch (Exception exception) { Log.FailedToDeleteLuggage(s_logger, exception); }
+            try
+            {
+                cleanup.Delete();
+            }
+            catch (Exception exception)
+            {
+                Log.FailedToDeleteLuggage(_logger, exception);
+            }
         }
+
         _cleanup.Clear();
     }
 
     /// <summary>Deletes non-retained luggage asynchronously after successful dispatch and final acknowledgement.</summary>
-    /// <param name="cancellationToken">Cancels storage cleanup.</param>
+    /// <param name = "cancellationToken">Cancels storage cleanup.</param>
     /// <returns>A task that completes after the cleanup attempts.</returns>
     /// <remarks>Cleanup failures are logged; an acknowledged message cannot be redelivered to retry cleanup.</remarks>
     public async Task CompleteAsync(CancellationToken cancellationToken = default)
     {
-        if (_ended) return;
+        if (_ended)
+            return;
         _ended = true;
         foreach (var cleanup in _cleanup)
         {
-            try { await cleanup.DeleteAsync(cancellationToken).ConfigureAwait(false); }
-            catch (Exception exception) { Log.FailedToDeleteLuggage(s_logger, exception); }
+            try
+            {
+                await cleanup.DeleteAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                Log.FailedToDeleteLuggage(_logger, exception);
+            }
         }
+
         _cleanup.Clear();
     }
 
@@ -112,4 +124,6 @@ public sealed partial class MessageDelivery : IDisposable
         [LoggerMessage(LogLevel.Warning, "Failed to delete claim-check luggage after acknowledgement")]
         public static partial void FailedToDeleteLuggage(ILogger logger, Exception exception);
     }
+
+
 }

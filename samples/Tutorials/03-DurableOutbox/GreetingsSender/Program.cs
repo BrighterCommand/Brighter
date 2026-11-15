@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
 using System;
 using System.Data.Common;
 using System.Linq;
@@ -62,15 +63,6 @@ var rmqConnection = new RmqMessagingGatewayConnection
 // Unchanged from rung 2: the publication says where GreetingEvent goes. Naming the type here
 // is also what loads the Greetings assembly, which AutoFromAssemblies below needs to have
 // happened already — moving this line beneath the registration is a silent no-op.
-var producerRegistry = new RmqProducerRegistryFactory(
-    rmqConnection,
-    [
-        new RmqPublication<GreetingEvent>
-        {
-            Topic = new RoutingKey("greeting.event"),
-            MakeChannels = OnMissingChannel.Create
-        }
-    ]).Create();
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -83,17 +75,29 @@ builder.Services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfigu
 
 builder.Services
     .AddBrighter()
-    .AddProducers(configure =>
+    .AddProducers(provider =>
     {
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        var producerRegistry = new RmqProducerRegistryFactory(
+            rmqConnection,
+            [
+                new RmqPublication<GreetingEvent>
+                {
+                    Topic = new RoutingKey("greeting.event"),
+                    MakeChannels = OnMissingChannel.Create
+                }
+            ],loggerFactory:loggerFactory).Create();
+        var configure = new ProducersConfiguration();
         configure.ProducerRegistry = producerRegistry;
 
         // Rung 2 had none of these three lines and got an in-memory Outbox by default: good
         // enough to make Post work, gone the moment the process is. These three make it
         // durable. The transaction provider is the important one — it is what lets the
         // handler hand Brighter a transaction that the handler itself opened.
-        configure.Outbox = new PostgreSqlOutbox(outboxConfiguration);
+        configure.Outbox = new PostgreSqlOutbox(outboxConfiguration,logger:LoggerFactoryExtensions.CreateLogger<PostgreSqlOutbox>(loggerFactory));
         configure.ConnectionProvider = typeof(PostgreSqlConnectionProvider);
         configure.TransactionProvider = typeof(PostgreSqlTransactionProvider);
+        return configure;
     })
     .AutoFromAssemblies()
 

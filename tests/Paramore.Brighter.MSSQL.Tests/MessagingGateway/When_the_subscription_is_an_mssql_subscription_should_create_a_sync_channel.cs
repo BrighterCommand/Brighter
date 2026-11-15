@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.MessagingGateway.MsSql;
@@ -58,7 +60,7 @@ public class MsSqlChannelFactorySubscriptionTypeTests
             makeChannels: OnMissingChannel.Assume);
 
     private ChannelFactory CreateChannelFactory() =>
-        new(new MsSqlMessageConsumerFactory(_configuration));
+        new(new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
     [Fact]
     public void When_the_subscription_is_not_an_mssql_subscription_should_throw_creating_a_sync_channel()

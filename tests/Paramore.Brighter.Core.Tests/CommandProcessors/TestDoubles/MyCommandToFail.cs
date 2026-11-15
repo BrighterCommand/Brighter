@@ -1,4 +1,4 @@
-﻿namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
+namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     internal sealed class MyCommandToFail : ICommand
     {

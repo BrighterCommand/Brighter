@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net.Mime;
 using Paramore.Brighter.Extensions;
@@ -94,9 +96,9 @@ public class RmqMessageProducerRequeuingMessageTests : IDisposable
                 requestType: typeof(MyCommand),
                 messagePumpType: MessagePumpType.Reactor);
 
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
 
-        _channel = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection))
+        _channel = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection, loggerFactory: NullLoggerFactory.Instance))
             .CreateSyncChannel(subscription);
 
         new QueueFactory(rmqConnection, queueName, new RoutingKeys(_message.Header.Topic))
@@ -129,7 +131,7 @@ public class RmqMessageProducerRequeuingMessageTests : IDisposable
         Assert.Equal(_message.Header.HandledCount, result.Header.HandledCount);
         Assert.Equal(_message.Header.DataSchema, result.Header.DataSchema);
         Assert.Equal(_message.Header.Subject, result.Header.Subject);
-        Assert.Equal(TimeSpan.Zero, result.Header.Delayed);                                //we clear any delay from the producer, as it represents delay in the pipeline 
+        Assert.Equal(TimeSpan.Zero, result.Header.Delayed);                                //we clear any delay from the producer, as it represents delay in the pipeline
         Assert.Equal(_message.Header.TraceParent, result.Header.TraceParent);
         Assert.Equal(_message.Header.TraceState, result.Header.TraceState);
         Assert.Equal(_message.Header.Baggage, result.Header.Baggage);

@@ -57,7 +57,7 @@ public class AmbientQueryParticipationTests
         var recordingProvider = new RecordingScopeProvider();
         var unitOfWorkRecorder = new UnitOfWorkRecorder();
 
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         collection.AddTransient<AmbientThrowsCommandHandler>();
         collection.AddTransient<OrderPlacedHandlerOne>();
         collection.AddTransient<OrderPlacedHandlerTwo>();
@@ -84,7 +84,7 @@ public class AmbientQueryParticipationTests
         var routingKey = new RoutingKey("test");
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(AmbientThrowsPostCommand) }) }
+            { routingKey, new InMemoryMessageProducer(new InternalBus(),Initializer.Factory, new Publication { Topic = routingKey, RequestType = typeof(AmbientThrowsPostCommand) }) }
         });
 
         var timeProvider = new FakeTimeProvider();
@@ -99,7 +99,7 @@ public class AmbientQueryParticipationTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            new InMemoryOutbox(timeProvider) { Tracer = tracer }
+Initializer.Factory,            new InMemoryOutbox(timeProvider) { Tracer = tracer }
         );
 
         var commandProcessor = new CommandProcessor(
@@ -109,8 +109,8 @@ public class AmbientQueryParticipationTests
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             bus,
-            new InMemorySchedulerFactory()
-        );
+new InMemorySchedulerFactory(loggerFactory: Initializer.Factory)
+,loggerFactory:Initializer.Factory        );
 
         // Act — Send, Publish (three subscribers) and Post, all against the same all-Transient host
         commandProcessor.Send(new AmbientThrowsCommand());
@@ -136,7 +136,7 @@ public class AmbientQueryParticipationTests
         TransformPipelineBuilder.ClearPipelineCache();
 
         var recorder = new UnitOfWorkRecorder();
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         collection.AddScoped<IUnitOfWork, UnitOfWork>();
         collection.AddSingleton(recorder);
         collection.AddScoped<MixedLifetimePostMapper>();
@@ -164,7 +164,7 @@ public class AmbientQueryParticipationTests
         var routingKey = new RoutingKey("test");
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(MixedLifetimePostCommand) }) }
+            { routingKey, new InMemoryMessageProducer(new InternalBus(),Initializer.Factory, new Publication { Topic = routingKey, RequestType = typeof(MixedLifetimePostCommand) }) }
         });
 
         var timeProvider = new FakeTimeProvider();
@@ -179,7 +179,7 @@ public class AmbientQueryParticipationTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            new InMemoryOutbox(timeProvider) { Tracer = tracer }
+Initializer.Factory,            new InMemoryOutbox(timeProvider) { Tracer = tracer }
         );
 
         var commandProcessor = new CommandProcessor(
@@ -187,8 +187,8 @@ public class AmbientQueryParticipationTests
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             bus,
-            new InMemorySchedulerFactory()
-        );
+            new InMemorySchedulerFactory(loggerFactory: Initializer.Factory)
+        , loggerFactory: Initializer.Factory);
 
         // Act
         commandProcessor.Post(new MixedLifetimePostCommand());

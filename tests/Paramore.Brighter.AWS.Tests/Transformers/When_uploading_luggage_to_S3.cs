@@ -1,4 +1,6 @@
-﻿using System;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -30,7 +32,7 @@ public class S3LuggageUploadTests : IAsyncLifetime
         _httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
         _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
     }
-    
+
     [Fact]
     public async Task When_uploading_luggage_to_S3()
     {
@@ -42,10 +44,10 @@ public class S3LuggageUploadTests : IAsyncLifetime
             ACLs = S3CannedACL.Private,
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
             RetryPolicy = GetSimpleHandlerRetryPolicy()
-        });
-        
+        }, loggerFactory: NullLoggerFactory.Instance);
+
         await luggageStore.EnsureStoreExistsAsync();
-        
+
         //act
         //Upload the test stream to S3
         const string testContent = "Well, always know that you shine Brighter";
@@ -60,7 +62,7 @@ public class S3LuggageUploadTests : IAsyncLifetime
         //assert
         //do we have a claim?
         Assert.True((await luggageStore.HasClaimAsync(claim)));
-        
+
         //check for the contents indicated by the claim id on S3
         var result = await luggageStore.RetrieveAsync(claim);
         var resultAsString = await new StreamReader(result).ReadToEndAsync();
@@ -69,17 +71,17 @@ public class S3LuggageUploadTests : IAsyncLifetime
         await luggageStore.DeleteAsync(claim);
 
     }
-    
+
     public Task InitializeAsync() => Task.CompletedTask;
 
     public Task DisposeAsync() => S3TestBucketCleanup.DeleteAsync(_bucketName);
 
     public static AsyncRetryPolicy GetSimpleHandlerRetryPolicy()
     {
-        var delay = Backoff.ConstantBackoff(TimeSpan.FromMilliseconds(50), retryCount: 3, fastFirst:true);
+        var delay = Backoff.ConstantBackoff(TimeSpan.FromMilliseconds(50), retryCount: 3, fastFirst: true);
 
         //TODO: Its not worth retrying malformed XML, error code: MalformedXML
-        
+
         return Policy
             .Handle<AmazonS3Exception>(e =>
             {

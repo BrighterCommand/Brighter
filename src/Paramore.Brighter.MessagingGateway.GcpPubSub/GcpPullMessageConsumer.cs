@@ -1,4 +1,4 @@
-﻿using Google.Api.Gax;
+using Google.Api.Gax;
 using Google.Api.Gax.Grpc;
 using Google.Cloud.PubSub.V1;
 using Grpc.Core;
@@ -13,11 +13,20 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// A Brighter message consumer implementation for Google Cloud Pub/Sub using the **Pull** message delivery model.
 /// This consumer polls the Pub/Sub service for messages.
 /// </summary>
+/// <param name="connection">The connection used for subscription management.</param>
+/// <param name="subscriptionName">The subscription from which to receive messages.</param>
+/// <param name="batchSize">The maximum number of messages requested per pull.</param>
+/// <param name="timeProvider">The clock used for message timestamps.</param>
+/// <param name="deadLetterRoutingKey">The dead-letter destination.</param>
+/// <param name="invalidMessageRoutingKey">The invalid-message destination.</param>
+/// <param name="makeChannels">The channel creation policy.</param>
+/// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
 public partial class GcpPullMessageConsumer(
     GcpMessagingGatewayConnection connection,
     Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
     int batchSize,
     TimeProvider timeProvider,
+    ILoggerFactory loggerFactory,
     RoutingKey? deadLetterRoutingKey = null,
     RoutingKey? invalidMessageRoutingKey = null,
     OnMissingChannel makeChannels = OnMissingChannel.Assume)
@@ -26,7 +35,7 @@ public partial class GcpPullMessageConsumer(
     /// <inheritdoc />
     public MessagingSystem MessagingSystem => MessagingSystem.PubSub;
 
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcpPullMessageConsumer>();
+    private readonly ILogger _logger = loggerFactory.CreateLogger<GcpPullMessageConsumer>();
     private readonly GcpPurgeWatermark _purgeWatermark = new();
     private readonly SemaphoreSlim _purgeLock = new(1, 1);
 
@@ -36,7 +45,7 @@ public partial class GcpPullMessageConsumer(
         invalidMessageRoutingKey,
         makeChannels,
         subscriptionName.ProjectId,
-        timeProvider);
+        timeProvider, loggerFactory);
 
     /// <summary>
     /// Synchronously acknowledges a message.
@@ -52,11 +61,11 @@ public partial class GcpPullMessageConsumer(
         try
         {
             AckByHandle(ackId);
-            Log.AcknowledgeSuccess(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
+            Log.AcknowledgeSuccess(_logger, message.Id.Value, ackId, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Log.AcknowledgeError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
+            Log.AcknowledgeError(_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
             throw;
         }
     }
@@ -77,11 +86,11 @@ public partial class GcpPullMessageConsumer(
         try
         {
             await AckByHandleAsync(ackId, cancellationToken);
-            Log.AcknowledgeSuccess(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
+            Log.AcknowledgeSuccess(_logger, message.Id.Value, ackId, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Log.AcknowledgeError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
+            Log.AcknowledgeError(_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
             throw;
         }
     }
@@ -124,14 +133,14 @@ public partial class GcpPullMessageConsumer(
         {
             var client = connection.GetOrCreateSubscriberServiceApiClient();
 
-            Log.PurgeStart(s_logger, subscriptionName.ToString());
+            Log.PurgeStart(_logger, subscriptionName.ToString());
             var publisher = connection.CreatePublisherServiceApiClient();
-            _purgeWatermark.Advance(GcpSubscriptionPurger.Purge(client, publisher, subscriptionName));
-            Log.PurgeComplete(s_logger, subscriptionName.ToString());
+            _purgeWatermark.Advance(new GcpSubscriptionPurger(loggerFactory).Purge(client, publisher, subscriptionName));
+            Log.PurgeComplete(_logger, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Log.PurgeError(s_logger, ex, subscriptionName.ToString());
+            Log.PurgeError(_logger, ex, subscriptionName.ToString());
             throw;
         }
         finally
@@ -154,16 +163,16 @@ public partial class GcpPullMessageConsumer(
         {
             var client = await connection.CreateSubscriberServiceApiClientAsync();
 
-            Log.PurgeStart(s_logger, subscriptionName.ToString());
+            Log.PurgeStart(_logger, subscriptionName.ToString());
 
             var publisher = await connection.CreatePublisherServiceApiClientAsync();
-            _purgeWatermark.Advance(await GcpSubscriptionPurger.PurgeAsync(client, publisher, subscriptionName, cancellationToken));
+            _purgeWatermark.Advance(await new GcpSubscriptionPurger(loggerFactory).PurgeAsync(client, publisher, subscriptionName, cancellationToken));
 
-            Log.PurgeComplete(s_logger, subscriptionName.ToString());
+            Log.PurgeComplete(_logger, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Log.PurgeError(s_logger, ex, subscriptionName.ToString());
+            Log.PurgeError(_logger, ex, subscriptionName.ToString());
             throw;
         }
         finally
@@ -236,13 +245,13 @@ public partial class GcpPullMessageConsumer(
         }
         catch (RpcException rcpException) when (rcpException.Status.StatusCode == StatusCode.Unavailable)
         {
-            Log.ReceiveConnectionError(s_logger);
+            Log.ReceiveConnectionError(_logger);
             throw new ChannelFailureException("Error connecting to Pub/Sub, see inner exception for details",
                 rcpException);
         }
         catch (Exception e)
         {
-            Log.ReceiveError(s_logger, e, subscriptionName.ToString());
+            Log.ReceiveError(_logger, e, subscriptionName.ToString());
             throw;
         }
 
@@ -323,13 +332,13 @@ public partial class GcpPullMessageConsumer(
         }
         catch (RpcException rcpException) when (rcpException.Status.StatusCode == StatusCode.Unavailable)
         {
-            Log.ReceiveConnectionError(s_logger);
+            Log.ReceiveConnectionError(_logger);
             throw new ChannelFailureException("Error connecting to Pub/Sub, see inner exception for details",
                 rcpException);
         }
         catch (Exception e)
         {
-            Log.ReceiveError(s_logger, e, subscriptionName.ToString());
+            Log.ReceiveError(_logger, e, subscriptionName.ToString());
             throw;
         }
 
@@ -354,7 +363,7 @@ public partial class GcpPullMessageConsumer(
         if (ackId == null)
         {
             // Missing handle: routing still ran, but we cannot settle the original.
-            Log.RejectMissingHandle(s_logger, message.Id.Value);
+            Log.RejectMissingHandle(_logger, message.Id.Value);
             return true;
         }
 
@@ -370,13 +379,13 @@ public partial class GcpPullMessageConsumer(
             }
             catch (Exception ex)
             {
-                Log.RejectError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
+                Log.RejectError(_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
             }
 
             return true;
         }
 
-        Log.RejectMessage(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
+        Log.RejectMessage(_logger, message.Id.Value, ackId, subscriptionName.ToString());
         try
         {
             AckByHandle(ackId);
@@ -385,7 +394,7 @@ public partial class GcpPullMessageConsumer(
         {
             // A failed ack RPC is accepted case 2 (R-16/R-17): the message stays leased until its
             // ack deadline, and nothing escapes Reject.
-            Log.RejectError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
+            Log.RejectError(_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
         }
 
         return true;
@@ -410,7 +419,7 @@ public partial class GcpPullMessageConsumer(
         if (ackId == null)
         {
             // Missing handle: routing still ran, but we cannot settle the original.
-            Log.RejectMissingHandle(s_logger, message.Id.Value);
+            Log.RejectMissingHandle(_logger, message.Id.Value);
             return true;
         }
 
@@ -426,13 +435,13 @@ public partial class GcpPullMessageConsumer(
             }
             catch (Exception ex)
             {
-                Log.RejectError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
+                Log.RejectError(_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
             }
 
             return true;
         }
 
-        Log.RejectMessage(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
+        Log.RejectMessage(_logger, message.Id.Value, ackId, subscriptionName.ToString());
         try
         {
             await AckByHandleAsync(ackId, cancellationToken);
@@ -441,7 +450,7 @@ public partial class GcpPullMessageConsumer(
         {
             // A failed ack RPC is accepted case 2 (R-16/R-17): the message stays leased until its
             // ack deadline, and nothing escapes RejectAsync.
-            Log.RejectError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
+            Log.RejectError(_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
         }
 
         return true;
@@ -461,18 +470,18 @@ public partial class GcpPullMessageConsumer(
             return false;
         }
 
-        Log.RequeueStart(s_logger, message.Id.Value);
+        Log.RequeueStart(_logger, message.Id.Value);
         try
         {
             // The requeue policy is defined by subscription, during its creation
             ReleaseByHandle(ackId);
 
-            Log.RequeueComplete(s_logger, message.Id.Value);
+            Log.RequeueComplete(_logger, message.Id.Value);
             return true;
         }
         catch (Exception ex)
         {
-            Log.RequeueError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
+            Log.RequeueError(_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
             return false;
         }
     }
@@ -493,18 +502,18 @@ public partial class GcpPullMessageConsumer(
             return false;
         }
 
-        Log.RequeueStart(s_logger, message.Id.Value);
+        Log.RequeueStart(_logger, message.Id.Value);
         try
         {
             // The requeue policy is defined by subscription, during its creation
             await ReleaseByHandleAsync(ackId, cancellationToken);
 
-            Log.RequeueComplete(s_logger, message.Id.Value);
+            Log.RequeueComplete(_logger, message.Id.Value);
             return true;
         }
         catch (Exception ex)
         {
-            Log.RequeueError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
+            Log.RequeueError(_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
             return false;
         }
     }

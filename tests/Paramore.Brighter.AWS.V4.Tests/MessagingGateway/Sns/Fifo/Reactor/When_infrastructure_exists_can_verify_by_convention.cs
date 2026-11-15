@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Net.Mime;
@@ -43,7 +45,7 @@ public class AwsValidateInfrastructureByConventionTestsAsync : IAsyncDisposable,
             queueAttributes: new SqsAttributes(
                 type: SqsType.Fifo,
                 tags: new Dictionary<string, string> { { "Environment", "Test" } }),
-            topicAttributes: topicAttributes, 
+            topicAttributes: topicAttributes,
             makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
@@ -54,7 +56,7 @@ public class AwsValidateInfrastructureByConventionTestsAsync : IAsyncDisposable,
 
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance);
         var channel = _channelFactory.CreateAsyncChannel(subscription);
 
         subscription.FindTopicBy = TopicFindBy.Convention;
@@ -67,10 +69,10 @@ public class AwsValidateInfrastructureByConventionTestsAsync : IAsyncDisposable,
                 FindTopicBy = TopicFindBy.Convention,
                 MakeChannels = OnMissingChannel.Validate,
                 TopicAttributes = topicAttributes
-            }
-        );
+            },
+            loggerFactory: NullLoggerFactory.Instance);
 
-        _consumer = new SqsMessageConsumerFactory(awsConnection).Create(subscription);
+        _consumer = new SqsMessageConsumerFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance).Create(subscription);
     }
 
     [Fact]

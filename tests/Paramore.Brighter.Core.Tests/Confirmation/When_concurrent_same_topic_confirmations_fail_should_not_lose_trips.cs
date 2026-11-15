@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -45,7 +47,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
         private const int ConcurrentFailures = 5;
 
         private readonly RoutingKey _topic = new("Confirmation.Concurrent.Failure.Topic");
-        private readonly InMemoryOutboxCircuitBreaker _circuitBreaker = new();
+        private readonly InMemoryOutboxCircuitBreaker _circuitBreaker = new(logger: LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>( Initializer.TestLoggerFactory ));
         private readonly InMemoryMessageProducer _producer;
         private readonly Barrier _barrier = new(ConcurrentFailures);
 
@@ -54,7 +56,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             // Arrange: a producer whose confirmations always fail, wired to a mediator whose tracer
             // gates every callback on a barrier so concurrent sends trip the breaker concurrently.
             var bus = new InternalBus();
-            _producer = new InMemoryMessageProducer(bus, new Publication { Topic = _topic })
+            _producer = new InMemoryMessageProducer(bus, Initializer.TestLoggerFactory, new Publication { Topic = _topic })
             {
                 PublishFailurePredicate = _ => true
             };
@@ -72,7 +74,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer: new GatingConfirmationTracer(_barrier),
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outboxCircuitBreaker: _circuitBreaker);
+                outboxCircuitBreaker: _circuitBreaker, loggerFactory: Initializer.TestLoggerFactory);
         }
 
         private Message NewMessage() => new(

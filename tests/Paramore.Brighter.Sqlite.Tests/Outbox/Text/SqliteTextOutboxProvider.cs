@@ -1,4 +1,6 @@
-﻿using System;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
@@ -21,12 +23,12 @@ public class SqliteTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProv
 
     public IAmAnOutboxSync<Message, DbTransaction> CreateOutbox()
     {
-        return new SqliteOutbox(_configuration);
+        return new SqliteOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<SqliteOutbox>());
     }
 
     public IAmAnOutboxAsync<Message, DbTransaction> CreateOutboxAsync()
     {
-        return new SqliteOutbox(_configuration);
+        return new SqliteOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<SqliteOutbox>());
     }
 
     public void CreateStore()
@@ -82,20 +84,20 @@ public class SqliteTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProv
 
     public IEnumerable<Message> GetAllMessages()
     {
-        var outbox = new SqliteOutbox(_configuration);
+        var outbox = new SqliteOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<SqliteOutbox>());
         return outbox.Get(new RequestContext());
     }
 
     public async Task<IEnumerable<Message>> GetAllMessagesAsync()
     {
-        var outbox = new SqliteOutbox(_configuration);
+        var outbox = new SqliteOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<SqliteOutbox>());
         return await outbox.GetAsync(new RequestContext());
     }
 
     public IAmAnOutboxAsync<Message, DbTransaction> CreateOutstandingCountStore()
     {
         CreateStore();
-        return new SqliteOutbox(_configuration);
+        return new SqliteOutbox(configuration: _configuration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteOutbox>.Instance);
     }
 
     public void DeleteOutstandingCountStore()

@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -72,7 +74,7 @@ public class PostgreSqlMigrationCancellationTests : IAsyncLifetime
             "RollbackAsync should receive CancellationToken.None to ensure pg_advisory_unlock completes.");
         Assert.Equal(CancellationToken.None, spy.RollbackToken);
 
-        var freshRunner = new PostgreSqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5));
+        var freshRunner = new PostgreSqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5), loggerFactory: NullLoggerFactory.Instance);
         await freshRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint, CancellationToken.None);
 
@@ -126,7 +128,8 @@ file sealed class CancellingPostgreSqlBoxMigrationRunner : PostgreSqlBoxMigratio
         IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout)
-        : base(catalog, configuration, lockTimeout)
+        : base(catalog, configuration, lockTimeout,
+            NullLoggerFactory.Instance)
     {
     }
 

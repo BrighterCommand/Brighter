@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net.Mime;
 using System.Text.Json;
@@ -38,7 +40,7 @@ public class SqsMessageConsumerRejectTests : IDisposable
             channelName: new ChannelName(channelName),
             channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor, 
+            messagePumpType: MessagePumpType.Reactor,
             queueAttributes: new SqsAttributes(type: SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }),
             topicAttributes: topicAttributes,
             makeChannels: OnMissingChannel.Create
@@ -54,14 +56,15 @@ public class SqsMessageConsumerRejectTests : IDisposable
         var awsConnection = GatewayFactory.CreateFactory();
 
         //We need to do this manually in a test - will create the channel from subscriber parameters
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateSyncChannel(subscription);
 
         _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create, TopicAttributes = topicAttributes
-            });
+                MakeChannels = OnMissingChannel.Create,
+                TopicAttributes = topicAttributes
+            }, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

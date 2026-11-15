@@ -57,7 +57,7 @@ namespace Paramore.Brighter.Outbox.Hosting
         private readonly CancellationTokenSource _stopping = new();
         private readonly AutoResetEvent _due = new(false);
         private readonly TaskCompletionSource<bool> _stopped = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
+        private readonly ILogger _logger;
         private Thread? _sweepThread;
         private bool _disposed;
         private const string LockingResourceName = "OutboxSweeper";
@@ -72,10 +72,12 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// <param name="meter">Records the sweeper's health (see ADR 0081); defaults to <see cref="NullSweeperMeter"/>, which records nothing</param>
         /// <param name="state">Holds what the sweeper is doing, for gauges and health checks to read; defaults to a new <see cref="OutboxSweeperState"/> on the sweeper's clock</param>
         /// <exception cref="ConfigurationException">Thrown when <see cref="TimedOutboxSweeperOptions.TimerInterval"/> is less than one second</exception>
+        /// <param name="logger">The application-owned logging dependency.</param>
         public TimedOutboxSweeper(
             IServiceScopeFactory serviceScopeFactory,
             IDistributedLock distributedLock,
             TimedOutboxSweeperOptions options,
+            ILogger<TimedOutboxSweeper> logger,
             TimeProvider? timeProvider = null,
             IAmABrighterSweeperMeter? meter = null,
             OutboxSweeperState? state = null
@@ -88,6 +90,7 @@ namespace Paramore.Brighter.Outbox.Hosting
             _serviceScopeFactory = serviceScopeFactory;
             _distributedLock = distributedLock;
             _options = options;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _timeProvider = timeProvider ?? TimeProvider.System;
             _meter = meter ?? NullSweeperMeter.Instance;
             _state = state ?? new OutboxSweeperState(_timeProvider);
@@ -101,7 +104,7 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// <returns>A completed task to allow other background services to be run</returns>
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            Log.OutboxSweeperServiceIsStarting(s_logger);
+            Log.OutboxSweeperServiceIsStarting(_logger);
 
             _sweepThread = new Thread(SweepUntilStopped) { IsBackground = true, Name = "Brighter Outbox Sweeper" };
             // Start with an empty context, so sweeps do not carry the starting caller's ambient state (AsyncLocals)
@@ -118,7 +121,7 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// <returns>A task that completes when the sweeper has stopped</returns>
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            Log.OutboxSweeperServiceIsStopping(s_logger);
+            Log.OutboxSweeperServiceIsStopping(_logger);
             _state.Stopped();
 
             if (_sweepThread is null)
@@ -230,7 +233,7 @@ namespace Paramore.Brighter.Outbox.Hosting
             var duration = _timeProvider.GetElapsedTime(started);
             Record(() => _meter.RecordSweep(outcome, duration));
 
-            Log.OutboxSweeperSleeping(s_logger);
+            Log.OutboxSweeperSleeping(_logger);
         }
 
         private SweepOutcome SweepOnce()
@@ -243,7 +246,7 @@ namespace Paramore.Brighter.Outbox.Hosting
             }
             catch (Exception e)
             {
-                Log.OutboxSweepFailed(s_logger, e);
+                Log.OutboxSweepFailed(_logger, e);
                 return SweepOutcome.Failed;
             }
         }
@@ -253,7 +256,7 @@ namespace Paramore.Brighter.Outbox.Hosting
             var lockId = await _distributedLock.ObtainLockAsync(LockingResourceName, CancellationToken.None);
             if (lockId == null)
             {
-                Log.OutboxSweeperIsStillRunningAbandoningAttempt(s_logger);
+                Log.OutboxSweeperIsStillRunningAbandoningAttempt(_logger);
                 return SweepOutcome.LockUnavailable;
             }
 
@@ -261,7 +264,7 @@ namespace Paramore.Brighter.Outbox.Hosting
 
             try
             {
-                Log.OutboxSweeperLookingForUnsentMessages(s_logger);
+                Log.OutboxSweeperLookingForUnsentMessages(_logger);
 
                 using var scope = _serviceScopeFactory.CreateScope();
                 IAmAnOutboxProducerMediator outboxProducerMediator = scope.ServiceProvider.GetRequiredService<IAmAnOutboxProducerMediator>();
@@ -283,10 +286,10 @@ namespace Paramore.Brighter.Outbox.Hosting
             }
         }
 
-        private static void Record(Action record)
+        private void Record(Action record)
         {
             try { record(); }
-            catch (Exception e) { Log.SweeperMeterFailed(s_logger, e); }
+            catch (Exception e) { Log.SweeperMeterFailed(_logger, e); }
         }
 
         private static partial class Log
@@ -296,13 +299,13 @@ namespace Paramore.Brighter.Outbox.Hosting
 
             [LoggerMessage(LogLevel.Information, "Outbox Sweeper Service is stopping.")]
             public static partial void OutboxSweeperServiceIsStopping(ILogger logger);
-            
+
             [LoggerMessage(LogLevel.Information, "Outbox Sweeper looking for unsent messages")]
             public static partial void OutboxSweeperLookingForUnsentMessages(ILogger logger);
-            
+
             [LoggerMessage(LogLevel.Warning, "Outbox Sweeper is still running - abandoning attempt.")]
             public static partial void OutboxSweeperIsStillRunningAbandoningAttempt(ILogger logger);
-            
+
             [LoggerMessage(LogLevel.Information, "Outbox Sweeper sleeping")]
             public static partial void OutboxSweeperSleeping(ILogger logger);
 

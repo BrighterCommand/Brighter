@@ -59,7 +59,7 @@ public class SqsBudgetBelowNativeLimitReactorTests : IDisposable, IAsyncDisposab
     {
         ConformanceDeferredPump.ResetDispatchCount();
         _awsConnection = GatewayFactory.CreateFactory();
-        _channelFactory = new ChannelFactory(_awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection: _awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     /// <summary>
@@ -116,7 +116,7 @@ public class SqsBudgetBelowNativeLimitReactorTests : IDisposable, IAsyncDisposab
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create);
 
-        _dlqChannelFactory = new ChannelFactory(_awsConnection);
+        _dlqChannelFactory = new ChannelFactory(awsConnection: _awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var dlqChannel = _dlqChannelFactory.CreateSyncChannel(dlqSubscription);
 
         // Create a reader channel for the native target (already provisioned by redrivePolicy above)
@@ -128,19 +128,19 @@ public class SqsBudgetBelowNativeLimitReactorTests : IDisposable, IAsyncDisposab
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create);
 
-        _nativeTargetChannelFactory = new ChannelFactory(_awsConnection);
+        _nativeTargetChannelFactory = new ChannelFactory(awsConnection: _awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var nativeTargetChannel = _nativeTargetChannelFactory.CreateSyncChannel(nativeTargetSubscription);
 
         // Wrap the underlying consumer in a recording decorator so dispatch counts are observable
-        var consumer = new SqsMessageConsumerFactory(_awsConnection).Create(subscription);
+        var consumer = new SqsMessageConsumerFactory(awsConnection: _awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(subscription);
         var channel = ConformanceDeferredPump.CreateRecordingChannel(channelName, routingKey, consumer);
 
-        var producer = new SnsMessageProducer(_awsConnection, new SnsPublication
+        var producer = new SnsMessageProducer(connection: _awsConnection, publication: new SnsPublication
         {
             Topic = routingKey,
             RequestType = typeof(ConformanceDeferredCommand),
             MakeChannels = OnMissingChannel.Validate
-        });
+        }, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var cmd = new ConformanceDeferredCommand { Value = "budget below native limit test v4" };
         var message = new Message(

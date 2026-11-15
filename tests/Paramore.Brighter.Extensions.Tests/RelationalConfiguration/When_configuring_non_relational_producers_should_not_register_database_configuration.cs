@@ -40,7 +40,8 @@ public class NonRelationalConfigurationRegistrationTests
     public void When_configuring_non_relational_producers_should_not_register_database_configuration(bool explicitOutbox)
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
+        services.AddSingleton(Initializer.Factory);
         var outbox = explicitOutbox ? new InMemoryOutbox(TimeProvider.System) : null;
 
         //Act

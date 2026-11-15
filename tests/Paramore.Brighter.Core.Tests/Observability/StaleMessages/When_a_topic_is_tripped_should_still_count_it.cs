@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -121,13 +121,13 @@ public class TrippedTopicCountTests
 
     private static IAmAnOutboxCircuitBreaker TrippedOrders()
     {
-        var breaker = new InMemoryOutboxCircuitBreaker();
+        var breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         breaker.TripTopic(new RoutingKey("orders"));
         return breaker;
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
-        new(new InternalBus(), new Publication { Topic = new RoutingKey(topic) });
+        new InMemoryMessageProducer(new InternalBus(), publication: new Publication { Topic = new RoutingKey(topic) }, loggerFactory: Initializer.TestLoggerFactory);
 
     private static Message Event(string topic) =>
         new(new MessageHeader(Id.Random(), new RoutingKey(topic), MessageType.MT_EVENT), new MessageBody("{}"));

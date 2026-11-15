@@ -38,9 +38,7 @@ public class InMemoryResetAnnouncementTests
             var orders = new RoutingKey("orders");
             var clock = new FakeTimeProvider();
             var breaker = new InMemoryOutboxCircuitBreaker(
-                new OutboxCircuitBreakerOptions { CooldownCount = 10, MaximumTripDuration = TimeSpan.FromMinutes(5) },
-                tracer,
-                timeProvider: clock);
+options: new OutboxCircuitBreakerOptions { CooldownCount = 10, MaximumTripDuration = TimeSpan.FromMinutes(5) }, tracer: tracer, timeProvider: clock, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
             breaker.TripTopic(orders);
             var spansBeforeReset = CircuitBreakerSpans(exportedActivities, traceProvider).Count;
             var incrementsBeforeReset = meter.AddCircuitBreakerEventCallCount;
@@ -82,9 +80,7 @@ public class InMemoryResetAnnouncementTests
 
             var orders = new RoutingKey("orders");
             var breaker = new InMemoryOutboxCircuitBreaker(
-                new OutboxCircuitBreakerOptions { CooldownCount = 1, MaximumTripDuration = TimeSpan.FromMinutes(5) },
-                tracer,
-                timeProvider: new FakeTimeProvider());
+options: new OutboxCircuitBreakerOptions { CooldownCount = 1, MaximumTripDuration = TimeSpan.FromMinutes(5) }, tracer: tracer, timeProvider: new FakeTimeProvider(), logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
             breaker.TripTopic(orders);
 
             // Act

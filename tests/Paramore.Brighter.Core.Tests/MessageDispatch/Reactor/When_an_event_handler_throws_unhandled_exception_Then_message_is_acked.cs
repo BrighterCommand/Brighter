@@ -27,30 +27,30 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             SpyExceptionCommandProcessor commandProcessor = new();
 
             _bus = new InternalBus();
-            
+
             _channel = new Channel(
-                new (Channel), _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
+                new (Channel), _routingKey,
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory)
             );
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
-                null); 
+                null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
             var requestContextFactory = new InMemoryRequestContextFactory();
-            _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyEvent), 
-                messageMapperRegistry, null, requestContextFactory, _channel)
+            _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyEvent),
+                messageMapperRegistry, null, requestContextFactory, _channel, loggerFactory: Initializer.TestLoggerFactory)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = _requeueCount
             };
 
-            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, null);
+            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, null, loggerFactory: Initializer.TestLoggerFactory);
 
             var msg = transformPipelineBuilder.BuildWrapPipeline<MyEvent>()
                 .Wrap(new MyEvent(), requestContextFactory.Create(), new Publication{Topic = _routingKey});
-            
+
             _bus.Enqueue(msg);
-            
+
         }
 
         [Fact]
@@ -60,7 +60,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             {
                 var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
                 await Task.Delay(1000);
-                
+
                 _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
                 var quitMessage = new Message(new MessageHeader(string.Empty, RoutingKey.Empty, MessageType.MT_QUIT),
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
                 Assert.Empty(_bus.Stream(_routingKey));
 
                 var logEvents = TestCorrelator.GetLogEventsFromCurrentContext();
-                Assert.Contains(logEvents, x => x.Level == LogEventLevel.Error && x.MessageTemplate.Text == 
+                Assert.Contains(logEvents, x => x.Level == LogEventLevel.Error && x.MessageTemplate.Text ==
                     "MessagePump: Failed to dispatch message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}");
             }
         }

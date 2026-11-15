@@ -35,7 +35,7 @@ public class RmqSharedConnectionDroppedConfirmTests : IDisposable
         //Arrange — after a send, another gateway drops the pooled connection this producer's channel is on
         _messageProducer.Send(NewMessage());
 
-        new RmqMessageGatewayConnectionPool(_rmqConnection.Name!, _rmqConnection.Heartbeat)
+        new RmqMessageGatewayConnectionPool(connectionName: _rmqConnection.Name!, connectionHeartbeat: _rmqConnection.Heartbeat, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
             .RemoveConnection(new ConnectionFactory { Uri = _rmqConnection.AmpqUri!.Uri });
 
         //Act — the next send finds its channel closed, with no IOException, and opens a new one

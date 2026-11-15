@@ -21,9 +21,9 @@ public class AsyncMessageWrapRequestMissingTransformTests
 
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync((_ => null));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, Initializer.TestLoggerFactory, InstrumentationOptions.All);
     }
-    
+
     [Fact]
     public void When_Wrapping_A_Message_Mapper_But_Not_In_Transform_Factory()
     {
@@ -31,6 +31,6 @@ public class AsyncMessageWrapRequestMissingTransformTests
         var exception = Catch.Exception(() => _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>());
         Assert.NotNull(exception);
         Assert.True((exception) is ConfigurationException);
-        
+
     }
 }

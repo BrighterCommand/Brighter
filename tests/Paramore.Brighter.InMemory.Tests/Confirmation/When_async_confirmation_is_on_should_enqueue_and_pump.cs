@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,7 +44,7 @@ public class AsyncConfirmationPumpTests
             new MessageHeader(messageId, new RoutingKey(topic), MessageType.MT_DOCUMENT),
             new MessageBody("test_content"));
         var bus = new InternalBus();
-        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All)
+        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All, loggerFactory: NullLoggerFactory.Instance)
         {
             UseAsyncPublishConfirmation = true
         };
@@ -72,7 +74,7 @@ public class AsyncConfirmationPumpTests
         const string topic = "test_topic_fifo";
         const int count = 5;
         var bus = new InternalBus();
-        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All)
+        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All, loggerFactory: NullLoggerFactory.Instance)
         {
             UseAsyncPublishConfirmation = true
         };

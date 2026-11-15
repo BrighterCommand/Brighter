@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.Postgres;
@@ -16,7 +18,7 @@ public class PostgresCausationTrackingInboxTest : CausationTrackingInboxBaseTest
         _configuration = new RelationalDatabaseConfiguration(
             Const.ConnectionString,
             inboxTableName: $"{Const.TablePrefix}{Uuid.New():N}");
-        _inbox = new PostgreSqlInbox(_configuration);
+        _inbox = new PostgreSqlInbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlInbox>());
         base.BeforeEachTest();
     }
 

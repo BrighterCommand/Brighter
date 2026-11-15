@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Reflection;
@@ -194,7 +196,7 @@ public class RmqMutualTlsConnectionConfigurationTests : IDisposable
     private sealed class TestableRmqMessageConsumer : RmqMessageGateway
     {
         public TestableRmqMessageConsumer(RmqMessagingGatewayConnection connection)
-            : base(connection)
+            : base(connection, NullLoggerFactory.Instance)
         {
         }
 

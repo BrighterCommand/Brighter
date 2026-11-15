@@ -45,7 +45,7 @@ public class SchedulerEnqueueFailureDeadlineTests
         //Arrange
         var clock = new FakeTimeProvider();
         var store = new InMemoryScheduleFailureStateStore(clock);
-        var channel = new InMemoryJobChannel<WorkflowTestData>(boundedCapacity: 1);
+        var channel = new InMemoryJobChannel<WorkflowTestData>(boundedCapacity: 1, loggerFactory: Initializer.TestLoggerFactory);
         var scheduler = new Scheduler<WorkflowTestData>(channel, store, clock);
         var job = new Job<WorkflowTestData>(new WorkflowTestData());
         await scheduler.ScheduleAtAsync(job, TimeSpan.FromMinutes(5));

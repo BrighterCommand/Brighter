@@ -39,7 +39,7 @@ public class SweeperHealthChecksRegistrationTests
     public void When_the_sweeper_health_checks_are_added_should_register_two_checks_each_with_its_remedy_tag()
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddOptions();
         services.AddHealthChecks().AddBrighterOutboxSweeperHealthChecks();
         using var provider = services.BuildServiceProvider();
@@ -59,7 +59,7 @@ public class SweeperHealthChecksRegistrationTests
     public void When_the_sweeper_health_checks_are_not_added_should_register_neither_check()
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddOptions();
         services.AddHealthChecks();
         using var provider = services.BuildServiceProvider();

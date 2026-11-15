@@ -49,14 +49,14 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            ]).CreateAsync().Result;
+            ], loggerFactory: Initializer.TestLoggerFactory).CreateAsync().Result;
 
         _consumer = new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Consumer Test",
                     BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .CreateAsync(new KafkaSubscription<MyCommand>(
                     channelName: new ChannelName(_queueName),
                     routingKey: new RoutingKey(_topic),
@@ -78,8 +78,8 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
     public async Task When_posting_a_message_via_the_messaging_gateway()
     {
         //Let topic propagate in the broker
-        await Task.Delay(500); 
-        
+        await Task.Delay(500);
+
         //arrange
 
         var myCommand = new MyKafkaCommand{ Value = "Hello World"};
@@ -103,7 +103,7 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
 
         var producerAsync = ((IAmAMessageProducerAsync)_producerRegistry.LookupAsyncBy(routingKey));
         await producerAsync.SendAsync(sent);
-        
+
         //We should not need to flush, as the async does not queue work  - but in case this changes
         ((KafkaMessageProducer)producerAsync).Flush();
 
@@ -143,7 +143,7 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
                     await _consumer.AcknowledgeAsync(messages[0]);
                     break;
                 }
-                
+
                 //wait before retry
                 await Task.Delay(1000);
 
@@ -162,7 +162,7 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
 
         return messages[0];
     }
-    
+
     public void Dispose()
     {
         _producerRegistry?.Dispose();

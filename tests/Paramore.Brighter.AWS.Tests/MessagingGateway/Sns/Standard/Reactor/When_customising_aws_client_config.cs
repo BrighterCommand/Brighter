@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net.Mime;
 using System.Text.Json;
@@ -33,7 +35,7 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
-            routingKey: routingKey, 
+            routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
             queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }),
             topicAttributes: new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }]));
@@ -49,7 +51,7 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
             config.HttpClientFactory = new InterceptingHttpClientFactory(new InterceptingDelegatingHandler("sync_sub"));
         });
 
-        _channelFactory = new ChannelFactory(subscribeAwsConnection);
+        _channelFactory = new ChannelFactory(subscribeAwsConnection, loggerFactory: NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateSyncChannel(subscription);
 
         var publishAwsConnection = GatewayFactory.CreateFactory(config =>
@@ -59,8 +61,11 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
 
         _messageProducer = new SnsMessageProducer(
             publishAwsConnection,
-            new SnsPublication { Topic = new RoutingKey(topicName), 
-                MakeChannels = OnMissingChannel.Create });
+            new SnsPublication
+            {
+                Topic = new RoutingKey(topicName),
+                MakeChannels = OnMissingChannel.Create
+            }, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]
@@ -79,7 +84,7 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
         //publish_and_subscribe_should_use_custom_http_client_factory
         Assert.Contains("sync_sub", InterceptingDelegatingHandler.RequestCount);
         Assert.True((InterceptingDelegatingHandler.RequestCount["sync_sub"]) > (0));
-        
+
         Assert.Contains("sync_pub", InterceptingDelegatingHandler.RequestCount);
         Assert.True((InterceptingDelegatingHandler.RequestCount["sync_pub"]) > (0));
     }

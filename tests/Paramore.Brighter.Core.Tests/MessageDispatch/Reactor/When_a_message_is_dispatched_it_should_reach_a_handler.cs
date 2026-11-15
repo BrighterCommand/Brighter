@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using Microsoft.Extensions.Time.Testing;
@@ -28,46 +28,47 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 
             var commandProcessor = new CommandProcessor(
                 subscriberRegistry,
-                handlerFactory, 
-                new InMemoryRequestContextFactory(), 
+                handlerFactory,
+                new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
                 new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory());
-            
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
+
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
             var channel = new Channel(
-                new("myChannel"), _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
+                new("myChannel"), _routingKey,
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory)
             );
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(
                     _ => new MyEventMessageMapper()),
-                null); 
+                null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-            
-            _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyEvent), 
-                messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel)
+
+            _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyEvent),
+                messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel, loggerFactory: Initializer.TestLoggerFactory)
             {
-                Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000)
+                Channel = channel,
+                TimeOut = TimeSpan.FromMilliseconds(5000)
             };
 
             var message = new Message(
-                new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT), 
+                new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT),
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
             );
-            
+
             channel.Enqueue(message);
             var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
             channel.Enqueue(quitMessage);
-            
+
         }
 
         [Fact]
         public void When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler()
         {
             _messagePump.Run();
-            
+
             Assert.Contains(nameof(MyEventHandler), _receivedMessages);
             Assert.Equal(_myEvent.Id, _receivedMessages[nameof(MyEventHandler)]);
         }

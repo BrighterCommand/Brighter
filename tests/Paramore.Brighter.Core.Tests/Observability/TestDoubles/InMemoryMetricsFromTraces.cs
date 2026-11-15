@@ -51,7 +51,7 @@ internal sealed class InMemoryMetricsFromTraces : IDisposable
 
     public InMemoryMetricsFromTraces(bool tracingFirst = false, bool combinedInstrumentation = false)
     {
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddMetrics();
         var builder = services.AddOpenTelemetry();
 

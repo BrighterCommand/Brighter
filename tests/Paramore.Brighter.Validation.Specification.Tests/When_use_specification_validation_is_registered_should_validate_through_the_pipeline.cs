@@ -36,7 +36,7 @@ public class UseSpecificationRegistrationTests
     public void When_use_specification_validation_is_registered_should_validate_through_the_pipeline()
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         services.AddSingleton<HandlerReceipt>();
         services.AddSingleton<ISpecification<PlaceOrder>>(OrderSpecification.Create());
         services.AddBrighter().UseSpecification();

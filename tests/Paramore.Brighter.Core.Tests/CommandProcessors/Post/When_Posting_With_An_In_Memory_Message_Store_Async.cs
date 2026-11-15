@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -30,8 +30,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             var timeProvider = new FakeTimeProvider();
             var tracer = new BrighterTracer(timeProvider);
-            _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-            InMemoryMessageProducer messageProducer = new(_internalBus, new Publication{Topic = _routingKey, RequestType = typeof(MyCommand)});
+            _outbox = new InMemoryOutbox(timeProvider) { Tracer = tracer };
+            InMemoryMessageProducer messageProducer = new(_internalBus, Initializer.TestLoggerFactory, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, _routingKey, MessageType.MT_COMMAND),
@@ -43,20 +43,20 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new SimpleMessageMapperFactoryAsync((_) => new MyCommandMessageMapperAsync())
                 );
             messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
-                                                                                                                  
-            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{_routingKey, messageProducer},});
+
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { _routingKey, messageProducer }, });
             var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
                 .AddBrighterDefault();
-            
+
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-                producerRegistry, 
-                resiliencePipelineRegistry, 
+                producerRegistry,
+                resiliencePipelineRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _outbox
+                Initializer.TestLoggerFactory, _outbox
             );
 
             _commandProcessor = new CommandProcessor(
@@ -64,8 +64,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new DefaultPolicy(),
                 resiliencePipelineRegistry,
                 bus,
-                new InMemorySchedulerFactory()
-            );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]
@@ -74,7 +73,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             await _commandProcessor.PostAsync(_myCommand);
 
             var message = await _outbox.GetAsync(_myCommand.Id, new RequestContext());
-            
+
             //Should store the message in the outbox
             Assert.NotNull(message);
             //Should send a message via the messaging gateway

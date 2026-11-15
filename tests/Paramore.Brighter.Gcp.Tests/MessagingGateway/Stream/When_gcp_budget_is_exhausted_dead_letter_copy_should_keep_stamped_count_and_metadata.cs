@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -133,7 +133,7 @@ public class GcpStreamBudgetExhaustedDlqTests
                 PublisherConfiguration = cfg => { cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction; },
                 SubscriptionManagerConfiguration = cfg => { cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction; },
             };
-            readerChannelFactory = new GcpPubSubChannelFactory(readerConnection);
+            readerChannelFactory = new GcpPubSubChannelFactory(connection: readerConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
             readingSubscription = new GcpPubSubSubscription<ConformanceDeferredCommand>(
                 subscriptionName: new SubscriptionName(readingChannelName),

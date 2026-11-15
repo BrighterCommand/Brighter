@@ -103,7 +103,7 @@ public class ScopedFactoryDirectCreateResolvesFreshTests
 
     private static IServiceProvider BuildProvider(Action<IServiceCollection> registerArtefact)
     {
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         registerArtefact(collection);
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions
         {

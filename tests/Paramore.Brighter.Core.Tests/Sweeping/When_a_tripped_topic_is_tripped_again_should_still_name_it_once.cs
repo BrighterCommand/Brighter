@@ -22,7 +22,7 @@ public class When_a_tripped_topic_is_tripped_again_should_still_name_it_once_tes
         state.SweepStarted();
         state.LockObtained();
         state.SweepEnded(SweepOutcome.Completed);
-        var breaker = new InMemoryOutboxCircuitBreaker(new OutboxCircuitBreakerOptions { CooldownCount = 1 });
+        var breaker = new InMemoryOutboxCircuitBreaker(options: new OutboxCircuitBreakerOptions { CooldownCount = 1 }, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
 
         //Act
         breaker.TripTopic(new RoutingKey("orders"));
@@ -43,5 +43,5 @@ public class When_a_tripped_topic_is_tripped_again_should_still_name_it_once_tes
     }
 
     private static OutboxSweeperInvestigateHealthCheck BuildCheck(OutboxSweeperState state, InMemoryOutboxCircuitBreaker breaker) =>
-        new(state, new TimedOutboxSweeperOptions(), () => breaker, 3);
+        new(state: state, options: new TimedOutboxSweeperOptions(), findCircuitBreaker: () => breaker, failureThreshold: 3, loggerFactory: Initializer.TestLoggerFactory);
 }

@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.Postgres;
@@ -64,13 +66,13 @@ public class PostgresMessageConsumerDeliveryErrorDlqTests : IDisposable
         // Producer registry factory ensures queue table exists
         var producerRegistry = new PostgresProducerRegistryFactory(
             connection,
-            [new PostgresPublication { Topic = topic }]
-        ).Create();
+            [new PostgresPublication { Topic = topic }],
+            loggerFactory: NullLoggerFactory.Instance).Create();
 
         _producer = (IAmAMessageProducerSync)producerRegistry.LookupBy(topic);
 
         // Consumer factory creates consumers; table already exists from producer registry
-        var consumerFactory = new PostgresConsumerFactory(connection);
+        var consumerFactory = new PostgresConsumerFactory(connection, loggerFactory: NullLoggerFactory.Instance);
         _consumer = consumerFactory.Create(sub);
         _dlqConsumer = consumerFactory.Create(dlqSub);
 

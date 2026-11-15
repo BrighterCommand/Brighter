@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Transactions;
@@ -32,7 +34,7 @@ public class InMemorySchedulerMessageTests
         _timeProvider = new FakeTimeProvider();
         _timeProvider.SetUtcNow(DateTimeOffset.UtcNow);
 
-        _scheduler = new InMemorySchedulerFactory { TimeProvider = _timeProvider };
+        _scheduler = new InMemorySchedulerFactory (loggerFactory: NullLoggerFactory.Instance) { TimeProvider = _timeProvider };
 
         var handlerFactory = new SimpleHandlerFactory(
             _ => new MyEventHandler(new Dictionary<string, string>()),
@@ -51,7 +53,7 @@ public class InMemorySchedulerMessageTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            [_routingKey] = new InMemoryMessageProducer(_internalBus, new Publication{ Topic = _routingKey, RequestType = typeof(MyEvent) })
+            [_routingKey] = new InMemoryMessageProducer(_internalBus, NullLoggerFactory.Instance, new Publication{ Topic = _routingKey, RequestType = typeof(MyEvent) })
         });
 
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -63,7 +65,7 @@ public class InMemorySchedulerMessageTests
         var trace = new BrighterTracer(_timeProvider);
         _outbox = new InMemoryOutbox(_timeProvider)
         {
-            Tracer = trace, 
+            Tracer = trace,
             //We need to set the outbox entries time to live to be greater than the re-schedule time, otherwise the test will fail
             EntryTimeToLive = TimeSpan.FromHours(3)
         };
@@ -76,7 +78,7 @@ public class InMemorySchedulerMessageTests
             new EmptyMessageTransformerFactoryAsync(),
             trace,
             new FindPublicationByPublicationTopicOrRequestType(),
-            _outbox
+            NullLoggerFactory.Instance, _outbox
         );
 
         _processor = new CommandProcessor(
@@ -86,8 +88,8 @@ public class InMemorySchedulerMessageTests
             policyRegistry,
             new ResiliencePipelineRegistry<string>(),
             outboxBus,
-            _scheduler
-        );
+            _scheduler,
+            loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]
@@ -110,7 +112,7 @@ public class InMemorySchedulerMessageTests
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
 
         Assert.NotEmpty(_internalBus.Stream(_routingKey));
-        
+
         var actual = _outbox.Get(message.Id, new RequestContext());
 
         Assert.Equivalent(message.Body, actual.Body);
@@ -186,7 +188,7 @@ public class InMemorySchedulerMessageTests
         _timeProvider.Advance(TimeSpan.FromHours(2));
 
         Assert.NotEmpty(_internalBus.Stream(_routingKey));
-        
+
         var actual = _outbox.Get(req.Id, new RequestContext());
 
         Assert.Equivalent(message.Body, actual.Body);
@@ -228,7 +230,7 @@ public class InMemorySchedulerMessageTests
 
         var expected = Message.Empty;
         var actual = _outbox.Get(req.Id, new RequestContext());
-        
+
         Assert.NotEqual(expected.Body, actual.Body);
         Assert.NotEqual(expected.Id, actual.Id);
         Assert.NotEqual(expected.Header.MessageType, actual.Header.MessageType);
@@ -252,11 +254,11 @@ public class InMemorySchedulerMessageTests
         scheduler.Cancel(id);
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
-        
-        
+
+
         var expected = Message.Empty;
         var actual = _outbox.Get(req.Id, new RequestContext());
-        
+
         Assert.Equal(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
@@ -284,7 +286,7 @@ public class InMemorySchedulerMessageTests
 
         var expected = Message.Empty;
         var actual = _outbox.Get(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);

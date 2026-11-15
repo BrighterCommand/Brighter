@@ -18,9 +18,7 @@ public class TimedOutboxSweeperAmbientStateTests
         using var outbox = new SweepableOutbox();
         var distributedLock = new AmbientRecordingLock(s_ambient);
         var sweeper = new TimedOutboxSweeper(
-            outbox.ScopeFactory,
-            distributedLock,
-            new TimedOutboxSweeperOptions { TimerInterval = 1, MinimumMessageAge = TimeSpan.Zero });
+serviceScopeFactory: outbox.ScopeFactory, distributedLock: distributedLock, options: new TimedOutboxSweeperOptions { TimerInterval = 1, MinimumMessageAge = TimeSpan.Zero }, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<TimedOutboxSweeper>(Initializer.TestLoggerFactory));
 
         //Act
         await Task.Run(async () =>

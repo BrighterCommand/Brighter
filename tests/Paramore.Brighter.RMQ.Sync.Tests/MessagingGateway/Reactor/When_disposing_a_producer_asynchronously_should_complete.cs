@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
@@ -41,7 +43,7 @@ public class RmqMessageProducerDisposeAsyncTests
             AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
             Exchange = new Exchange("paramore.brighter.exchange")
         };
-        var producer = new RmqMessageProducer(rmqConnection);
+        var producer = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
 
         await producer.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5));
     }

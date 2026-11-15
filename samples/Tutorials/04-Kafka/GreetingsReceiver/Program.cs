@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
 using Greetings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -70,10 +71,13 @@ var subscriptions = new Subscription[]
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services
-    .AddConsumers(options =>
+    .AddConsumers(provider =>
     {
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        var options = new ConsumersOptions();
         options.Subscriptions = subscriptions;
-        options.DefaultChannelFactory = new ChannelFactory(new KafkaMessageConsumerFactory(kafkaConfiguration));
+        options.DefaultChannelFactory = new ChannelFactory(new KafkaMessageConsumerFactory(kafkaConfiguration, loggerFactory: loggerFactory));
+        return options;
     })
     .AutoFromAssemblies();
 

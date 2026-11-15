@@ -118,7 +118,7 @@ public static class OutboxSweeperRecordScenario
     /// <returns>The registered circuit breaker.</returns>
     public static InMemoryOutboxCircuitBreaker RegisterTrippedTopics(IServiceCollection services, params string[] topics)
     {
-        var circuitBreaker = new InMemoryOutboxCircuitBreaker();
+        var circuitBreaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<InMemoryOutboxCircuitBreaker>.Instance);
         foreach (var topic in topics)
             circuitBreaker.TripTopic(new RoutingKey(topic));
 

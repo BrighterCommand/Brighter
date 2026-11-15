@@ -30,7 +30,6 @@ using System.Net.Mime;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -39,9 +38,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync;
 
 internal sealed partial class RmqMessageCreator
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageCreator>();
+    private readonly ILogger _logger;
 
-    public static Message CreateMessage(BasicDeliverEventArgs fromQueue)
+    public RmqMessageCreator(ILogger<RmqMessageCreator> logger)
+    {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    public Message CreateMessage(BasicDeliverEventArgs fromQueue)
     {
         var headers = fromQueue.BasicProperties.Headers ?? new Dictionary<string, object?>();
         var topic = HeaderResult<RoutingKey>.Empty();
@@ -62,14 +66,14 @@ internal sealed partial class RmqMessageCreator
         }
         catch (Exception e)
         {
-            Log.FailedToCreateMessageFromAmqpMessage(s_logger, e);
+            Log.FailedToCreateMessageFromAmqpMessage(_logger, e);
             message = Message.FailureMessage(topic.Result, messageId.Result);
         }
 
         return message;
     }
 
-    private static MessageHeader CreateMessageHeader(BasicDeliverEventArgs fromQueue, IDictionary<string, object?> headers,
+    private MessageHeader CreateMessageHeader(BasicDeliverEventArgs fromQueue, IDictionary<string, object?> headers,
         HeaderResult<RoutingKey?> topic, HeaderResult<Id?> messageId)
     {
         var timeStamp = ReadTimeStamp(fromQueue.BasicProperties);
@@ -101,7 +105,7 @@ internal sealed partial class RmqMessageCreator
             timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
             correlationId: correlationId.Result,
             replyTo: new RoutingKey(replyTo.Result?.Value ?? string.Empty),
-            contentType: new ContentType(fromQueue.BasicProperties.ContentType), 
+            contentType: new ContentType(fromQueue.BasicProperties.ContentType),
             handledCount: handledCount.Result,
             dataSchema: dataSchema.Result,
             subject: subject.Result,
@@ -112,12 +116,12 @@ internal sealed partial class RmqMessageCreator
         );
     }
 
-    private static void ProcessHeaderBag(IDictionary<string, object?> headers, Message message)
+    private void ProcessHeaderBag(IDictionary<string, object?> headers, Message message)
     {
         headers.Each(header => message.Header.Bag.Add(header.Key, ParseHeaderValue(header.Value)));
     }
 
-    private static void SetMessageMetadata(BasicDeliverEventArgs fromQueue, Message message)
+    private void SetMessageMetadata(BasicDeliverEventArgs fromQueue, Message message)
     {
         var deliveryTag = ReadDeliveryTag(fromQueue.DeliveryTag);
         var redelivered = ReadRedeliveredFlag(fromQueue.Redelivered);
@@ -127,7 +131,7 @@ internal sealed partial class RmqMessageCreator
         message.Persist = fromQueue.BasicProperties.DeliveryMode == 2;
     }
 
-    private static HeaderResult<string?> ReadHeader(IDictionary<string, object?> dict, string key, bool dieOnMissing = false)
+    private HeaderResult<string?> ReadHeader(IDictionary<string, object?> dict, string key, bool dieOnMissing = false)
     {
         if (false == dict.TryGetValue(key, out object? value))
         {
@@ -136,7 +140,7 @@ internal sealed partial class RmqMessageCreator
 
         if (!(value is byte[] bytes))
         {
-            Log.HeaderValueCouldNotBeCastToByteArray(s_logger, key);
+            Log.HeaderValueCouldNotBeCastToByteArray(_logger, key);
             return new HeaderResult<string?>(null, false);
         }
 
@@ -148,12 +152,12 @@ internal sealed partial class RmqMessageCreator
         catch (Exception e)
         {
             var firstTwentyBytes = BitConverter.ToString(bytes.Take(20).ToArray());
-            Log.FailedToReadHeaderValueAsUtf8(s_logger, key, firstTwentyBytes, e);
+            Log.FailedToReadHeaderValueAsUtf8(_logger, key, firstTwentyBytes, e);
             return new HeaderResult<string?>(null, false);
         }
     }
 
-    private static HeaderResult<Id?> ReadCorrelationId(IDictionary<string, object?> headers)
+    private HeaderResult<Id?> ReadCorrelationId(IDictionary<string, object?> headers)
     {
         if (headers.TryGetValue(HeaderNames.CORRELATION_ID, out object? correlationHeader))
         {
@@ -164,12 +168,12 @@ internal sealed partial class RmqMessageCreator
         return new HeaderResult<Id?>(null, false);
     }
 
-    private static HeaderResult<ulong> ReadDeliveryTag(ulong deliveryTag)
+    private HeaderResult<ulong> ReadDeliveryTag(ulong deliveryTag)
     {
         return new HeaderResult<ulong>(deliveryTag, true);
     }
 
-    private static HeaderResult<DateTimeOffset> ReadTimeStamp(IBasicProperties basicProperties)
+    private HeaderResult<DateTimeOffset> ReadTimeStamp(IBasicProperties basicProperties)
     {
         if (basicProperties.IsTimestampPresent())
         {
@@ -187,7 +191,7 @@ internal sealed partial class RmqMessageCreator
         return new HeaderResult<DateTimeOffset>(DateTimeOffset.UtcNow, true);
     }
 
-    private static HeaderResult<MessageType> ReadMessageType(IDictionary<string, object?> headers)
+    private HeaderResult<MessageType> ReadMessageType(IDictionary<string, object?> headers)
     {
         return ReadHeader(headers, HeaderNames.MESSAGE_TYPE)
             .Map(s =>
@@ -202,7 +206,7 @@ internal sealed partial class RmqMessageCreator
             });
     }
 
-    private static HeaderResult<int> ReadHandledCount(IDictionary<string, object?> headers)
+    private HeaderResult<int> ReadHandledCount(IDictionary<string, object?> headers)
     {
         if (headers.TryGetValue(HeaderNames.HANDLED_COUNT, out object? header) == false)
         {
@@ -223,7 +227,7 @@ internal sealed partial class RmqMessageCreator
         }
     }
 
-    private static HeaderResult<RoutingKey?> ReadTopic(BasicDeliverEventArgs fromQueue, IDictionary<string, object?> headers)
+    private HeaderResult<RoutingKey?> ReadTopic(BasicDeliverEventArgs fromQueue, IDictionary<string, object?> headers)
     {
         var res = ReadHeader(headers, HeaderNames.TOPIC).Map(s =>
         {
@@ -235,28 +239,28 @@ internal sealed partial class RmqMessageCreator
         {
             return res;
         }
-        
+
         return new HeaderResult<RoutingKey?>(new RoutingKey(fromQueue.RoutingKey), true);
     }
 
-    private static HeaderResult<Id?> ReadMessageId(string? messageId)
+    private HeaderResult<Id?> ReadMessageId(string? messageId)
     {
         if (string.IsNullOrEmpty(messageId))
         {
             var newMessageId = Id.Random();
-            Log.NoMessageIdFoundInMessage(s_logger, newMessageId.Value);
+            Log.NoMessageIdFoundInMessage(_logger, newMessageId.Value);
             return new HeaderResult<Id?>(newMessageId, true);
         }
 
         return new HeaderResult<Id?>(Id.Create(messageId), true);
     }
 
-    private static HeaderResult<bool> ReadRedeliveredFlag(bool redelivered)
+    private HeaderResult<bool> ReadRedeliveredFlag(bool redelivered)
     {
         return new HeaderResult<bool>(redelivered, true);
     }
 
-    private static HeaderResult<RoutingKey?> ReadReplyTo(IBasicProperties basicProperties)
+    private HeaderResult<RoutingKey?> ReadReplyTo(IBasicProperties basicProperties)
     {
         if (basicProperties.IsReplyToPresent())
         {
@@ -266,7 +270,7 @@ internal sealed partial class RmqMessageCreator
         return new HeaderResult<RoutingKey?>(null, true);
     }
 
-    private static HeaderResult<Uri> ReadSource(IDictionary<string, object?> headers)
+    private HeaderResult<Uri> ReadSource(IDictionary<string, object?> headers)
     {
         if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SOURCE, out var source)
             && source is byte[] val
@@ -278,7 +282,7 @@ internal sealed partial class RmqMessageCreator
         return new HeaderResult<Uri>(new Uri(MessageHeader.DefaultSource), true);
     }
 
-    private static HeaderResult<CloudEventsType> ReadType(IDictionary<string, object?> headers)
+    private HeaderResult<CloudEventsType> ReadType(IDictionary<string, object?> headers)
     {
         if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TYPE, out var type)
             && type is byte[] typeArray)
@@ -289,7 +293,7 @@ internal sealed partial class RmqMessageCreator
         return new HeaderResult<CloudEventsType>(CloudEventsType.Empty, true);
     }
 
-    private static HeaderResult<string?> ReadSubject(IDictionary<string, object?> headers)
+    private HeaderResult<string?> ReadSubject(IDictionary<string, object?> headers)
     {
         if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SUBJECT, out var subject)
             && subject is byte[] subjectArray)
@@ -300,7 +304,7 @@ internal sealed partial class RmqMessageCreator
         return new HeaderResult<string?>(null, true);
     }
 
-    private static HeaderResult<Uri?> ReadDataSchema(IDictionary<string, object?> headers)
+    private HeaderResult<Uri?> ReadDataSchema(IDictionary<string, object?> headers)
     {
         if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, out var dataSchema)
             && dataSchema is byte[] dataSchemaArray
@@ -312,7 +316,7 @@ internal sealed partial class RmqMessageCreator
         return new HeaderResult<Uri?>(null, true);
     }
 
-    private static HeaderResult<TraceParent?> ReadTraceParent(IDictionary<string, object?> headers)
+    private HeaderResult<TraceParent?> ReadTraceParent(IDictionary<string, object?> headers)
     {
         if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, out var traceParent)
             && traceParent is byte[] traceParentArray)
@@ -323,7 +327,7 @@ internal sealed partial class RmqMessageCreator
         return new HeaderResult<TraceParent?>(string.Empty, true);
     }
 
-    private static HeaderResult<TraceState?> ReadTraceState(IDictionary<string, object?> headers)
+    private HeaderResult<TraceState?> ReadTraceState(IDictionary<string, object?> headers)
     {
         if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TRACE_STATE, out var traceState)
             && traceState is byte[] traceParentArray)
@@ -334,7 +338,7 @@ internal sealed partial class RmqMessageCreator
         return new HeaderResult<TraceState?>(string.Empty, true);
     }
 
-    private static HeaderResult<string?> ReadBaggage(IDictionary<string, object?> headers)
+    private HeaderResult<string?> ReadBaggage(IDictionary<string, object?> headers)
     {
         if (headers.TryGetValue(HeaderNames.W3C_BAGGAGE, out var traceParent)
             && traceParent is byte[] traceParentArray)
@@ -345,7 +349,7 @@ internal sealed partial class RmqMessageCreator
         return new HeaderResult<string?>(string.Empty, true);
     }
 
-    private static object ParseHeaderValue(object? value)
+    private object ParseHeaderValue(object? value)
     {
         if (value == null)
             return string.Empty;

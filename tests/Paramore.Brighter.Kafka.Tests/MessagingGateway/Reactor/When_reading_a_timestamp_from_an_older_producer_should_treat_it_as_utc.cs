@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Globalization;
 using Confluent.Kafka;
@@ -39,7 +41,7 @@ public class KafkaLegacyTimeStampFormatTests
     public void When_reading_a_timestamp_from_an_older_producer_should_treat_it_as_utc()
     {
         //act
-        Message read = new KafkaMessageCreator().CreateMessage(ConsumeResultFor(_headers));
+        Message read = new KafkaMessageCreator(logger: LoggerFactoryExtensions.CreateLogger<KafkaMessageCreator>( NullLoggerFactory.Instance )).CreateMessage(ConsumeResultFor(_headers));
 
         //assert - an offset-less value is taken as UTC and left there, not converted to host-local time
         Assert.Equal(s_utcTimeStamp, read.Header.TimeStamp);

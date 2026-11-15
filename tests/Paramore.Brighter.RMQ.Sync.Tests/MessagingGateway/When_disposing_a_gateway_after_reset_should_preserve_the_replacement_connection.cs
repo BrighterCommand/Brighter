@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -46,10 +46,10 @@ public class RmqSharedConnectionResetTests
         var routingKey = new RoutingKey(Guid.NewGuid().ToString());
         var queueName = new ChannelName(Guid.NewGuid().ToString());
         var factory = new ConnectionFactory { Uri = connection.AmpqUri.Uri };
-        var pool = new RmqMessageGatewayConnectionPool(connection.Name, connection.Heartbeat);
-        using var oldProducer = new RmqMessageProducer(connection);
-        using var producer = new RmqMessageProducer(connection);
-        using var consumer = new RmqMessageConsumer(connection, queueName, routingKey, isDurable: true);
+        var pool = new RmqMessageGatewayConnectionPool(connection.Name, connection.Heartbeat, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        using var oldProducer = new RmqMessageProducer(connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        using var producer = new RmqMessageProducer(connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        using var consumer = new RmqMessageConsumer(connection, queueName, routingKey, isDurable: true, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         consumer.Purge();
         var message = new Message(new MessageHeader(Id.Random(), routingKey, MessageType.MT_COMMAND),
             new MessageBody("before reset"));

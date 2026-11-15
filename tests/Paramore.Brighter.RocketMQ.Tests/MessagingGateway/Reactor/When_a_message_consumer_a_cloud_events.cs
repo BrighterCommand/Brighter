@@ -1,11 +1,13 @@
-﻿using Paramore.Brighter.MessagingGateway.RocketMQ;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
 using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RocketMQ")]
-public class BufferedConsumerCloudEventsTests : IDisposable 
+public class BufferedConsumerCloudEventsTests : IDisposable
 {
     private readonly RoutingKey _routingKey = new(Guid.NewGuid().ToString());
     private readonly IAmAMessageConsumerSync _consumer;
@@ -14,12 +16,12 @@ public class BufferedConsumerCloudEventsTests : IDisposable
 
     public BufferedConsumerCloudEventsTests()
     {
-        var connection = GatewayFactory.CreateConnection(); 
+        var connection = GatewayFactory.CreateConnection();
         var publication = new RocketMqPublication { Topic = "bt_mc_cloudevents" };
         var consumer = GatewayFactory.CreateSimpleConsumer(connection, publication).GetAwaiter().GetResult();
         var producer = GatewayFactory.CreateProducer(connection, publication).GetAwaiter().GetResult();
 
-        _consumer = new RocketMessageConsumer(consumer, BatchSize, TimeSpan.FromSeconds(30));
+        _consumer = new RocketMessageConsumer(consumer, BatchSize, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
         _producer = new RocketMqMessageProducer(connection, producer, publication);
     }
 
@@ -27,7 +29,7 @@ public class BufferedConsumerCloudEventsTests : IDisposable
     public void When_uses_cloud_events()
     {
         _consumer.Purge();
-        
+
         //Post one more than batch size messages
         var messageOne = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND)
@@ -37,7 +39,7 @@ public class BufferedConsumerCloudEventsTests : IDisposable
                 Source = new Uri($"/component/{Guid.NewGuid()}", UriKind.RelativeOrAbsolute),
                 DataSchema = new Uri("https://example.com/storage/tenant/container", UriKind.RelativeOrAbsolute)
             }, new MessageBody("test content One"));
-        
+
         _producer.Send(messageOne);
 
         //let them arrive

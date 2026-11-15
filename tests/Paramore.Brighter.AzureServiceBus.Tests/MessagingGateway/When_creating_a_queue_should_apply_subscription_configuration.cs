@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -66,9 +66,7 @@ public class AzureServiceBusQueueConfigurationTests
             makeChannels: OnMissingChannel.Create, subscriptionConfiguration: configuration);
         var administration = new InMemoryServiceBusAdministrationClient();
         await using var client = new InMemoryServiceBusClient(ServiceBusModelFactory.ServiceBusReceivedMessage(), administration);
-        using var consumer = new AzureServiceBusQueueConsumer(subscription, new AzureServiceBusRequeueScheduler(client),
-            new AdministrationClientWrapper(client),
-            new FakeServiceBusReceiverProvider(new FakeServiceBusReceiverWrapper()));
+        using var consumer = new AzureServiceBusQueueConsumer(subscription: subscription, requeueScheduler: new AzureServiceBusRequeueScheduler(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), administrationClientWrapper: new AdministrationClientWrapper(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), serviceBusReceiverProvider: new FakeServiceBusReceiverProvider(new FakeServiceBusReceiverWrapper()), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Act
         if (useAsync)

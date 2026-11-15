@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -125,7 +125,7 @@ public class CountBlockingItsThreadTests
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
-        new(new InternalBus(), new Publication { Topic = new RoutingKey(topic) });
+        new InMemoryMessageProducer(new InternalBus(), publication: new Publication { Topic = new RoutingKey(topic) }, loggerFactory: Initializer.TestLoggerFactory);
 
     private static bool IsCancelled(StaleMessageCountingOutbox outbox) =>
         outbox.CountCalls.Any(call => call.CancellationToken.IsCancellationRequested);

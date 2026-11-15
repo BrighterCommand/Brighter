@@ -37,15 +37,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 .AddBrighterDefault();
 
             var exception = Catch.Exception(() => new OutboxProducerMediator<Message, CommittableTransaction>(
-                null!, 
+                null!,
                 resiliencePipelineRegistry,
                 _messageMapperRegistry,
                  new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 _tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _outbox)
-            );               
+                Initializer.TestLoggerFactory, _outbox)
+            );
 
             Assert.IsType<ConfigurationException>(exception);
         }

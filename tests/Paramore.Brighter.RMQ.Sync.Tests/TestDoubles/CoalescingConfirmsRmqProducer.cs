@@ -32,7 +32,7 @@ using RabbitMQ.Client;
 namespace Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 
 public class CoalescingConfirmsRmqProducer(RmqMessagingGatewayConnection connection)
-    : RmqMessageProducer(connection)
+    : RmqMessageProducer(connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
 {
     private readonly List<CoalescingConfirmsRmqChannel> _channels = [];
 

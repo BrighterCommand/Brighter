@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -43,22 +43,22 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         public OnceOnlyAttributeWithWarnExceptionAsyncTests()
         {
             IAmAnInboxAsync inbox = new InMemoryInbox(new FakeTimeProvider());
-            
+
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyStoredCommandToWarnHandlerAsync>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyStoredCommandToWarnHandlerAsync>();
             container.AddSingleton(inbox);
             container.AddTransient<UseInboxHandlerAsync<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            
-            _command = new MyCommand {Value = "My Test String"};
-            
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+
+            _command = new MyCommand { Value = "My Test String" };
+
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
+                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         {
             await _commandProcessor.SendAsync(_command);
             await _commandProcessor.SendAsync(_command);
-            
+
             Assert.Equal(1, MyStoredCommandToWarnHandlerAsync.ReceivedCount);
         }
     }

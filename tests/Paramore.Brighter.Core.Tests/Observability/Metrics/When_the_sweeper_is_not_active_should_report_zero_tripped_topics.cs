@@ -137,7 +137,7 @@ public class InactiveSweeperZeroTrippedTopicsGaugeTests
 
     private static List<long> ObserveWithOrdersTripped(OutboxSweeperState state)
     {
-        var breaker = new InMemoryOutboxCircuitBreaker();
+        var breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         breaker.TripTopic(new RoutingKey("orders"));
         return Observe(state, () => breaker);
     }
@@ -146,7 +146,7 @@ public class InactiveSweeperZeroTrippedTopicsGaugeTests
     {
         using var metrics = new ServiceCollection().AddMetrics().BuildServiceProvider();
         var meterFactory = metrics.GetRequiredService<IMeterFactory>();
-        var meter = new SweeperMeter(meterFactory, state, findCircuitBreaker);
+        var meter = new SweeperMeter(meterFactory: meterFactory, state: state, findCircuitBreaker: findCircuitBreaker, loggerFactory: Initializer.TestLoggerFactory);
         var values = new List<long>();
         using var listener = new MeterListener();
         listener.InstrumentPublished = (instrument, l) =>

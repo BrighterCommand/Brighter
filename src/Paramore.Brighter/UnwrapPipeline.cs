@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter
@@ -33,7 +34,7 @@ namespace Paramore.Brighter
     /// Takes a message and maps it to a request
     /// Runs transforms on that message
     /// </summary>
-    public class UnwrapPipeline<TRequest> : TransformPipeline<TRequest> where TRequest: class, IRequest
+    public class UnwrapPipeline<TRequest> : TransformPipeline<TRequest> where TRequest : class, IRequest
     {
         /// <summary>
         /// Constructs an instance of an Unwrap pipeline
@@ -41,24 +42,26 @@ namespace Paramore.Brighter
         /// <param name="transformLeases">The leases over the transforms that run before the mapper</param>
         /// <param name="messageTransformerFactory">The factory used to create transforms</param>
         /// <param name="messageMapperLease">The lease over the message mapper that forms the pipeline sink</param>
+        /// <param name="loggerFactory">The factory used to create loggers.</param>
         /// <param name="mapperRegistry">The registry the message mapper came from, required to release it when the pipeline is disposed</param>
         /// <param name="scope">The pipeline's own DI scope, if one was offered when the pipeline was built</param>
         public UnwrapPipeline(
             IEnumerable<Lease<IAmAMessageTransform>> transformLeases,
             IAmAMessageTransformerFactory? messageTransformerFactory,
             Lease<IAmAMessageMapper<TRequest>> messageMapperLease,
+            ILoggerFactory loggerFactory,
             IAmAMessageMapperRegistry? mapperRegistry = null,
             IAmAScope? scope = null
-            ) : base(messageMapperLease, transformLeases, mapperRegistry, scope)
+            ) : base(messageMapperLease, transformLeases, loggerFactory, mapperRegistry, scope)
         {
             if (messageTransformerFactory != null)
             {
-                InstanceScope = new TransformLifetimeScope(messageTransformerFactory);
+                InstanceScope = new TransformLifetimeScope(messageTransformerFactory, loggerFactory);
                 TransformLeases.Each(lease => InstanceScope.Add(lease));
             }
         }
 
-        /// <summary>        
+        /// <summary>
         /// Lists the unwrap pipeline: filter transforms and message mapper that will be executed
         /// Used for pipeline verification
         /// </summary>
@@ -70,24 +73,24 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Transforms a <see cref="Message"/> into a <see cref="IRequest"/> 
-        /// Applies any required <see cref="IAmAMessageTransform"/> to that <see cref="Message"/> 
+        /// Transforms a <see cref="Message"/> into a <see cref="IRequest"/>
+        /// Applies any required <see cref="IAmAMessageTransform"/> to that <see cref="Message"/>
         /// </summary>
         /// <param name="message">The message to unwrap</param>
         /// <param name="requestContext">The context of the request in this pipeline</param>
         /// <returns>a request</returns>
         public TRequest Unwrap(Message message, RequestContext? requestContext)
         {
-            if(requestContext is not null)
+            if (requestContext is not null)
                 requestContext.Span ??= Activity.Current;
-            
+
             var msg = requestContext?.Delivery is null ? message : message.CopyForDelivery();
             Transforms.Each(transform =>
             {
                 transform.Context = requestContext;
                 msg = transform.Unwrap(msg);
             });
-            
+
             MessageMapper.Context = requestContext;
             return MessageMapper.MapToRequest(msg);
         }

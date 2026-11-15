@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Linq;
 using Paramore.Brighter.CircuitBreaker;
 using Serilog.Events;
@@ -15,7 +17,7 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker
             {
                 // Arrange
                 var topic = new RoutingKey("already.tripped.topic");
-                var circuitBreaker = new InMemoryOutboxCircuitBreaker(new OutboxCircuitBreakerOptions { CooldownCount = 3 });
+                var circuitBreaker = new InMemoryOutboxCircuitBreaker(LoggerFactoryExtensions.CreateLogger<Paramore.Brighter.CircuitBreaker.InMemoryOutboxCircuitBreaker>( Initializer.TestLoggerFactory ), new OutboxCircuitBreakerOptions { CooldownCount = 3 });
                 circuitBreaker.TripTopic(topic); // fresh trip
 
                 // Act

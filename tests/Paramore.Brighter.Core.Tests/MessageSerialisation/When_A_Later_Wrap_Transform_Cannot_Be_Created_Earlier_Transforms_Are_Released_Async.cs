@@ -26,7 +26,7 @@ public class AsyncTransformPipelinePartialWrapBuildReleaseTests
         mapperRegistry.RegisterAsync<MyTransformableCommand, MyDoubleWrapTransformMessageMapperAsync>();
 
         _transformerFactory = new RecordingTransformerFactoryAsync();
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, _transformerFactory, InstrumentationOptions.All);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, _transformerFactory, Initializer.TestLoggerFactory, InstrumentationOptions.All);
     }
 
     [Fact]

@@ -64,7 +64,7 @@ public class KafkaMessageConsumerInvalidMessageFallbackAsyncTests : IAsyncDispos
                 Name = "Kafka Producer Invalid Message Fallback Async Test",
                 BootStrapServers = new[] { "localhost:9092" }
             },
-            publication);
+            publication, loggerFactory: Initializer.TestLoggerFactory);
 
         _producer.Init();
     }
@@ -139,7 +139,7 @@ public class KafkaMessageConsumerInvalidMessageFallbackAsyncTests : IAsyncDispos
                 {
                     Name = "Kafka Consumer Invalid Message Fallback Async Test",
                     BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .CreateAsync(new KafkaSubscription<MyCommand>
             (
                 subscriptionName: new SubscriptionName("Paramore.Brighter.Tests"),
@@ -163,7 +163,7 @@ public class KafkaMessageConsumerInvalidMessageFallbackAsyncTests : IAsyncDispos
                 {
                     Name = "Kafka DLQ Consumer Async Test",
                     BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .CreateAsync(new KafkaSubscription<MyCommand>
             (
                 subscriptionName: new SubscriptionName("Paramore.Brighter.DLQ.Tests"),

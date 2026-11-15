@@ -34,7 +34,7 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 public class PausedConnectionRmqConsumer(
     RmqMessagingGatewayConnection connection, ChannelName queue, RoutingKey routingKey,
     TaskCompletionSource<bool> connecting, TaskCompletionSource<bool> resume)
-    : RmqMessageConsumer(connection, queue, routingKey, isDurable: true)
+    : RmqMessageConsumer(connection, queue, routingKey, isDurable: true, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
 {
     protected override void ConnectToBroker(OnMissingChannel makeExchange)
     {

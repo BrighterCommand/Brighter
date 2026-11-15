@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -49,21 +49,21 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             registry.Register<MyCommand, MyStoredCommandHandler>();
             registry.Register<MyCommandToFail, MyStoredCommandToFailHandler>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyStoredCommandHandler>();
             container.AddTransient<MyStoredCommandToFailHandler>();
             container.AddSingleton(_inbox);
             container.AddTransient<UseInboxHandler<MyCommand>>();
             container.AddTransient<UseInboxHandler<MyCommandToFail>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-            _command = new MyCommand {Value = "My Test String"};
+            _command = new MyCommand { Value = "My Test String" };
 
             _contextKey = typeof(MyStoredCommandHandler).FullName;
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
+                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
         }
 
@@ -81,7 +81,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         {
             string id = Guid.NewGuid().ToString();
 
-            Assert.Throws<NotImplementedException>(() => _commandProcessor.Send(new MyCommandToFail { Id = id}));
+            Assert.Throws<NotImplementedException>(() => _commandProcessor.Send(new MyCommandToFail { Id = id }));
 
             Assert.False(_inbox.Exists<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandler).FullName, null));
         }

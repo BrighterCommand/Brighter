@@ -22,7 +22,7 @@ public class TransformerFactoryInitializeFailureReleaseTests
         mapperRegistry.Register<MyTransformableCommand, MyTransformableCommandMessageMapper>();
 
         _transformerFactory = new RecordingTransformerFactory();
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, _transformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, _transformerFactory, loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

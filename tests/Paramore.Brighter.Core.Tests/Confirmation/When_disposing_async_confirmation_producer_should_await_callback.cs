@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -48,7 +50,7 @@ public class AsyncPublishConfirmationTests
         var message = CreateMessage();
         var outbox = new GatedAsyncOutbox();
         await outbox.AddAsync(message, requestContext);
-        var producer = new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = s_topic })
+        var producer = new InMemoryMessageProducer(new InternalBus(), Initializer.TestLoggerFactory, new Publication { Topic = s_topic })
         {
             UseAsyncPublishConfirmation = true
         };
@@ -82,7 +84,7 @@ public class AsyncPublishConfirmationTests
         var message = CreateMessage();
         var outbox = new GatedAsyncOutbox();
         await outbox.AddAsync(message, requestContext);
-        var producer = new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = s_topic });
+        var producer = new InMemoryMessageProducer(new InternalBus(), Initializer.TestLoggerFactory, new Publication { Topic = s_topic });
         ConfigureMediator(producer, outbox);
 
         // Act
@@ -106,7 +108,7 @@ public class AsyncPublishConfirmationTests
     public async Task When_disposing_with_concurrent_sends_should_drain_every_confirmation()
     {
         // Arrange
-        var producer = new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = s_topic })
+        var producer = new InMemoryMessageProducer(new InternalBus(), Initializer.TestLoggerFactory, new Publication { Topic = s_topic })
         {
             UseAsyncPublishConfirmation = true
         };
@@ -132,7 +134,7 @@ public class AsyncPublishConfirmationTests
     public async Task When_an_async_confirmation_subscriber_throws_dispose_still_drains()
     {
         // Arrange
-        var producer = new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = s_topic })
+        var producer = new InMemoryMessageProducer(new InternalBus(), Initializer.TestLoggerFactory, new Publication { Topic = s_topic })
         {
             UseAsyncPublishConfirmation = true
         };
@@ -174,7 +176,7 @@ public class AsyncPublishConfirmationTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer: null,
             new FindPublicationByPublicationTopicOrRequestType(),
-            outbox,
-            new InMemoryOutboxCircuitBreaker());
+            Initializer.TestLoggerFactory, outbox,
+            new InMemoryOutboxCircuitBreaker(logger: LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>( Initializer.TestLoggerFactory )));
     }
 }

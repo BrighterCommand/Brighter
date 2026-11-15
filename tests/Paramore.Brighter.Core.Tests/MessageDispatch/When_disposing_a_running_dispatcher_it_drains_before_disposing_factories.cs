@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 new SubscriptionName("test"),
                 noOfPerformers: 1,
                 timeOut: TimeSpan.FromMilliseconds(1000),
-                channelFactory: new InMemoryChannelFactory(bus, _timeProvider),
+                channelFactory: new InMemoryChannelFactory(bus, _timeProvider, loggerFactory: Initializer.TestLoggerFactory),
                 channelName: new ChannelName(ChannelName),
                 messagePumpType: MessagePumpType.Reactor,
                 routingKey: _routingKey);
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher = new Dispatcher(
                 commandProcessor,
                 new List<Subscription> { subscription },
-                messageMapperRegistry,
+                Initializer.TestLoggerFactory, messageMapperRegistry,
                 ownsRegistry: true);
 
             //the factory can only read the dispatcher's state at dispose time once the dispatcher exists

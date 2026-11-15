@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
@@ -24,11 +24,11 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyFailsWithFallbackDivideByZeroHandlerAsync>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddSingleton<MyFailsWithFallbackDivideByZeroHandlerAsync>();
             container.AddSingleton<ExceptionPolicyHandlerAsync<MyCommand>>();
             container.AddSingleton<FallbackPolicyHandlerRequestHandlerAsync<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
             _provider = container.BuildServiceProvider();
             var handlerFactory = new ServiceProviderHandlerFactory(_provider);
@@ -38,19 +38,19 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             var policy = Policy
                 .Handle<DivideByZeroException>()
                 .WaitAndRetryAsync([
-                        TimeSpan.FromMilliseconds(10), 
-                        TimeSpan.FromMilliseconds(20), 
+                        TimeSpan.FromMilliseconds(10),
+                        TimeSpan.FromMilliseconds(20),
                         TimeSpan.FromMilliseconds(30)
                     ],
                     (exception, timeSpan) =>
                         _retryCount++
                 );
-            
+
             policyRegistry.Add("MyDivideByZeroPolicy", policy);
 
             _provider.GetService<MyFailsWithFallbackDivideByZeroHandlerAsync>().ReceivedCommand = false;
-            
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         }
 
         //We have to catch the final exception that bubbles out after retry

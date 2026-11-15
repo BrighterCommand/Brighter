@@ -20,7 +20,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
-
 using System;
 using System.Diagnostics;
 using System.Threading;
@@ -33,7 +32,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
 internal sealed partial class ServiceBusLock
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<ServiceBusLock>();
+    private readonly ILogger _logger; private readonly ILoggerFactory _loggerFactory;
     private readonly CancellationTokenSource _stop = new();
     private readonly Task _renewal;
     private readonly string _entityPath;
@@ -43,17 +42,15 @@ internal sealed partial class ServiceBusLock
     private long _lockedUntilTicks;
     private int _lost;
     private Task? _stopping;
-
-    public ServiceBusLock(DateTimeOffset lockedUntil, TimeSpan maxDuration,
-        string entityPath, string lockType, string lockId, Func<CancellationToken, Task<DateTimeOffset>> renew)
+    public ServiceBusLock(DateTimeOffset lockedUntil, TimeSpan maxDuration, string entityPath, string lockType, string lockId, Func<CancellationToken, Task<DateTimeOffset>> renew, ILoggerFactory loggerFactory)
     {
+        _loggerFactory = loggerFactory ?? throw new System.ArgumentNullException(nameof(loggerFactory));
+        _logger = loggerFactory.CreateLogger<ServiceBusLock>();
         _lockedUntilTicks = lockedUntil.UtcTicks;
         _entityPath = entityPath;
         _lockType = lockType;
         _lockId = lockId;
-        _renewal = maxDuration == TimeSpan.Zero || lockedUntil == default
-            ? Task.CompletedTask
-            : Task.Run(() => RenewAsync(maxDuration, renew));
+        _renewal = maxDuration == TimeSpan.Zero || lockedUntil == default ? Task.CompletedTask : Task.Run(() => RenewAsync(maxDuration, renew));
     }
 
     public bool IsValid
@@ -61,8 +58,7 @@ internal sealed partial class ServiceBusLock
         get
         {
             var lockedUntilTicks = Interlocked.Read(ref _lockedUntilTicks);
-            return Volatile.Read(ref _lost) == 0 &&
-                (lockedUntilTicks == 0 || lockedUntilTicks > DateTimeOffset.UtcNow.UtcTicks);
+            return Volatile.Read(ref _lost) == 0 && (lockedUntilTicks == 0 || lockedUntilTicks > DateTimeOffset.UtcNow.UtcTicks);
         }
     }
 
@@ -70,8 +66,8 @@ internal sealed partial class ServiceBusLock
     {
         var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var stopping = Interlocked.CompareExchange(ref _stopping, completion.Task, null);
-        if (stopping is not null) return stopping;
-
+        if (stopping is not null)
+            return stopping;
         _ = StopCoreAsync(completion);
         return completion.Task;
     }
@@ -89,6 +85,7 @@ internal sealed partial class ServiceBusLock
                 await _renewal.ConfigureAwait(false);
                 _stop.Dispose();
             }
+
             completion.TrySetResult(true);
         }
         catch (Exception exception)
@@ -121,14 +118,15 @@ internal sealed partial class ServiceBusLock
                     LogRenewalBudgetReached(maxDuration);
                     return;
                 }
-                await Task.Delay(delay, _stop.Token).ConfigureAwait(false);
 
+                await Task.Delay(delay, _stop.Token).ConfigureAwait(false);
                 budget = maxDuration - _elapsed.Elapsed;
                 if (budget <= TimeSpan.Zero)
                 {
                     LogRenewalBudgetReached(maxDuration);
                     return;
                 }
+
                 using var attempt = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token);
                 attempt.CancelAfter(TimeSpan.FromMilliseconds(Math.Min(budget.TotalMilliseconds, int.MaxValue)));
                 try
@@ -147,21 +145,19 @@ internal sealed partial class ServiceBusLock
                 {
                     var lockedUntil = new DateTimeOffset(Interlocked.Read(ref _lockedUntilTicks), TimeSpan.Zero);
                     if (retrying)
-                        Log.TransientRenewalRetry(s_logger, exception, _lockType, _lockId, _entityPath, maxDuration, lockedUntil);
+                        Log.TransientRenewalRetry(_logger, exception, _lockType, _lockId, _entityPath, maxDuration, lockedUntil);
                     else
-                        Log.TransientRenewalFailure(s_logger, exception, _lockType, _lockId, _entityPath, maxDuration, lockedUntil);
+                        Log.TransientRenewalFailure(_logger, exception, _lockType, _lockId, _entityPath, maxDuration, lockedUntil);
                     retrying = true;
-
                     budget = maxDuration - _elapsed.Elapsed;
                     if (budget <= TimeSpan.Zero)
                     {
                         LogRenewalBudgetReached(maxDuration);
                         return;
                     }
+
                     remainingLock = lockedUntil - DateTimeOffset.UtcNow;
-                    var retryDelay = remainingLock > TimeSpan.Zero
-                        ? Math.Min(retryDelayMilliseconds, remainingLock.TotalMilliseconds)
-                        : retryDelayMilliseconds;
+                    var retryDelay = remainingLock > TimeSpan.Zero ? Math.Min(retryDelayMilliseconds, remainingLock.TotalMilliseconds) : retryDelayMilliseconds;
                     await Task.Delay(TimeSpan.FromMilliseconds(Math.Min(retryDelay, budget.TotalMilliseconds)), _stop.Token).ConfigureAwait(false);
                     retryDelayMilliseconds = Math.Min(retryDelayMilliseconds * 2, 1000);
                 }
@@ -174,35 +170,28 @@ internal sealed partial class ServiceBusLock
         {
             if (exception is ServiceBusException { Reason: ServiceBusFailureReason.MessageLockLost or ServiceBusFailureReason.SessionLockLost })
                 Interlocked.Exchange(ref _lost, 1);
-            Log.RenewalStoppedAfterFailure(s_logger, exception, _lockType, _lockId, _entityPath, maxDuration,
-                new DateTimeOffset(Interlocked.Read(ref _lockedUntilTicks), TimeSpan.Zero));
+            Log.RenewalStoppedAfterFailure(_logger, exception, _lockType, _lockId, _entityPath, maxDuration, new DateTimeOffset(Interlocked.Read(ref _lockedUntilTicks), TimeSpan.Zero));
         }
     }
 
     private void LogRenewalBudgetReached(TimeSpan maxDuration)
     {
-        if (_stop.IsCancellationRequested) return;
-
-        Log.RenewalBudgetReached(s_logger, _lockType, _lockId, _entityPath, maxDuration,
-            new DateTimeOffset(Interlocked.Read(ref _lockedUntilTicks), TimeSpan.Zero));
+        if (_stop.IsCancellationRequested)
+            return;
+        Log.RenewalBudgetReached(_logger, _lockType, _lockId, _entityPath, maxDuration, new DateTimeOffset(Interlocked.Read(ref _lockedUntilTicks), TimeSpan.Zero));
     }
 
     private static partial class Log
     {
         [LoggerMessage(LogLevel.Warning, "Transient failure renewing Service Bus {LockType} lock for {LockId} on {EntityPath}. Configured renewal duration is {MaxAutoLockRenewalDuration}; last known lock expiry is {LockedUntil}")]
-        public static partial void TransientRenewalFailure(ILogger logger, Exception exception, string lockType,
-            string lockId, string entityPath, TimeSpan maxAutoLockRenewalDuration, DateTimeOffset lockedUntil);
-
+        public static partial void TransientRenewalFailure(ILogger logger, Exception exception, string lockType, string lockId, string entityPath, TimeSpan maxAutoLockRenewalDuration, DateTimeOffset lockedUntil);
         [LoggerMessage(LogLevel.Debug, "Transient failure retrying Service Bus {LockType} lock renewal for {LockId} on {EntityPath}. Configured renewal duration is {MaxAutoLockRenewalDuration}; last known lock expiry is {LockedUntil}")]
-        public static partial void TransientRenewalRetry(ILogger logger, Exception exception, string lockType,
-            string lockId, string entityPath, TimeSpan maxAutoLockRenewalDuration, DateTimeOffset lockedUntil);
-
+        public static partial void TransientRenewalRetry(ILogger logger, Exception exception, string lockType, string lockId, string entityPath, TimeSpan maxAutoLockRenewalDuration, DateTimeOffset lockedUntil);
         [LoggerMessage(LogLevel.Warning, "Service Bus {LockType} lock renewal for {LockId} on {EntityPath} stopped after a failure. Configured renewal duration is {MaxAutoLockRenewalDuration}; last known lock expiry is {LockedUntil}")]
-        public static partial void RenewalStoppedAfterFailure(ILogger logger, Exception exception, string lockType,
-            string lockId, string entityPath, TimeSpan maxAutoLockRenewalDuration, DateTimeOffset lockedUntil);
-
+        public static partial void RenewalStoppedAfterFailure(ILogger logger, Exception exception, string lockType, string lockId, string entityPath, TimeSpan maxAutoLockRenewalDuration, DateTimeOffset lockedUntil);
         [LoggerMessage(LogLevel.Warning, "Stopped automatic Service Bus {LockType} lock renewal for {LockId} on {EntityPath}: MaxAutoLockRenewalDuration {MaxAutoLockRenewalDuration} has been reached. Last known lock expiry is {LockedUntil}; processing is not cancelled")]
-        public static partial void RenewalBudgetReached(ILogger logger, string lockType, string lockId,
-            string entityPath, TimeSpan maxAutoLockRenewalDuration, DateTimeOffset lockedUntil);
+        public static partial void RenewalBudgetReached(ILogger logger, string lockType, string lockId, string entityPath, TimeSpan maxAutoLockRenewalDuration, DateTimeOffset lockedUntil);
     }
+
+
 }

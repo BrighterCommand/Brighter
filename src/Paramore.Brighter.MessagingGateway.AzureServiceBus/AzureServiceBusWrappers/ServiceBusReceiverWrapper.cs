@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -28,7 +28,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
@@ -44,16 +43,19 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         private readonly HashSet<ServiceBusLock> _renewals = new();
         private ServiceBusLock? _sessionLock;
         private Task? _closing;
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<ServiceBusReceiverWrapper>();
+        private readonly ILogger _logger;
+        private readonly ILoggerFactory _loggerFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ServiceBusReceiverWrapper"/> class.
         /// </summary>
         /// <param name="messageReceiver">The <see cref="ServiceBusReceiver"/> to wrap.</param>
-        public ServiceBusReceiverWrapper(ServiceBusReceiver messageReceiver, TimeSpan maxAutoLockRenewalDuration)
+        public ServiceBusReceiverWrapper(ServiceBusReceiver messageReceiver, TimeSpan maxAutoLockRenewalDuration, ILoggerFactory loggerFactory)
         {
             _messageReceiver = messageReceiver;
             _maxAutoLockRenewalDuration = maxAutoLockRenewalDuration;
+            _loggerFactory = loggerFactory;
+            _logger = loggerFactory.CreateLogger<ServiceBusReceiverWrapper>();
         }
 
         /// <summary>
@@ -106,10 +108,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         {
             try
             {
-                Log.ClosingMessageReceiverConnection(s_logger);
+                Log.ClosingMessageReceiverConnection(_logger);
                 await Task.WhenAll(locks.Select(messageLock => messageLock.StopAsync())).ConfigureAwait(false);
                 await _messageReceiver.CloseAsync().ConfigureAwait(false);
-                Log.MessageReceiverConnectionStopped(s_logger);
+                Log.MessageReceiverConnectionStopped(_logger);
                 completion.TrySetResult(true);
             }
             catch (Exception exception)
@@ -152,24 +154,20 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         {
             if (_messageReceiver is ServiceBusSessionReceiver session)
             {
-                _sessionLock ??= new ServiceBusLock(session.SessionLockedUntil, _maxAutoLockRenewalDuration,
-                    session.EntityPath, "session", session.SessionId,
-                    async cancellationToken =>
+                _sessionLock ??= new ServiceBusLock(lockedUntil: session.SessionLockedUntil, maxDuration: _maxAutoLockRenewalDuration, entityPath: session.EntityPath, lockType: "session", lockId: session.SessionId, renew: async cancellationToken =>
                     {
                         await session.RenewSessionLockAsync(cancellationToken).ConfigureAwait(false);
                         return session.SessionLockedUntil;
-                    });
+                    }, loggerFactory: _loggerFactory);
                 _locks[message.LockToken] = _sessionLock;
             }
             else
             {
-                _locks[message.LockToken] = new ServiceBusLock(message.LockedUntil, _maxAutoLockRenewalDuration,
-                    _messageReceiver.EntityPath, "message", message.MessageId,
-                    async cancellationToken =>
+                _locks[message.LockToken] = new ServiceBusLock(lockedUntil: message.LockedUntil, maxDuration: _maxAutoLockRenewalDuration, entityPath: _messageReceiver.EntityPath, lockType: "message", lockId: message.MessageId, renew: async cancellationToken =>
                     {
                         await _messageReceiver.RenewMessageLockAsync(message, cancellationToken).ConfigureAwait(false);
                         return message.LockedUntil;
-                    });
+                    }, loggerFactory: _loggerFactory);
             }
             _renewals.Add(_locks[message.LockToken]);
         }

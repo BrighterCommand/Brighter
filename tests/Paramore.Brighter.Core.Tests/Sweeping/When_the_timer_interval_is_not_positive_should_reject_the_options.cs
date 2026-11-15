@@ -16,7 +16,7 @@ public class TimedOutboxSweeperOptionsValidationTests
         var options = new TimedOutboxSweeperOptions { TimerInterval = timerInterval };
 
         //Act
-        var exception = Record.Exception(() => new TimedOutboxSweeper(scopeFactory, new InMemoryLock(), options));
+        var exception = Record.Exception(() => new TimedOutboxSweeper(serviceScopeFactory: scopeFactory, distributedLock: new InMemoryLock(), options: options, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<TimedOutboxSweeper>(Initializer.TestLoggerFactory)));
 
         //Assert
         Assert.IsType<ConfigurationException>(exception);

@@ -44,6 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
 {
     private readonly SqsMessageConsumerFactory _messageConsumerFactory;
+    private readonly ILoggerFactory _loggerFactory;
     private SqsSubscription? _subscription;
     private readonly AsyncRetryPolicy _retryPolicy;
 
@@ -51,10 +52,12 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
     /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
     /// </summary>
     /// <param name="awsConnection">The details of the subscription to AWS.</param>
-    public ChannelFactory(AWSMessagingGatewayConnection awsConnection)
-        : base(awsConnection)
+    /// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
+    public ChannelFactory(AWSMessagingGatewayConnection awsConnection, ILoggerFactory loggerFactory)
+        : base(awsConnection, loggerFactory)
     {
-        _messageConsumerFactory = new SqsMessageConsumerFactory(awsConnection);
+        _loggerFactory = loggerFactory;
+        _messageConsumerFactory = new SqsMessageConsumerFactory(awsConnection, loggerFactory);
         _retryPolicy = Policy
             .Handle<InvalidOperationException>()
             .WaitAndRetryAsync([TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10)]);
@@ -100,7 +103,7 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
                             throw new ConfigurationException(
                                 "We expect an SqsSubscription or SqsSubscription<T> as a parameter");
 
-            DeliveryBudgetDiagnostics.WarnIfUnenforceable(subscription);
+            DeliveryBudgetDiagnostics.WarnIfUnenforceable(subscription, _loggerFactory);
 
             var isFifo = _subscription.QueueAttributes.Type == SqsType.Fifo;
             var queueName = _subscription.ChannelName.Value.ToValidSQSQueueName(isFifo);
@@ -112,8 +115,8 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
                     new RoutingKey(_subscription.RoutingKey.Value),
                     _messageConsumerFactory.CreateAsync(subscription),
                     subscription.BufferSize
-                ); 
-            
+                );
+
             var queueUrl =await EnsureQueueAsync(
                 queueName,
                 _subscription.ChannelType,
@@ -121,16 +124,16 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
                 _subscription.QueueAttributes,
                 _subscription.MakeChannels,
                 ct);
-            
+
             //Either we found it, or we made it, so we should have a queueUrl
             if (queueUrl is null)
                 throw new InvalidOperationException($"ChannelFactory.CreateAsyncChannelAsync: Could not create queue {queueName}");
-            
+
             var routingKey = RoutingKey.Empty;
             if (_subscription.ChannelType == ChannelType.PubSub)
                 routingKey = await EnsureSubscriptionAsync(
-                    isFifo, 
-                    queueUrl, 
+                    isFifo,
+                    queueUrl,
                     _subscription.RoutingKey,
                     _subscription.FindTopicBy,
                     _subscription.TopicAttributes,
@@ -170,7 +173,7 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
             }
             catch (Exception)
             {
-                Log.CouldNotDeleteQueue(s_logger, queueExists.queueUrl);
+                Log.CouldNotDeleteQueue(Logger, queueExists.queueUrl);
             }
         }
     }
@@ -197,7 +200,7 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
             }
             catch (Exception)
             {
-                Log.CouldNotDeleteTopic(s_logger, ChannelTopicArn);
+                Log.CouldNotDeleteTopic(Logger, ChannelTopicArn);
             }
         }
     }
@@ -211,11 +214,11 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
                             throw new ConfigurationException(
                                 "We expect an SqsSubscription or SqsSubscription<T> as a parameter");
 
-            DeliveryBudgetDiagnostics.WarnIfUnenforceable(subscription);
+            DeliveryBudgetDiagnostics.WarnIfUnenforceable(subscription, _loggerFactory);
 
             var isFifo = _subscription.QueueAttributes.Type == SqsType.Fifo;
             var queueName = _subscription.ChannelName.Value.ToValidSQSQueueName(isFifo);
-            
+
             //on assume, don't try to create the queue or topic, just return a channel
             if (_subscription.MakeChannels == OnMissingChannel.Assume)
                 return new Channel(
@@ -223,7 +226,7 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
                     new RoutingKey(_subscription.RoutingKey.Value),
                     _messageConsumerFactory.Create(subscription),
                     subscription.BufferSize
-                ); 
+                );
 
             var queueUrl = await EnsureQueueAsync(
                 queueName,
@@ -231,16 +234,16 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
                 _subscription.FindQueueBy,
                 _subscription.QueueAttributes,
                 _subscription.MakeChannels);
-            
+
             //Either we found it, or we made it, so we should have a queueUrl
             if (queueUrl is null)
                 throw new InvalidOperationException($"ChannelFactory.CreateAsyncChannelAsync: Could not create queue {queueName}");
-            
+
             var routingKey = RoutingKey.Empty;
             if (_subscription.ChannelType == ChannelType.PubSub)
                 routingKey = await EnsureSubscriptionAsync(
-                    isFifo, 
-                    queueUrl, 
+                    isFifo,
+                    queueUrl,
                     _subscription.RoutingKey,
                     _subscription.FindTopicBy,
                     _subscription.TopicAttributes,
@@ -314,7 +317,7 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
                     await snsClient.UnsubscribeAsync(new UnsubscribeRequest { SubscriptionArn = sub.SubscriptionArn });
                 if (unsubscribe.HttpStatusCode != HttpStatusCode.OK)
                 {
-                    Log.ErrorUnsubscribingFromTopic(s_logger, ChannelAddress, sub.SubscriptionArn);
+                    Log.ErrorUnsubscribingFromTopic(Logger, ChannelAddress, sub.SubscriptionArn);
                 }
             }
         } while (response.NextToken != null);

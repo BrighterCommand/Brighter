@@ -36,9 +36,9 @@ using GcpSubscriptionName = Google.Cloud.PubSub.V1.SubscriptionName;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 
-internal static partial class GcpSubscriptionPurger
+internal sealed partial class GcpSubscriptionPurger(ILoggerFactory loggerFactory)
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger(typeof(GcpSubscriptionPurger));
+    private readonly ILogger _logger = loggerFactory.CreateLogger<GcpSubscriptionPurger>();
     private static readonly CallSettings s_cleanupSettings = CallSettings
         .FromExpiration(Expiration.FromTimeout(TimeSpan.FromSeconds(10)))
         .WithRetry(RetrySettings.FromExponentialBackoff(3, TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(1), 2,
@@ -47,7 +47,7 @@ internal static partial class GcpSubscriptionPurger
         RetrySettings.FromExponentialBackoff(10, TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(2), 2,
             RetrySettings.FilterForStatusCodes(StatusCode.NotFound, StatusCode.Unavailable)));
 
-    public static Timestamp Purge(SubscriberServiceApiClient client, PublisherServiceApiClient publisher,
+    public Timestamp Purge(SubscriberServiceApiClient client, PublisherServiceApiClient publisher,
         GcpSubscriptionName subscriptionName)
     {
         var resourceId = $"brighter-purge-{Guid.NewGuid():N}";
@@ -90,7 +90,7 @@ internal static partial class GcpSubscriptionPurger
         return purgeBefore;
     }
 
-    public static async Task<Timestamp> PurgeAsync(SubscriberServiceApiClient client, PublisherServiceApiClient publisher,
+    public async Task<Timestamp> PurgeAsync(SubscriberServiceApiClient client, PublisherServiceApiClient publisher,
         GcpSubscriptionName subscriptionName, CancellationToken cancellationToken)
     {
         var resourceId = $"brighter-purge-{Guid.NewGuid():N}";
@@ -135,7 +135,7 @@ internal static partial class GcpSubscriptionPurger
         return purgeBefore;
     }
 
-    private static void DeleteResource(Action delete, string resourceName, List<Exception> failures)
+    private void DeleteResource(Action delete, string resourceName, List<Exception> failures)
     {
         try
         {
@@ -147,11 +147,11 @@ internal static partial class GcpSubscriptionPurger
         catch (Exception exception)
         {
             failures.Add(exception);
-            LogCleanupFailure(s_logger, exception, resourceName);
+            LogCleanupFailure(_logger, exception, resourceName);
         }
     }
 
-    private static async Task DeleteResourceAsync(Func<Task> delete, string resourceName, List<Exception> failures)
+    private async Task DeleteResourceAsync(Func<Task> delete, string resourceName, List<Exception> failures)
     {
         try
         {
@@ -163,11 +163,11 @@ internal static partial class GcpSubscriptionPurger
         catch (Exception exception)
         {
             failures.Add(exception);
-            LogCleanupFailure(s_logger, exception, resourceName);
+            LogCleanupFailure(_logger, exception, resourceName);
         }
     }
 
-    private static void HandleCleanupFailures(Exception? failure, List<Exception> cleanupFailures)
+    private void HandleCleanupFailures(Exception? failure, List<Exception> cleanupFailures)
     {
         if (cleanupFailures.Count == 0)
             return;
@@ -181,7 +181,7 @@ internal static partial class GcpSubscriptionPurger
     [LoggerMessage(LogLevel.Error, "Could not remove temporary Pub/Sub purge resource {ResourceName}")]
     private static partial void LogCleanupFailure(ILogger logger, Exception exception, string resourceName);
 
-    private static Google.Cloud.PubSub.V1.Subscription CreateTemporarySubscription(GcpSubscriptionName name, TopicName topic) => new()
+    private Google.Cloud.PubSub.V1.Subscription CreateTemporarySubscription(GcpSubscriptionName name, TopicName topic) => new()
     {
         SubscriptionName = name,
         TopicAsTopicName = topic,
@@ -190,9 +190,9 @@ internal static partial class GcpSubscriptionPurger
         ExpirationPolicy = new ExpirationPolicy { Ttl = Duration.FromTimeSpan(TimeSpan.FromDays(1)) }
     };
 
-    private static PubsubMessage CreateMarker() => new() { Data = ByteString.CopyFromUtf8("brighter-purge") };
+    private PubsubMessage CreateMarker() => new() { Data = ByteString.CopyFromUtf8("brighter-purge") };
 
-    private static Timestamp ReceiveMarker(SubscriberServiceApiClient client, GcpSubscriptionName subscription, string markerId)
+    private Timestamp ReceiveMarker(SubscriberServiceApiClient client, GcpSubscriptionName subscription, string markerId)
     {
         var elapsed = Stopwatch.StartNew();
         while (true)
@@ -208,7 +208,7 @@ internal static partial class GcpSubscriptionPurger
         }
     }
 
-    private static async Task<Timestamp> ReceiveMarkerAsync(SubscriberServiceApiClient client,
+    private async Task<Timestamp> ReceiveMarkerAsync(SubscriberServiceApiClient client,
         GcpSubscriptionName subscription, string markerId, CancellationToken cancellationToken)
     {
         var elapsed = Stopwatch.StartNew();
@@ -225,7 +225,7 @@ internal static partial class GcpSubscriptionPurger
         }
     }
 
-    private static CallSettings MarkerCallSettings(Stopwatch elapsed)
+    private CallSettings MarkerCallSettings(Stopwatch elapsed)
     {
         var remaining = TimeSpan.FromSeconds(30) - elapsed.Elapsed;
         if (remaining <= TimeSpan.Zero)
@@ -233,7 +233,7 @@ internal static partial class GcpSubscriptionPurger
         return CallSettings.FromExpiration(Expiration.FromTimeout(remaining));
     }
 
-    private static Timestamp? FindMarker(PullResponse response, string markerId)
+    private Timestamp? FindMarker(PullResponse response, string markerId)
     {
         var marker = response.ReceivedMessages.FirstOrDefault(message => message.Message.MessageId == markerId)?.Message;
         if (marker == null)

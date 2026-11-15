@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.Claims.Test_Doubles;
@@ -28,21 +28,21 @@ public class LargeMessagePayloadAsyncWrapTests : IAsyncDisposable
             new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync(
                 _ => new MyLargeCommandMessageMapperAsync())
             );
-           
+
         mapperRegistry.RegisterAsync<MyLargeCommand, MyLargeCommandMessageMapperAsync>();
-            
+
         _myCommand = new MyLargeCommand(6000);
 
         _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
         _luggageStore = new FileSystemStorageProvider(new FileSystemOptions($"./{_bucketName}"));
-            
+
         _luggageStore.EnsureStoreExists();
 
         var transformerFactoryAsync = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
         _publication = new Publication { Topic = new RoutingKey("MyLargeCommand"), RequestType = typeof(MyLargeCommand) };
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, InstrumentationOptions.All);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, Initializer.TestLoggerFactory, InstrumentationOptions.All);
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class LargeMessagePayloadAsyncWrapTests : IAsyncDisposable
         Assert.NotNull(message.Header.DataRef);
         _id = (string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
         Assert.Equal($"Claim Check {_id}", message.Body.Value);
-            
+
         Assert.True(await _luggageStore.HasClaimAsync(_id));
     }
 
@@ -68,7 +68,7 @@ public class LargeMessagePayloadAsyncWrapTests : IAsyncDisposable
         {
             await _luggageStore.DeleteAsync(_id);
         }
-            
+
         Directory.Delete($"./{_bucketName}");
     }
 }

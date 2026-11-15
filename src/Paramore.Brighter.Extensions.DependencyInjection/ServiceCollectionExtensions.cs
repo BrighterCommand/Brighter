@@ -33,7 +33,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Paramore.Brighter.FeatureSwitch;
-using Paramore.Brighter.Logging;
 using System.Text.Json;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.JsonConverters;
@@ -207,9 +206,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             // Register InMemorySchedulerFactory as the default using TryAddSingleton.
             // TryAddSingleton ensures these are only registered if no scheduler has been
             // explicitly configured via UseScheduler/UseMessageScheduler (which use AddSingleton).
-            var defaultSchedulerFactory = new InMemorySchedulerFactory();
-            services.TryAddSingleton<IAmAMessageSchedulerFactory>(defaultSchedulerFactory);
-            services.TryAddSingleton<IAmARequestSchedulerFactory>(defaultSchedulerFactory);
+            services.TryAddSingleton<InMemorySchedulerFactory>();
+            services.TryAddSingleton<IAmAMessageSchedulerFactory>(provider => provider.GetRequiredService<InMemorySchedulerFactory>());
+            services.TryAddSingleton<IAmARequestSchedulerFactory>(provider => provider.GetRequiredService<InMemorySchedulerFactory>());
             services.TryAddSingleton(provider =>
             {
                 var messageSchedulerFactory = provider.GetRequiredService<IAmAMessageSchedulerFactory>();
@@ -285,10 +284,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <summary>
         ///We use AddProducers to register an external bus, which is a bus that is not the Brighter In-Memory Bus.
         /// The external bus uses Message Oriented Middleware (MoM) to dispatch a message from a producer
-        /// to a consumer. 
+        /// to a consumer.
         /// Registers singletons with the service collection :-
         ///     -- An Outbox Producer Mediator - used to send message externally via an Outbox:
-        ///     -- Producer Registry - A list of producers we can send middleware messages with 
+        ///     -- Producer Registry - A list of producers we can send middleware messages with
         ///     -- Outbox - stores messages so that they can be written in the same transaction as entity writes
         ///     -- Outbox Transaction Provider - used to provide a transaction that spans the Outbox write and
         ///         your updates to your entities
@@ -325,7 +324,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             if (busConfiguration.UseRpc && busConfiguration.ReplyQueueSubscriptions == null)
                 throw new ConfigurationException("If the you configure RPC, you must configure the ReplyQueueSubscriptions");
-            
+
             brighterBuilder.Services.TryAddSingleton<IAmAPublicationFinder, FindPublicationByPublicationTopicOrRequestType>();
             brighterBuilder.Services.TryAddSingleton(busConfiguration.ProducerRegistry);
 
@@ -356,7 +355,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             if (busConfiguration.ConnectionProvider != null)
                 RegisterConnectionAndTransactionProvider(brighterBuilder, busConfiguration.ConnectionProvider, transactionProvider, serviceLifetime);
-            
+
             //we always need an outbox in case of producer callbacks
             var outbox = busConfiguration.Outbox ?? CreateDefaultOutbox(busConfiguration);
 
@@ -409,10 +408,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             if (busConfiguration.UseRpc)
                 brighterBuilder.Services.TryAddSingleton<IUseRpc>(new UseRpc(busConfiguration.UseRpc, busConfiguration.ReplyQueueSubscriptions!));
-            
+
             brighterBuilder.Services.TryAddSingleton<IAmProducersConfiguration>(busConfiguration);
             RegisterResiliencePipelineRegistry(brighterBuilder);
-           
+
             brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutboxProducerMediator),
                (serviceProvider) => BuildOutBoxProducerMediator(
                    serviceProvider, transactionType, busConfiguration, outbox
@@ -586,7 +585,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             builder.Services.Add(new ServiceDescriptor(typeof(IAmAPublicationFinder), typeof(T), lifetime));
             return builder;
         }
-        
+
         /// <summary>
         /// Set a default <see cref="IAmAPublicationFinder"/>
         /// </summary>
@@ -600,7 +599,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             builder.Services.AddSingleton<IAmAPublicationFinder>(instance);
             return builder;
         }
-        
+
          /// <summary>
          /// An external request scheduler factory
          /// </summary>
@@ -609,13 +608,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
          /// <returns></returns>
          public static IBrighterBuilder UseScheduler<T>(this IBrighterBuilder builder, T factory)
             where T : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
-         { 
+         {
              builder
                  .UseRequestScheduler(factory)
                  .UseMessageScheduler(factory);
              return builder;
          }
-         
+
          /// <summary>
          /// An external request scheduler factory
          /// </summary>
@@ -630,7 +629,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                  .UseMessageScheduler(provider => factory(provider));
              return builder;
          }
-        
+
         /// <summary>
         /// An external request scheduler factory
         /// </summary>
@@ -654,7 +653,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             });
             return builder;
         }
-        
+
         /// <summary>
         /// An external request scheduler factory
         /// </summary>
@@ -666,7 +665,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             builder.Services.AddSingleton(factory);
             return builder;
         }
-        
+
         /// <summary>
         /// An external message scheduler factory
         /// </summary>
@@ -686,7 +685,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             builder.Services.TryAddSingleton(provide => (IAmAMessageSchedulerSync)provide.GetRequiredService<IAmAMessageScheduler>());
             return builder;
         }
-        
+
         /// <summary>
         /// An external message scheduler factory
         /// </summary>
@@ -698,7 +697,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             builder.Services.AddSingleton(factory);
             return builder;
         }
-        
+
         private static INeedInstrumentation AddEventBus(
             IServiceProvider provider,
             INeedMessaging messagingBuilder,
@@ -706,7 +705,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             var eventBus = provider.GetService<IAmAnOutboxProducerMediator>();
             var hasEventBus = eventBus != null;
-            
+
             var eventBusConfiguration = provider.GetService<IAmProducersConfiguration>();
             var serviceActivatorOptions = provider.GetService<IAmConsumerOptions>();
 
@@ -754,7 +753,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             if (policyRegistry == null)
                 throw new ConfigurationException("You must add a policy registry, to which defaults can be added");
-            
+
 #pragma warning disable CS0618 // Type or member is obsolete
             if (!policyRegistry.ContainsKey(CommandProcessor.RETRYPOLICY))
                 throw new ConfigurationException(
@@ -770,11 +769,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         private static IAmACommandProcessor BuildCommandProcessor(IServiceProvider provider)
         {
-            var loggerFactory = provider.GetService<ILoggerFactory>();
-            //if not supplied, use the default logger factory, which has no providers
-            if (loggerFactory != null)
-                ApplicationLogging.LoggerFactory = loggerFactory;
-
+            //Resolve the container's logger factory and flow it through the builder as an instance,
+            //rather than copying it into a process-wide static (which would be disposed with the container).
+            var loggerFactory = provider.GetService<ILoggerFactory>() ?? throw new ConfigurationException(
+                "Brighter requires logging. Call AddLogging(...) or explicitly register NullLoggerFactory.Instance before resolving Brighter services.");
 
             var options = provider.GetRequiredService<IBrighterOptions>();
             var subscriberRegistry = provider.GetRequiredService<ServiceCollectionSubscriberRegistry>();
@@ -790,7 +788,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             if (featureSwitchRegistry != null)
                 handlerBuilder = handlerBuilder.ConfigureFeatureSwitches(featureSwitchRegistry);
-            
+
             var pollyBuilder = handlerBuilder.Handlers(handlerConfiguration);
 
             var resiliencePipelineRegistry = provider.GetRequiredService<BrighterResiliencePipelineRegistry>().Registry;
@@ -798,13 +796,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var messagingBuilder = pollyBuilder.Resilience(resiliencePipelineRegistry, options.PolicyRegistry);
 #pragma warning restore CS0618 // Type or member is obsolete
 
-            
+
             var command = AddEventBus(provider, messagingBuilder, useRequestResponse)
                 .ConfigureInstrumentation(provider.GetService<IAmABrighterTracer>(), options.InstrumentationOptions)
                 .RequestContextFactory(provider.GetRequiredService<IAmARequestContextFactory>())
                 .RequestSchedulerFactory(provider.GetRequiredService<IAmARequestSchedulerFactory>())
+                .ConfigureLogging(loggerFactory)
                 .Build();
-            
+
             var eventBusConfiguration = provider.GetService<IAmProducersConfiguration>();
             var producerRegistry = provider.GetService<IAmAProducerRegistry>();
             var messageSchedulerFactory = eventBusConfiguration?.MessageSchedulerFactory ?? provider.GetRequiredService<IAmAMessageSchedulerFactory>();
@@ -813,12 +812,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return command;
         }
-        
+
         private static IAmAnOutboxProducerMediator? BuildOutBoxProducerMediator(
             IServiceProvider serviceProvider,
             Type transactionType,
             ProducersConfiguration busConfiguration,
-            IAmAnOutbox outbox) 
+            IAmAnOutbox outbox)
         {
             var resiliencePipelineRegistry = serviceProvider.GetRequiredService<BrighterResiliencePipelineRegistry>().Registry;
             //Because the bus has specialized types as members, we need to create the bus type dynamically
@@ -838,6 +837,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 TransformFactoryAsync(serviceProvider),
                 Tracer(serviceProvider),
                 PublicationFinder(serviceProvider),
+                serviceProvider.GetRequiredService<ILoggerFactory>(),
                 outbox,
                 OutboxCircuitBreaker(serviceProvider),
                 RequestContextFactory(serviceProvider),
@@ -899,12 +899,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             {
                 messageMapperRegistry.RegisterAsync(messageMapper.Key, messageMapper.Value);
             }
-            
+
 
             return messageMapperRegistry;
         }
 
-        private static void RegisterConnectionAndTransactionProvider(IBrighterBuilder brighterBuilder, 
+        private static void RegisterConnectionAndTransactionProvider(IBrighterBuilder brighterBuilder,
             Type connectionProvider,
             Type transactionProvider,
             ServiceLifetime serviceLifetime)
@@ -913,7 +913,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (connectionProviderInterface != null)
             {
                 brighterBuilder.Services.TryAdd(new ServiceDescriptor(connectionProviderInterface, connectionProvider, serviceLifetime));
-                
+
                 var transactionProviderInterface = GetTransactionInterface(transactionProvider, connectionProviderInterface);
                 if (transactionProviderInterface != null)
                 {
@@ -924,36 +924,36 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             static Type? GetConnectionProviderInterface(Type type)
             {
-                // all connection provider interfaces must be extended from IAmAConnectionProvider  
+                // all connection provider interfaces must be extended from IAmAConnectionProvider
                 var interfaces = GetInterfaces(type);
                 foreach (var @interface in interfaces)
                 {
-                    if (typeof(IAmAConnectionProvider).IsAssignableFrom(@interface) 
-                        && !typeof(IAmABoxTransactionProvider).IsAssignableFrom(@interface)) 
+                    if (typeof(IAmAConnectionProvider).IsAssignableFrom(@interface)
+                        && !typeof(IAmABoxTransactionProvider).IsAssignableFrom(@interface))
                     {
                         return @interface;
                     }
                 }
-                
+
                 return null;
             }
-            
+
             static Type? GetTransactionInterface(Type type, Type connectionProvider)
             {
                 // All Brighter transaction provider interface must be extended from connection provider and IAmABoxTransactionProvider
                 var interfaces = GetInterfaces(type);
                 foreach (var @interface in interfaces)
                 {
-                    if (connectionProvider.IsAssignableFrom(@interface) 
-                        && typeof(IAmABoxTransactionProvider).IsAssignableFrom(@interface)) 
+                    if (connectionProvider.IsAssignableFrom(@interface)
+                        && typeof(IAmABoxTransactionProvider).IsAssignableFrom(@interface))
                     {
                         return @interface;
                     }
                 }
-                
+
                 return null;
             }
-            
+
             static IEnumerable<Type> GetInterfaces(Type type)
             {
                 var interfaces = type.GetInterfaces().AsEnumerable();
@@ -981,7 +981,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             return provider.GetRequiredService<IAmAPublicationFinder>();
         }
-        
+
         /// <summary>
         /// Creates the default <see cref="InMemoryOutbox"/> when no explicit outbox is provided.
         /// Uses <see cref="IAmProducersConfiguration.DefaultBoxConfiguration"/> when set;
@@ -1007,7 +1007,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             return serviceProvider.GetService<IAmABrighterTracer>();
         }
-        
+
         private static IAmAnOutboxCircuitBreaker? OutboxCircuitBreaker(IServiceProvider serviceProvider)
         {
             return serviceProvider.GetService<IAmAnOutboxCircuitBreaker>();
@@ -1041,7 +1041,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             return new ServiceProviderTransformerFactoryAsync(provider);
         }
-        
+
         /// <summary>
         /// Adds a singleton instance of an external luggage (claim check) store provider to the Brighter framework.
         /// This method is used when you have a pre-initialized instance of your storage provider.
@@ -1060,7 +1060,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return builder;
         }
-        
+
         /// <summary>
         /// Adds a singleton instance of an external luggage (claim check) store provider to the Brighter framework.
         /// This method is used when you have a pre-initialized instance of your storage provider.
@@ -1080,7 +1080,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return builder;
         }
-        
+
         /// <summary>
         /// Adds a singleton instance of a luggage (claim check) store provider to the Brighter framework,
         /// resolved via a factory function. This method is used when the storage provider
@@ -1098,7 +1098,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             builder.Services.AddSingleton(storeProvider)
                 .RegisterLuggageStore<TStoreProvider>();
-            
+
             return builder;
         }
 

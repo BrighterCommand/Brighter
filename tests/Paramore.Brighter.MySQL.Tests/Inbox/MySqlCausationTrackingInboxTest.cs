@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.MySql;
@@ -16,7 +18,7 @@ public class MySqlCausationTrackingInboxTest : CausationTrackingInboxBaseTests
         _configuration = new RelationalDatabaseConfiguration(
             Const.DefaultConnectingString,
             inboxTableName: $"{Const.TablePrefix}{Uuid.New():N}");
-        _inbox = new MySqlInbox(_configuration);
+        _inbox = new MySqlInbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<MySqlInbox>());
         base.BeforeEachTest();
     }
 

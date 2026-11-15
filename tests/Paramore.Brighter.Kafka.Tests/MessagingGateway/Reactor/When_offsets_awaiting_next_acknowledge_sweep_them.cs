@@ -26,7 +26,7 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
-                Name = "Kafka Producer Send Test", 
+                Name = "Kafka Producer Send Test",
                 BootStrapServers = new[] {"localhost:9092"}
             },
             [
@@ -41,16 +41,16 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            ]).Create();
-            
+            ], loggerFactory: Initializer.TestLoggerFactory).Create();
+
         _consumer = (KafkaMessageConsumer)new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Consumer Test",
                     BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .Create(new KafkaSubscription<MyCommand>(
-                    channelName: new ChannelName(_queueName), 
+                    channelName: new ChannelName(_queueName),
                     routingKey: new RoutingKey(_topic),
                     groupId: groupId,
                     commitBatchSize: 20,  //This large commit batch size may never be sent
@@ -68,11 +68,11 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
     {
         //allow topic to propogate on the broker
         await Task.Delay(500);
-        
+
         var routingKey = new RoutingKey(_topic);
 
         var producer = ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey));
-        
+
         //send x messages to Kafka
         var sentMessages = new string[10];
         for (int i = 0; i < 10; i++)
@@ -83,7 +83,7 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
                 new MessageBody($"test content [{_queueName}]")));
             sentMessages[i] = msgId;
         }
-       
+
         //ensure messages are sent
         ((KafkaMessageProducer)producer).Flush();
 
@@ -98,10 +98,10 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
 
         //Let time elapse with no activity
         await Task.Delay(10000);
-            
+
         //This should trigger a sweeper run (can be fragile when non scheduled in containers etc)
         consumedMessages.Add(await ReadMessageAsync());
-            
+
         //Poll for the sweeper to commit offsets - can be slow in CI environments
         int sweepRetries = 0;
         while (_consumer.StoredOffsets() > 0 && sweepRetries < 20)

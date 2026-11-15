@@ -1,4 +1,5 @@
 ﻿using System.Threading;
+using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.RocketMQ;
@@ -7,7 +8,7 @@ namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 /// Factory class for creating RocketMQ channels in Brighter pipeline.
 /// Implements RocketMQ's consumer group pattern for parallel message processing [[4]].
 /// </summary>
-public class RocketMqChannelFactory(RocketMessageConsumerFactory factory) : IAmAChannelFactory
+public class RocketMqChannelFactory(RocketMessageConsumerFactory factory, ILoggerFactory loggerFactory) : IAmAChannelFactory
 {
     /// <inheritdoc />
     public IAmAChannelSync CreateSyncChannel(Subscription subscription)
@@ -18,7 +19,7 @@ public class RocketMqChannelFactory(RocketMessageConsumerFactory factory) : IAmA
         }
 
         // Warn once, at channel creation, if the delivery budget cannot run down (R-11, R-26)
-        DeliveryBudgetDiagnostics.WarnIfUnenforceable(subscription);
+        DeliveryBudgetDiagnostics.WarnIfUnenforceable(subscription, loggerFactory);
 
         return new Channel(
             subscription.ChannelName,
@@ -36,7 +37,7 @@ public class RocketMqChannelFactory(RocketMessageConsumerFactory factory) : IAmA
         }
 
         // Warn once, at channel creation, if the delivery budget cannot run down (R-11, R-26)
-        DeliveryBudgetDiagnostics.WarnIfUnenforceable(subscription);
+        DeliveryBudgetDiagnostics.WarnIfUnenforceable(subscription, loggerFactory);
 
         return new ChannelAsync(
             subscription.ChannelName,
@@ -49,7 +50,7 @@ public class RocketMqChannelFactory(RocketMessageConsumerFactory factory) : IAmA
     public async Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription, CancellationToken ct = default)
     {
         // Warn once, at channel creation, if the delivery budget cannot run down (R-11, R-26)
-        DeliveryBudgetDiagnostics.WarnIfUnenforceable(subscription);
+        DeliveryBudgetDiagnostics.WarnIfUnenforceable(subscription, loggerFactory);
 
         return new ChannelAsync(
             subscription.ChannelName,

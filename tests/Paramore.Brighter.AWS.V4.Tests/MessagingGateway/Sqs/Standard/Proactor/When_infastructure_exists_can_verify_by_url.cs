@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Net.Mime;
@@ -47,7 +49,7 @@ public class AWSValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
         //We need to do this manually in a test - will create the channel from subscriber parameters
         //This doesn't look that different from our create tests - this is because we create using the channel factory in
         //our AWS transport, not the consumer (as it's a more likely to use infrastructure declared elsewhere)
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance);
         var channel = _channelFactory.CreateSyncChannel(subscription);
 
         var queueUrl = FindQueueUrl(awsConnection, routingKey.Value);
@@ -67,12 +69,12 @@ public class AWSValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
             new SqsPublication
             {
                 Topic = routingKey,
-                ChannelName= new ChannelName(queueUrl),
+                ChannelName = new ChannelName(queueUrl),
                 FindQueueBy = QueueFindBy.Url,
                 MakeChannels = OnMissingChannel.Validate
-            });
+            }, loggerFactory: NullLoggerFactory.Instance);
 
-        _consumer = new SqsMessageConsumerFactory(awsConnection).Create(subscription);
+        _consumer = new SqsMessageConsumerFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance).Create(subscription);
     }
 
     [Fact]

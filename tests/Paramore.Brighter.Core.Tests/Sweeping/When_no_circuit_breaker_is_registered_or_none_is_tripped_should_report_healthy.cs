@@ -18,7 +18,7 @@ public class When_no_circuit_breaker_is_registered_or_none_is_tripped_should_rep
     {
         //Arrange
         var state = ActiveState();
-        var check = new OutboxSweeperInvestigateHealthCheck(state, new TimedOutboxSweeperOptions(), null, 3);
+        var check = new OutboxSweeperInvestigateHealthCheck(state: state, options: new TimedOutboxSweeperOptions(), findCircuitBreaker: null, failureThreshold: 3, loggerFactory: Initializer.TestLoggerFactory);
 
         //Act
         HealthCheckResult result = default;
@@ -34,7 +34,7 @@ public class When_no_circuit_breaker_is_registered_or_none_is_tripped_should_rep
     {
         //Arrange
         var state = ActiveState();
-        var check = new OutboxSweeperInvestigateHealthCheck(state, new TimedOutboxSweeperOptions(), () => null, 3);
+        var check = new OutboxSweeperInvestigateHealthCheck(state: state, options: new TimedOutboxSweeperOptions(), findCircuitBreaker: () => null, failureThreshold: 3, loggerFactory: Initializer.TestLoggerFactory);
 
         //Act
         HealthCheckResult result = default;
@@ -50,8 +50,8 @@ public class When_no_circuit_breaker_is_registered_or_none_is_tripped_should_rep
     {
         //Arrange
         var state = ActiveState();
-        var breaker = new InMemoryOutboxCircuitBreaker();
-        var check = new OutboxSweeperInvestigateHealthCheck(state, new TimedOutboxSweeperOptions(), () => breaker, 3);
+        var breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
+        var check = new OutboxSweeperInvestigateHealthCheck(state: state, options: new TimedOutboxSweeperOptions(), findCircuitBreaker: () => breaker, failureThreshold: 3, loggerFactory: Initializer.TestLoggerFactory);
 
         //Act
         HealthCheckResult result = default;

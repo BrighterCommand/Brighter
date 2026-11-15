@@ -71,7 +71,7 @@ public class GcpKeyedMessageOnUnorderedPublicationAsyncTests
             };
 
             channel = await provider.CreateChannelAsync(subscription);
-            var producers = await new GcpPubSubMessageProducerFactory(connection, [publication]).CreateAsync();
+            var producers = await new GcpPubSubMessageProducerFactory(connection: connection, publications: [publication], loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync();
             producer = (IAmAMessageProducerAsync)producers.Values.Single();
 
             var partitionKey = new PartitionKey("customer-42");

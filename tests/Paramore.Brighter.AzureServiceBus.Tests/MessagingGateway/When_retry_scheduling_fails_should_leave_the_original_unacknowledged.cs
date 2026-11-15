@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -149,13 +149,13 @@ public class AzureServiceBusScheduledRetryFailureTests
         var processor = new CommandProcessor(new SubscriberRegistry(),
             new SimpleHandlerFactoryAsync(_ => throw new InvalidOperationException()),
             new InMemoryRequestContextFactory(), new DefaultPolicy(),
-            new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
-        var scheduler = new AzureServiceBusSchedulerFactory(client, new RoutingKey("scheduler")).Create(processor);
+            new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        var scheduler = new AzureServiceBusSchedulerFactory(client: client, topic: new RoutingKey("scheduler"), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(processor);
         var publication = new AzureServiceBusPublication
         {
             RequeueScheduler = useGlobalScheduler ? RequeueSchedulerMode.Global : RequeueSchedulerMode.Native
         };
-        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(client, publication))
+        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider: client, publication: publication, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
         {
             Scheduler = scheduler
         };

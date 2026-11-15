@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -65,7 +67,7 @@ public class RunnerNonMonotonicMigrationsTests : IAsyncLifetime
         //Arrange
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
         var malformedCatalog = new MalformedListCatalog(malformed);
-        var runner = new SqliteBoxMigrationRunner(malformedCatalog, config);
+        var runner = new SqliteBoxMigrationRunner(malformedCatalog, config, loggerFactory: NullLoggerFactory.Instance);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act + Assert

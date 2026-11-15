@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Npgsql;
@@ -51,7 +53,7 @@ public class PostgreSqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
         var shortCircuit = new TimeoutException("short-circuit to read captured timeout");
         var fakeLock = new FakePostgreSqlAdvisoryLock(releaseResult: true, throwOnAcquire: shortCircuit);
 
-        var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlBoxDetectionHelper(), new PostgreSqlOutboxMigrationCatalog(), config, advisoryLock: fakeLock);
+        var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlBoxDetectionHelper(logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlBoxDetectionHelper>()), new PostgreSqlOutboxMigrationCatalog(), config, advisoryLock: fakeLock, loggerFactory: NullLoggerFactory.Instance);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act

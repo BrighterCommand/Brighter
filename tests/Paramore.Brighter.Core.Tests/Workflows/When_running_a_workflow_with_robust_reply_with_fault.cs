@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
@@ -9,7 +9,7 @@ using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
-public class MediatorRobustReplyFaultStepFlowTests  
+public class MediatorRobustReplyFaultStepFlowTests
 {
     private readonly ITestOutputHelper _testOutputHelper;
     private readonly Scheduler<WorkflowTestData> _scheduler;
@@ -30,54 +30,54 @@ public class MediatorRobustReplyFaultStepFlowTests
         IAmACommandProcessor commandProcessor = null;
         var handlerFactory = new SimpleHandlerFactoryAsync((handlerType) =>
              handlerType switch
-            { 
+            {
                 _ when handlerType == typeof(MyCommandHandlerAsync) => new MyCommandHandlerAsync(commandProcessor, raiseFault: true),
                 _ when handlerType == typeof(MyEventHandlerAsync) => new MyEventHandlerAsync(_scheduler),
                 _ when handlerType == typeof(MyFaultHandlerAsync) => new MyFaultHandlerAsync(_scheduler),
                 _ => throw new InvalidOperationException($"The handler type {handlerType} is not supported")
             });
 
-        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
-        
+        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
+            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
+
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
-        var workflowData= new WorkflowTestData();
+        var workflowData = new WorkflowTestData();
         workflowData.Bag["MyValue"] = "Test";
-        
-         _job = new Job<WorkflowTestData>(workflowData) ;
-         
-         var firstStep = new Sequential<WorkflowTestData>(
-             "Test of Job",
-            new RobustRequestAndReactionAsync<MyCommand, MyEvent, MyFault, WorkflowTestData>(
-                (data) => new MyCommand { Value = (data.Bag["MyValue"] as string)! },
-                (reply, data) => { data.Bag["MyReply"] = reply!.Value; },
-            (fault, data) => { data.Bag["MyFault"] = fault!.Value; }),
-            () => { _stepCompleted = true; },
-            null,
-            () => { _stepFaulted = true; },
-         null);
-         
-         _job.InitSteps(firstStep);
-        
-         InMemoryStateStoreAsync store = new();
-         _channel = new InMemoryJobChannel<WorkflowTestData>();
 
-         _scheduler = new Scheduler<WorkflowTestData>(
-             _channel,
-             store
-         );
+        _job = new Job<WorkflowTestData>(workflowData);
 
-         _runner = new Runner<WorkflowTestData>(_channel, store, commandProcessor, _scheduler);
+        var firstStep = new Sequential<WorkflowTestData>(
+            "Test of Job",
+           new RobustRequestAndReactionAsync<MyCommand, MyEvent, MyFault, WorkflowTestData>(
+               (data) => new MyCommand { Value = (data.Bag["MyValue"] as string)! },
+               (reply, data) => { data.Bag["MyReply"] = reply!.Value; },
+           (fault, data) => { data.Bag["MyFault"] = fault!.Value; }),
+           () => { _stepCompleted = true; },
+           null,
+           Initializer.TestLoggerFactory, () => { _stepFaulted = true; },
+        null);
+
+        _job.InitSteps(firstStep);
+
+        InMemoryStateStoreAsync store = new(loggerFactory: Initializer.TestLoggerFactory);
+        _channel = new InMemoryJobChannel<WorkflowTestData>(loggerFactory: Initializer.TestLoggerFactory);
+
+        _scheduler = new Scheduler<WorkflowTestData>(
+            _channel,
+            store
+        );
+
+        _runner = new Runner<WorkflowTestData>(_channel, store, commandProcessor, _scheduler, loggerFactory: Initializer.TestLoggerFactory);
     }
-    
+
     [Fact]
     public async Task When_running_a_workflow_with_reply()
     {
         MyCommandHandlerAsync.ReceivedCommands.Clear();
         MyEventHandlerAsync.ReceivedEvents.Clear();
         MyFaultHandlerAsync.ReceivedFaults.Clear();
-        
+
         await _scheduler.ScheduleAsync(_job);
         _channel.Stop();
 

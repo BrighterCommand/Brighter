@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -47,8 +47,7 @@ public class MsSqlSubscriberReadinessTests : IDisposable
 
     public MsSqlSubscriberReadinessTests()
     {
-        _producer = (MsSqlMessageProducer)new MsSqlMessageProducerFactory(_configuration,
-            [new MsSqlPublication { Topic = _topic, SubscriberChannels = [new("first"), new("second")] }])
+        _producer = (MsSqlMessageProducer)new MsSqlMessageProducerFactory(msSqlConfiguration: _configuration, publications: [new MsSqlPublication { Topic = _topic, SubscriberChannels = [new("first"), new("second")] }], loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
             .Create().Single().Value;
     }
 
@@ -65,7 +64,7 @@ public class MsSqlSubscriberReadinessTests : IDisposable
         //Arrange
         SetCollation(collation);
         using var producer = new MsSqlMessageProducer(_configuration,
-            new MsSqlPublication { Topic = new("café"), SubscriberChannels = [new("other"), new(alias)] });
+publication: new MsSqlPublication { Topic = new("café"), SubscriberChannels = [new("other"), new(alias)] }, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var message = Message(new RoutingKey("café"));
 
         //Act
@@ -84,7 +83,7 @@ public class MsSqlSubscriberReadinessTests : IDisposable
         //Arrange
         SetCollation("Latin1_General_100_BIN2");
         using var producer = new MsSqlMessageProducer(_configuration,
-            new MsSqlPublication { Topic = new("topic"), SubscriberChannels = [new("TOPIC")] });
+publication: new MsSqlPublication { Topic = new("topic"), SubscriberChannels = [new("TOPIC")] }, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         using var consumer = Consumer("TOPIC");
         var message = Message(new RoutingKey("topic"));
 
@@ -108,7 +107,7 @@ public class MsSqlSubscriberReadinessTests : IDisposable
             delivered.TrySetResult(message);
             return null;
         });
-        var factory = new MsSqlMessageConsumerFactory(_configuration, scheduler);
+        var factory = new MsSqlMessageConsumerFactory(msSqlConfiguration: _configuration, scheduler: scheduler, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var subscription = new MsSqlSubscription(new("plain"), new("CAFE "), new("café"),
             requestType: typeof(Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand), requeueDelay: TimeSpan.FromMilliseconds(10));
         var message = Message(new RoutingKey("café"));
@@ -133,7 +132,7 @@ public class MsSqlSubscriberReadinessTests : IDisposable
         //Arrange
         var channels = new List<ChannelName> { new("first"), new("second") };
         var publication = new MsSqlPublication { Topic = _topic, SubscriberChannels = channels };
-        using var producer = new MsSqlMessageProducer(_configuration, publication);
+        using var producer = new MsSqlMessageProducer(msSqlConfiguration: _configuration, publication: publication, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         using var first = Consumer("first");
         using var second = Consumer("second");
         using var unexpected = Consumer("unexpected");
@@ -163,7 +162,7 @@ public class MsSqlSubscriberReadinessTests : IDisposable
         var committed = Message(_topic);
         var pending = Message(_topic);
         await Send(_producer, committed, async);
-        using var otherProducer = new MsSqlMessageProducer(_configuration);
+        using var otherProducer = new MsSqlMessageProducer(msSqlConfiguration: _configuration, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var unrelated = Message(new RoutingKey("unrelated"));
         await Send(otherProducer, unrelated, async);
         using var first = Consumer("first");
@@ -213,7 +212,7 @@ public class MsSqlSubscriberReadinessTests : IDisposable
     {
         //Arrange
         using var producer = new MsSqlMessageProducer(_configuration,
-            new MsSqlPublication { Topic = _topic, SubscriberChannels = [new("first"), new("second")], SendTimeout = TimeSpan.FromSeconds(1) });
+publication: new MsSqlPublication { Topic = _topic, SubscriberChannels = [new("first"), new("second")], SendTimeout = TimeSpan.FromSeconds(1) }, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         using var blocker = new SqlConnection(_configuration.ConnectionString);
         await blocker.OpenAsync();
         using var transaction = blocker.BeginTransaction();
@@ -282,7 +281,7 @@ public class MsSqlSubscriberReadinessTests : IDisposable
             """);
         using var first = Consumer("first");
         using var second = Consumer("second");
-        using var producer = new MsSqlMessageProducer(_configuration);
+        using var producer = new MsSqlMessageProducer(msSqlConfiguration: _configuration, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var later = Message(new RoutingKey("first"));
         var purging = Task.Run(async () =>
         {
@@ -326,8 +325,9 @@ public class MsSqlSubscriberReadinessTests : IDisposable
         //Arrange
         var scheduler = new TestDoubles.InMemorySubscriberRetryScheduler();
         var subscription = new MsSqlSubscription(new("subscriber"), new("same"), new("same"),
-            requestType: typeof(Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand)) { IsIndependentSubscriber = true };
-        var factory = new MsSqlMessageConsumerFactory(_configuration, scheduler);
+            requestType: typeof(Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand))
+        { IsIndependentSubscriber = true };
+        var factory = new MsSqlMessageConsumerFactory(msSqlConfiguration: _configuration, scheduler: scheduler, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         using var consumer = async ? (MsSqlMessageConsumer)factory.CreateAsync(subscription) : (MsSqlMessageConsumer)factory.Create(subscription);
         var message = Message(new RoutingKey("same"));
         var delay = TimeSpan.FromSeconds(1);
@@ -366,9 +366,10 @@ public class MsSqlSubscriberReadinessTests : IDisposable
     }
 
     private MsSqlMessageConsumer Consumer(string channel) =>
-        (MsSqlMessageConsumer)new MsSqlMessageConsumerFactory(_configuration).Create(
+        (MsSqlMessageConsumer)new MsSqlMessageConsumerFactory(msSqlConfiguration: _configuration, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(
             new MsSqlSubscription(new(Guid.NewGuid().ToString()), new(channel), _topic,
-                requestType: typeof(Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand)) { IsIndependentSubscriber = true });
+                requestType: typeof(Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand))
+            { IsIndependentSubscriber = true });
 
     private static Message Message(RoutingKey topic) =>
         new(new MessageHeader(Id.Random(), topic, MessageType.MT_EVENT), new MessageBody("payload"));

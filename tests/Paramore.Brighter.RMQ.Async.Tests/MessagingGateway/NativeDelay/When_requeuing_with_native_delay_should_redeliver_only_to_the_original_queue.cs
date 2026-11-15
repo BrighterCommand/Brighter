@@ -60,11 +60,10 @@ public class RmqNativeDelayTests : IAsyncLifetime
     {
         //Arrange
         await using var consumer = new RmqMessageConsumer(
-            CreateConnection(exchangeType), _queueName, _topic, isDurable: true, queueType: queueType);
+connection: CreateConnection(exchangeType), queueName: _queueName, routingKey: _topic, isDurable: true, queueType: queueType, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         await using var otherConsumer = new RmqMessageConsumer(
-            CreateConnection(exchangeType), _otherQueueName, OtherRoutingKey(exchangeType), isDurable: true,
-            queueType: queueType);
-        await using var producer = new RmqMessageProducer(CreateConnection(exchangeType));
+connection: CreateConnection(exchangeType), queueName: _otherQueueName, routingKey: OtherRoutingKey(exchangeType), isDurable: true, queueType: queueType, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        await using var producer = new RmqMessageProducer(connection: CreateConnection(exchangeType), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         await consumer.PurgeAsync();
         await otherConsumer.PurgeAsync();
 
@@ -101,8 +100,8 @@ public class RmqNativeDelayTests : IAsyncLifetime
     {
         //Arrange
         await using var consumer = new RmqMessageConsumer(
-            CreateConnection(ExchangeType.Direct), _queueName, _topic, isDurable: true, queueType: queueType);
-        await using var producer = new RmqMessageProducer(CreateConnection(ExchangeType.Direct));
+connection: CreateConnection(ExchangeType.Direct), queueName: _queueName, routingKey: _topic, isDurable: true, queueType: queueType, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        await using var producer = new RmqMessageProducer(connection: CreateConnection(ExchangeType.Direct), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         await consumer.PurgeAsync();
         var message = new DefaultMessageBuilder().SetTopic(_topic).Build();
         var delay = TimeSpan.FromSeconds(3);
@@ -137,8 +136,8 @@ public class RmqNativeDelayTests : IAsyncLifetime
         //Arrange
         var connection = CreateConnection(exchangeType);
         await using var consumer = new RmqMessageConsumer(
-            connection, _queueName, _topic, isDurable: true, queueType: queueType);
-        await using var producer = new RmqMessageProducer(connection);
+connection: connection, queueName: _queueName, routingKey: _topic, isDurable: true, queueType: queueType, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        await using var producer = new RmqMessageProducer(connection: connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var message = new DefaultMessageBuilder().SetTopic(_topic).Build();
 
         //Act
@@ -163,13 +162,12 @@ public class RmqNativeDelayTests : IAsyncLifetime
     public async Task When_using_preprovisioned_retry_topology_should_honor_native_delay(OnMissingChannel makeChannels)
     {
         //Arrange
-        await using (var setup = new RmqMessageConsumer(CreateConnection(ExchangeType.Direct), _queueName, _topic, isDurable: true))
+        await using (var setup = new RmqMessageConsumer(connection: CreateConnection(ExchangeType.Direct), queueName: _queueName, routingKey: _topic, isDurable: true, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
         {
             await setup.PurgeAsync();
         }
-        await using var consumer = new RmqMessageConsumer(CreateConnection(ExchangeType.Direct), _queueName, _topic,
-            isDurable: true, makeChannels: makeChannels);
-        await using var producer = new RmqMessageProducer(CreateConnection(ExchangeType.Direct));
+        await using var consumer = new RmqMessageConsumer(connection: CreateConnection(ExchangeType.Direct), queueName: _queueName, routingKey: _topic, isDurable: true, makeChannels: makeChannels, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        await using var producer = new RmqMessageProducer(connection: CreateConnection(ExchangeType.Direct), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var message = new DefaultMessageBuilder().SetTopic(_topic).Build();
         await producer.SendAsync(message);
         var received = Assert.Single(await consumer.ReceiveAsync(TimeSpan.FromSeconds(5)));
@@ -192,14 +190,13 @@ public class RmqNativeDelayTests : IAsyncLifetime
     public async Task When_retry_topology_is_missing_should_not_create_it_without_permission(OnMissingChannel makeChannels)
     {
         //Arrange
-        await using (var setup = new RmqMessageConsumer(CreateConnection(ExchangeType.Direct), _queueName, _topic, isDurable: true))
+        await using (var setup = new RmqMessageConsumer(connection: CreateConnection(ExchangeType.Direct), queueName: _queueName, routingKey: _topic, isDurable: true, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
         {
             await setup.PurgeAsync();
         }
         await using var inspection = await _broker.CreateChannelAsync();
         await inspection.ExchangeDeleteAsync($"{_exchangeName}.requeue");
-        await using var consumer = new RmqMessageConsumer(CreateConnection(ExchangeType.Direct), _queueName, _topic,
-            isDurable: true, makeChannels: makeChannels);
+        await using var consumer = new RmqMessageConsumer(connection: CreateConnection(ExchangeType.Direct), queueName: _queueName, routingKey: _topic, isDurable: true, makeChannels: makeChannels, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act
         var exception = await Record.ExceptionAsync(async () => await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(100)));
@@ -217,8 +214,8 @@ public class RmqNativeDelayTests : IAsyncLifetime
     public async Task When_requeuing_with_negative_delay_should_redeliver_immediately()
     {
         //Arrange
-        await using var consumer = new RmqMessageConsumer(CreateConnection(ExchangeType.Direct), _queueName, _topic, isDurable: true);
-        await using var producer = new RmqMessageProducer(CreateConnection(ExchangeType.Direct));
+        await using var consumer = new RmqMessageConsumer(connection: CreateConnection(ExchangeType.Direct), queueName: _queueName, routingKey: _topic, isDurable: true, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        await using var producer = new RmqMessageProducer(connection: CreateConnection(ExchangeType.Direct), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         await consumer.PurgeAsync();
         var message = new DefaultMessageBuilder().SetTopic(_topic).Build();
         await producer.SendAsync(message);

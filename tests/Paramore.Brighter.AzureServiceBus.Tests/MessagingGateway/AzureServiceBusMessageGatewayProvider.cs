@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -139,7 +141,7 @@ public class AzureServiceBusMessageGatewayProvider
         if (publication.MakeChannels != OnMissingChannel.Create)
             return;
 
-        var administrationClient = new AdministrationClientWrapper(ClientProvider);
+        var administrationClient = new AdministrationClientWrapper(clientProvider: ClientProvider, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var topicName = publication.Topic!.Value;
 
         if (await administrationClient.TopicExistsAsync(topicName))
@@ -164,7 +166,7 @@ public class AzureServiceBusMessageGatewayProvider
         var factory = new AzureServiceBusMessageProducerFactory(
             ClientProvider,
             [publication],
-            bulkSendBatchSize: 10);
+            bulkSendBatchSize: 10, loggerFactory: NullLoggerFactory.Instance);
 
         var producers = factory.Create();
         return (IAmAMessageProducerSync)producers.First().Value;
@@ -172,7 +174,7 @@ public class AzureServiceBusMessageGatewayProvider
 
     public IAmAChannelSync CreateChannel(AzureServiceBusSubscription subscription)
     {
-        var consumerFactory = new AzureServiceBusConsumerFactory(ClientProvider);
+        var consumerFactory = new AzureServiceBusConsumerFactory(clientProvider: ClientProvider, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var channelFactory = new AzureServiceBusChannelFactory(consumerFactory);
         var channel = channelFactory.CreateSyncChannel(subscription);
 
@@ -309,7 +311,7 @@ public class AzureServiceBusMessageGatewayProvider
         var factory = new AzureServiceBusMessageProducerFactory(
             ClientProvider,
             [publication],
-            bulkSendBatchSize: 10);
+            bulkSendBatchSize: 10, loggerFactory: NullLoggerFactory.Instance);
 
         var producers = await factory.CreateAsync();
         return (IAmAMessageProducerAsync)producers.First().Value;
@@ -319,7 +321,7 @@ public class AzureServiceBusMessageGatewayProvider
         AzureServiceBusSubscription subscription,
         CancellationToken cancellationToken = default)
     {
-        var consumerFactory = new AzureServiceBusConsumerFactory(ClientProvider);
+        var consumerFactory = new AzureServiceBusConsumerFactory(clientProvider: ClientProvider, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var channelFactory = new AzureServiceBusChannelFactory(consumerFactory);
         var channel = await channelFactory.CreateAsyncChannelAsync(subscription, cancellationToken);
 

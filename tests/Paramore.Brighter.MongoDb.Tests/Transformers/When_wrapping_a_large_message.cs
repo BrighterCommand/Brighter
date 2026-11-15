@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MongoDb.Tests.TestDoubles;
 using Paramore.Brighter.Transformers.MongoGridFS;
@@ -26,22 +28,22 @@ public class LargeMessagePayloadWrapTests : IDisposable
                 new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
                 null
             );
-           
+
         mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
-            
+
         _myCommand = new MyLargeCommand(6000);
 
         string bucketName = $"brightertestbucket-{Guid.NewGuid()}";
 
         _luggageStore = new MongoDbLuggageStore(new MongoDbLuggageStoreOptions(Configuration.ConnectionString, Configuration.DatabaseName, bucketName));
-            
+
         _luggageStore.EnsureStoreExists();
 
         var transformerFactoryAsync = new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
         _publication = new Publication { Topic = new RoutingKey("MyLargeCommand"), RequestType = typeof(MyLargeCommand) };
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactoryAsync);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactoryAsync, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]
@@ -56,7 +58,7 @@ public class LargeMessagePayloadWrapTests : IDisposable
         Assert.NotNull(message.Header.DataRef);
         _id = (string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
         Assert.Equal($"Claim Check {_id}", message.Body.Value);
-            
+
         Assert.True(_luggageStore.HasClaim(_id));
     }
 

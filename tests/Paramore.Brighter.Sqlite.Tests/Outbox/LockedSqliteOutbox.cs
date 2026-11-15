@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel <guilhermeaappel@gmail.com>
 
@@ -75,7 +75,7 @@ public sealed class LockedSqliteOutbox : IDisposable
 
         var configuration = configure(_connectionString, tableName);
         _connectionProvider = new CountingSqliteConnectionProvider(configuration);
-        Outbox = new SqliteOutbox(configuration, _connectionProvider);
+        Outbox = new SqliteOutbox(configuration: configuration, connectionProvider: _connectionProvider, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteOutbox>.Instance);
         Outbox.Add(new DefaultMessageFactory().Create(DateTimeOffset.UtcNow.AddMinutes(-5)), new RequestContext());
     }
 

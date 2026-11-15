@@ -52,7 +52,7 @@ public class SqsRedeliveryDeliveryCountTests : IDisposable, IAsyncDisposable
     {
         ConformanceDeferredPump.ResetDispatchCount();
         _awsConnection = GatewayFactory.CreateFactory();
-        _channelFactory = new ChannelFactory(_awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection: _awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     /// <summary>
@@ -88,15 +88,15 @@ public class SqsRedeliveryDeliveryCountTests : IDisposable, IAsyncDisposable
         // factory — we wrap the underlying consumer ourselves so the recording decorator can observe it.
         _channelFactory.CreateSyncChannel(subscription);
 
-        var consumer = new SqsMessageConsumerFactory(_awsConnection).Create(subscription);
+        var consumer = new SqsMessageConsumerFactory(awsConnection: _awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(subscription);
         var channel = ConformanceDeferredPump.CreateRecordingChannel(channelName, routingKey, consumer);
 
-        var producer = new SnsMessageProducer(_awsConnection, new SnsPublication
+        var producer = new SnsMessageProducer(connection: _awsConnection, publication: new SnsPublication
         {
             Topic = routingKey,
             RequestType = typeof(ConformanceDeferredCommand),
             MakeChannels = OnMissingChannel.Validate
-        });
+        }, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var cmd = new ConformanceDeferredCommand { Value = "delivery count test" };
         var message = new Message(

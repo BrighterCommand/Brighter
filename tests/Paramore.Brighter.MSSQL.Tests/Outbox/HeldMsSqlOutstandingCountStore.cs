@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel <guilhermeaappel@gmail.com>
 
@@ -61,7 +61,7 @@ public static class HeldMsSqlOutstandingCountStore
         await ExecuteAsync(holder, $"SELECT TOP 1 * FROM {configuration.OutBoxTableName} WITH (TABLOCKX, HOLDLOCK)", transaction);
 
         return new OutstandingCountCancellationSetup<DbTransaction>(
-            new MsSqlOutbox(configuration),
+            new MsSqlOutbox(configuration: configuration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<MsSqlOutbox>.Instance),
             storeHeld: true,
             clientCancellationException: typeof(SqlException),
             release: async () =>

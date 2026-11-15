@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,17 +48,19 @@ var kafkaConfig = new KafkaMessagingGatewayConfiguration
     BootStrapServers = new[] { "localhost:9092" }
 };
 
-var kafkaMessageConsumerFactory = new KafkaMessageConsumerFactory(kafkaConfig);
-
 // KafkaProducerRegistryFactory.Create() opens a real broker connection at construction
 // time, so we only build the registry when actually starting the producer side. In
 // --generate-asyncapi mode the [PublicationTopic]-decorated event types are picked up
 // by assembly scanning, so the document still describes publications correctly.
+
 var host = new HostBuilder()
     .ConfigureServices((_, services) =>
     {
-        var brighter = services.AddConsumers(options =>
+        var brighter = services.AddConsumers(provider =>
         {
+            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            var kafkaMessageConsumerFactory = new KafkaMessageConsumerFactory(kafkaConfig, loggerFactory: loggerFactory);
+            var options = new ConsumersOptions();
             options.Subscriptions = new Subscription[]
             {
                 new KafkaSubscription<PaymentReceivedEvent>(
@@ -70,27 +73,31 @@ var host = new HostBuilder()
                     makeChannels: OnMissingChannel.Create)
             };
             options.DefaultChannelFactory = new ChannelFactory(kafkaMessageConsumerFactory);
+            return options;
         });
 
         if (!generateAsyncApi)
         {
-            var producerRegistry = new KafkaProducerRegistryFactory(
-                kafkaConfig,
-                new KafkaPublication<OrderCreatedEvent>[]
-                {
-                    new()
-                    {
-                        Topic = new RoutingKey("order.created"),
-                        NumPartitions = 3,
-                        MessageSendMaxRetries = 3,
-                        MessageTimeoutMs = 1000,
-                        MaxInFlightRequestsPerConnection = 1
-                    }
-                }).Create();
 
-            brighter.AddProducers(configure =>
+            brighter.AddProducers(provider =>
             {
+                var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+                var producerRegistry = new KafkaProducerRegistryFactory(
+                    kafkaConfig,
+                    new KafkaPublication<OrderCreatedEvent>[]
+                    {
+                        new()
+                        {
+                            Topic = new RoutingKey("order.created"),
+                            NumPartitions = 3,
+                            MessageSendMaxRetries = 3,
+                            MessageTimeoutMs = 1000,
+                            MaxInFlightRequestsPerConnection = 1
+                        }
+                    }, loggerFactory: loggerFactory).Create();
+                var configure = new ProducersConfiguration();
                 configure.ProducerRegistry = producerRegistry;
+                return configure;
             });
         }
 

@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="logger">The logger this Brighter container's diagnostics are written to.</param>
         public AmbientScopeDiagnostics(ILogger<AmbientScopeDiagnostics> logger)
         {
-            _logger = logger;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         /// <summary>

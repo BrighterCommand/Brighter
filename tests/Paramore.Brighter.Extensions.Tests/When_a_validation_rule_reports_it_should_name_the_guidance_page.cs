@@ -45,7 +45,7 @@ public class ValidationMessageGuidancePageTests
     public void When_the_opt_in_is_inert_the_error_should_name_the_guidance_page()
     {
         // Arrange — JoinAmbient with all three lifetimes left at the Transient default: the opt-in has no effect
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         var builder = services.AddBrighter(options => options.DefaultScopeAffinity = ScopeAffinity.JoinAmbient);
         builder.ValidatePipelines(throwOnError: true);
@@ -65,7 +65,7 @@ public class ValidationMessageGuidancePageTests
     {
         // Arrange — Handler and Transformer Scoped, Mapper Transient: a mixed pair cannot share a
         // pipeline-scoped dependency
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         var builder = services.AddBrighter(options =>
         {
@@ -89,7 +89,7 @@ public class ValidationMessageGuidancePageTests
     public void When_a_singleton_artefact_has_a_captive_dependency_the_warning_should_name_the_guidance_page()
     {
         // Arrange — a Singleton mapper whose only constructor parameter is registered Scoped
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         services.AddSingleton(subscriberRegistry);
         var mapperRegistryBuilder = new ServiceCollectionMessageMapperRegistryBuilder(services);
@@ -120,7 +120,7 @@ public class ValidationMessageGuidancePageTests
     {
         // Arrange — the application registers IBrighterOptions itself, before AddBrighter, so
         // AddBrighterRequestScope's write-through never runs (D18)
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
         {
@@ -151,7 +151,7 @@ public class ValidationMessageGuidancePageTests
     public void When_two_distinct_scope_providers_are_registered_the_warning_should_name_the_guidance_page()
     {
         // Arrange — two distinct IAmAScopeProvider implementations registered unkeyed
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddSingleton<IAmAScopeProvider, AsyncLocalScopeProvider>();
         services.AddSingleton<IAmAScopeProvider, ThrowingScopeProvider>();
@@ -177,7 +177,7 @@ public class ValidationMessageGuidancePageTests
     public void When_the_opt_in_is_repeated_with_different_affinities_the_warning_should_name_the_guidance_page()
     {
         // Arrange — two constructed ScopeAffinityOverride instances carrying different affinities
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddSingleton(new ScopeAffinityOverride(ScopeAffinity.AlwaysNew));
         services.AddSingleton(new ScopeAffinityOverride(ScopeAffinity.JoinAmbient));
@@ -204,7 +204,7 @@ public class ValidationMessageGuidancePageTests
     {
         // Arrange — an affinity override registered by factory delegate, so RepeatedOptIn cannot read a
         // value off it
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddSingleton(_ => new ScopeAffinityOverride(ScopeAffinity.JoinAmbient));
         var builder = services.AddBrighter(options =>

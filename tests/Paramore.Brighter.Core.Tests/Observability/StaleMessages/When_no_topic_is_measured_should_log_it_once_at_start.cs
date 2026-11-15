@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -62,7 +62,7 @@ public class StaleMessageMonitorNoMeasuredTopicLogTests
         _logs.Reset();
         var outbox = new StaleMessageTopicCountingOutbox();
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddSingleton<TimeProvider>(new FakeTimeProvider());
         services.AddSingleton<IAmAnOutbox>(outbox);
         services.AddSingleton<IAmProducersConfiguration>(new ProducersConfiguration { ProducerRegistry = CreateRegistry(producers) });
@@ -89,7 +89,7 @@ public class StaleMessageMonitorNoMeasuredTopicLogTests
         EMPTY_REGISTRY => new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>()),
         EMPTY_TOPIC_ONLY => new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { RoutingKey.Empty, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = RoutingKey.Empty }) }
+            { RoutingKey.Empty, new InMemoryMessageProducer(new InternalBus(), publication:new Publication { Topic = RoutingKey.Empty },loggerFactory:Initializer.TestLoggerFactory) }
         }),
         _ => null
     };

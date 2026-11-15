@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Net.Mime;
@@ -49,13 +51,13 @@ public class AwsValidateInfrastructureByConventionTestsAsync : IAsyncDisposable,
 
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance);
         var channel = _channelFactory.CreateAsyncChannel(subscription);
 
         //Now change the subscription to validate, just check what we made - will make the SNS Arn to prevent ListTopics call
         subscription.FindQueueBy = QueueFindBy.Name;
         subscription.FindTopicBy = TopicFindBy.Convention;
-        subscription.MakeChannels =  OnMissingChannel.Validate;
+        subscription.MakeChannels = OnMissingChannel.Validate;
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,
@@ -63,10 +65,10 @@ public class AwsValidateInfrastructureByConventionTestsAsync : IAsyncDisposable,
             {
                 FindTopicBy = TopicFindBy.Convention,
                 MakeChannels = OnMissingChannel.Validate
-            }
-        );
+            },
+            loggerFactory: NullLoggerFactory.Instance);
 
-        _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
+        _consumer = new SqsMessageConsumerFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance).CreateAsync(subscription);
     }
 
     [Fact]
@@ -83,7 +85,7 @@ public class AwsValidateInfrastructureByConventionTestsAsync : IAsyncDisposable,
 
         await _consumer.AcknowledgeAsync(message);
     }
-        
+
     public void Dispose()
     {
         //Clean up resources that we have created

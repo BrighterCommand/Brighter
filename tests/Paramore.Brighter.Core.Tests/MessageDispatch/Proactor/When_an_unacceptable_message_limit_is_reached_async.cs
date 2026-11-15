@@ -44,35 +44,35 @@ public class MessagePumpUnacceptableMessageLimitBreachedAsyncTests
     {
         SpyRequeueCommandProcessor commandProcessor = new();
 
-        var channel = new ChannelAsync(new("MyChannel"), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)), 3);
-            
+        var channel = new ChannelAsync(new("MyChannel"), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory), 3);
+
         var messageMapperRegistry = new MessageMapperRegistry(
             null,
             new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
-            
-        _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyEvent), 
+
+        _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyEvent),
             messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel,
-            timeProvider:_timeProvider)
+            timeProvider:_timeProvider, loggerFactory: Initializer.TestLoggerFactory)
         {
             Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3, UnacceptableMessageLimit = 3,
             UnacceptableMessageLimitWindow =  TimeSpan.FromMinutes(1)
         };
-            
+
         var unacceptableMessage1 = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
-            new MessageBody("")                                
+            new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE),
+            new MessageBody("")
         );
         var unacceptableMessage2 = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
+            new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE),
             new MessageBody("")
         );
         var unacceptableMessage3 = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
+            new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE),
             new MessageBody("")
         );
         var unacceptableMessage4 = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
+            new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE),
             new MessageBody("")
         );
 
@@ -80,20 +80,20 @@ public class MessagePumpUnacceptableMessageLimitBreachedAsyncTests
         channel.Enqueue(unacceptableMessage2);
         channel.Enqueue(unacceptableMessage3);
         channel.Enqueue(unacceptableMessage4);
-            
+
     }
 
     [Fact]
     public async Task When_An_Unacceptable_Message_Limit_Is_Reached()
     {
         var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            
+
         _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
         await Task.WhenAll(task);
 
         Assert.Empty(_bus.Stream(_routingKey));
-            
-        Assert.Equal(MessagePumpStatus.MP_LIMIT_EXCEEDED, _messagePump.Status); 
+
+        Assert.Equal(MessagePumpStatus.MP_LIMIT_EXCEEDED, _messagePump.Status);
     }
 }

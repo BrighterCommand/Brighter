@@ -15,7 +15,7 @@ public class TransientMapperResolutionThrowsScopeTests
         // Arrange — the mapper is registered but its constructor dependency is NOT, so the
         // container throws while activating it (the most common DI misconfiguration). This is the
         // failure path GetTransient creates a scope for before resolution succeeds.
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddTransient<MapperWithUnregisteredDependency>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Transient });
         var rootProvider = collection.BuildServiceProvider();

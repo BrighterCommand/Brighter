@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -88,7 +88,7 @@ public class OnePerTopicCallPerDueTimeTests
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
-        new(new InternalBus(), new Publication { Topic = new RoutingKey(topic), StaleMessageAge = TimeSpan.FromMinutes(2) });
+        new InMemoryMessageProducer(new InternalBus(), publication: new Publication { Topic = new RoutingKey(topic), StaleMessageAge = TimeSpan.FromMinutes(2) }, loggerFactory: Initializer.TestLoggerFactory);
 
     private void WaitUntilTheMonitorWaits(int timers) =>
         Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));

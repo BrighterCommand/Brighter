@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
@@ -10,7 +10,7 @@ using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
-public class MediatorWaitStepFlowTests 
+public class MediatorWaitStepFlowTests
 {
     private readonly Scheduler<WorkflowTestData> _scheduler;
     private readonly Runner<WorkflowTestData> _runner;
@@ -28,42 +28,42 @@ public class MediatorWaitStepFlowTests
 
         CommandProcessor commandProcessor = null;
         var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyCommandHandlerAsync(commandProcessor));
-        
-        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
-        PipelineBuilder<MyCommand>.ClearPipelineCache();    
-        
-        var workflowData= new WorkflowTestData();
+
+        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
+            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
+        PipelineBuilder<MyCommand>.ClearPipelineCache();
+
+        var workflowData = new WorkflowTestData();
         workflowData.Bag["MyValue"] = "Test";
-        
+
         _job = new Job<WorkflowTestData>(workflowData);
-        
+
         var secondStep = new Sequential<WorkflowTestData>(
             "Test of Job",
-            new ChangeAsync<WorkflowTestData>( (_) => Task.CompletedTask),
+            new ChangeAsync<WorkflowTestData>((_) => Task.CompletedTask),
             () => { _stepCompleted = true; },
-            null
-        );
-        
+            null,
+            loggerFactory: Initializer.TestLoggerFactory);
+
         var firstStep = new Wait<WorkflowTestData>("Test of Job",
             TimeSpan.FromMilliseconds(100),
-            secondStep
-            );
-        
+            secondStep,
+            loggerFactory: Initializer.TestLoggerFactory);
+
         _job.InitSteps(firstStep);
 
-        InMemoryStateStoreAsync store = new(_timeProvider);
-        InMemoryJobChannel<WorkflowTestData> channel = new();
-        
+        InMemoryStateStoreAsync store = new(Initializer.TestLoggerFactory, _timeProvider);
+        InMemoryJobChannel<WorkflowTestData> channel = new(loggerFactory: Initializer.TestLoggerFactory);
+
         _scheduler = new Scheduler<WorkflowTestData>(
             channel,
             store
             );
-        
-        _runner = new Runner<WorkflowTestData>(channel, store, commandProcessor, _scheduler);
-        _waker = new Waker<WorkflowTestData>(TimeSpan.FromMilliseconds(100), _scheduler);
+
+        _runner = new Runner<WorkflowTestData>(channel, store, commandProcessor, _scheduler, loggerFactory: Initializer.TestLoggerFactory);
+        _waker = new Waker<WorkflowTestData>(TimeSpan.FromMilliseconds(100), _scheduler, loggerFactory: Initializer.TestLoggerFactory);
     }
-    
+
     [Fact]
     public async Task When_running_a_wait_workflow()
     {

@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Net;
@@ -63,7 +65,7 @@ public class MqttMessageConsumerRejectUnacceptableInvalidChannelTests : IDisposa
             TopicPrefix = SOURCE_TOPIC_PREFIX,
             ClientID = "BrighterTests-Invalid-Producer"
         };
-        var publisher = new MqttMessagePublisher(producerConfig);
+        var publisher = new MqttMessagePublisher(producerConfig, loggerFactory: NullLoggerFactory.Instance);
         _sourceProducer = new MqttMessageProducer(publisher, new Publication());
 
         //Arrange — source consumer with both DLQ and invalid message routing keys
@@ -77,8 +79,8 @@ public class MqttMessageConsumerRejectUnacceptableInvalidChannelTests : IDisposa
         _sourceConsumer = new MqttMessageConsumer(
             consumerConfig,
             deadLetterRoutingKey: new RoutingKey(DLQ_TOPIC_PREFIX),
-            invalidMessageRoutingKey: new RoutingKey(INVALID_TOPIC_PREFIX)
-        );
+            invalidMessageRoutingKey: new RoutingKey(INVALID_TOPIC_PREFIX),
+            loggerFactory: NullLoggerFactory.Instance);
 
         //Arrange — invalid message consumer
         var invalidConsumerConfig = new MqttMessagingGatewayConsumerConfiguration
@@ -88,7 +90,7 @@ public class MqttMessageConsumerRejectUnacceptableInvalidChannelTests : IDisposa
             TopicPrefix = INVALID_TOPIC_PREFIX,
             ClientID = "BrighterTests-InvalidTarget-Consumer"
         };
-        _invalidConsumer = new MqttMessageConsumer(invalidConsumerConfig);
+        _invalidConsumer = new MqttMessageConsumer(invalidConsumerConfig, loggerFactory: NullLoggerFactory.Instance);
 
         //Arrange — DLQ consumer (should NOT receive the message)
         var dlqConsumerConfig = new MqttMessagingGatewayConsumerConfiguration
@@ -98,7 +100,7 @@ public class MqttMessageConsumerRejectUnacceptableInvalidChannelTests : IDisposa
             TopicPrefix = DLQ_TOPIC_PREFIX,
             ClientID = "BrighterTests-InvalidDlq-Consumer"
         };
-        _dlqConsumer = new MqttMessageConsumer(dlqConsumerConfig);
+        _dlqConsumer = new MqttMessageConsumer(dlqConsumerConfig, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -50,8 +50,8 @@ public class DispatcherShutSubscriptionsTests
             new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
         registry.Register<MyEvent, MyEventMessageMapper>();
         registry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
-        using var running = new Dispatcher(new SpyCommandProcessor(), [NewSubscription(channelFactory)], registry, registry);
-        using var awaiting = new Dispatcher(new SpyCommandProcessor(), [NewSubscription(channelFactory)], registry, registry);
+        using var running = new Dispatcher(commandProcessor: new SpyCommandProcessor(), subscriptions: [NewSubscription(channelFactory)], messageMapperRegistry: registry, messageMapperRegistryAsync: registry, loggerFactory: Initializer.TestLoggerFactory);
+        using var awaiting = new Dispatcher(commandProcessor: new SpyCommandProcessor(), subscriptions: [NewSubscription(channelFactory)], messageMapperRegistry: registry, messageMapperRegistryAsync: registry, loggerFactory: Initializer.TestLoggerFactory);
         var orders = new SubscriptionName("orders");
 
         try

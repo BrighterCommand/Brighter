@@ -49,7 +49,7 @@ public class InvestigateCheckReadsBreakerRegisteredInContainerTests
     public async Task When_a_shared_singleton_breaker_trips_a_topic_should_be_reported_by_the_investigate_check()
     {
         //Arrange
-        var breaker = new InMemoryOutboxCircuitBreaker();
+        var breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         using var mediator = new GatedOutboxProducerMediator();
         var services = SweeperContainer.Create(new InMemoryLock(), new FakeTimeProvider(), useOutboxSweeper: true);
         services.AddSingleton<IAmAnOutboxCircuitBreaker>(breaker);

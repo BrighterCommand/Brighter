@@ -46,7 +46,7 @@ public class AzureServiceBusFailedBatchMappingTests
             channelName: new ChannelName("locks"), routingKey: new RoutingKey("locks"),
             bufferSize: 4, makeChannels: OnMissingChannel.Assume,
             subscriptionConfiguration: new AzureServiceBusSubscriptionConfiguration { UseServiceBusQueue = useQueue });
-        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(subscription);
+        await using var consumer = new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync(subscription);
 
         // Act
         await Assert.ThrowsAsync<FormatException>(() => consumer.ReceiveAsync());

@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Linq;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
@@ -36,7 +38,7 @@ public class GcpPubSubCombinedChannelFactoryRoutingTests
     {
         // Arrange — construction only, so no broker connection is made (NFR-3)
         var connection = new GcpMessagingGatewayConnection();
-        var combinedChannelFactory = new CombinedChannelFactory([new GcpPubSubChannelFactory(connection)]);
+        var combinedChannelFactory = new CombinedChannelFactory([new GcpPubSubChannelFactory(connection, loggerFactory: NullLoggerFactory.Instance)]);
         var subscription = new GcpPubSubSubscription<MyCommand>(
             new SubscriptionName("t"),
             new ChannelName("t"),

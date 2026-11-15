@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using DbMaker;
 using Salutation_Sweeper.Extensions;
@@ -17,6 +19,7 @@ using TransportMaker;
 JsonSerializerOptions jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
 var brighterTracer = new BrighterTracer(TimeProvider.System);
 builder.Services.AddSingleton<IAmABrighterTracer>(brighterTracer);
 
@@ -71,20 +74,23 @@ if (string.IsNullOrEmpty(dbType))
     throw new ArgumentNullException("No database type specified in configuration");
 
 var rdbms = DbResolver.GetDatabaseType(dbType);
-(IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
-    OutboxFactory.MakeDapperOutbox(rdbms, outboxConfiguration);
 
 builder.Services.AddBrighter(options =>
 {
     options.InstrumentationOptions = InstrumentationOptions.All;
-}).AddProducers(configure =>
+}).AddProducers(provider =>
 {
-    configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<SalutationReceived>(messagingTransport);
+    var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+    (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
+        OutboxFactory.MakeDapperOutbox(rdbms, outboxConfiguration, loggerFactory);
+    var configure = new ProducersConfiguration();
+    configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<SalutationReceived>(messagingTransport, loggerFactory);
     configure.Outbox = makeOutbox.outbox;
     configure.TransactionProvider = makeOutbox.transactionProvider;
     configure.ConnectionProvider = makeOutbox.connectionProvider;
     configure.MaxOutStandingMessages = 5;
     configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
+    return configure;
 })
 .UseOutboxSweeper(options =>
 {

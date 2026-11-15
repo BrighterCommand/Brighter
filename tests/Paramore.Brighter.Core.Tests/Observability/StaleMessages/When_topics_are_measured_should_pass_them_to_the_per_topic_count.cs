@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -98,7 +98,7 @@ public class PerTopicCountArgumentsTests
     }
 
     private static InMemoryMessageProducer Producer(string topic, TimeSpan? staleMessageAge) =>
-        new(new InternalBus(), new Publication { Topic = new RoutingKey(topic), StaleMessageAge = staleMessageAge });
+        new InMemoryMessageProducer(new InternalBus(), publication: new Publication { Topic = new RoutingKey(topic), StaleMessageAge = staleMessageAge }, loggerFactory: Initializer.TestLoggerFactory);
 
     private static void WaitForPerTopicCompletions(OutboxStaleMessageReadings readings, long completions) =>
         SpinWait.SpinUntil(

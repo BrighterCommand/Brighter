@@ -26,9 +26,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
@@ -65,12 +63,14 @@ public class PostgreSqlBoxDetectionHelper :
     }
 
     /// <summary>
-    /// Initialises the detection helper with an optional logger. When unspecified, falls back
-    /// to <see cref="ApplicationLogging.CreateLogger{T}"/>.
+    /// Initialises the detection helper with a logger. The logger is currently only consumed for the
+    /// rare <c>UndefinedTable</c>-swallow Debug emission in
+    /// <see cref="DoesHistoryExistAsync"/>; the helper remains a safe DI singleton.
     /// </summary>
-    public PostgreSqlBoxDetectionHelper(ILogger? logger = null)
+    /// <param name="logger">The logger for this component. Must not be null.</param>
+    public PostgreSqlBoxDetectionHelper(ILogger<PostgreSqlBoxDetectionHelper> logger)
     {
-        _logger = logger ?? ApplicationLogging.CreateLogger<PostgreSqlBoxDetectionHelper>();
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
@@ -83,7 +83,8 @@ public class PostgreSqlBoxDetectionHelper :
         NpgsqlTransaction? transaction = null)
     {
         using var command = connection.CreateCommand();
-        if (transaction != null) command.Transaction = transaction;
+        if (transaction != null)
+            command.Transaction = transaction;
         command.CommandText = @"
 SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
@@ -117,7 +118,8 @@ WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
             return false;
 
         using var command = connection.CreateCommand();
-        if (transaction != null) command.Transaction = transaction;
+        if (transaction != null)
+            command.Transaction = transaction;
         command.CommandText = $@"
 SELECT COUNT(1) FROM {quotedHistorySchema}.""__BrighterMigrationHistory""
 WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
@@ -173,7 +175,8 @@ WHERE TABLE_SCHEMA = @HistorySchema AND TABLE_NAME = '__BrighterMigrationHistory
     {
         var quotedHistorySchema = QuotedHistorySchema(historySchema);
         using var command = connection.CreateCommand();
-        if (transaction != null) command.Transaction = transaction;
+        if (transaction != null)
+            command.Transaction = transaction;
         command.CommandText = $@"
 SELECT COALESCE(MAX(""MigrationVersion""), 0) FROM {quotedHistorySchema}.""__BrighterMigrationHistory""
 WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
@@ -255,7 +258,8 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
         NpgsqlTransaction? transaction = null)
     {
         using var command = connection.CreateCommand();
-        if (transaction != null) command.Transaction = transaction;
+        if (transaction != null)
+            command.Transaction = transaction;
         command.CommandText = @"
 SELECT column_name FROM information_schema.columns
 WHERE table_schema = @SchemaName AND table_name = @TableName";

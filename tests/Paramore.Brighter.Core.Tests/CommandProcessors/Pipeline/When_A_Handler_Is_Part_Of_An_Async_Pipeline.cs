@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -17,14 +17,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyImplicitHandlerAsync>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyImplicitHandlerAsync>();
             container.AddTransient<MyLoggingHandlerAsync<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory);
+            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory, loggerFactory: Initializer.TestLoggerFactory);
 
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         public void When_A_Handler_Is_Part_Of_An_Async_Pipeline()
         {
             _pipeline = _pipelineBuilder.BuildAsync(new MyCommand(), new RequestContext(), false).First();
-            
+
             var trace = TracePipeline().ToString();
             Assert.Contains("MyImplicitHandlerAsync", trace);
             Assert.Contains("MyLoggingHandlerAsync", trace);

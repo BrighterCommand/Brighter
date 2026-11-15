@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text.Json;
 using Paramore.Brighter.TickerQ.Tests.TestDoubles;
 using Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures;
@@ -176,4 +176,3 @@ public class TickerQSchedulerMessageTests : IClassFixture<TickerQMessageTestFixt
         _fixture.Clear();
     }
 }
-

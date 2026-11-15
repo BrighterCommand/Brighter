@@ -47,7 +47,7 @@ public class StaleMessageMonitorBoundarySettingsTests
         TimeSpan staleMessageAge, int countCeiling, TimeSpan measurementInterval, TimeSpan measurementTimeout)
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         var builder = new ServiceCollectionBrighterBuilder(
             services,
             new ServiceCollectionSubscriberRegistry(services),

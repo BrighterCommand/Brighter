@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -65,7 +67,7 @@ public class SnsMessageProducerMissingSchedulerTests
         // A topic ARN is supplied so the producer never needs to reach AWS to resolve one; every
         // assertion here is about the branch taken before any client call.
         return new SnsMessageProducer(connection,
-            new SnsPublication { TopicArn = "arn:aws:sns:eu-west-1:000000000000:test-topic" })
+            new SnsPublication { TopicArn = "arn:aws:sns:eu-west-1:000000000000:test-topic" }, loggerFactory: NullLoggerFactory.Instance)
         {
             Scheduler = scheduler
         };

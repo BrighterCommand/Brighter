@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -36,7 +38,7 @@ public class AsyncInMemoryConsumerRequeueTests
             t =>
             {
                 if (t == typeof(FireSchedulerMessageHandler))
-                    return new FireSchedulerMessageHandler(_processor!);    
+                    return new FireSchedulerMessageHandler(_processor!);
 
                 if (t == typeof(MyEventHandlerAsync))
                     return new MyEventHandlerAsync(new Dictionary<string, string>());
@@ -53,7 +55,7 @@ public class AsyncInMemoryConsumerRequeueTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            [_routingKey] = new InMemoryMessageProducer(_internalBus, new Publication{ Topic = _routingKey, RequestType = typeof(MyEvent) })
+            [_routingKey] = new InMemoryMessageProducer(_internalBus, NullLoggerFactory.Instance, new Publication{ Topic = _routingKey, RequestType = typeof(MyEvent) })
         });
 
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -78,11 +80,11 @@ public class AsyncInMemoryConsumerRequeueTests
             new EmptyMessageTransformerFactoryAsync(),
             trace,
             new FindPublicationByPublicationTopicOrRequestType(),
-            outbox
+            NullLoggerFactory.Instance, outbox
         );
-        
-        
-        var schedulerFactory = new InMemorySchedulerFactory { TimeProvider = _timeProvider };
+
+
+        var schedulerFactory = new InMemorySchedulerFactory (loggerFactory: NullLoggerFactory.Instance) { TimeProvider = _timeProvider };
 
         _processor = new CommandProcessor(
             subscriberRegistry,
@@ -91,13 +93,13 @@ public class AsyncInMemoryConsumerRequeueTests
             new DefaultPolicy(),
             new ResiliencePipelineRegistry<string>(),
             outboxBus,
-            schedulerFactory
-        );
-        
+            schedulerFactory,
+            loggerFactory: NullLoggerFactory.Instance);
+
         _scheduler = schedulerFactory.Create(_processor);
     }
-    
-    
+
+
     [Fact]
     public async Task When_requeueing_a_message_it_should_be_available_again()
     {
@@ -106,21 +108,21 @@ public class AsyncInMemoryConsumerRequeueTests
         var expectedMessage = new Message(
             new MessageHeader(Id.Random(), _routingKey, MessageType.MT_EVENT),
             new MessageBody("a test body"));
-        
+
         _internalBus.Enqueue(expectedMessage);
 
-        var consumer = new InMemoryMessageConsumer(_routingKey, _internalBus, _timeProvider, 
-            ackTimeout: TimeSpan.FromMilliseconds(1000), scheduler: _scheduler);
-        
+        var consumer = new InMemoryMessageConsumer(_routingKey, _internalBus, _timeProvider,
+            ackTimeout: TimeSpan.FromMilliseconds(1000), scheduler: _scheduler, loggerFactory: NullLoggerFactory.Instance);
+
         //act
         var receivedMessage = await consumer.ReceiveAsync();
         await consumer.RequeueAsync(receivedMessage.Single(), TimeSpan.Zero);
-        
+
         //assert
         Assert.Single(_internalBus.Stream(_routingKey));
-        
+
     }
-    
+
     [Fact]
     public async Task When_requeueing_a_message_with_a_delay_it_should_not_be_available_immediately()
     {
@@ -128,23 +130,23 @@ public class AsyncInMemoryConsumerRequeueTests
         var expectedMessage = new Message(
             new MessageHeader(Id.Random(), _routingKey, MessageType.MT_EVENT),
             new MessageBody("a test body"));
-        
+
         _internalBus.Enqueue(expectedMessage);
 
-        var consumer = new InMemoryMessageConsumer(_routingKey, _internalBus, _timeProvider, 
-            ackTimeout: TimeSpan.FromMilliseconds(1000), scheduler:_scheduler);
-        
+        var consumer = new InMemoryMessageConsumer(_routingKey, _internalBus, _timeProvider,
+            ackTimeout: TimeSpan.FromMilliseconds(1000), scheduler:_scheduler, loggerFactory: NullLoggerFactory.Instance);
+
         //act
         var receivedMessage = await consumer.ReceiveAsync();
         Assert.Empty(_internalBus.Stream(_routingKey));
-        
+
         await consumer.RequeueAsync(receivedMessage.Single(), TimeSpan.FromMilliseconds(1000));
-        
+
         //assert
         Assert.Empty(_internalBus.Stream(_routingKey));
-        
+
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
-        
+
         Assert.Single(_internalBus.Stream(_routingKey));
     }
 }

@@ -70,7 +70,7 @@ public class BuilderResilienceRegistryTests
         var optionsRegistry = configureOptions
             ? new ResiliencePipelineRegistry<string>().AddBrighterDefault()
             : null;
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         var builder = addConsumers
             ? useOptionsFactory
                 ? services.AddConsumers(_ => new ConsumersOptions { ResiliencePipelineRegistry = optionsRegistry })

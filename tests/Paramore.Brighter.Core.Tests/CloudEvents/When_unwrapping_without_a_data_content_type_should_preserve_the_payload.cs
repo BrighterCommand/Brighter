@@ -37,10 +37,10 @@ public class CloudEventsOptionalDataContentTypeTests
     public static IEnumerable<object[]> Payloads()
     {
         foreach (var explicitNull in new[] { false, true })
-        foreach (var useAsync in new[] { false, true })
-        {
-            foreach (var json in new[]
+            foreach (var useAsync in new[] { false, true })
             {
+                foreach (var json in new[]
+                {
                 "{\"value\":1}",
                 "[1,\"two\",null]",
                 "\"hello\\n\\\"world\\\"\"",
@@ -50,33 +50,33 @@ public class CloudEventsOptionalDataContentTypeTests
                 "false",
                 "null"
             })
-            {
-                yield return new object[]
                 {
+                    yield return new object[]
+                    {
                     explicitNull, useAsync, ",\"data\":" + json,
                     "application/json", Encoding.UTF8.GetBytes(json)
-                };
-            }
+                    };
+                }
 
-            foreach (var bytes in new[]
-            {
+                foreach (var bytes in new[]
+                {
                 new byte[] { 0, 255, 128, 1 },
                 Encoding.UTF8.GetBytes("{\"value\":1}"),
                 Array.Empty<byte>()
             })
-            {
-                yield return new object[]
                 {
+                    yield return new object[]
+                    {
                     explicitNull, useAsync, ",\"data_base64\":\"" + Convert.ToBase64String(bytes) + "\"",
                     "application/octet-stream", bytes
+                    };
+                }
+
+                yield return new object[]
+                {
+                explicitNull, useAsync, string.Empty, "application/octet-stream", Array.Empty<byte>()
                 };
             }
-
-            yield return new object[]
-            {
-                explicitNull, useAsync, string.Empty, "application/octet-stream", Array.Empty<byte>()
-            };
-        }
     }
 
     [Theory]
@@ -97,7 +97,7 @@ public class CloudEventsOptionalDataContentTypeTests
                 contentType: new ContentType("application/cloudevents+json")),
             new MessageBody(envelope));
         message.Header.Bag["transport-metadata"] = "preserved";
-        using var transformer = new CloudEventsTransformer();
+        using var transformer = new CloudEventsTransformer(loggerFactory: Initializer.TestLoggerFactory);
         transformer.InitializeUnwrapFromAttributeParams(CloudEventFormat.Json);
 
         //Act

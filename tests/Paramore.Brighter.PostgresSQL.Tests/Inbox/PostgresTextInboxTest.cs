@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.Postgres;
@@ -10,10 +12,10 @@ public class PostgresTextInboxTest : RelationalDatabaseInboxTests
     protected override string TableNamePrefix => Const.TablePrefix;
     protected override bool BinaryMessagePayload => false;
     protected override bool JsonMessagePayload => false;
-    
+
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
     {
-        return new PostgreSqlInbox(configuration);
+        return new PostgreSqlInbox(configuration, logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlInbox>());
     }
 
     protected override void CreateInboxTable(RelationalDatabaseConfiguration configuration)

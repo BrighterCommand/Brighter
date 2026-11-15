@@ -22,11 +22,11 @@ public class When_the_circuit_breaker_stops_listing_a_topic_should_stop_naming_i
         state.SweepStarted();
         state.LockObtained();
         state.SweepEnded(SweepOutcome.Completed);
-        var breaker = new InMemoryOutboxCircuitBreaker(new OutboxCircuitBreakerOptions { CooldownCount = 1 });
+        var breaker = new InMemoryOutboxCircuitBreaker(options: new OutboxCircuitBreakerOptions { CooldownCount = 1 }, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         breaker.TripTopic(new RoutingKey("payments"));
         breaker.CoolDown();
         breaker.TripTopic(new RoutingKey("orders"));
-        var check = new OutboxSweeperInvestigateHealthCheck(state, new TimedOutboxSweeperOptions(), () => breaker, 3);
+        var check = new OutboxSweeperInvestigateHealthCheck(state: state, options: new TimedOutboxSweeperOptions(), findCircuitBreaker: () => breaker, failureThreshold: 3, loggerFactory: Initializer.TestLoggerFactory);
 
         //Act
         var bothTripped = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);

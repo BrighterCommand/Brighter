@@ -1,11 +1,13 @@
-﻿using Paramore.Brighter.MessagingGateway.RocketMQ;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
 using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "RocketMQ")]
-public class BufferedConsumerCloudEventsTestsAsync : IAsyncDisposable 
+public class BufferedConsumerCloudEventsTestsAsync : IAsyncDisposable
 {
     private readonly RoutingKey _routingKey = new(Guid.NewGuid().ToString());
     private readonly IAmAMessageConsumerAsync _consumer;
@@ -14,12 +16,12 @@ public class BufferedConsumerCloudEventsTestsAsync : IAsyncDisposable
 
     public BufferedConsumerCloudEventsTestsAsync()
     {
-        var connection = GatewayFactory.CreateConnection(); 
+        var connection = GatewayFactory.CreateConnection();
         var publication = new RocketMqPublication { Topic = "bt_mc_cloudevents_async" };
         var consumer = GatewayFactory.CreateSimpleConsumer(connection, publication).GetAwaiter().GetResult();
         var producer = GatewayFactory.CreateProducer(connection,  publication).GetAwaiter().GetResult();
 
-        _consumer = new RocketMessageConsumer(consumer, BatchSize, TimeSpan.FromSeconds(30));
+        _consumer = new RocketMessageConsumer(consumer, BatchSize, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
         _producer = new RocketMqMessageProducer(connection, producer, publication);
     }
 
@@ -36,7 +38,7 @@ public class BufferedConsumerCloudEventsTestsAsync : IAsyncDisposable
                 Source = new Uri($"/component/{Guid.NewGuid()}", UriKind.RelativeOrAbsolute),
                 DataSchema = new Uri("https://example.com/storage/tenant/container", UriKind.RelativeOrAbsolute)
             }, new MessageBody("test content One"));
-        
+
         await _producer.SendAsync(messageOne);
 
         //let them arrive

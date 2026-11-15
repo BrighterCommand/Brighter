@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -82,7 +84,7 @@ public class KafkaPartitionKeyMessageGatewayProvider
             MakeChannels = OnMissingChannel.Create,
         };
 
-        var registry = new KafkaProducerRegistryFactory(_configuration, [publication]).Create();
+        var registry = new KafkaProducerRegistryFactory(_configuration, [publication], loggerFactory: NullLoggerFactory.Instance).Create();
         var producer = (IAmAMessageProducerSync)registry.LookupBy(message.Header.Topic);
         return ConformanceHarnessMessageScheduler.SendAndHandBack(registry, () => producer.Send(message));
     }
@@ -171,7 +173,7 @@ public class KafkaPartitionKeyMessageGatewayProvider
     public IAmAChannelSync CreateChannel(KafkaSubscription subscription)
     {
         var channel = new ChannelFactory(
-            new KafkaMessageConsumerFactory(_configuration, Scheduler)
+            new KafkaMessageConsumerFactory(_configuration, scheduler: Scheduler, loggerFactory: Initializer.TestLoggerFactory)
         ).CreateSyncChannel(subscription);
 
         return new RetryableChannelSync(channel);
@@ -183,7 +185,7 @@ public class KafkaPartitionKeyMessageGatewayProvider
     )
     {
         var channel = await new ChannelFactory(
-            new KafkaMessageConsumerFactory(_configuration, Scheduler)
+            new KafkaMessageConsumerFactory(_configuration, scheduler: Scheduler, loggerFactory: Initializer.TestLoggerFactory)
         ).CreateAsyncChannelAsync(subscription, cancellationToken);
 
         return new RetryableChannelAsync(channel);
@@ -193,8 +195,8 @@ public class KafkaPartitionKeyMessageGatewayProvider
     {
         var producerRegistry = new KafkaProducerRegistryFactory(
             _configuration,
-            [publication]
-        ).Create();
+            [publication],
+            loggerFactory: Initializer.TestLoggerFactory).Create();
 
         _producerRegistries.Add(producerRegistry);
 
@@ -210,8 +212,8 @@ public class KafkaPartitionKeyMessageGatewayProvider
     {
         var producerRegistry = await new KafkaProducerRegistryFactory(
             _configuration,
-            [publication]
-        ).CreateAsync(cancellationToken);
+            [publication],
+            loggerFactory: Initializer.TestLoggerFactory).CreateAsync(cancellationToken);
 
         _producerRegistries.Add(producerRegistry);
 
@@ -326,7 +328,7 @@ public class KafkaPartitionKeyMessageGatewayProvider
     private IAmAMessageConsumerSync CreateRejectionConsumer(RoutingKey topic)
     {
         _rejectionTopics.Add(topic.Value);
-        return new KafkaMessageConsumerFactory(_configuration).Create(
+        return new KafkaMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance).Create(
             CreateRejectionSubscription(topic)
         );
     }
@@ -334,7 +336,7 @@ public class KafkaPartitionKeyMessageGatewayProvider
     private IAmAMessageConsumerAsync CreateRejectionConsumerAsync(RoutingKey topic)
     {
         _rejectionTopics.Add(topic.Value);
-        return new KafkaMessageConsumerFactory(_configuration).CreateAsync(
+        return new KafkaMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance).CreateAsync(
             CreateRejectionSubscription(topic)
         );
     }

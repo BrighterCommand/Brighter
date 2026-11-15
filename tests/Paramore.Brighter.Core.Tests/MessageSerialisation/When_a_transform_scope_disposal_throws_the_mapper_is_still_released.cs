@@ -32,7 +32,7 @@ public class TransformPipelineMapperReleaseOnScopeThrowTests
             messageTransformerFactory: new ThrowingOnReleaseTransformerFactory(),
             transformLeases: new Lease<IAmAMessageTransform>[] { Lease<IAmAMessageTransform>.Untracked(new NoOpTransform()) },
             instrumentationOptions: InstrumentationOptions.All,
-            mapperRegistry: new RecordingReleaseRegistry(mapper));
+            mapperRegistry: new RecordingReleaseRegistry(mapper), loggerFactory: Initializer.TestLoggerFactory);
 
         //act — the transform-scope disposal exception still surfaces to the owner; the scope drains
         //deterministically and reports its release failure as an AggregateException
@@ -53,7 +53,7 @@ public class TransformPipelineMapperReleaseOnScopeThrowTests
             messageTransformerFactoryAsync: new ThrowingOnReleaseTransformerFactoryAsync(),
             transformLeases: new Lease<IAmAMessageTransformAsync>[] { Lease<IAmAMessageTransformAsync>.Untracked(new NoOpTransformAsync()) },
             instrumentationOptions: InstrumentationOptions.All,
-            mapperRegistry: new RecordingReleaseRegistryAsync(mapper));
+            mapperRegistry: new RecordingReleaseRegistryAsync(mapper), loggerFactory: Initializer.TestLoggerFactory);
 
         //act
         var aggregate = await Assert.ThrowsAsync<AggregateException>(async () => await pipeline.DisposeAsync());
@@ -74,7 +74,7 @@ public class TransformPipelineMapperReleaseOnScopeThrowTests
             messageTransformerFactoryAsync: new ThrowingOnReleaseTransformerFactoryAsync(),
             transformLeases: new Lease<IAmAMessageTransformAsync>[] { Lease<IAmAMessageTransformAsync>.Untracked(new NoOpTransformAsync()) },
             instrumentationOptions: InstrumentationOptions.All,
-            mapperRegistry: new RecordingReleaseRegistryAsync(mapper));
+            mapperRegistry: new RecordingReleaseRegistryAsync(mapper), loggerFactory: Initializer.TestLoggerFactory);
 
         //act
         var aggregate = Assert.Throws<AggregateException>(() => pipeline.Dispose());

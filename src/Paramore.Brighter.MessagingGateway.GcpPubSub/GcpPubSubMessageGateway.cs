@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using Google.Api.Gax.ResourceNames;
 using Google.Cloud.Iam.V1;
 using Google.Cloud.PubSub.V1;
@@ -13,7 +13,7 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// specifically for managing topic and subscription infrastructure. It handles checking for existence,
 /// creating, and updating these resources based on Brighter's configuration.
 /// </summary>
-public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection connection)
+public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection connection, Microsoft.Extensions.Logging.ILoggerFactory loggerFactory)
 {
     // A thread-safe, static dictionary to track which topics or subscriptions have already been
     // checked/created/updated. This prevents redundant API calls during factory creation.
@@ -23,12 +23,14 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
     /// Runs IAM helper steps with tolerance for missing-rights failures (R-20, ADR 0078 §IAM tolerance).
     /// Logs one Warning per tolerated failure and returns false to end the helper early.
     /// </summary>
-    private readonly GcpIamCallTolerance _iamTolerance = new();
+    private readonly GcpIamCallTolerance _iamTolerance = new(Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<GcpIamCallTolerance>(loggerFactory));
 
     /// <summary>
     /// Gets the configured connection details for the Google Cloud Pub/Sub gateway.
     /// </summary>
     protected GcpMessagingGatewayConnection Connection { get; } = connection;
+
+    protected Microsoft.Extensions.Logging.ILoggerFactory LoggerFactory { get; } = loggerFactory;
 
     /// <summary>
     /// Asynchronously ensures that a Google Cloud Pub/Sub Topic exists and is configured according to the publication attributes.
@@ -124,7 +126,7 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
             {
                 topic.Labels[label.Key] = label.Value;
             }
-            
+
             attributes.TopicConfiguration?.Invoke(topic);
             attributes.UpdateMaskConfiguration?.Invoke(mask);
 
@@ -163,7 +165,7 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
             {
                 topic.Labels[label.Key] = label.Value;
             }
-            
+
             attributes.TopicConfiguration?.Invoke(topic);
             return topic;
         }
@@ -315,8 +317,8 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
     /// <returns>A <see cref="SubscriptionName"/> instance.</returns>
     protected Google.Cloud.PubSub.V1.SubscriptionName GetSubscriptionName(string? projectId, string subscriptionName)
         => Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(projectId ?? Connection.ProjectId,
-            subscriptionName); 
-        
+            subscriptionName);
+
     // Helper function to parse or create the TopicName object
     private static TopicName ParseOrCreateTopicName(string topicName, string projectId)
     {
@@ -391,7 +393,7 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
         var client = await Connection.CreateSubscriberServiceApiClientAsync();
         await client.CreateSubscriptionAsync(gpcSubscription);
     }
-    
+
     // Asynchronously updates an existing Google Cloud Pub/Sub subscription.
     private async Task UpdateSubscriptionAsync(string projectId,
         Google.Cloud.PubSub.V1.Subscription gcpSubscription,
@@ -399,7 +401,7 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
     {
         var request = new UpdateSubscriptionRequest
         {
-            Subscription = gcpSubscription, 
+            Subscription = gcpSubscription,
             UpdateMask = new FieldMask()
         };
 
@@ -520,7 +522,7 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
 
         var bindings = new List<Binding>();
         const string publisherRole = "roles/pubsub.publisher";
-            
+
         // 2. Check if the DLT Publisher role is missing for the service account
         if (!policy!.Bindings.Any(x => x.Role == publisherRole && x.Members.Contains(publishMember)))
         {
@@ -529,7 +531,7 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
             binding.Members.Add(publishMember);
             bindings.Add(binding);
         }
-        
+
         // 3. If any bindings were added, update the policy
         if (bindings.Count > 0)
         {
@@ -539,14 +541,15 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
                 setIamStep,
                 () => publisher.IAMPolicyClient.SetIamPolicyAsync(new SetIamPolicyRequest
                 {
-                    Policy = policy, ResourceAsResourceName = topicName
+                    Policy = policy,
+                    ResourceAsResourceName = topicName
                 }));
         }
     }
-    
+
     // Asynchronously updates the IAM policy on the Dead Letter Topic (DLT) to grant the Pub/Sub service account
     // the `roles/pubsub.publisher` role, allowing the main subscription to forward messages to the DLT.
-    private async Task UpdateIAmRoleForSubscriptionAsync(string projectId, 
+    private async Task UpdateIAmRoleForSubscriptionAsync(string projectId,
         Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
         GcpPubSubSubscription pubSubSubscription)
     {
@@ -586,7 +589,7 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
         if (!gotPolicy) return;
 
         var bindings = new List<Binding>();
-        
+
         const string subscriberRole = "roles/pubsub.subscriber";
         // Check if the DLT Subscriber role is missing for the service account
         if (!policy!.Bindings.Any(x => x.Role == subscriberRole && x.Members.Contains(subscriberMember)))
@@ -607,7 +610,8 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
                 setIamStep,
                 () => publisher.IAMPolicyClient.SetIamPolicyAsync(new SetIamPolicyRequest
                 {
-                    Policy = policy, ResourceAsResourceName = subscriptionName
+                    Policy = policy,
+                    ResourceAsResourceName = subscriptionName
                 }));
         }
     }

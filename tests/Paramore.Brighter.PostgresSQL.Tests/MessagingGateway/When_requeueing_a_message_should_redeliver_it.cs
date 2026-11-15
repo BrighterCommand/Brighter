@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Diagnostics;
 using System.Net.Mime;
 using System.Text.Json;
@@ -14,7 +16,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway;
 public class PostgreSqlMessageConsumerRequeueTests : IDisposable
 {
     private readonly Message _message;
-    private readonly IAmAProducerRegistry _producerRegistry; 
+    private readonly IAmAProducerRegistry _producerRegistry;
     private readonly IAmAChannelFactory _channelFactory;
     private readonly PostgresSubscription<MyCommand> _subscription;
     private readonly RoutingKey _topic;
@@ -29,7 +31,7 @@ public class PostgreSqlMessageConsumerRequeueTests : IDisposable
         _topic = new RoutingKey($"Consumer-Requeue-Tests-{Guid.NewGuid()}");
 
         _message = new Message(
-            new MessageHeader(myCommand.Id, _topic, MessageType.MT_COMMAND, correlationId:correlationId, 
+            new MessageHeader(myCommand.Id, _topic, MessageType.MT_COMMAND, correlationId:correlationId,
                 replyTo:new RoutingKey(replyTo), contentType:contentType),
             new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
         );
@@ -41,13 +43,13 @@ public class PostgreSqlMessageConsumerRequeueTests : IDisposable
             new SubscriptionName(channelName),
             new ChannelName(_topic), new RoutingKey(_topic),
             messagePumpType: MessagePumpType.Reactor);
-            
+
         _producerRegistry = new PostgresProducerRegistryFactory(
                 new PostgresMessagingGatewayConnection(testHelper.Configuration),
-            [new PostgresPublication {Topic = new RoutingKey(_topic)}]
-        ).Create();
-        
-        _channelFactory = new PostgresChannelFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration));
+            [new PostgresPublication {Topic = new RoutingKey(_topic)}],
+            loggerFactory: NullLoggerFactory.Instance).Create();
+
+        _channelFactory = new PostgresChannelFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration), loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Theory]

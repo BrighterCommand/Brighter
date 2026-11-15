@@ -1,4 +1,6 @@
-﻿using System.Collections.Specialized;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System.Collections.Specialized;
 using System.Transactions;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions;
@@ -57,7 +59,7 @@ public class QuartzSchedulerRequestAsyncTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            [_routingKey] = new InMemoryMessageProducer(_internalBus, new Publication { Topic = _routingKey, RequestType = typeof(MyEvent) })
+            [_routingKey] = new InMemoryMessageProducer(_internalBus, NullLoggerFactory.Instance, new Publication { Topic = _routingKey, RequestType = typeof(MyEvent) })
         });
 
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -71,13 +73,13 @@ public class QuartzSchedulerRequestAsyncTests
 
         var outboxBus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
-            new ResiliencePipelineRegistry<string>().AddBrighterDefault(), 
+            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             trace,
             new FindPublicationByPublicationTopicOrRequestType(),
-            _outbox
+            NullLoggerFactory.Instance, _outbox
         );
 
         var schedulerFactory = SchedulerBuilder.Create(new NameValueCollection())
@@ -97,8 +99,8 @@ public class QuartzSchedulerRequestAsyncTests
             policyRegistry,
             new ResiliencePipelineRegistry<string>(),
             outboxBus,
-            _scheduler
-        );
+            _scheduler,
+            loggerFactory: NullLoggerFactory.Instance);
 
         BrighterResolver.Processor = _processor;
     }
@@ -123,7 +125,7 @@ public class QuartzSchedulerRequestAsyncTests
 
         var expected = Message.Empty;
         var actual = _outbox.Get(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -155,7 +157,7 @@ public class QuartzSchedulerRequestAsyncTests
 
         var expected = Message.Empty;
         var actual = _outbox.Get(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -188,7 +190,7 @@ public class QuartzSchedulerRequestAsyncTests
 
         var expected = Message.Empty;
         var actual = _outbox.Get(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -220,7 +222,7 @@ public class QuartzSchedulerRequestAsyncTests
 
         var expected = Message.Empty;
         var actual = _outbox.Get(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -299,7 +301,7 @@ public class QuartzSchedulerRequestAsyncTests
 
         var expected = Message.Empty;
         var actual = _outbox.Get(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -336,7 +338,7 @@ public class QuartzSchedulerRequestAsyncTests
 
         var expected = Message.Empty;
         var actual = _outbox.Get(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -377,7 +379,7 @@ public class QuartzSchedulerRequestAsyncTests
 
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -412,7 +414,7 @@ public class QuartzSchedulerRequestAsyncTests
 
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);

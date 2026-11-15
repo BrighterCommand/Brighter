@@ -1,4 +1,6 @@
-﻿using System;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Amazon.S3;
@@ -11,7 +13,7 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.Transformers;
 
-[Trait("Category", "AWS")] 
+[Trait("Category", "AWS")]
 public class S3LuggageStoreExistsTests : IAsyncLifetime
 {
     private readonly IHttpClientFactory _httpClientFactory;
@@ -25,7 +27,7 @@ public class S3LuggageStoreExistsTests : IAsyncLifetime
         var provider = services.BuildServiceProvider();
         _httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
     }
-    
+
     [Fact]
     public async Task When_checking_store_that_exists()
     {
@@ -36,8 +38,8 @@ public class S3LuggageStoreExistsTests : IAsyncLifetime
             BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate(),
             ACLs = S3CannedACL.Private,
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
-        });
-        
+        }, loggerFactory: NullLoggerFactory.Instance);
+
         await luggageStore.EnsureStoreExistsAsync();
 
         //allow bucket endpoint to come into existence
@@ -47,14 +49,14 @@ public class S3LuggageStoreExistsTests : IAsyncLifetime
         luggageStore = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), _bucketName)
         {
             Strategy = StorageStrategy.Validate,
-            HttpClientFactory = _httpClientFactory, 
+            HttpClientFactory = _httpClientFactory,
             BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate(),
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
-        });
+        }, loggerFactory: NullLoggerFactory.Instance);
 
         Assert.NotNull(luggageStore);
     }
-    
+
     public Task InitializeAsync() => Task.CompletedTask;
 
     public Task DisposeAsync() => S3TestBucketCleanup.DeleteAsync(_bucketName);
@@ -73,11 +75,11 @@ public class S3LuggageStoreExistsTests : IAsyncLifetime
                          BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate(),
                          ACLs = S3CannedACL.Private,
                          Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
-                     });
+                     }, loggerFactory: NullLoggerFactory.Instance);
 
                  await luggageStore.EnsureStoreExistsAsync();
              });
-         
+
          Assert.NotNull(doesNotExist);
          Assert.True(doesNotExist is InvalidOperationException);
     }

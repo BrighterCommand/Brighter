@@ -68,20 +68,23 @@ try
     builder.Services.AddBrighter()
         // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
         // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-        .UseScheduler(new InMemorySchedulerFactory())
-        .AddProducers((configure) =>
+        .UseScheduler(provider => new InMemorySchedulerFactory(provider.GetRequiredService<ILoggerFactory>()))
+        .AddProducers(provider =>
         {
+            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            var configure = new ProducersConfiguration();
             configure.ProducerRegistry = new MsSqlProducerRegistryFactory(
                     configuration,
                     [new Publication<GreetingEvent> { Topic = new RoutingKey(SampleDatabase.GreetingTopic) }]
-                )
+                , loggerFactory: loggerFactory)
                 .Create();
 
             // Without these three the message goes straight to the queue. With them it lands in
             // the Outbox first, so it can share a transaction with your own write.
-            configure.Outbox = new MsSqlOutbox(configuration);
+            configure.Outbox = new MsSqlOutbox(configuration, logger: loggerFactory.CreateLogger<MsSqlOutbox>());
             configure.ConnectionProvider = typeof(MsSqlConnectionProvider);
             configure.TransactionProvider = typeof(MsSqlTransactionProvider);
+            return configure;
         })
         // Creates and migrates the Outbox table — but only once the HOST starts, because it
         // registers a hosted service. See StartAsync below.

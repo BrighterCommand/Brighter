@@ -42,7 +42,7 @@ public class InstrumentationWithoutSweeperGaugesTests
     public void When_instrumentation_is_added_without_an_outbox_sweeper_should_publish_both_gauges_at_zero()
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddMetrics();
         services.AddOpenTelemetry().WithMetrics(metrics => metrics.AddBrighterInstrumentation());
         using var provider = services.BuildServiceProvider();

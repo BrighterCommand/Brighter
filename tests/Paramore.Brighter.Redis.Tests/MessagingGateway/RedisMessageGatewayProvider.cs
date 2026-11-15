@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -65,7 +67,7 @@ public class RedisMessageGatewayProvider
             MakeChannels = OnMissingChannel.Create,
         };
 
-        var producer = new RedisMessageProducer(_configuration, publication);
+        var producer = new RedisMessageProducer(_configuration, publication, loggerFactory: NullLoggerFactory.Instance);
         return ConformanceHarnessMessageScheduler.SendAndHandBack(producer, () => producer.Send(message));
     }
 
@@ -126,7 +128,7 @@ public class RedisMessageGatewayProvider
     public IAmAChannelSync CreateChannel(RedisSubscription subscription)
     {
         var channel = new ChannelFactory(
-            new RedisMessageConsumerFactory(_configuration, Scheduler)
+            new RedisMessageConsumerFactory(_configuration, scheduler: Scheduler, loggerFactory: NullLoggerFactory.Instance)
         ).CreateSyncChannel(subscription);
 
         // Redis requires a receive before send to establish the subscription
@@ -140,8 +142,8 @@ public class RedisMessageGatewayProvider
             _dlqConsumer = new RedisMessageConsumer(
                 _configuration,
                 dlqQueueName,
-                subscription.DeadLetterRoutingKey
-            );
+                subscription.DeadLetterRoutingKey,
+                loggerFactory: NullLoggerFactory.Instance);
             _dlqConsumer.Receive(TimeSpan.FromMilliseconds(1000));
         }
 
@@ -154,7 +156,7 @@ public class RedisMessageGatewayProvider
                 _configuration,
                 invalidQueueName,
                 subscription.InvalidMessageRoutingKey
-            );
+            , loggerFactory: NullLoggerFactory.Instance);
             _invalidConsumer.Receive(TimeSpan.FromMilliseconds(1000));
         }
 
@@ -167,7 +169,7 @@ public class RedisMessageGatewayProvider
     )
     {
         var channel = await new ChannelFactory(
-            new RedisMessageConsumerFactory(_configuration, Scheduler)
+            new RedisMessageConsumerFactory(_configuration, scheduler: Scheduler, loggerFactory: NullLoggerFactory.Instance)
         ).CreateAsyncChannelAsync(subscription, cancellationToken);
 
         // Redis async ReceiveAsync does NOT enforce a 1s minimum timeout like
@@ -181,8 +183,8 @@ public class RedisMessageGatewayProvider
             _dlqConsumer = new RedisMessageConsumer(
                 _configuration,
                 dlqQueueName,
-                subscription.DeadLetterRoutingKey
-            );
+                subscription.DeadLetterRoutingKey,
+                loggerFactory: NullLoggerFactory.Instance);
             _dlqConsumer.Receive(TimeSpan.FromMilliseconds(1000));
         }
 
@@ -193,7 +195,7 @@ public class RedisMessageGatewayProvider
                 _configuration,
                 invalidQueueName,
                 subscription.InvalidMessageRoutingKey
-            );
+            , loggerFactory: NullLoggerFactory.Instance);
             _invalidConsumer.Receive(TimeSpan.FromMilliseconds(1000));
         }
 
@@ -202,7 +204,7 @@ public class RedisMessageGatewayProvider
 
     public IAmAMessageProducerSync CreateProducer(RedisMessagePublication publication)
     {
-        return new RedisMessageProducer(_configuration, publication) { Scheduler = Scheduler };
+        return new RedisMessageProducer(_configuration, publication, loggerFactory: NullLoggerFactory.Instance) { Scheduler = Scheduler };
     }
 
     public async Task<IAmAMessageProducerAsync> CreateProducerAsync(
@@ -211,7 +213,7 @@ public class RedisMessageGatewayProvider
     )
     {
         await Task.CompletedTask;
-        return new RedisMessageProducer(_configuration, publication) { Scheduler = Scheduler };
+        return new RedisMessageProducer(_configuration, publication, loggerFactory: NullLoggerFactory.Instance) { Scheduler = Scheduler };
     }
 
     public RedisMessagePublication CreatePublication(

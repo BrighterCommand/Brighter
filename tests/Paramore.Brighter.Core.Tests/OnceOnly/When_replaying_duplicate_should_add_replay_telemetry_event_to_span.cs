@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -74,7 +76,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         {
             //Arrange
             using var span = new Activity("pipeline").Start();
-            var handler = new UseInboxHandler<MyCommand>(_inbox, _outbox);
+            var handler = new UseInboxHandler<MyCommand>(_inbox, LoggerFactoryExtensions.CreateLogger<UseInboxHandler<MyCommand>>(Initializer.TestLoggerFactory), _outbox);
             handler.InitializeFromAttributeParams(true, ContextKey, OnceOnlyAction.Replay);
             handler.Context = new RequestContext { Span = span };
 
@@ -96,7 +98,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         {
             //Arrange
             using var span = new Activity("pipeline").Start();
-            var handler = new UseInboxHandlerAsync<MyCommand>(_inbox, _outbox);
+            var handler = new UseInboxHandlerAsync<MyCommand>(_inbox, LoggerFactoryExtensions.CreateLogger<UseInboxHandlerAsync<MyCommand>>(Initializer.TestLoggerFactory), _outbox);
             handler.InitializeFromAttributeParams(true, ContextKey, OnceOnlyAction.Replay);
             handler.Context = new RequestContext { Span = span };
 
@@ -123,7 +125,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             inbox.Add(command, ContextKey, new RequestContext());
 
             using var span = new Activity("pipeline").Start();
-            var handler = new UseInboxHandler<MyCommand>(inbox, outbox);
+            var handler = new UseInboxHandler<MyCommand>(inbox, LoggerFactoryExtensions.CreateLogger<UseInboxHandler<MyCommand>>(Initializer.TestLoggerFactory), outbox);
             handler.InitializeFromAttributeParams(true, ContextKey, OnceOnlyAction.Replay);
             handler.Context = new RequestContext { Span = span };
 
@@ -146,7 +148,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             //Arrange — a seen command WITH a causation id, but the outbox cannot replay it because its live
             //schema does not support causation tracking (the "inbox migrated, outbox not" mixed state).
             using var span = new Activity("pipeline").Start();
-            var handler = new UseInboxHandler<MyCommand>(_inbox, new MixedMigrationOutbox());
+            var handler = new UseInboxHandler<MyCommand>(_inbox, LoggerFactoryExtensions.CreateLogger<UseInboxHandler<MyCommand>>(Initializer.TestLoggerFactory), new MixedMigrationOutbox());
             handler.InitializeFromAttributeParams(true, ContextKey, OnceOnlyAction.Replay);
             handler.Context = new RequestContext { Span = span };
 
@@ -168,7 +170,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         {
             //Arrange — a seen command WITH a causation id, but the outbox cannot replay it (mixed-migration state)
             using var span = new Activity("pipeline").Start();
-            var handler = new UseInboxHandlerAsync<MyCommand>(_inbox, new MixedMigrationOutbox());
+            var handler = new UseInboxHandlerAsync<MyCommand>(_inbox, LoggerFactoryExtensions.CreateLogger<UseInboxHandlerAsync<MyCommand>>(Initializer.TestLoggerFactory), new MixedMigrationOutbox());
             handler.InitializeFromAttributeParams(true, ContextKey, OnceOnlyAction.Replay);
             handler.Context = new RequestContext { Span = span };
 
@@ -190,7 +192,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         {
             //Arrange — a context whose instrumentation does not include the Brighter flag
             using var span = new Activity("pipeline").Start();
-            var handler = new UseInboxHandler<MyCommand>(_inbox, _outbox);
+            var handler = new UseInboxHandler<MyCommand>(_inbox, LoggerFactoryExtensions.CreateLogger<UseInboxHandler<MyCommand>>(Initializer.TestLoggerFactory), _outbox);
             handler.InitializeFromAttributeParams(true, ContextKey, OnceOnlyAction.Replay);
             handler.Context = new RequestContext
             {
@@ -208,7 +210,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         public void When_replaying_duplicate_with_no_span_should_not_throw_and_still_replay()
         {
             //Arrange — no span on the context
-            var handler = new UseInboxHandler<MyCommand>(_inbox, _outbox);
+            var handler = new UseInboxHandler<MyCommand>(_inbox, LoggerFactoryExtensions.CreateLogger<UseInboxHandler<MyCommand>>(Initializer.TestLoggerFactory), _outbox);
             handler.InitializeFromAttributeParams(true, ContextKey, OnceOnlyAction.Replay);
             var context = new RequestContext();
             handler.Context = context;

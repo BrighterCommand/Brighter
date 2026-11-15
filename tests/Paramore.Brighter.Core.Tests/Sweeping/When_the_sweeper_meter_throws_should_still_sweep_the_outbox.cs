@@ -17,10 +17,7 @@ public class SweeperThrowingMeterTests
         using var outbox = new SweepableOutbox();
         var undispatched = outbox.AddUndispatched();
         var sweeper = new TimedOutboxSweeper(
-            outbox.ScopeFactory,
-            new InMemoryLock(),
-            new TimedOutboxSweeperOptions { TimerInterval = 1, MinimumMessageAge = TimeSpan.Zero },
-            meter: new ThrowingSweeperMeter());
+serviceScopeFactory: outbox.ScopeFactory, distributedLock: new InMemoryLock(), options: new TimedOutboxSweeperOptions { TimerInterval = 1, MinimumMessageAge = TimeSpan.Zero }, meter: new ThrowingSweeperMeter(), logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<TimedOutboxSweeper>(Initializer.TestLoggerFactory));
 
         //Act
         await sweeper.StartAsync(CancellationToken.None);

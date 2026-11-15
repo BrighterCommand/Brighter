@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -107,7 +109,8 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
             IAmARelationalDatabaseConfiguration configuration,
             IAmABoxMigrationRunner migrationRunner,
             BoxType boxType)
-            : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, boxType)
+            : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, boxType,
+                NullLoggerFactory.Instance)
         {
         }
 
@@ -126,7 +129,8 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
             IAmARelationalDatabaseConfiguration configuration,
             IAmABoxMigrationRunner migrationRunner,
             BoxType boxType)
-            : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, boxType)
+            : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, boxType,
+                NullLoggerFactory.Instance)
         {
         }
 

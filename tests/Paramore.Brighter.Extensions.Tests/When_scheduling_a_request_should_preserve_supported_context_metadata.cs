@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -352,11 +352,11 @@ public class ScheduledRequestContextTests
 
     private static ServiceProvider BuildProvider(FakeTimeProvider timeProvider)
     {
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddSingleton<ScheduledContextEventHandler>();
         services.AddSingleton<ScheduledContextEventHandlerAsync>();
         services.AddBrighter()
-            .UseScheduler(new InMemorySchedulerFactory { TimeProvider = timeProvider });
+            .UseScheduler(new InMemorySchedulerFactory(Initializer.Factory) { TimeProvider = timeProvider });
         return services.BuildServiceProvider();
     }
 

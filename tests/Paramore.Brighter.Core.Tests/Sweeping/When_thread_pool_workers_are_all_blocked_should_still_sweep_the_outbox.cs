@@ -32,14 +32,12 @@ public class TimedOutboxSweeperStarvationTests
             new MessageBody("awaiting a publish confirmation that never came"));
         outbox.Add(undispatched, new RequestContext());
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddSingleton<IAmAnOutboxProducerMediator>(mediator);
         using var provider = services.BuildServiceProvider();
 
         var sweeper = new TimedOutboxSweeper(
-            provider.GetRequiredService<IServiceScopeFactory>(),
-            new InMemoryLock(),
-            new TimedOutboxSweeperOptions { TimerInterval = 1, MinimumMessageAge = TimeSpan.Zero });
+serviceScopeFactory: provider.GetRequiredService<IServiceScopeFactory>(), distributedLock: new InMemoryLock(), options: new TimedOutboxSweeperOptions { TimerInterval = 1, MinimumMessageAge = TimeSpan.Zero }, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<TimedOutboxSweeper>(Initializer.TestLoggerFactory));
 
         var starvedPool = new StarvedThreadPool();
         try
@@ -62,20 +60,13 @@ public class TimedOutboxSweeperStarvationTests
     private static OutboxProducerMediator<Message, CommittableTransaction> CreateMediator(
         InternalBus bus, RoutingKey routingKey, InMemoryOutbox outbox)
     {
-        var producer = new InMemoryMessageProducer(bus, new Publication { Topic = routingKey });
+        var producer = new InMemoryMessageProducer(bus, publication: new Publication { Topic = routingKey }, loggerFactory: Initializer.TestLoggerFactory);
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
             { routingKey, producer }
         });
 
         return new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry,
-            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
-            new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => null!), null),
-            new EmptyMessageTransformerFactory(),
-            new EmptyMessageTransformerFactoryAsync(),
-            new BrighterTracer(TimeProvider.System),
-            new FindPublicationByPublicationTopicOrRequestType(),
-            outbox);
+producerRegistry: producerRegistry, resiliencePipelineRegistry: new ResiliencePipelineRegistry<string>().AddBrighterDefault(), mapperRegistry: new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => null!), null), messageTransformerFactory: new EmptyMessageTransformerFactory(), messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: new BrighterTracer(TimeProvider.System), publicationFinder: new FindPublicationByPublicationTopicOrRequestType(), outbox: outbox, loggerFactory: Initializer.TestLoggerFactory);
     }
 }

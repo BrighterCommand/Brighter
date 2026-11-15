@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.Redis;
 
@@ -18,8 +20,8 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
 
             RedisMessagingGatewayConfiguration configuration = RedisMessagingGatewayConfiguration();
 
-            MessageProducer = new RedisMessageProducer(configuration, new RedisMessagePublication {Topic = Topic});
-            MessageConsumer = new RedisMessageConsumer(configuration, queueName, Topic);
+            MessageProducer = new RedisMessageProducer(configuration, new RedisMessagePublication {Topic = Topic}, loggerFactory: NullLoggerFactory.Instance);
+            MessageConsumer = new RedisMessageConsumer(configuration, queueName, Topic, loggerFactory: NullLoggerFactory.Instance);
         }
 
         public static RedisMessagingGatewayConfiguration RedisMessagingGatewayConfiguration()

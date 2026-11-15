@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -76,7 +76,7 @@ public class BlockedThreadsPostingTests : IDisposable
         var outbox = new StaleMessageTopicCountingOutbox(clock);
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { s_orders, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = s_orders, RequestType = typeof(MyCommand) }) }
+            { s_orders, new InMemoryMessageProducer(new InternalBus(), publication:new Publication { Topic = s_orders, RequestType = typeof(MyCommand) },loggerFactory:Initializer.TestLoggerFactory) }
         });
         if (withTheFeature)
         {
@@ -140,21 +140,14 @@ public class BlockedThreadsPostingTests : IDisposable
         var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>().AddBrighterDefault();
 
         var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry: producerRegistry,
-            resiliencePipelineRegistry: resiliencePipelineRegistry,
-            mapperRegistry: messageMapperRegistry,
-            messageTransformerFactory: new EmptyMessageTransformerFactory(),
-            messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),
-            tracer: new BrighterTracer(),
-            publicationFinder: new FindPublicationByPublicationTopicOrRequestType(),
-            outbox: outbox);
+            producerRegistry: producerRegistry, resiliencePipelineRegistry: resiliencePipelineRegistry, mapperRegistry: messageMapperRegistry, messageTransformerFactory: new EmptyMessageTransformerFactory(), messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: new BrighterTracer(), publicationFinder: new FindPublicationByPublicationTopicOrRequestType(), outbox: outbox, loggerFactory: Initializer.TestLoggerFactory);
 
         return new Brighter.CommandProcessor(
             new InMemoryRequestContextFactory(),
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             mediator,
-            new InMemorySchedulerFactory());
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
     }
 
     public void Dispose()

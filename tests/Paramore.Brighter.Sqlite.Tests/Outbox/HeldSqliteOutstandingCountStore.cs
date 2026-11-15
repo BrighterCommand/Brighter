@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel <guilhermeaappel@gmail.com>
 
@@ -58,7 +58,7 @@ public static class HeldSqliteOutstandingCountStore
         await ExecuteAsync(holder, "BEGIN EXCLUSIVE");
 
         var outbox = new SqliteOutbox(
-            new RelationalDatabaseConfiguration(connectionString, outBoxTableName: tableName, binaryMessagePayload: binaryMessagePayload));
+configuration: new RelationalDatabaseConfiguration(connectionString, outBoxTableName: tableName, binaryMessagePayload: binaryMessagePayload), logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteOutbox>.Instance);
 
         return new OutstandingCountCancellationSetup<DbTransaction>(
             outbox,

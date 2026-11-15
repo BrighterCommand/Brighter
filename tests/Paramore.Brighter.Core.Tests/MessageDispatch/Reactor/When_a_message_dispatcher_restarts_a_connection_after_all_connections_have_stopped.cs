@@ -34,44 +34,44 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
                 new SubscriptionName("test"),
                 noOfPerformers: 1,
                 timeOut: TimeSpan.FromMilliseconds(100),
-                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider),
+                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider, loggerFactory: Initializer.TestLoggerFactory),
                 channelName: _channelName,
                 messagePumpType: MessagePumpType.Reactor,
                 routingKey: _routingKey
             );
-            
+
             Subscription newSubscription = new Subscription<MyEvent>(
-                new SubscriptionName("newTest"), 
-                noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(100), 
-                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider), 
-                channelName: _channelName, 
+                new SubscriptionName("newTest"),
+                noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(100),
+                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider, loggerFactory: Initializer.TestLoggerFactory),
+                channelName: _channelName,
                 messagePumpType: MessagePumpType.Reactor,
                 routingKey: _routingKey
             );
-            
+
             _publication = new Publication{Topic = subscription.RoutingKey};
-            
+
             _dispatcher = new Dispatcher(
-                commandProcessor, 
-                new List<Subscription> { subscription, newSubscription }, 
-                messageMapperRegistry)
+                commandProcessor,
+                new List<Subscription> { subscription, newSubscription },
+                Initializer.TestLoggerFactory, messageMapperRegistry)
             ;
 
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event, _publication );
-           
+
             _bus.Enqueue(message);
 
             Assert.Equal(DispatcherState.DS_AWAITING, _dispatcher.State);
-            
+
             _dispatcher.Receive();
             Task.Delay(250).Wait();
             _dispatcher.Shut(subscription.Name);
             _dispatcher.Shut(newSubscription.Name);
             Task.Delay(1000).Wait();
-            
+
             Assert.Empty(_dispatcher.Consumers);
-            
+
         }
 
         [Fact]

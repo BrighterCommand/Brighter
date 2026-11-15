@@ -44,7 +44,7 @@ public class TransientAsyncDisposableMapperReleaseTests
 
     private static IServiceProvider BuildProvider(MapperDisposalLog disposals)
     {
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddSingleton(disposals);
         collection.AddTransient<AsyncDisposableOnlyMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Transient });

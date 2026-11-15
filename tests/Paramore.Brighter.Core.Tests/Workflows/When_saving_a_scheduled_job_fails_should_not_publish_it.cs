@@ -43,7 +43,7 @@ public class SchedulerSaveBeforePublishTests
         //Arrange
         var clock = new FakeTimeProvider();
         var store = new InMemoryScheduleFailureStateStore(clock);
-        var channel = new InMemoryJobChannel<WorkflowTestData>();
+        var channel = new InMemoryJobChannel<WorkflowTestData>(loggerFactory: Initializer.TestLoggerFactory);
         var scheduler = new Scheduler<WorkflowTestData>(channel, store, clock);
         var job = new Job<WorkflowTestData>(new WorkflowTestData());
         if (alreadyScheduled)

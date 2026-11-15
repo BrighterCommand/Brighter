@@ -47,7 +47,7 @@ public class MsSqlMessageIdRetryTests
         //Arrange
         await using var store = new MsSqlMessageIdOutboxStore(binary, customSchema);
         await store.InitializeAsync();
-        var outbox = new MsSqlOutbox(store.OutboxConfig);
+        var outbox = new MsSqlOutbox(configuration: store.OutboxConfig, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<MsSqlOutbox>.Instance);
         var context = new RequestContext();
         var original = MsSqlMessageIdOutboxStore.Message(Id.Random(), "original payload");
         var retry = MsSqlMessageIdOutboxStore.Message(original.Id, "retry payload");

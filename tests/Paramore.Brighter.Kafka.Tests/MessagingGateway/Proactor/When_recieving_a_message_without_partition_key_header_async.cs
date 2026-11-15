@@ -60,7 +60,7 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Consumer Test", BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .CreateAsync(new KafkaSubscription<MyCommand>(
                     channelName: new ChannelName(_queueName),
                     routingKey: new RoutingKey(_topic),
@@ -74,7 +74,7 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
     public async Task When_recieving_a_message_without_partition_key_header()
     {
         await Task.Delay(500); //Let topic propagate in the broker
-        
+
         var command = new MyCommand { Value = "Test Content" };
 
         //vanilla i.e. no Kafka specific bytes at the beginning
@@ -87,13 +87,13 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
         };
 
         await _producer.ProduceAsync(_topic, kafkaMessage);
-        
+
         //We should not need to flush, as the async does not queue work  - but in case this changes
         _producer.Flush();
 
         //let the message propagate on the broker
         await Task.Delay(3000);
-        
+
         var receivedMessage = await GetMessageAsync();
 
         //Where we lack a partition key header, assume non-Brighter header and set to message key
@@ -110,7 +110,7 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
             try
             {
                 maxTries++;
-                
+
                 messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
@@ -118,7 +118,7 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
                     await _consumer.AcknowledgeAsync(messages[0]);
                     break;
                 }
-                
+
                 //wait before retry
                 await Task.Delay(1000);
             }
@@ -135,7 +135,7 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
 
         return messages[0];
     }
-    
+
     public void Dispose()
     {
         _producer?.Dispose();

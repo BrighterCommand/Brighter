@@ -77,7 +77,7 @@ public class RocketMqPublishWithStaleBagHandledCountTests : IDisposable
             messagePumpType: MessagePumpType.Reactor,
             receiveMessageTimeout: s_receiveMessageTimeout);
 
-        _consumer = new RocketMessageConsumerFactory(_connection).Create(subscription);
+        _consumer = new RocketMessageConsumerFactory(connection: _connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(subscription);
     }
 
     public void Dispose()

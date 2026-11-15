@@ -69,7 +69,7 @@ public class When_migrating_subject_from_bag_to_header
                 subject: expectedSubject),
             new MessageBody("{\"orderId\": 123}"));
 
-        var transformer = new CloudEventsTransformer();
+        var transformer = new CloudEventsTransformer(loggerFactory: Initializer.TestLoggerFactory);
         var publication = new Publication(); // empty, no subject
 
         //Act - CloudEventsTransformer wraps the message

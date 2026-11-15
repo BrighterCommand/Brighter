@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Net.Mime;
@@ -26,19 +28,19 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor
             _myCommand = new MyCommand { Value = "Test" };
             var replyTo = new RoutingKey("http:\\queueUrl");
             var contentType = new ContentType(MediaTypeNames.Text.Plain);
-            var correlationId =Id.Random();
+            var correlationId = Id.Random();
             var subscriptionName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             var routingKey = new RoutingKey(queueName);
             var channelName = new ChannelName(queueName);
-            
+
             var subscription = new SqsSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(subscriptionName),
                 channelName: channelName,
-                channelType: ChannelType.PointToPoint, 
+                channelType: ChannelType.PointToPoint,
                 findQueueBy: QueueFindBy.Name,
-                routingKey: routingKey, 
-                messagePumpType: MessagePumpType.Proactor, 
+                routingKey: routingKey,
+                messagePumpType: MessagePumpType.Proactor,
                 makeChannels: OnMissingChannel.Create,
                 queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }));
 
@@ -50,17 +52,17 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor
 
             var awsConnection = GatewayFactory.CreateFactory();
 
-            _channelFactory = new ChannelFactory(awsConnection);
+            _channelFactory = new ChannelFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance);
             var channel = _channelFactory.CreateAsyncChannel(subscription);
 
             subscription.MakeChannels = OnMissingChannel.Validate;
 
             _messageProducer = new SqsMessageProducer(
                 awsConnection,
-                new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Validate)
-            );
+                new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Validate),
+                loggerFactory: NullLoggerFactory.Instance);
 
-            _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
+            _consumer = new SqsMessageConsumerFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance).CreateAsync(subscription);
         }
 
         [Fact]

@@ -14,11 +14,11 @@ public class InvestigateCheckNoSweeperStateTests
     {
         //Arrange
         var lookups = 0;
-        var check = new OutboxSweeperInvestigateHealthCheck(null, null, () =>
+        var check = new OutboxSweeperInvestigateHealthCheck(state: null, options: null, findCircuitBreaker: () =>
         {
             lookups++;
             return null;
-        });
+        }, loggerFactory: Initializer.TestLoggerFactory);
 
         //Act
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);

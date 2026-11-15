@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Runtime.CompilerServices;
 using Org.Apache.Rocketmq;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
@@ -218,7 +220,7 @@ public class RocketMqMessageGatewayProvider
 
     public IAmAChannelSync CreateChannel(RocketSubscription subscription)
     {
-        var channelFactory = new RocketMqChannelFactory(new RocketMessageConsumerFactory(_connection));
+        var channelFactory = new RocketMqChannelFactory(factory: new RocketMessageConsumerFactory(_connection, loggerFactory: NullLoggerFactory.Instance), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var channel = channelFactory.CreateSyncChannel(subscription);
 
         if (subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0)
@@ -233,7 +235,7 @@ public class RocketMqMessageGatewayProvider
         RocketSubscription subscription,
         CancellationToken cancellationToken = default)
     {
-        var channelFactory = new RocketMqChannelFactory(new RocketMessageConsumerFactory(_connection));
+        var channelFactory = new RocketMqChannelFactory(factory: new RocketMessageConsumerFactory(_connection, loggerFactory: NullLoggerFactory.Instance), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var channel = await channelFactory.CreateAsyncChannelAsync(subscription, cancellationToken);
 
         if (subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0)
@@ -297,7 +299,7 @@ public class RocketMqMessageGatewayProvider
             })
             .Build();
 
-        var consumer = new RocketMessageConsumer(dlqConsumer, 1, TimeSpan.FromSeconds(30));
+        var consumer = new RocketMessageConsumer(dlqConsumer, 1, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
 
         try
         {
@@ -338,7 +340,7 @@ public class RocketMqMessageGatewayProvider
             })
             .Build();
 
-        var consumer = new RocketMessageConsumer(invalidConsumer, 1, TimeSpan.FromSeconds(30));
+        var consumer = new RocketMessageConsumer(invalidConsumer, 1, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
 
         try
         {

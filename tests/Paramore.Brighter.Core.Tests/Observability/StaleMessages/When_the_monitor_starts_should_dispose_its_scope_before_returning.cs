@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -46,10 +46,10 @@ public class StaleMessageMonitorStartScopeTests
         var routingKey = new RoutingKey("orders");
         var producers = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey }) }
+            { routingKey, new InMemoryMessageProducer(new InternalBus(), publication:new Publication { Topic = routingKey },loggerFactory:Initializer.TestLoggerFactory) }
         });
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddSingleton<TimeProvider>(new FakeTimeProvider());
         var builder = new ServiceCollectionBrighterBuilder(
             services,

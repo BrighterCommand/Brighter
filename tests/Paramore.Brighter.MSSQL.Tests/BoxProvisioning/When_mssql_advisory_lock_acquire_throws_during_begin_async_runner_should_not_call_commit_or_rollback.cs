@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -79,7 +81,7 @@ public class MsSqlAdvisoryLockAcquireThrowsDuringBeginTests : IAsyncLifetime
         Assert.True(spy.DisposeInvoked,
             "DisposeAsync MUST run via `await using` even when BeginAsync throws — otherwise the partial-init transaction leaks.");
 
-        var freshRunner = new MsSqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5));
+        var freshRunner = new MsSqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5), loggerFactory: NullLoggerFactory.Instance);
         await freshRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, freshHint, CancellationToken.None);
 
@@ -135,7 +137,8 @@ file sealed class SpyingMsSqlBoxMigrationRunner : MsSqlBoxMigrationRunner
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
         IMsSqlAdvisoryLock advisoryLock)
-        : base(catalog, configuration, lockTimeout, advisoryLock)
+        : base(catalog, configuration, lockTimeout,
+            NullLoggerFactory.Instance, advisoryLock)
     {
     }
 

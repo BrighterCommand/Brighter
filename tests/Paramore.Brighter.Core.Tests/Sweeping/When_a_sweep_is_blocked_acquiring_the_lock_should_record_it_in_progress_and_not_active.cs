@@ -20,11 +20,7 @@ public class SweeperStateBlockedInLockAcquisitionTests
         using var outbox = new SweepableOutbox();
         using var lockGate = new GatedDistributedLock();
         var sweeper = new TimedOutboxSweeper(
-            outbox.ScopeFactory,
-            lockGate,
-            new TimedOutboxSweeperOptions { TimerInterval = 60, MinimumMessageAge = TimeSpan.Zero },
-            timeProvider: timeProvider,
-            state: state);
+serviceScopeFactory: outbox.ScopeFactory, distributedLock: lockGate, options: new TimedOutboxSweeperOptions { TimerInterval = 60, MinimumMessageAge = TimeSpan.Zero }, timeProvider: timeProvider, state: state, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<TimedOutboxSweeper>(Initializer.TestLoggerFactory));
 
         OutboxSweeperSnapshot blocked;
         try

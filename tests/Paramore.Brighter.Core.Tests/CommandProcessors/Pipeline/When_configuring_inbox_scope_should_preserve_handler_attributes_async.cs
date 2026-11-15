@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -47,11 +49,11 @@ public class GlobalInboxScopeAttributeAsyncTests
         registry.Add(typeof(MyCommand), handlerType);
         var factory = new SimpleHandlerFactoryAsync(type =>
             type == typeof(UseInboxHandlerAsync<MyCommand>)
-                ? new UseInboxHandlerAsync<MyCommand>(inbox)
+                ? new UseInboxHandlerAsync<MyCommand>(inbox, logger: LoggerFactoryExtensions.CreateLogger<UseInboxHandlerAsync<MyCommand>>( Initializer.TestLoggerFactory ))
                 : useExplicitInbox ? new MyCommandInboxedHandlerAsync() : new MyNoInboxCommandHandlerAsync());
         var configuration = new InboxConfiguration(inbox, scope, context: _ => "global-inbox");
-        using var builder = new PipelineBuilder<MyCommand>(registry, factory, configuration);
-        using var describer = new PipelineBuilder<IRequest>(registry, configuration);
+        using var builder = new PipelineBuilder<MyCommand>(registry, factory,Initializer.TestLoggerFactory, configuration);
+        using var describer = new PipelineBuilder<IRequest>(registry,Initializer.TestLoggerFactory, configuration);
         var request = new MyCommand();
         var pipeline = builder.BuildAsync(request, new RequestContext(), false).Single();
 

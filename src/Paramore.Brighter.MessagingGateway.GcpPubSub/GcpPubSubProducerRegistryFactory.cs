@@ -7,10 +7,11 @@
 /// of the underlying Pub/Sub <see cref="Google.Cloud.PubSub.V1.PublisherClient"/> instances.
 /// </summary>
 /// <param name="connection">The connection details for the Google Cloud Pub/Sub gateway.</param>
+/// <param name="loggerFactory">The application-owned logger factory.</param>
 /// <param name="publications">A collection of Google Cloud Pub/Sub specific publication configurations.</param>
 public class GcpPubSubProducerRegistryFactory(
     GcpMessagingGatewayConnection connection,
-    IEnumerable<GcpPublication> publications) : IAmAProducerRegistryFactory
+    IEnumerable<GcpPublication> publications, Microsoft.Extensions.Logging.ILoggerFactory loggerFactory) : IAmAProducerRegistryFactory
 {
     /// <summary>
     /// Creates the synchronous producer registry. This method wraps the asynchronous creation.
@@ -19,7 +20,7 @@ public class GcpPubSubProducerRegistryFactory(
     public IAmAProducerRegistry Create()
     {
         // Create the message producer factory
-        var factory = new GcpPubSubMessageProducerFactory(connection, publications);
+        var factory = new GcpPubSubMessageProducerFactory(connection, publications, loggerFactory);
 
         // Synchronously create the dictionary of producers and wrap it in a ProducerRegistry
         return new ProducerRegistry(factory.Create());
@@ -35,7 +36,7 @@ public class GcpPubSubProducerRegistryFactory(
     public async Task<IAmAProducerRegistry> CreateAsync(CancellationToken cancellationToken = default)
     {
         // Create the message producer factory
-        var factory = new GcpPubSubMessageProducerFactory(connection, publications);
+        var factory = new GcpPubSubMessageProducerFactory(connection, publications, loggerFactory);
 
         // Asynchronously create the dictionary of producers
         var producers = await factory.CreateAsync();

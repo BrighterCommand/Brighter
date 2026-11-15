@@ -41,6 +41,7 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
     private readonly SqsPublication _publication;
     private readonly AWSClientFactory _clientFactory;
     private readonly InstrumentationOptions _instrumentation;
+    private readonly ILoggerFactory _loggerFactory;
 
     /// <summary>
     /// The publication configuration for this producer
@@ -61,16 +62,19 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
     /// <param name="connection">How do we connect to AWS in order to manage middleware</param>
     /// <param name="publication">Configuration of a producer. Required.</param>
     /// <param name="instrumentation"></param>
-    public SqsMessageProducer(AWSMessagingGatewayConnection connection, 
+    /// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
+    public SqsMessageProducer(AWSMessagingGatewayConnection connection,
         SqsPublication publication,
+        ILoggerFactory loggerFactory,
         InstrumentationOptions instrumentation = InstrumentationOptions.All)
-        : base(connection)
+        : base(connection, loggerFactory)
     {
         _publication = publication ?? throw new ArgumentNullException(nameof(publication));
-        if (_publication.ChannelName is null) 
+        if (_publication.ChannelName is null)
             throw new InvalidOperationException($"We must have a valid Channel Name on the Publication, either a queue name or a Url");
         _clientFactory = new AWSClientFactory(connection);
         _instrumentation = instrumentation;
+        _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
 
         if (publication.FindQueueBy == QueueFindBy.Url)
         {
@@ -107,10 +111,10 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
         //Only do this on first send for a queue for efficiency; won't auto-recreate when goes missing at runtime as a result
         if (!string.IsNullOrEmpty(ChannelQueueUrl))
             return true;
-        
+
         if (_publication is null)
             throw new ConfigurationException("No publication specified for producer");
-        
+
         if (_publication.ChannelName is null)
             throw new ConfigurationException("No channel name specified for publication");
 
@@ -121,7 +125,7 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
             _publication.QueueAttributes,
             _publication.MakeChannels,
             cancellationToken);
-        
+
         ChannelQueueUrl = queueUrl;
 
         return !string.IsNullOrEmpty(queueUrl);
@@ -137,13 +141,13 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
     /// </exception>
     public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
         => await SendWithDelayAsync(message, delay, true, cancellationToken);
-    
-    
+
+
     private async Task SendWithDelayAsync(Message message, TimeSpan? delay, bool useAsyncScheduler, CancellationToken cancellationToken = default)
     {
         if (_publication is null)
             throw new ConfigurationException("No publication specified for producer");
-        
+
         delay ??= TimeSpan.Zero;
         // FIFO has no per-message delay; Standard supports at most 15 minutes natively.
         if (delay > TimeSpan.Zero &&
@@ -181,14 +185,14 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
             throw new ConfigurationException(
                 $"SqsMessageProducer: delay of {delay} was requested but no usable scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
         }
-        
+
         BrighterTracer.WriteProducerEvent(Span, MessagingSystem.AWSSQS, message, _instrumentation);
-        Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
+        Log.PublishingMessage(Logger, message.Header.Topic.Value, message.Id.Value, message.Body);
 
         await ConfirmQueueExistsAsync(cancellationToken);
 
         using var client = _clientFactory.CreateSqsClient();
-        var sender = new SqsMessageSender(ChannelQueueUrl!, client);
+        var sender = new SqsMessageSender(ChannelQueueUrl!, client, _loggerFactory);
         var messageId = await sender.SendAsync(message, delay, cancellationToken);
 
         if (messageId == null)
@@ -197,7 +201,7 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
                 $"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}");
         }
 
-        Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.Value, messageId);
+        Log.PublishedMessage(Logger, message.Header.Topic.Value, message.Id.Value, messageId);
     }
 
     public void Send(Message message) => SendWithDelay(message, null);

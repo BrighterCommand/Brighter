@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
@@ -7,7 +9,7 @@ using Xunit;
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Standard.Proactor;
 
 [Trait("Category", "AWS")]
-public class AwsValidateMissingTopicTestsAsync 
+public class AwsValidateMissingTopicTestsAsync
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
     private readonly RoutingKey _routingKey;
@@ -30,10 +32,10 @@ public class AwsValidateMissingTopicTestsAsync
             new SnsPublication
             {
                 MakeChannels = OnMissingChannel.Validate
-            });
+            }, loggerFactory: NullLoggerFactory.Instance);
 
         // act & assert
-        await Assert.ThrowsAsync<BrokerUnreachableException>(async () => 
+        await Assert.ThrowsAsync<BrokerUnreachableException>(async () =>
             await producer.SendAsync(new Message(
                 new MessageHeader("", _routingKey, MessageType.MT_EVENT, type: new CloudEventsType("plain/text")),
                 new MessageBody("Test"))));

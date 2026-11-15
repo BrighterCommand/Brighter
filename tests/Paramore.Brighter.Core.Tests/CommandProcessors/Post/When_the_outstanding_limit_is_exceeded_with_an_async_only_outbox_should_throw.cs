@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -83,24 +83,14 @@ public class OutstandingLimitAnyOutboxTests
             new Dictionary<RoutingKey, IAmAMessageProducer> { { _routingKey, producer } });
 
         IAmAnOutboxProducerMediator mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry,
-            resiliencePipelineRegistry,
-            messageMapperRegistry,
-            new EmptyMessageTransformerFactory(),
-            new EmptyMessageTransformerFactoryAsync(),
-            null,
-            new FindPublicationByPublicationTopicOrRequestType(),
-            outbox,
-            maxOutStandingMessages: 3,
-            maxOutStandingCheckInterval: TimeSpan.FromMilliseconds(250),
-            timeProvider: timeProvider);
+producerRegistry: producerRegistry, resiliencePipelineRegistry: resiliencePipelineRegistry, mapperRegistry: messageMapperRegistry, messageTransformerFactory: new EmptyMessageTransformerFactory(), messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: null, publicationFinder: new FindPublicationByPublicationTopicOrRequestType(), outbox: outbox, maxOutStandingMessages: 3, maxOutStandingCheckInterval: TimeSpan.FromMilliseconds(250), timeProvider: timeProvider, loggerFactory: Initializer.TestLoggerFactory);
 
         var commandProcessor = new CommandProcessor(
             new InMemoryRequestContextFactory(),
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             mediator,
-            new InMemorySchedulerFactory());
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
         try
         {

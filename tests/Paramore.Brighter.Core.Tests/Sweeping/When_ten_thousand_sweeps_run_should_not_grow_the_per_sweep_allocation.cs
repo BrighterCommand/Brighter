@@ -23,11 +23,7 @@ public class SweeperAllocationTests
         using var outbox = new SweepableOutbox();
         var meter = new AllocationReadingSweeperMeter(SweepsToRun);
         var sweeper = new TimedOutboxSweeper(
-            outbox.ScopeFactory,
-            new InMemoryLock(),
-            new TimedOutboxSweeperOptions { TimerInterval = TimerIntervalSeconds, MinimumMessageAge = TimeSpan.Zero },
-            timeProvider: timeProvider,
-            meter: meter);
+serviceScopeFactory: outbox.ScopeFactory, distributedLock: new InMemoryLock(), options: new TimedOutboxSweeperOptions { TimerInterval = TimerIntervalSeconds, MinimumMessageAge = TimeSpan.Zero }, timeProvider: timeProvider, meter: meter, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<TimedOutboxSweeper>(Initializer.TestLoggerFactory));
 
         //Act
         await sweeper.StartAsync(CancellationToken.None);

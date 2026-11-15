@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
@@ -56,7 +58,7 @@ public class RmqMutualTlsAcceptanceTests : IDisposable
         };
 
         // Act
-        using var producer = new RmqMessageProducer(connection);
+        using var producer = new RmqMessageProducer(connection, loggerFactory: NullLoggerFactory.Instance);
         var message = new Message(
             new MessageHeader(Id.Random(), "test.mtls.topic", MessageType.MT_EVENT),
             new MessageBody("Test message over mTLS (sync)")
@@ -95,11 +97,11 @@ public class RmqMutualTlsAcceptanceTests : IDisposable
         };
 
         // Act - Create consumer first to ensure queue exists and is bound
-        using var consumer = new RmqMessageConsumer(connection, queueName, routingKey, false);
+        using var consumer = new RmqMessageConsumer(connection, queueName, routingKey, false, loggerFactory: NullLoggerFactory.Instance);
         consumer.Purge(); // Ensure queue is created and bound before publishing
 
         // Act - Publish
-        using var producer = new RmqMessageProducer(connection);
+        using var producer = new RmqMessageProducer(connection, loggerFactory: NullLoggerFactory.Instance);
         var sentMessage = new Message(
             new MessageHeader(Id.Random(), routingKey, MessageType.MT_EVENT),
             new MessageBody("Round-trip test over mTLS (sync)")

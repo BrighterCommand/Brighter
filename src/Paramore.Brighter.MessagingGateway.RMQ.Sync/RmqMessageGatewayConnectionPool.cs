@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,7 +26,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 
@@ -44,17 +43,18 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     {
         private readonly string _connectionName;
         private readonly ushort _connectionHeartbeat;
+        private readonly ILogger _logger;
         private static readonly Dictionary<string, PooledConnection> s_connectionPool = new Dictionary<string, PooledConnection>();
         private static readonly object s_lock = new object();
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageGatewayConnectionPool>();
         private static readonly Random jitter = new Random();
 
-        public RmqMessageGatewayConnectionPool(string connectionName, ushort connectionHeartbeat)
+        public RmqMessageGatewayConnectionPool(string connectionName, ushort connectionHeartbeat, ILoggerFactory loggerFactory)
         {
             _connectionName = connectionName;
             _connectionHeartbeat = connectionHeartbeat;
+            _logger = loggerFactory.CreateBrighterLogger<RmqMessageGatewayConnectionPool>();
         }
-        
+
         /// <summary>
         /// Returns an open pooled connection or replaces a closed or missing connection (thread-safe).
         /// </summary>
@@ -98,7 +98,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 }
                 catch (BrokerUnreachableException exception)
                 {
-                    Log.FailedToResetSubscriptionToRabbitMqEndpoint(s_logger, connectionFactory.Endpoint, exception);
+                    Log.FailedToResetSubscriptionToRabbitMqEndpoint(_logger, connectionFactory.Endpoint, exception);
                 }
             }
         }
@@ -124,7 +124,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             TryRemoveConnection(connectionId);
 
-            Log.CreatingSubscriptionToRabbitMqEndpoint(s_logger, connectionFactory.Endpoint);
+            Log.CreatingSubscriptionToRabbitMqEndpoint(_logger, connectionFactory.Endpoint);
 
             connectionFactory.RequestedHeartbeat = TimeSpan.FromSeconds(_connectionHeartbeat);
             connectionFactory.RequestedConnectionTimeout = TimeSpan.FromMilliseconds(5000);
@@ -133,7 +133,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             var connection = connectionFactory.CreateConnection(_connectionName);
 
-            Log.NewConnectedToAddedToPool(s_logger, connection.Endpoint, connection.ClientProvidedName);
+            Log.NewConnectedToAddedToPool(_logger, connection.Endpoint, connection.ClientProvidedName);
 
             var pooledConnection = new PooledConnection { Connection = connection };
 
@@ -191,4 +191,3 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         }
     }
 }
-

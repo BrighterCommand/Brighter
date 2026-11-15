@@ -56,10 +56,10 @@ public class SqliteOutboxMessageIdUniquenessTests : IDisposable
     public static IEnumerable<object[]> WriteModes()
     {
         foreach (var binary in new[] { false, true })
-        foreach (var useAsync in new[] { false, true })
-        foreach (var useBulk in new[] { false, true })
-        foreach (var changeCase in new[] { false, true })
-            yield return new object[] { binary, useAsync, useBulk, changeCase };
+            foreach (var useAsync in new[] { false, true })
+                foreach (var useBulk in new[] { false, true })
+                    foreach (var changeCase in new[] { false, true })
+                        yield return new object[] { binary, useAsync, useBulk, changeCase };
     }
 
     [Theory]
@@ -69,7 +69,7 @@ public class SqliteOutboxMessageIdUniquenessTests : IDisposable
     {
         //Arrange
         Execute(SqliteOutboxBuilder.GetDDL(TABLE, binary));
-        var outbox = new SqliteOutbox(CreateConfiguration(binary));
+        var outbox = new SqliteOutbox(configuration: CreateConfiguration(binary), logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteOutbox>.Instance);
         var original = CreateMessage("message-a", "original");
         var duplicate = CreateMessage(changeCase ? "MESSAGE-A" : "message-a", "replacement");
 
@@ -95,7 +95,7 @@ public class SqliteOutboxMessageIdUniquenessTests : IDisposable
     {
         //Arrange
         Execute(SqliteOutboxBuilder.GetDDL(TABLE, binary));
-        var outbox = new SqliteOutbox(CreateConfiguration(binary));
+        var outbox = new SqliteOutbox(configuration: CreateConfiguration(binary), logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteOutbox>.Instance);
         outbox.Add(CreateMessage("message-a", "original"), _context);
         var batch = new[]
         {
@@ -134,7 +134,7 @@ public class SqliteOutboxMessageIdUniquenessTests : IDisposable
         //Act
         await provisioner.ProvisionAsync();
         await provisioner.ProvisionAsync();
-        var outbox = new SqliteOutbox(configuration);
+        var outbox = new SqliteOutbox(configuration: configuration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteOutbox>.Instance);
         outbox.Add(CreateMessage("message-a", "original"), _context);
         await outbox.AddAsync(CreateMessage("MESSAGE-A", "replacement"), _context);
 
@@ -154,7 +154,7 @@ public class SqliteOutboxMessageIdUniquenessTests : IDisposable
         //Arrange
         CreateLegacyTable(binary, hasHistory);
         var configuration = CreateConfiguration(binary);
-        var outbox = new SqliteOutbox(configuration);
+        var outbox = new SqliteOutbox(configuration: configuration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteOutbox>.Instance);
         outbox.Add(CreateMessage("message-a", "original"), _context);
         var provisioner = CreateProvisioner(configuration);
 
@@ -179,7 +179,7 @@ public class SqliteOutboxMessageIdUniquenessTests : IDisposable
         //Arrange
         CreateLegacyTable(binary, hasHistory);
         var configuration = CreateConfiguration(binary);
-        var outbox = new SqliteOutbox(configuration);
+        var outbox = new SqliteOutbox(configuration: configuration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteOutbox>.Instance);
         outbox.Add(CreateMessage("message-a", "original"), _context);
         outbox.Add(CreateMessage("MESSAGE-A", "conflicting payload"), _context);
         var provisioner = CreateProvisioner(configuration);
@@ -231,7 +231,7 @@ public class SqliteOutboxMessageIdUniquenessTests : IDisposable
         CreateLegacyTable(binary: false, hasHistory: hasHistory);
         Execute(indexDdl);
         var configuration = CreateConfiguration(binary: false);
-        var outbox = new SqliteOutbox(configuration);
+        var outbox = new SqliteOutbox(configuration: configuration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteOutbox>.Instance);
         var message = CreateMessage("message-a", "original");
         outbox.Add(message, _context);
         outbox.MarkDispatched(message.Id, _context);
@@ -255,9 +255,8 @@ public class SqliteOutboxMessageIdUniquenessTests : IDisposable
     private static SqliteOutboxProvisioner CreateProvisioner(RelationalDatabaseConfiguration configuration)
     {
         var catalog = new SqliteOutboxMigrationCatalog();
-        var runner = new SqliteBoxMigrationRunner(catalog, configuration, TimeSpan.FromSeconds(5), enableWalMode: false);
-        return new SqliteOutboxProvisioner(new SqliteBoxDetectionHelper(), catalog,
-            new SqlitePayloadModeValidator(), configuration, runner);
+        var runner = new SqliteBoxMigrationRunner(catalog: catalog, configuration: configuration, lockTimeout: TimeSpan.FromSeconds(5), enableWalMode: false, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        return new SqliteOutboxProvisioner(detectionHelper: new SqliteBoxDetectionHelper(), catalog: catalog, payloadValidator: new SqlitePayloadModeValidator(), configuration: configuration, migrationRunner: runner, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     private async Task<int> CurrentVersionAsync(RelationalDatabaseConfiguration configuration)

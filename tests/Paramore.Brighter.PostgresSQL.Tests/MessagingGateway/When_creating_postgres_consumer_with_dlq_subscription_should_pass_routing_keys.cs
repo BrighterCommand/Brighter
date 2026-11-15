@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Reflection;
 using Paramore.Brighter.MessagingGateway.Postgres;
@@ -41,7 +43,7 @@ public class PostgresMessageConsumerFactoryDlqTests : IDisposable
         var configuration = new RelationalDatabaseConfiguration(
             "Host=localhost;Port=5432;Database=BrighterTests;Username=brighteruser;Password=Password1!");
         var connection = new PostgresMessagingGatewayConnection(configuration);
-        _factory = new PostgresConsumerFactory(connection);
+        _factory = new PostgresConsumerFactory(connection, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

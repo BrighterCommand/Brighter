@@ -31,13 +31,13 @@ public class LargeMessagePayloadAsyncUnwrapTests : IDisposable
 
         _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
         _luggageStore = new FileSystemStorageProvider(new FileSystemOptions($"./{_bucketName}"));
-            
+
         _luggageStore.EnsureStoreExists();
 
         var messageTransformerFactory =
             new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, Initializer.TestLoggerFactory, InstrumentationOptions.All);
     }
 
     [Fact]

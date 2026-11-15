@@ -23,10 +23,10 @@ public static class SweeperContainer
         Action<TimedOutboxSweeperOptions>? configureSweeper = null)
     {
         var routingKey = new RoutingKey("MyCommand");
-        var producer = new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey });
+        var producer = new InMemoryMessageProducer(new InternalBus(), publication: new Publication { Topic = routingKey }, loggerFactory: Initializer.TestLoggerFactory);
         var producers = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer } });
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddSingleton(timeProvider);
         if (meterFactory is not null) services.AddSingleton(meterFactory);
 

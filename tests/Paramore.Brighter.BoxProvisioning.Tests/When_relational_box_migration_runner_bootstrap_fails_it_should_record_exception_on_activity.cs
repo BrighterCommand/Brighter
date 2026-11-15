@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -152,7 +154,7 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
                 new StubBoxMigrationCatalog(),
                 new StubRelationalDatabaseConfiguration(),
                 TimeSpan.FromSeconds(30),
-                logger: null,
+                logger: NullLogger.Instance,
                 tracer: tracer)
         {
             _openConnectionThrow = openConnectionThrow;
@@ -166,14 +168,16 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
 
         protected override Task<FakeDbConnection> OpenConnectionAsync(CancellationToken cancellationToken)
         {
-            if (_openConnectionThrow is not null) throw _openConnectionThrow;
+            if (_openConnectionThrow is not null)
+                throw _openConnectionThrow;
             return Task.FromResult(new FakeDbConnection());
         }
 
         protected override Task<IAmAProvisioningUnitOfWork<FakeDbTransaction>> CreateUnitOfWorkAsync(
             FakeDbConnection connection, string? schemaName, string tableName, CancellationToken cancellationToken)
         {
-            if (_createUnitOfWorkThrow is not null) throw _createUnitOfWorkThrow;
+            if (_createUnitOfWorkThrow is not null)
+                throw _createUnitOfWorkThrow;
             return Task.FromResult<IAmAProvisioningUnitOfWork<FakeDbTransaction>>(
                 new ThrowOnBeginUnitOfWork(_beginAsyncThrow));
         }

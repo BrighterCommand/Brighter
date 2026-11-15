@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -58,11 +58,11 @@ public class StaleMessageMonitorNoTopicCountLogTests
         var payments = new RoutingKey("payments");
         var producers = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { orders, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = orders }) },
-            { payments, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = payments }) }
+            { orders, new InMemoryMessageProducer(new InternalBus(), publication:new Publication { Topic = orders },loggerFactory:Initializer.TestLoggerFactory) },
+            { payments, new InMemoryMessageProducer(new InternalBus(), publication:new Publication { Topic = payments },loggerFactory:Initializer.TestLoggerFactory) }
         });
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddSingleton<TimeProvider>(new FakeTimeProvider());
         var builder = new ServiceCollectionBrighterBuilder(
             services,

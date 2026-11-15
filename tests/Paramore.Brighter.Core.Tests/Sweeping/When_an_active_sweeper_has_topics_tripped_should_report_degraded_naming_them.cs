@@ -25,10 +25,10 @@ public class When_an_active_sweeper_has_topics_tripped_should_report_degraded_na
             state.LockObtained();
             state.SweepEnded(SweepOutcome.Completed);
         }
-        var breaker = new InMemoryOutboxCircuitBreaker();
+        var breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         breaker.TripTopic(new RoutingKey("payments"));
         breaker.TripTopic(new RoutingKey("orders"));
-        var check = new OutboxSweeperInvestigateHealthCheck(state, new TimedOutboxSweeperOptions(), () => breaker, 3);
+        var check = new OutboxSweeperInvestigateHealthCheck(state: state, options: new TimedOutboxSweeperOptions(), findCircuitBreaker: () => breaker, failureThreshold: 3, loggerFactory: Initializer.TestLoggerFactory);
 
         //Act
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);

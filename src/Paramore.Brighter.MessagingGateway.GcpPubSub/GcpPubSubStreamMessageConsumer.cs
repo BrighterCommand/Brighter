@@ -1,6 +1,5 @@
 ﻿using Google.Cloud.PubSub.V1;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
 using Paramore.Brighter.Observability;
 
@@ -10,6 +9,14 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// Implements a synchronous and asynchronous message consumer for Google Cloud Pub/Sub,
 /// integrating a streaming consumer approach with message bus abstractions.
 /// </summary>
+/// <param name="connection">The connection used for subscription management.</param>
+/// <param name="consumer">The streaming consumer that receives messages.</param>
+/// <param name="subscriptionName">The subscription from which to receive messages.</param>
+/// <param name="timeProvider">The clock used for message timestamps.</param>
+/// <param name="deadLetterRoutingKey">The dead-letter destination.</param>
+/// <param name="invalidMessageRoutingKey">The invalid-message destination.</param>
+/// <param name="makeChannels">The channel creation policy.</param>
+/// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
 /// <remarks>
 /// This consumer uses the <see cref="GcpMessagingGatewayConnection"/> to access the
 /// low-level client for management operations like Purge, and uses an internal
@@ -20,6 +27,7 @@ public partial class GcpPubSubStreamMessageConsumer(
     GcpStreamConsumer consumer,
     Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
     TimeProvider timeProvider,
+    ILoggerFactory loggerFactory,
     RoutingKey? deadLetterRoutingKey = null,
     RoutingKey? invalidMessageRoutingKey = null,
     OnMissingChannel makeChannels = OnMissingChannel.Assume) : IAmAMessageConsumerSync, IAmAMessageConsumerAsync, IHaveAMessagingSystem
@@ -27,7 +35,7 @@ public partial class GcpPubSubStreamMessageConsumer(
     /// <inheritdoc />
     public MessagingSystem MessagingSystem => MessagingSystem.PubSub;
 
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcpPubSubStreamMessageConsumer>();
+    private readonly ILogger _logger = loggerFactory.CreateLogger<GcpPubSubStreamMessageConsumer>();
 
     private readonly GcpRejectionRouter _router = new GcpRejectionRouter(
         connection,
@@ -35,7 +43,7 @@ public partial class GcpPubSubStreamMessageConsumer(
         invalidMessageRoutingKey,
         makeChannels,
         subscriptionName.ProjectId,
-        timeProvider);
+        timeProvider, loggerFactory);
 
     private int _disposed;
 
@@ -52,7 +60,7 @@ public partial class GcpPubSubStreamMessageConsumer(
         }
 
         Accept(gcpStreamMessage);
-        Log.AcknowledgeSuccess(s_logger, message.Id.Value, "", subscriptionName.ToString());
+        Log.AcknowledgeSuccess(_logger, message.Id.Value, "", subscriptionName.ToString());
     }
 
     /// <summary>
@@ -86,7 +94,7 @@ public partial class GcpPubSubStreamMessageConsumer(
         }
 
         Nack(gcpStreamMessage);
-        Log.NackComplete(s_logger, message.Id.Value);
+        Log.NackComplete(_logger, message.Id.Value);
     }
 
     /// <summary>
@@ -120,7 +128,7 @@ public partial class GcpPubSubStreamMessageConsumer(
         if (gcpStreamMessage == null)
         {
             // Missing handle: routing still ran, but we cannot settle the original.
-            Log.RejectMissingHandle(s_logger, message.Id.Value);
+            Log.RejectMissingHandle(_logger, message.Id.Value);
             return true;
         }
 
@@ -133,7 +141,7 @@ public partial class GcpPubSubStreamMessageConsumer(
         }
 
         Accept(gcpStreamMessage);
-        Log.RejectMessage(s_logger, message.Id.Value, "", subscriptionName.ToString());
+        Log.RejectMessage(_logger, message.Id.Value, "", subscriptionName.ToString());
         return true;
     }
 
@@ -156,7 +164,7 @@ public partial class GcpPubSubStreamMessageConsumer(
         if (gcpStreamMessage == null)
         {
             // Missing handle: routing still ran, but we cannot settle the original.
-            Log.RejectMissingHandle(s_logger, message.Id.Value);
+            Log.RejectMissingHandle(_logger, message.Id.Value);
             return true;
         }
 
@@ -169,12 +177,12 @@ public partial class GcpPubSubStreamMessageConsumer(
         }
 
         Accept(gcpStreamMessage);
-        Log.RejectMessage(s_logger, message.Id.Value, "", subscriptionName.ToString());
+        Log.RejectMessage(_logger, message.Id.Value, "", subscriptionName.ToString());
         return true;
     }
 
     /// <summary>
-    /// Synchronously purges all messages from the subscription backlog by executing a 
+    /// Synchronously purges all messages from the subscription backlog by executing a
     /// Pub/Sub Seek operation to a server-derived timestamp.
     /// </summary>
     /// <remarks>
@@ -192,17 +200,17 @@ public partial class GcpPubSubStreamMessageConsumer(
         {
             var client = connection.GetOrCreateSubscriberServiceApiClient();
 
-            Log.PurgeStart(s_logger, subscriptionName.ToString());
+            Log.PurgeStart(_logger, subscriptionName.ToString());
 
             var publisher = connection.CreatePublisherServiceApiClient();
-            var purgeBefore = GcpSubscriptionPurger.Purge(client, publisher, subscriptionName);
+            var purgeBefore = new GcpSubscriptionPurger(loggerFactory).Purge(client, publisher, subscriptionName);
             consumer.PurgeBuffered(purgeBefore);
 
-            Log.PurgeComplete(s_logger, subscriptionName.ToString());
+            Log.PurgeComplete(_logger, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Log.PurgeError(s_logger, ex, subscriptionName.ToString());
+            Log.PurgeError(_logger, ex, subscriptionName.ToString());
             throw;
         }
         finally
@@ -212,7 +220,7 @@ public partial class GcpPubSubStreamMessageConsumer(
     }
 
     /// <summary>
-    /// Asynchronously purges all messages from the subscription backlog by executing a 
+    /// Asynchronously purges all messages from the subscription backlog by executing a
     /// Pub/Sub Seek operation to a server-derived timestamp.
     /// </summary>
     /// <remarks>Uses the same permissions and late-delivery filtering as <see cref="Purge"/>.</remarks>
@@ -226,17 +234,17 @@ public partial class GcpPubSubStreamMessageConsumer(
         {
             var client = await connection.CreateSubscriberServiceApiClientAsync();
 
-            Log.PurgeStart(s_logger, subscriptionName.ToString());
+            Log.PurgeStart(_logger, subscriptionName.ToString());
 
             var publisher = await connection.CreatePublisherServiceApiClientAsync();
-            var purgeBefore = await GcpSubscriptionPurger.PurgeAsync(client, publisher, subscriptionName, cancellationToken);
+            var purgeBefore = await new GcpSubscriptionPurger(loggerFactory).PurgeAsync(client, publisher, subscriptionName, cancellationToken);
             consumer.PurgeBuffered(purgeBefore);
 
-            Log.PurgeComplete(s_logger, subscriptionName.ToString());
+            Log.PurgeComplete(_logger, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Log.PurgeError(s_logger, ex, subscriptionName.ToString());
+            Log.PurgeError(_logger, ex, subscriptionName.ToString());
             throw;
         }
         finally
@@ -246,7 +254,7 @@ public partial class GcpPubSubStreamMessageConsumer(
     }
 
     /// <summary>
-    /// Synchronously reads the next message from the internal channel reader, blocking 
+    /// Synchronously reads the next message from the internal channel reader, blocking
     /// until a message is available or the timeout is reached.
     /// </summary>
     /// <param name="timeOut">Optional timeout for the receive operation.</param>
@@ -257,7 +265,7 @@ public partial class GcpPubSubStreamMessageConsumer(
     }
 
     /// <summary>
-    /// Asynchronously reads the next message from the internal channel reader, waiting 
+    /// Asynchronously reads the next message from the internal channel reader, waiting
     /// until a message is available or the timeout is reached.
     /// </summary>
     /// <param name="timeOut">Optional timeout for the receive operation.</param>
@@ -298,7 +306,7 @@ public partial class GcpPubSubStreamMessageConsumer(
     }
 
     /// <summary>
-    /// Synchronously requeues a message by calling <see cref="GcpStreamMessage.Reject"/> 
+    /// Synchronously requeues a message by calling <see cref="GcpStreamMessage.Reject"/>
     /// on the receipt handle. This signals the service to redeliver the message.
     /// </summary>
     /// <param name="message">The message to requeue.</param>
@@ -312,12 +320,12 @@ public partial class GcpPubSubStreamMessageConsumer(
         }
 
         Nack(gcpStreamMessage);
-        Log.RequeueComplete(s_logger, message.Id.Value);
+        Log.RequeueComplete(_logger, message.Id.Value);
         return true;
     }
 
     /// <summary>
-    /// Asynchronously requeues a message by calling <see cref="GcpStreamMessage.Reject"/> 
+    /// Asynchronously requeues a message by calling <see cref="GcpStreamMessage.Reject"/>
     /// on the receipt handle. This signals the service to redeliver the message.
     /// </summary>
     /// <param name="message">The message to requeue.</param>

@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -76,7 +78,7 @@ public class MsSqlMigrationCancellationRollbackTests : IAsyncLifetime
             "RollbackAsync should receive CancellationToken.None to ensure lock release completes.");
         Assert.Equal(CancellationToken.None, spy.RollbackToken);
 
-        var freshRunner = new MsSqlBoxMigrationRunner(catalog, config, s_freshRunnerLockTimeout);
+        var freshRunner = new MsSqlBoxMigrationRunner(catalog: catalog, configuration: config, lockTimeout: s_freshRunnerLockTimeout, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         await freshRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint, CancellationToken.None);
 
@@ -133,7 +135,8 @@ file sealed class CancellingMsSqlBoxMigrationRunner : MsSqlBoxMigrationRunner
         IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout)
-        : base(catalog, configuration, lockTimeout)
+        : base(catalog, configuration, lockTimeout,
+            NullLoggerFactory.Instance)
     {
     }
 

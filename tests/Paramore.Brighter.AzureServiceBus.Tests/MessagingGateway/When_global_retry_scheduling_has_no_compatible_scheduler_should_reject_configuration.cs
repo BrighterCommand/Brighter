@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -45,14 +45,14 @@ public class AzureServiceBusRetrySchedulerConfigurationTests
         // Arrange
         await using var client = new InMemoryRetryServiceBusClient(ServiceBusModelFactory.ServiceBusReceivedMessage());
         var publication = new AzureServiceBusPublication { RequeueScheduler = RequeueSchedulerMode.Global };
-        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(client, publication));
+        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider: client, publication: publication, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         if (ordinaryScheduler)
         {
             var processor = new CommandProcessor(new SubscriberRegistry(),
                 new SimpleHandlerFactoryAsync(_ => throw new InvalidOperationException()),
                 new InMemoryRequestContextFactory(), new DefaultPolicy(),
-                new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
-            factory.Scheduler = new InMemorySchedulerFactory().Create(processor);
+                new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+            factory.Scheduler = new InMemorySchedulerFactory(loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(processor);
         }
         var subscription = new AzureServiceBusSubscription(new SubscriptionName("retry"),
             new ChannelName("retry-queue"), new RoutingKey("retry-queue"),

@@ -46,7 +46,7 @@ public class StoppingAMonitorThatNeverStartedTests
     public async Task When_stopping_a_monitor_that_never_started_should_return_at_once(bool startFirst, string missingRegistration)
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddSingleton<TimeProvider>(new FakeTimeProvider());
         if (missingRegistration == nameof(IAmProducersConfiguration))
             services.AddSingleton<IAmAnOutbox>(new StaleMessageCountingOutbox());

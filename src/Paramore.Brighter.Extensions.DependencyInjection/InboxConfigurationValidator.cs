@@ -28,6 +28,7 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Inbox.Handlers;
 using Paramore.Brighter.Validation;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection;
 
@@ -38,10 +39,11 @@ internal sealed class InboxConfigurationValidator(IServiceProvider serviceProvid
         var inspector = serviceProvider.GetService<IAmASubscriberRegistryInspector>()
             ?? (IAmASubscriberRegistryInspector)serviceProvider.GetRequiredService<ServiceCollectionSubscriberRegistry>();
         var configuration = serviceProvider.GetService<IAmConsumerOptions>()?.InboxConfiguration;
-        using var builder = new PipelineBuilder<IRequest>(inspector, configuration);
+        using var builder = new PipelineBuilder<IRequest>(inspector, serviceProvider.GetRequiredService<ILoggerFactory>(), configuration);
         var options = serviceProvider.GetService<IBrighterOptions>();
         using var scope = new ServiceProviderLifetimeScope(serviceProvider,
             options?.HandlerLifetime ?? ServiceLifetime.Transient,
+            serviceProvider.GetRequiredService<ILogger<ServiceProviderLifetimeScope>>(),
             options?.IsolateTransientHandlerScope ?? true);
         var failures = new Dictionary<Type, string?>();
         var errors = new List<ValidationError>();

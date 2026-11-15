@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net.Mime;
 using System.Text.Json;
@@ -135,7 +135,7 @@ public class CloudEventJsonMessageMapperTests
             Topic = new RoutingKey(Guid.NewGuid().ToString()),
             CloudEventsAdditionalProperties = extraProperty
         };
-        
+
         var message = mapper.MapToMessage(command, publication);
 
         Assert.NotNull(message);
@@ -155,7 +155,7 @@ public class CloudEventJsonMessageMapperTests
         Assert.Single(body.AdditionalProperties);
         Assert.Equal(extraProperty["test"], body.AdditionalProperties["test"]);
     }
-    
+
     [Fact]
     public void When_mapping_command_to_message_with_duplicated_additional_properties()
     {
@@ -167,7 +167,7 @@ public class CloudEventJsonMessageMapperTests
             Topic = new RoutingKey(Guid.NewGuid().ToString()),
             CloudEventsAdditionalProperties = extraProperty
         };
-        
+
         var message = mapper.MapToMessage(command, publication);
 
         Assert.NotNull(message);

@@ -56,7 +56,7 @@ public class DeliveryBudgetDiagnosticsTests
         using var ctx = TestCorrelator.CreateContext();
 
         //Act
-        DeliveryBudgetDiagnostics.WarnIfUnenforceable(sub);
+        DeliveryBudgetDiagnostics.WarnIfUnenforceable(sub, Initializer.TestLoggerFactory);
 
         //Assert — exactly one Warning naming the subscription, 3, and the reason
         var warnings = TestCorrelator.GetLogEventsFromCurrentContext()
@@ -85,7 +85,7 @@ public class DeliveryBudgetDiagnosticsTests
         using var ctx = TestCorrelator.CreateContext();
 
         //Act
-        DeliveryBudgetDiagnostics.WarnIfUnenforceable(sub);
+        DeliveryBudgetDiagnostics.WarnIfUnenforceable(sub, Initializer.TestLoggerFactory);
 
         //Assert — no log events at any level
         var events = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
@@ -107,7 +107,7 @@ public class DeliveryBudgetDiagnosticsTests
         using var ctx = TestCorrelator.CreateContext();
 
         //Act
-        DeliveryBudgetDiagnostics.WarnIfUnenforceable(sub);
+        DeliveryBudgetDiagnostics.WarnIfUnenforceable(sub, Initializer.TestLoggerFactory);
 
         //Assert — no log events at any level
         var events = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
@@ -130,7 +130,7 @@ public class DeliveryBudgetDiagnosticsTests
         using var ctx = TestCorrelator.CreateContext();
 
         //Act
-        DeliveryBudgetDiagnostics.WarnIfUnenforceable(sub);
+        DeliveryBudgetDiagnostics.WarnIfUnenforceable(sub, Initializer.TestLoggerFactory);
 
         //Assert — no log events at any level
         var events = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
@@ -153,7 +153,7 @@ public class DeliveryBudgetDiagnosticsTests
         using var ctx = TestCorrelator.CreateContext();
 
         //Act
-        DeliveryBudgetDiagnostics.WarnIfUnenforceable(sub);
+        DeliveryBudgetDiagnostics.WarnIfUnenforceable(sub, Initializer.TestLoggerFactory);
 
         //Assert — R-7 is a pipeline-validation concern; no log here
         var events = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
@@ -176,7 +176,7 @@ public class DeliveryBudgetDiagnosticsTests
         using var ctx = TestCorrelator.CreateContext();
 
         //Act
-        DeliveryBudgetDiagnostics.WarnIfUnenforceable(sub);
+        DeliveryBudgetDiagnostics.WarnIfUnenforceable(sub, Initializer.TestLoggerFactory);
 
         //Assert — R-10 is a pipeline-validation concern; no log here
         var events = TestCorrelator.GetLogEventsFromCurrentContext().ToList();

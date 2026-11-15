@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
 using Xunit;
@@ -34,7 +36,7 @@ public class GcpChannelFactorySubscriptionTests
     public GcpChannelFactorySubscriptionTests()
     {
         // Arrange
-        _factory = new GcpPubSubChannelFactory(new GcpMessagingGatewayConnection());
+        _factory = new GcpPubSubChannelFactory(new GcpMessagingGatewayConnection(), loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Theory]

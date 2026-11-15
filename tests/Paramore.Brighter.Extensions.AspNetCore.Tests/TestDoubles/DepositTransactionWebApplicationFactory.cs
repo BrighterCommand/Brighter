@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -144,9 +145,6 @@ public sealed class DepositTransactionWebApplicationFactory : WebApplicationFact
     {
         builder.ConfigureServices(services =>
         {
-            // SqliteOutboxCollection prevents competing hosts from replacing this factory while
-            // SqliteOutbox creates its instance logger; a preceding host may have left a disposed factory.
-            ApplicationLogging.LoggerFactory = Initializer.Factory;
 
             services.AddControllers().AddApplicationPart(typeof(DepositTransactionController).Assembly);
 
@@ -161,7 +159,7 @@ public sealed class DepositTransactionWebApplicationFactory : WebApplicationFact
             var routingKey = new RoutingKey("deposit-transaction-posted");
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(DepositEntityPostedCommand) }) }
+                { routingKey, new InMemoryMessageProducer(new InternalBus(),Initializer.Factory, new Publication { Topic = routingKey, RequestType = typeof(DepositEntityPostedCommand) }) }
             });
 
             var outboxConfiguration = new RelationalDatabaseConfiguration(
@@ -180,9 +178,9 @@ public sealed class DepositTransactionWebApplicationFactory : WebApplicationFact
             .AddProducers(cfg =>
             {
                 cfg.ProducerRegistry = producerRegistry;
-                cfg.Outbox = new SqliteOutbox(outboxConfiguration, new AttachOutboxConnectionProvider(outboxConfiguration, _outboxDatabasePath));
+                cfg.Outbox = new SqliteOutbox(outboxConfiguration,new AttachOutboxConnectionProvider(outboxConfiguration, _outboxDatabasePath),logger:LoggerFactoryExtensions.CreateLogger<Paramore.Brighter.Outbox.Sqlite.SqliteOutbox>(Initializer.Factory));
                 cfg.TransactionProvider = typeof(AttachOutboxTransactionProvider);
-            }, ServiceLifetime.Scoped);
+            },ServiceLifetime.Scoped);
         });
 
         builder.Configure(app =>

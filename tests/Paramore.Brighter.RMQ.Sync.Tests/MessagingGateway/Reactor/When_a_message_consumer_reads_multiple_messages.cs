@@ -1,4 +1,6 @@
-﻿using System;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Xunit;
@@ -23,9 +25,9 @@ public class RMQBufferedConsumerTests : IDisposable
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        _messageProducer = new RmqMessageProducer(rmqConnection);
-        _messageConsumer = new RmqMessageConsumer(connection:rmqConnection, queueName:_channelName, routingKey:_routingKey, isDurable:false, highAvailability:false, batchSize:BatchSize);
-            
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
+        _messageConsumer = new RmqMessageConsumer(connection:rmqConnection, queueName:_channelName, routingKey:_routingKey, isDurable:false, highAvailability:false, batchSize:BatchSize, loggerFactory: NullLoggerFactory.Instance);
+
         //create the queue, so that we can receive messages posted to it
         new QueueFactory(rmqConnection, _channelName, new RoutingKeys(_routingKey)).Create(TimeSpan.FromMilliseconds(1000));
     }
@@ -42,16 +44,16 @@ public class RMQBufferedConsumerTests : IDisposable
         _messageProducer.Send(messageThree);
         var messageFour= new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content Four"));
         _messageProducer.Send(messageFour);
-            
+
         //let them arrive
         Task.Delay(5000);
-            
+
         //Now retrieve messages from the consumer
         var messages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000));
-            
+
         //We should only have three messages
         Assert.Equal(3, messages.Length);
-            
+
         //ack those to remove from the queue
         foreach (var message in messages)
         {
@@ -60,7 +62,7 @@ public class RMQBufferedConsumerTests : IDisposable
 
         //Allow ack to register
         Task.Delay(1000);
-            
+
         //Now retrieve again
         messages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(500));
 

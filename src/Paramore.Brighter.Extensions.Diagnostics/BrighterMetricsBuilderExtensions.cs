@@ -43,18 +43,19 @@ public static class BrighterMetricsBuilderExtensions
             services.TryAddSingleton<IAmABrighterDbMeter, DbMeter>();
             services.TryAddSingleton<IAmABrighterSweeperMeter>(serviceProvider => new SweeperMeter(
                 serviceProvider.GetRequiredService<IMeterFactory>(),
+                serviceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>(),
                 serviceProvider.GetService<OutboxSweeperState>(),
                 () => serviceProvider.GetService<IAmAnOutboxCircuitBreaker>()));
             services.TryAddSingleton<PublishConfirmationMeter>();
             services.TryAddSingleton<IAmABrighterOutboxMeter, OutboxMeter>();
             services.TryAddSingleton<OutboxStaleMessageMeter>();
-            
+
             builder.AddMeter(BrighterSemanticConventions.MeterName);
         });
 
         if (builder is IDeferredMeterProviderBuilder deferred)
             deferred.Configure((serviceProvider, _) => CreateMetersNothingDependsOn(serviceProvider));
-        
+
         return builder;
     }
 

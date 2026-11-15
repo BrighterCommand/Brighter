@@ -57,7 +57,7 @@ public class RmqChannelFactoryAsyncChannelAsyncValidateTests
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Validate);
 
-        var channelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection));
+        var channelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection: rmqConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
         // Act
         var exception = await Record.ExceptionAsync(() => channelFactory.CreateAsyncChannelAsync(subscription));

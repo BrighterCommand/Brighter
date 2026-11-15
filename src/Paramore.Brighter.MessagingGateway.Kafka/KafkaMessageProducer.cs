@@ -55,12 +55,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             add => _onMessagePublishedAsync += value;
             remove => _onMessagePublishedAsync -= value;
         }
-      
+
         /// <summary>
         /// The publication configuration for this producer
         /// </summary>
         public Publication Publication { get; set; }
-        
+
         /// <summary>
         /// The OTel Span we are writing Producer events too
         /// </summary>
@@ -84,13 +84,15 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly BatchedCallbackQueue _confirmationCallbacks;
 
         public KafkaMessageProducer(
-            KafkaMessagingGatewayConfiguration configuration, 
+            KafkaMessagingGatewayConfiguration configuration,
             KafkaPublication publication,
+            ILoggerFactory loggerFactory,
             InstrumentationOptions instrumentation = InstrumentationOptions.All)
+            : base(loggerFactory)
         {
             if (publication is null)
                 throw new ArgumentNullException(nameof(publication));
-            
+
             if (string.IsNullOrEmpty(publication.Topic!))
                 throw new ConfigurationException("Topic is required for a publication");
 
@@ -149,7 +151,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _headerBuilder = publication.MessageHeaderBuilder;
             _instrumentation = instrumentation;
         }
-        
+
         /// <summary>
         /// Disposes of the producer. Repeated calls are no-ops.
         /// </summary>
@@ -160,8 +162,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-    
-        
+
+
         /// <summary>
         /// Disposes of the producer. Repeated calls are no-ops, including calls after <see cref="Dispose()"/>.
         /// </summary>
@@ -186,7 +188,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             configHook(_producerConfig);
         }
-        
+
         /// <summary>
         /// Flushes the producer to ensure all messages in the internal buffer have been sent
         /// </summary>
@@ -204,7 +206,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _producer = new ProducerBuilder<string, byte[]>(_producerConfig)
                 .SetErrorHandler((_, error) => HandleError(error))
                 .Build();
-            _publisher = new KafkaMessagePublisher(_producer, _headerBuilder);
+            _publisher = new KafkaMessagePublisher(
+                _producer,
+                _headerBuilder,
+                LoggerFactory.CreateBrighterLogger<KafkaMessagePublisher>());
 
             EnsureTopic();
         }
@@ -224,11 +229,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             // Log against the error we actually received, independent of the latch, so a non-fatal error
             // that arrives after a fatal one is still logged as non-fatal.
             if (error.IsFatal)
-                Log.FatalProducerError(s_logger, error.Code, error.Reason, true);
+                Log.FatalProducerError(Logger, error.Code, error.Reason, true);
             else
-                Log.NonFatalProducerError(s_logger, error.Code, error.Reason, false);
+                Log.NonFatalProducerError(Logger, error.Code, error.Reason, false);
         }
-        
+
         /// <summary>
         /// Sends the specified message.
         /// </summary>
@@ -254,7 +259,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             await SendWithDelayAsync(message, TimeSpan.Zero, cancellationToken);
         }
-        
+
         /// <summary>
         /// Sends the message with the given delay
         /// </summary>
@@ -299,29 +304,29 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 //confirmation can be linked back to the original publish even on the synthetic path.
                 var publishContext = Activity.Current?.Context;
                 BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Kafka, message, _instrumentation);
-                Log.SendingMessageToKafka(s_logger, _producerConfig.BootstrapServers, message.Header.Topic.Value, message.Body.Value);
+                Log.SendingMessageToKafka(Logger, _producerConfig.BootstrapServers, message.Header.Topic.Value, message.Body.Value);
                 _publisher.PublishMessage(message, report => PublishResults(report.Status, report.Headers, message.Header.Topic, publishContext));
             }
             catch (ProduceException<string, string> pe)
             {
-                Log.ErrorSendingMessageToKafka(s_logger, pe, _producerConfig.BootstrapServers, pe.Error.Reason);
+                Log.ErrorSendingMessageToKafka(Logger, pe, _producerConfig.BootstrapServers, pe.Error.Reason);
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", pe);
             }
             catch (InvalidOperationException ioe)
             {
-                Log.ErrorSendingMessageToKafka(s_logger, ioe, _producerConfig.BootstrapServers, ioe.Message);
+                Log.ErrorSendingMessageToKafka(Logger, ioe, _producerConfig.BootstrapServers, ioe.Message);
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ioe);
 
             }
             catch (ArgumentException ae)
             {
-                Log.ErrorSendingMessageToKafka(s_logger, ae, _producerConfig.BootstrapServers, ae.Message);
+                Log.ErrorSendingMessageToKafka(Logger, ae, _producerConfig.BootstrapServers, ae.Message);
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ae);
 
             }
             catch (KafkaException kafkaException)
             {
-                Log.KafkaExceptionError(s_logger, kafkaException, Topic?.Value ?? RoutingKey.Empty.Value);
+                Log.KafkaExceptionError(Logger, kafkaException, Topic?.Value ?? RoutingKey.Empty.Value);
 
                 if (kafkaException.Error.IsFatal) //this can't be recovered and requires a new producer
                     throw;
@@ -368,33 +373,32 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
              if (_hasFatalProducerError)
                  throw new ChannelFailureException("Producer is in unrecoverable state");
-              
+
              try
              {
                  //Capture the publish span context synchronously, before any closure runs, so the
                  //confirmation can be linked back to the original publish even on the synthetic path.
                  var publishContext = Activity.Current?.Context;
                  BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Kafka, message, _instrumentation);
-                 Log.SendingMessageToKafka(s_logger, _producerConfig.BootstrapServers, message.Header.Topic.Value, message.Body.Value);
+                Log.SendingMessageToKafka(Logger, _producerConfig.BootstrapServers, message.Header.Topic.Value, message.Body.Value);
                  await _publisher.PublishMessageAsync(message, result => PublishResults(result.Status, result.Headers, message.Header.Topic, publishContext), cancellationToken);
-
              }
              catch (ProduceException<string, string> pe)
              {
-                 Log.ErrorSendingMessageToKafka(s_logger, pe, _producerConfig.BootstrapServers, pe.Error.Reason);
+                Log.ErrorSendingMessageToKafka(Logger, pe, _producerConfig.BootstrapServers, pe.Error.Reason);
                  throw new ChannelFailureException("Error talking to the broker, see inner exception for details", pe);
              }
              catch (InvalidOperationException ioe)
              {
-                 Log.ErrorSendingMessageToKafka(s_logger, ioe, _producerConfig.BootstrapServers, ioe.Message);
+                Log.ErrorSendingMessageToKafka(Logger, ioe, _producerConfig.BootstrapServers, ioe.Message);
                  throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ioe);
-            
+
              }
              catch (ArgumentException ae)
              {
-                 Log.ErrorSendingMessageToKafka(s_logger, ae, _producerConfig.BootstrapServers, ae.Message);
+                Log.ErrorSendingMessageToKafka(Logger, ae, _producerConfig.BootstrapServers, ae.Message);
                  throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ae);
-                           
+
              }
         }
 
@@ -411,7 +415,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             cleanup.Try(() => _producer?.Dispose());
             cleanup.ThrowIfFailed();
         }
-        
+
         private void PublishResults(PersistenceStatus status, Headers headers, RoutingKey topic, ActivityContext? publishContext)
         {
             if (status == PersistenceStatus.Persisted)
@@ -433,7 +437,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 // degraded state is diagnosable: MarkDispatched(Id.Empty) matches no Outbox row, so the
                 // message stays un-dispatched and the Sweeper re-delivers it rather than being marked sent.
                 if (Id.IsNullOrEmpty(persistedId))
-                    Log.PersistedReportMissingId(s_logger, topic.Value);
+                    Log.PersistedReportMissingId(Logger, topic.Value);
 
                 RaisePublishConfirmation(new PublishConfirmationResult(true, persistedId, topic, publishContext));
                 return;
@@ -470,7 +474,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 }
                 catch (Exception ex)
                 {
-                    Log.PublishConfirmationRaiseFault(s_logger, ex);
+                    Log.PublishConfirmationRaiseFault(Logger, ex);
                 }
             });
         }
@@ -478,7 +482,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private void WaitForConfirmationCallbacks()
         {
             if (!_confirmationCallbacks.TryWait(TimeSpan.FromMilliseconds(ConfirmationCallbacksShutdownTimeoutMs), out int stillInFlight))
-                Log.FailedToAwaitConfirmationCallbacks(s_logger, stillInFlight, ConfirmationCallbacksShutdownTimeoutMs);
+                Log.FailedToAwaitConfirmationCallbacks(Logger, stillInFlight, ConfirmationCallbacksShutdownTimeoutMs);
         }
 
         private static partial class Log
@@ -500,7 +504,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             [LoggerMessage(LogLevel.Warning, "Kafka reported topic {Topic} as persisted but the delivery report carried no message id; confirmation degraded to an empty id so the message stays un-dispatched for Sweeper retry")]
             public static partial void PersistedReportMissingId(ILogger logger, string topic);
-            
+
             [LoggerMessage(LogLevel.Error, "KafkaMessageProducer: There was an error sending to topic {Topic})")]
             public static partial void KafkaExceptionError(ILogger logger, Exception exception, string topic);
 

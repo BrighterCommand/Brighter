@@ -25,6 +25,7 @@ using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning.MySql;
@@ -49,13 +50,15 @@ public static class MySqlBoxProvisioningExtensions
             {
                 var catalog = sp.GetRequiredService<MySqlOutboxMigrationCatalog>();
                 var runner = new MySqlBoxMigrationRunner(catalog, configuration, options.MigrationLockTimeout,
+                    sp.GetRequiredService<ILoggerFactory>(),
                     tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new MySqlOutboxProvisioner(
                     sp.GetRequiredService<MySqlBoxDetectionHelper>(),
                     catalog,
                     sp.GetRequiredService<MySqlPayloadModeValidator>(),
                     configuration,
-                    runner);
+                    runner,
+                    sp.GetRequiredService<ILoggerFactory>());
             });
         });
         return options;
@@ -88,13 +91,15 @@ public static class MySqlBoxProvisioningExtensions
                     binaryMessagePayload: binaryMessagePayload);
                 var catalog = sp.GetRequiredService<MySqlOutboxMigrationCatalog>();
                 var runner = new MySqlBoxMigrationRunner(catalog, dbConfig, options.MigrationLockTimeout,
+                    sp.GetRequiredService<ILoggerFactory>(),
                     tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new MySqlOutboxProvisioner(
                     sp.GetRequiredService<MySqlBoxDetectionHelper>(),
                     catalog,
                     sp.GetRequiredService<MySqlPayloadModeValidator>(),
                     dbConfig,
-                    runner);
+                    runner,
+                    sp.GetRequiredService<ILoggerFactory>());
             });
         });
         return options;
@@ -115,13 +120,15 @@ public static class MySqlBoxProvisioningExtensions
             {
                 var catalog = sp.GetRequiredService<MySqlInboxMigrationCatalog>();
                 var runner = new MySqlBoxMigrationRunner(catalog, configuration, options.MigrationLockTimeout,
+                    sp.GetRequiredService<ILoggerFactory>(),
                     tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new MySqlInboxProvisioner(
                     sp.GetRequiredService<MySqlBoxDetectionHelper>(),
                     catalog,
                     sp.GetRequiredService<MySqlPayloadModeValidator>(),
                     configuration,
-                    runner);
+                    runner,
+                    sp.GetRequiredService<ILoggerFactory>());
             });
         });
         return options;
@@ -154,13 +161,15 @@ public static class MySqlBoxProvisioningExtensions
                     binaryMessagePayload: binaryMessagePayload);
                 var catalog = sp.GetRequiredService<MySqlInboxMigrationCatalog>();
                 var runner = new MySqlBoxMigrationRunner(catalog, dbConfig, options.MigrationLockTimeout,
+                    sp.GetRequiredService<ILoggerFactory>(),
                     tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new MySqlInboxProvisioner(
                     sp.GetRequiredService<MySqlBoxDetectionHelper>(),
                     catalog,
                     sp.GetRequiredService<MySqlPayloadModeValidator>(),
                     dbConfig,
-                    runner);
+                    runner,
+                    sp.GetRequiredService<ILoggerFactory>());
             });
         });
         return options;

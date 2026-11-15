@@ -10,7 +10,7 @@ namespace Paramore.Brighter.Core.Tests.CloudEvents;
 
 public class When_wrapping_a_message_that_already_has_cloud_event_headers_should_preserve_them
 {
-    private readonly CloudEventsTransformer _transformer = new();
+    private readonly CloudEventsTransformer _transformer = new(loggerFactory: Initializer.TestLoggerFactory);
     private readonly Uri _mapperSource = new("http://goparamore.io/MyMapper");
     private readonly CloudEventsType _mapperType = new("MyApp.OrderAccepted");
     private readonly Uri _mapperDataSchema = new("http://goparamore.io/MyMapper/schema");

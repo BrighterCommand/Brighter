@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Reflection;
 using Amazon;
@@ -43,7 +45,7 @@ public class SqsMessageConsumerFactoryDlqTests : IDisposable
         var connection = new AWSMessagingGatewayConnection(
             new BasicAWSCredentials("test", "test"),
             RegionEndpoint.EUWest1);
-        _factory = new SqsMessageConsumerFactory(connection);
+        _factory = new SqsMessageConsumerFactory(connection, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -45,7 +45,7 @@ public class MsSqlSubscriberRetryTests
     {
         //Arrange
         var scheduler = new InMemorySubscriberRetryScheduler();
-        var factory = new MsSqlMessageConsumerFactory(_configuration, scheduler);
+        var factory = new MsSqlMessageConsumerFactory(msSqlConfiguration: _configuration, scheduler: scheduler, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var subscription = Subscription();
         var message = Message();
         using var cancellation = new CancellationTokenSource();
@@ -75,7 +75,7 @@ public class MsSqlSubscriberRetryTests
     {
         //Arrange
         var scheduler = new InMemorySubscriberRetryScheduler { FailScheduling = true };
-        var factory = new MsSqlMessageConsumerFactory(_configuration, scheduler);
+        var factory = new MsSqlMessageConsumerFactory(msSqlConfiguration: _configuration, scheduler: scheduler, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         using var consumer = async ? (MsSqlMessageConsumer)factory.CreateAsync(Subscription()) : (MsSqlMessageConsumer)factory.Create(Subscription());
         var message = Message();
 
@@ -97,7 +97,7 @@ public class MsSqlSubscriberRetryTests
     {
         //Arrange
         var scheduler = new InMemorySubscriberRetryScheduler();
-        using var consumer = new MsSqlMessageConsumer(_configuration, "subscriber", true, scheduler: scheduler);
+        using var consumer = new MsSqlMessageConsumer(msSqlConfiguration: _configuration, topic: "subscriber", isIndependentSubscriber: true, scheduler: scheduler, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
         var message = Message();
@@ -113,7 +113,8 @@ public class MsSqlSubscriberRetryTests
     }
 
     private MsSqlSubscription Subscription() => new(new("subscription"), new("subscriber"), new("logical.topic"),
-        requestType: typeof(Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand), requeueDelay: _delay) { IsIndependentSubscriber = true };
+        requestType: typeof(Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand), requeueDelay: _delay)
+    { IsIndependentSubscriber = true };
 
     private static Message Message() => new(new MessageHeader(Id.Random(), new RoutingKey("logical.topic"), MessageType.MT_EVENT), new MessageBody("payload"));
 }

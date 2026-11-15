@@ -128,7 +128,7 @@ public class RocketMqBudgetOneZeroOrBelowMinusOneRejectsOnFirstDeferralProactorT
             // Build the real consumer via the production factory, then wrap it in the recording
             // consumer (task 3.3's harness) to observe RequeueAsync calls without re-implementing
             // the delivery-budget rule under test (that rule lives in Reactor/Proactor, not here).
-            var innerConsumer = new RocketMessageConsumerFactory(GatewayFactory.CreateConnection())
+            var innerConsumer = new RocketMessageConsumerFactory(connection: GatewayFactory.CreateConnection(), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
                 .CreateAsync(subscription);
             channel = ConformanceDeferredPump.CreateRecordingChannelAsync(
                 subscription.ChannelName, routingKey, innerConsumer);
@@ -191,7 +191,7 @@ public class RocketMqBudgetOneZeroOrBelowMinusOneRejectsOnFirstDeferralProactorT
     {
         var connection = GatewayFactory.CreateConnection();
         await using var simpleConsumer = await GatewayFactory.CreateSimpleConsumer(connection, DlqTopic);
-        await using var dlqConsumer = new RocketMessageConsumer(simpleConsumer, 1, TimeSpan.FromSeconds(30));
+        await using var dlqConsumer = new RocketMessageConsumer(consumer: simpleConsumer, bufferSize: 1, invisibilityTimeout: TimeSpan.FromSeconds(30), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var deadline = Stopwatch.StartNew();
         while (deadline.Elapsed < s_dlqReadCeiling)

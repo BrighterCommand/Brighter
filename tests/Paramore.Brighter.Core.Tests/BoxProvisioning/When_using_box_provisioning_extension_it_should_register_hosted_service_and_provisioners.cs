@@ -13,7 +13,7 @@ public class When_using_box_provisioning_extension_it_should_register_hosted_ser
     public void Should_register_hosted_service_and_provisioners()
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddLogging();
         var builder = new StubBrighterBuilder(services);
 

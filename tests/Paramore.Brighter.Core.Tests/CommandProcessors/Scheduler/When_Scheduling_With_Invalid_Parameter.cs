@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
@@ -44,7 +44,7 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsTests
 
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-        var producer = new InMemoryMessageProducer(_internalBus, new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
+        var producer = new InMemoryMessageProducer(_internalBus, Initializer.TestLoggerFactory, new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer }, });
         var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
@@ -61,7 +61,7 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            _outbox
+            Initializer.TestLoggerFactory, _outbox
         );
 
         _commandProcessor = new CommandProcessor(registry,
@@ -70,7 +70,7 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsTests
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             bus,
-            new InMemorySchedulerFactory { TimeProvider = _timeProvider });
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory) { TimeProvider = _timeProvider }, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<MyCommand>.ClearPipelineCache();
         PipelineBuilder<FireSchedulerRequest>.ClearPipelineCache();
     }
@@ -100,7 +100,7 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsTests
         Assert.NotNull(exception);
         Assert.True((exception) is ArgumentOutOfRangeException);
     }
-    
+
     [Fact]
     public void When_Scheduling_Post_With_Invalid_Parameter()
     {

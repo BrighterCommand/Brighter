@@ -21,7 +21,8 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             {
                 EntryLimit = limit,
                 CompactionPercentage = 0.5,
-                ExpirationScanInterval = TimeSpan.FromMilliseconds(100),
+                // Keep expiry scans outside this test so they cannot race capacity compaction.
+                ExpirationScanInterval = TimeSpan.FromMinutes(10),
                 Tracer = new BrighterTracer(timeProvider)
             };
 
@@ -48,9 +49,6 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             }
 
             Assert.Equal(5, outbox.EntryCount);
-
-            //Advance past compaction cooldown
-            timeProvider.Advance(TimeSpan.FromMilliseconds(200));
 
             //Act - add one more to trigger compaction
             outbox.Add(new MessageTestDataBuilder(), context);

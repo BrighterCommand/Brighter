@@ -14,7 +14,6 @@ using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Quartz;
 using Serilog;
 
-
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .Enrich.FromLogContext()
@@ -48,21 +47,23 @@ var host = new HostBuilder()
                     }
                 });
 
-            var producerRegistry = new SnsProducerRegistryFactory(
-                awsConnection,
-                [
-                    new SnsPublication
-                    {
-                        Topic = new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
-                        RequestType = typeof(GreetingEvent)
-                    }
-                ]
-            ).Create();
-
             services.AddBrighter()
-                .AddProducers((configure) =>
+                .AddProducers(provider =>
                 {
+                    var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+                    var producerRegistry = new SnsProducerRegistryFactory(
+                        awsConnection,
+                        [
+                            new SnsPublication
+                            {
+                                Topic = new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                                RequestType = typeof(GreetingEvent)
+                            }
+                        ],
+                        loggerFactory: loggerFactory).Create();
+                    var configure = new ProducersConfiguration();
                     configure.ProducerRegistry = producerRegistry;
+                    return configure;
                 })
                 .UseScheduler(provider =>
                 {
@@ -78,7 +79,6 @@ var host = new HostBuilder()
     .UseConsoleLifetime()
     .UseSerilog()
     .Build();
-
 
 Console.CancelKeyPress += (_, _) => host.StopAsync().Wait();
 
@@ -96,7 +96,7 @@ internal sealed class RunCommandProcessor(IAmACommandProcessor commandProcessor,
 
             logger.LogInformation("Scheduling message #{Loop}", loop);
             commandProcessor.Post(TimeSpan.FromSeconds(10), new GreetingEvent($"Scheduler message Ian #{loop}"));
-            
+
             if (loop % 100 != 0)
             {
                 continue;

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -104,10 +104,7 @@ public class DispatcherShutSubscriptionGetsConsumerTests
         registry.Register<MyEvent, MyEventMessageMapper>();
         registry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
         var dispatcher = new Dispatcher(
-            new SpyCommandProcessor(),
-            [NewSubscription("orders", channelFactory), NewSubscription("billing", channelFactory)],
-            registry,
-            registry);
+commandProcessor: new SpyCommandProcessor(), subscriptions: [NewSubscription("orders", channelFactory), NewSubscription("billing", channelFactory)], messageMapperRegistry: registry, messageMapperRegistryAsync: registry, loggerFactory: Initializer.TestLoggerFactory);
         dispatcher.Receive();
         return dispatcher;
     }

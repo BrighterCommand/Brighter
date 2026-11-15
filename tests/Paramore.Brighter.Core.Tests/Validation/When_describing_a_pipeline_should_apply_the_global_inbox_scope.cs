@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -56,7 +56,7 @@ public class GlobalInboxScopeDescriptionTests
         // Arrange
         var registry = new SubscriberRegistry();
         registry.Add(requestType, handlerType);
-        using var builder = new PipelineBuilder<IRequest>(registry, new InboxConfiguration(scope: scope));
+        using var builder = new PipelineBuilder<IRequest>(registry,Initializer.TestLoggerFactory, new InboxConfiguration(scope: scope));
 
         // Act
         var description = Assert.Single(builder.Describe(requestType));

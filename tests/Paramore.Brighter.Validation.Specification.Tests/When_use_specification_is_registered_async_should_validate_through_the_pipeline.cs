@@ -37,7 +37,7 @@ public class UseSpecificationAsyncRegistrationTests
     public async Task When_use_specification_is_registered_async_should_validate_through_the_pipeline()
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         services.AddSingleton<HandlerReceipt>();
         services.AddSingleton<ISpecification<CancelOrder>>(CancelOrderSpecification.Create());
         services.AddBrighter().UseSpecification();

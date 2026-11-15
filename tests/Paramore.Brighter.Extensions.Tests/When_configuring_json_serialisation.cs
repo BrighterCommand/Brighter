@@ -55,7 +55,7 @@ public class When_configuring_json_serialisation : IDisposable
         var caseInsensitiveBefore = JsonSerialisationOptions.Options.PropertyNameCaseInsensitive;
         var writeIndentedBefore =  JsonSerialisationOptions.Options.WriteIndented;
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var builder = services.AddBrighter();
 
         // Act

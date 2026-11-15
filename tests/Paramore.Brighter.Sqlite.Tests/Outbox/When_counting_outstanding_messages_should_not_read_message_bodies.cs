@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -53,7 +53,7 @@ public class OutstandingCountWithoutMessageBodiesTests : IDisposable
         command.Parameters.AddWithValue("@Old", DateTimeOffset.UtcNow.AddMinutes(-10));
         command.Parameters.AddWithValue("@Recent", DateTimeOffset.UtcNow.AddMinutes(-1));
         command.ExecuteNonQuery();
-        _outbox = new SqliteOutbox(new RelationalDatabaseConfiguration(connectionString, outBoxTableName: "outbox"));
+        _outbox = new SqliteOutbox(configuration: new RelationalDatabaseConfiguration(connectionString, outBoxTableName: "outbox"), logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteOutbox>.Instance);
     }
 
     [Theory]

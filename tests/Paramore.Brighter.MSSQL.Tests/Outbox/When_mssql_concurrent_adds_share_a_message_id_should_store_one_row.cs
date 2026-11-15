@@ -46,7 +46,7 @@ public class MsSqlMessageIdConcurrentRetryTests
         var writes = Enumerable.Range(0, 8).Select(async _ =>
         {
             await start.Task;
-            await new MsSqlOutbox(store.OutboxConfig).AddAsync(
+            await new MsSqlOutbox(configuration: store.OutboxConfig, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<MsSqlOutbox>.Instance).AddAsync(
                 MsSqlMessageIdOutboxStore.Message(id, "same message"), new RequestContext());
         }).ToArray();
 

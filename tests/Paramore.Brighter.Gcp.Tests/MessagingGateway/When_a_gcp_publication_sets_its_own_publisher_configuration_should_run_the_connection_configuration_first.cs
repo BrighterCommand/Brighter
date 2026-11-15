@@ -57,7 +57,7 @@ public class GcpPublisherConfigurationCompositionTests
             }
         };
 
-        var factory = new GcpPubSubMessageProducerFactory(connection, [publication]);
+        var factory = new GcpPubSubMessageProducerFactory(connection: connection, publications: [publication], loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Act
         var producers = await factory.CreateAsync();

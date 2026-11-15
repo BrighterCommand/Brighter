@@ -1,4 +1,6 @@
-﻿using Google.Cloud.Spanner.Data;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using Google.Cloud.Spanner.Data;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.Spanner;
 
@@ -9,13 +11,13 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.Inbox;
 public class SpannerInboxTest : RelationalDatabaseInboxTests
 {
     protected override string DefaultConnectingString => Const.ConnectionString;
-    protected override string TableNamePrefix => Const.TablePrefix; 
+    protected override string TableNamePrefix => Const.TablePrefix;
     protected override bool BinaryMessagePayload => false;
     protected override bool JsonMessagePayload => false;
 
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
     {
-        return new SpannerInboxAsync(configuration);
+        return new SpannerInboxAsync(configuration, logger: NullLoggerFactory.Instance.CreateLogger<SpannerInboxAsync>());
     }
 
     protected override void CreateInboxTable(RelationalDatabaseConfiguration configuration)
@@ -28,7 +30,7 @@ public class SpannerInboxTest : RelationalDatabaseInboxTests
     }
 
     protected override void DeleteInboxTable(RelationalDatabaseConfiguration configuration)
-    { 
+    {
         using var connection = new SpannerConnection(configuration.ConnectionString);
         connection.Open();
         using var command = connection.CreateCommand();

@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Diagnostics;
 using System.Net.Mime;
 using System.Text.Json;
@@ -38,15 +40,15 @@ public class PostgreSqlMessageConsumerRequeueAsyncTests : IDisposable
         testHelper.SetupDatabase();
 
         _subscription = new PostgresSubscription<MyCommand>(new SubscriptionName(channelName),
-            new ChannelName(_topic), 
+            new ChannelName(_topic),
             new RoutingKey(_topic),
             messagePumpType: MessagePumpType.Proactor);
-        
+
         _producerRegistry = new PostgresProducerRegistryFactory(
             new PostgresMessagingGatewayConnection(testHelper.Configuration),
-            [new PostgresPublication {Topic = new RoutingKey(_topic)}]
-        ).CreateAsync().Result;
-        _channelFactory = new PostgresChannelFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration));
+            [new PostgresPublication {Topic = new RoutingKey(_topic)}],
+            loggerFactory: NullLoggerFactory.Instance).CreateAsync().Result;
+        _channelFactory = new PostgresChannelFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration), loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Theory]
@@ -84,7 +86,7 @@ public class PostgreSqlMessageConsumerRequeueAsyncTests : IDisposable
         Assert.Equal(_message.Id, requeuedMessage.Id);
         Assert.Equal(_message.Body.Value, requeuedMessage.Body.Value);
     }
-        
+
     public void Dispose()
     {
         _producerRegistry.Dispose();

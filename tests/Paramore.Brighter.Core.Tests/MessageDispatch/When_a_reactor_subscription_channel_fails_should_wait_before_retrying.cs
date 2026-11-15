@@ -58,7 +58,7 @@ public class ReactorSubscriptionChannelFailureDelayTests
         using var registry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()), null);
         registry.Register<MyEvent, MyEventMessageMapper>();
-        await using var dispatcher = new Dispatcher(new SpyCommandProcessor(), [subscription], registry);
+        await using var dispatcher = new Dispatcher(commandProcessor: new SpyCommandProcessor(), subscriptions: [subscription], messageMapperRegistry: registry, loggerFactory: Initializer.TestLoggerFactory);
 
         //Act
         dispatcher.Receive();

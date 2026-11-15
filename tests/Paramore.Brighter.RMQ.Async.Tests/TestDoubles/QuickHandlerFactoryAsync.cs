@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 

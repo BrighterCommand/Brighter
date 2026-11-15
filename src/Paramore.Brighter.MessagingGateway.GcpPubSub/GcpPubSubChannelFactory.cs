@@ -1,6 +1,7 @@
 ﻿using Google.Api.Gax.Grpc;
 using Google.Cloud.PubSub.V1;
 using Grpc.Core;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
@@ -11,10 +12,11 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// on the Pub/Sub service.
 /// </summary>
 /// <param name="connection">The connection details for the Google Cloud Pub/Sub gateway.</param>
-public class GcpPubSubChannelFactory(GcpMessagingGatewayConnection connection)
-    : GcpPubSubMessageGateway(connection), IAmAChannelFactory
+/// <param name="loggerFactory">The factory used to create loggers.</param>
+public class GcpPubSubChannelFactory(GcpMessagingGatewayConnection connection, ILoggerFactory loggerFactory)
+    : GcpPubSubMessageGateway(connection, loggerFactory), IAmAChannelFactory
 {
-    private readonly GcpPubSubConsumerFactory _consumerFactory = new(connection);
+    private readonly GcpPubSubConsumerFactory _consumerFactory = new(connection, loggerFactory);
 
     /// <summary>
     /// Creates a synchronous <see cref="IAmAChannelSync"/> for the given subscription.
@@ -37,7 +39,7 @@ public class GcpPubSubChannelFactory(GcpMessagingGatewayConnection connection)
             await EnsureSubscriptionExistsAsync(pullSubscription);
 
             // Warn once, at channel creation, if the delivery budget cannot run down (R-11, R-26)
-            DeliveryBudgetDiagnostics.WarnIfUnenforceable(pullSubscription);
+            DeliveryBudgetDiagnostics.WarnIfUnenforceable(pullSubscription, LoggerFactory);
 
             // Create a synchronous channel, leveraging the consumer factory for the underlying GcpConsumer
             return new Channel(
@@ -77,7 +79,7 @@ public class GcpPubSubChannelFactory(GcpMessagingGatewayConnection connection)
         await EnsureSubscriptionExistsAsync(pullSubscription);
 
         // Warn once, at channel creation, if the delivery budget cannot run down (R-11, R-26)
-        DeliveryBudgetDiagnostics.WarnIfUnenforceable(pullSubscription);
+        DeliveryBudgetDiagnostics.WarnIfUnenforceable(pullSubscription, LoggerFactory);
 
         // Create an asynchronous channel, leveraging the consumer factory for the underlying GcpConsumer
         return new ChannelAsync(

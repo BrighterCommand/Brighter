@@ -2,7 +2,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql;
 
@@ -11,7 +10,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql;
 /// </summary>
 public partial class ChannelFactory : MsSqlMessagingGateway, IAmAChannelFactory, IAmAChannelFactoryWithScheduler
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<ChannelFactory>();
+    private readonly ILogger _logger;
     private readonly MsSqlMessageConsumerFactory _msSqlMessageConsumerFactory;
 
     /// <summary>
@@ -28,11 +27,13 @@ public partial class ChannelFactory : MsSqlMessagingGateway, IAmAChannelFactory,
     /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
     /// </summary>
     /// <param name="msSqlMessageConsumerFactory">The factory for creating MS SQL message consumers.</param>
+    /// <param name="logger">The logger.</param>
     /// <exception cref="ArgumentNullException">Thrown when the msSqlMessageConsumerFactory is null.</exception>
-    public ChannelFactory(MsSqlMessageConsumerFactory msSqlMessageConsumerFactory)
+    public ChannelFactory(MsSqlMessageConsumerFactory msSqlMessageConsumerFactory, ILogger<ChannelFactory> logger)
         : base(ConfigurationOf(msSqlMessageConsumerFactory))
     {
         _msSqlMessageConsumerFactory = msSqlMessageConsumerFactory;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     // The base call has to run before the field is set, and it needs the configuration the consumer
@@ -57,7 +58,7 @@ public partial class ChannelFactory : MsSqlMessagingGateway, IAmAChannelFactory,
         _msSqlMessageConsumerFactory.ValidateSubscription(msSqlSubscription, false);
         EnsureQueueStoreExists(msSqlSubscription.MakeChannels);
 
-        Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey.Value);
+        Log.MsSqlInputChannelFactoryCreateInputChannel(_logger, subscription.ChannelName, subscription.RoutingKey.Value);
         return new Channel(
             subscription.ChannelName,
             subscription.RoutingKey,
@@ -80,7 +81,7 @@ public partial class ChannelFactory : MsSqlMessagingGateway, IAmAChannelFactory,
         _msSqlMessageConsumerFactory.ValidateSubscription(msSqlSubscription, true);
         EnsureQueueStoreExists(msSqlSubscription.MakeChannels);
 
-        Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey.Value);
+        Log.MsSqlInputChannelFactoryCreateInputChannel(_logger, subscription.ChannelName, subscription.RoutingKey.Value);
         return new ChannelAsync(
             subscription.ChannelName,
             subscription.RoutingKey,
@@ -106,9 +107,9 @@ public partial class ChannelFactory : MsSqlMessagingGateway, IAmAChannelFactory,
         _msSqlMessageConsumerFactory.ValidateSubscription(msSqlSubscription, true);
         await EnsureQueueStoreExistsAsync(msSqlSubscription.MakeChannels, ct);
 
-        Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey.Value);
+        Log.MsSqlInputChannelFactoryCreateInputChannel(_logger, subscription.ChannelName, subscription.RoutingKey.Value);
         var channel = new ChannelAsync(
-            subscription.ChannelName, 
+            subscription.ChannelName,
             subscription.RoutingKey,
             _msSqlMessageConsumerFactory.CreateAsync(subscription),
             subscription.BufferSize);
@@ -122,4 +123,3 @@ public partial class ChannelFactory : MsSqlMessagingGateway, IAmAChannelFactory,
         public static partial void MsSqlInputChannelFactoryCreateInputChannel(ILogger logger, string? channelName, string topic);
     }
 }
-

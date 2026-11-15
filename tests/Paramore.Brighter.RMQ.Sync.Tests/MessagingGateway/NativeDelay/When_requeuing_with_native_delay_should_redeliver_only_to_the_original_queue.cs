@@ -51,10 +51,10 @@ public class RmqNativeDelayTests : IDisposable
     {
         //Arrange
         using var consumer = new RmqMessageConsumer(
-            CreateConnection(exchangeType), _queueName, _topic, isDurable: true);
+connection: CreateConnection(exchangeType), queueName: _queueName, routingKey: _topic, isDurable: true, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         using var otherConsumer = new RmqMessageConsumer(
-            CreateConnection(exchangeType), _otherQueueName, OtherRoutingKey(exchangeType), isDurable: true);
-        using var producer = new RmqMessageProducer(CreateConnection(exchangeType));
+connection: CreateConnection(exchangeType), queueName: _otherQueueName, routingKey: OtherRoutingKey(exchangeType), isDurable: true, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        using var producer = new RmqMessageProducer(connection: CreateConnection(exchangeType), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         consumer.Purge();
         otherConsumer.Purge();
@@ -92,8 +92,8 @@ public class RmqNativeDelayTests : IDisposable
     {
         //Arrange
         using var consumer = new RmqMessageConsumer(
-            CreateConnection(ExchangeType.Direct), _queueName, _topic, isDurable: true);
-        using var producer = new RmqMessageProducer(CreateConnection(ExchangeType.Direct));
+connection: CreateConnection(ExchangeType.Direct), queueName: _queueName, routingKey: _topic, isDurable: true, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        using var producer = new RmqMessageProducer(connection: CreateConnection(ExchangeType.Direct), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         consumer.Purge();
 
         var message = new DefaultMessageBuilder().SetTopic(_topic).Build();
@@ -127,9 +127,9 @@ public class RmqNativeDelayTests : IDisposable
         //Arrange
         var connection = CreateConnection(exchangeType);
         using var consumer = new RmqMessageConsumer(
-            connection, _queueName, _topic, isDurable: true);
+connection: connection, queueName: _queueName, routingKey: _topic, isDurable: true, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
-        using var producer = new RmqMessageProducer(connection);
+        using var producer = new RmqMessageProducer(connection: connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var message = new DefaultMessageBuilder().SetTopic(_topic).Build();
 
         //Act
@@ -155,13 +155,12 @@ public class RmqNativeDelayTests : IDisposable
     public void When_using_preprovisioned_retry_topology_should_honor_native_delay(OnMissingChannel makeChannels)
     {
         //Arrange
-        using (var setup = new RmqMessageConsumer(CreateConnection(ExchangeType.Direct), _queueName, _topic, isDurable: true))
+        using (var setup = new RmqMessageConsumer(connection: CreateConnection(ExchangeType.Direct), queueName: _queueName, routingKey: _topic, isDurable: true, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
         {
             setup.Purge();
         }
-        using var consumer = new RmqMessageConsumer(CreateConnection(ExchangeType.Direct), _queueName, _topic,
-            isDurable: true, makeChannels: makeChannels);
-        using var producer = new RmqMessageProducer(CreateConnection(ExchangeType.Direct));
+        using var consumer = new RmqMessageConsumer(connection: CreateConnection(ExchangeType.Direct), queueName: _queueName, routingKey: _topic, isDurable: true, makeChannels: makeChannels, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        using var producer = new RmqMessageProducer(connection: CreateConnection(ExchangeType.Direct), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var message = new DefaultMessageBuilder().SetTopic(_topic).Build();
         producer.Send(message);
         var received = Assert.Single(consumer.Receive(TimeSpan.FromSeconds(5)));
@@ -184,14 +183,13 @@ public class RmqNativeDelayTests : IDisposable
     public void When_retry_topology_is_missing_should_not_create_it_without_permission(OnMissingChannel makeChannels)
     {
         //Arrange
-        using (var setup = new RmqMessageConsumer(CreateConnection(ExchangeType.Direct), _queueName, _topic, isDurable: true))
+        using (var setup = new RmqMessageConsumer(connection: CreateConnection(ExchangeType.Direct), queueName: _queueName, routingKey: _topic, isDurable: true, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
         {
             setup.Purge();
         }
         using var inspection = _broker.CreateModel();
         inspection.ExchangeDelete($"{_exchangeName}.requeue");
-        using var consumer = new RmqMessageConsumer(CreateConnection(ExchangeType.Direct), _queueName, _topic,
-            isDurable: true, makeChannels: makeChannels);
+        using var consumer = new RmqMessageConsumer(connection: CreateConnection(ExchangeType.Direct), queueName: _queueName, routingKey: _topic, isDurable: true, makeChannels: makeChannels, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act
         var exception = Record.Exception(() => consumer.Receive(TimeSpan.FromMilliseconds(100)));
@@ -209,8 +207,8 @@ public class RmqNativeDelayTests : IDisposable
     public void When_requeuing_with_negative_delay_should_redeliver_immediately()
     {
         //Arrange
-        using var consumer = new RmqMessageConsumer(CreateConnection(ExchangeType.Direct), _queueName, _topic, isDurable: true);
-        using var producer = new RmqMessageProducer(CreateConnection(ExchangeType.Direct));
+        using var consumer = new RmqMessageConsumer(connection: CreateConnection(ExchangeType.Direct), queueName: _queueName, routingKey: _topic, isDurable: true, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        using var producer = new RmqMessageProducer(connection: CreateConnection(ExchangeType.Direct), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         consumer.Purge();
         var message = new DefaultMessageBuilder().SetTopic(_topic).Build();
         producer.Send(message);

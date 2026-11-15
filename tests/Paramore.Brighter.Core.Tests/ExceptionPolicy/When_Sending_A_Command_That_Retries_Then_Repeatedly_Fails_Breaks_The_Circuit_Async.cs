@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 {
-     public class CommandProcessorWithBothRetryAndCircuitBreakerAsync
+    public class CommandProcessorWithBothRetryAndCircuitBreakerAsync
     {
         private readonly CommandProcessor _commandProcessor;
         private Exception? _thirdException;
@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyMultiplePoliciesFailsWithDivideByZeroHandlerAsync>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddSingleton<MyMultiplePoliciesFailsWithDivideByZeroHandlerAsync>();
             container.AddSingleton<ExceptionPolicyHandlerAsync<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions()
@@ -42,8 +42,8 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             var retryPolicy = Policy
                 .Handle<DivideByZeroException>()
                 .WaitAndRetryAsync([
-                        TimeSpan.FromMilliseconds(10), 
-                        TimeSpan.FromMilliseconds(20), 
+                        TimeSpan.FromMilliseconds(10),
+                        TimeSpan.FromMilliseconds(20),
                         TimeSpan.FromMilliseconds(30)
                     ],
                     (exception, timeSpan) =>
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
                     onBreak: (exception, timespan, context) =>
                     {
                     },
-                    onReset: context =>  _context = context
+                    onReset: context => _context = context
                 );
 
             policyRegistry.Add("MyDivideByZeroRetryPolicyAsync", retryPolicy);
@@ -67,7 +67,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             MyMultiplePoliciesFailsWithDivideByZeroHandlerAsync.ReceivedCommand = false;
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
-                policyRegistry, new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+                policyRegistry, new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]

@@ -1,9 +1,9 @@
-﻿using System.Net;
+using Microsoft.Extensions.Logging.Abstractions;
+using System.Net;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using MQTTnet;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.MQTT;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Server;
 using Paramore.Test.Helpers.Base;
@@ -23,7 +23,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
     /// This class initializes an MQTT test server, configures message producers and consumers, and provides
     /// utility methods for managing the lifecycle of these components during tests.
     /// </remarks>
-    public abstract class MqttTestClassBase<T> : TestClassBase<T> 
+    public abstract class MqttTestClassBase<T> : TestClassBase<T>
         where T : class
     {
         protected static readonly MqttFactory s_mqttFactory = new();
@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
         protected MqttTestClassBase(string clientID, string topicPrefix, ITestOutputHelper testOutputHelper)
         : base(testOutputHelper)
         {
-            ApplicationLogging.LoggerFactory = LoggerFactory.Create(configure =>
+            var loggerFactory = LoggerFactory.Create(configure =>
             {
                 configure.Services.AddSingleton(TestOutputHelper);
                 configure.Services.AddSingleton<ITestOutputLoggingProvider, TestOutputLoggingProvider>();
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
             IPAddress serverIPAddress = IPAddress.Any;
             int serverPort = MqttTestServer.GetRandomServerPort();
 
-            MqttTestServer = MqttTestServer.CreateTestMqttServer(s_mqttFactory, true, ApplicationLogging.CreateLogger<T>(), serverIPAddress, serverPort, null, TestDisplayName);
+            MqttTestServer = MqttTestServer.CreateTestMqttServer(s_mqttFactory, true, loggerFactory.CreateLogger<T>(), serverIPAddress, serverPort, null, TestDisplayName);
 
             var mqttProducerConfig = new MqttMessagingGatewayProducerConfiguration
             {
@@ -65,7 +65,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
                 TopicPrefix = topicPrefix
             };
 
-            MqttMessagePublisher mqttMessagePublisher = new(mqttProducerConfig);
+            MqttMessagePublisher mqttMessagePublisher = new(mqttProducerConfig, loggerFactory: NullLoggerFactory.Instance);
             MessageProducerAsync = new MqttMessageProducer(mqttMessagePublisher, new Publication());
 
             MqttMessagingGatewayConsumerConfiguration mqttConsumerConfig = new()
@@ -76,7 +76,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
                 ClientID = clientID
             };
 
-            MessageConsumerAsync = new MqttMessageConsumer(mqttConsumerConfig);
+            MessageConsumerAsync = new MqttMessageConsumer(mqttConsumerConfig, loggerFactory: NullLoggerFactory.Instance);
         }
 
         /// <summary>
@@ -110,14 +110,14 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
         /// Releases the resources used by the <see cref="MqttTestClassBase{T}"/> instance.
         /// </summary>
         /// <param name="disposing">
-        /// A boolean value indicating whether the method is being called explicitly 
-        /// to release both managed and unmanaged resources (<c>true</c>), 
+        /// A boolean value indicating whether the method is being called explicitly
+        /// to release both managed and unmanaged resources (<c>true</c>),
         /// or by the finalizer to release only unmanaged resources (<c>false</c>).
         /// </param>
         /// <remarks>
-        /// This method ensures that all disposable components, such as the message producer, 
+        /// This method ensures that all disposable components, such as the message producer,
         /// message consumer, and MQTT test server, are properly disposed of when no longer needed.
-        /// It also calls the base class's <see cref="TestClassBase.Dispose(bool)"/> method to 
+        /// It also calls the base class's <see cref="TestClassBase.Dispose(bool)"/> method to
         /// perform additional cleanup operations.
         /// </remarks>
         protected override void Dispose(bool disposing)

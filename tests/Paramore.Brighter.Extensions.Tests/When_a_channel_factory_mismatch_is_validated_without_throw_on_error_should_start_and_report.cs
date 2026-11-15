@@ -47,7 +47,7 @@ public class ChannelFactoryMismatchThrowOnErrorFalseTests
         var actionLog = new List<string>();
         var dispatcher = new SpyDispatcher(actionLog);
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddConsumers(options =>
             {
                 options.DefaultChannelFactory = new ExtensionsNonMatchingChannelFactory();

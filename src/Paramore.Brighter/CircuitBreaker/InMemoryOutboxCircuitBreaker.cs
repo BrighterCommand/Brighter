@@ -30,7 +30,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.CircuitBreaker;
@@ -46,7 +45,7 @@ public partial class InMemoryOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private const string MAXIMUM_TRIP_DURATION_CAUSE = "maximum trip duration";
     private static readonly TimeSpan s_longestPermittedTripDuration = TimeSpan.FromHours(24);
 
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<InMemoryOutboxCircuitBreaker>();
+    private readonly ILogger _logger;
 
     private readonly OutboxCircuitBreakerOptions _outboxCircuitBreakerOptions;
     private readonly TimeSpan _maximumTripDuration;
@@ -65,11 +64,13 @@ public partial class InMemoryOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     /// <param name="timeProvider">The clock used to timestamp trips; defaults to <see cref="TimeProvider.System"/></param>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when MaximumTripDuration is not greater than zero and at most 24 hours</exception>
     public InMemoryOutboxCircuitBreaker(
+        ILogger<InMemoryOutboxCircuitBreaker> logger,
         OutboxCircuitBreakerOptions? options = null,
         IAmABrighterTracer? tracer = null,
         InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
         TimeProvider? timeProvider = null)
     {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _outboxCircuitBreakerOptions = options ?? new OutboxCircuitBreakerOptions();
         _maximumTripDuration = ValidatedMaximumTripDuration(_outboxCircuitBreakerOptions);
         _tracer = tracer;
@@ -170,11 +171,11 @@ public partial class InMemoryOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         var span = _tracer?.CreateCircuitBreakerSpan(new CircuitBreakerSpanInfo(CircuitBreakerSpanOperation.Reset, topic, 0), _instrumentationOptions);
         _tracer?.EndSpan(span);
 
-        Log.Reset(s_logger, topic.Value, resetCause);
+        Log.Reset(_logger, topic.Value, resetCause);
     }
 
     /// <summary>
-    /// If a topic exceeds a configurable failure threshold within a time window, mark it as "tripped" 
+    /// If a topic exceeds a configurable failure threshold within a time window, mark it as "tripped"
     /// </summary>
     /// <param name="topic">Name of the entity to circuit break</param>
     public void TripTopic(RoutingKey topic)
@@ -199,9 +200,9 @@ public partial class InMemoryOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         _tracer?.EndSpan(span);
 
         if (isReTrip)
-            Log.ReTripped(s_logger, topic.Value, cooldownCount);
+            Log.ReTripped(_logger, topic.Value, cooldownCount);
         else
-            Log.Tripped(s_logger, topic.Value, cooldownCount);
+            Log.Tripped(_logger, topic.Value, cooldownCount);
     }
 
     private static partial class Log
@@ -216,4 +217,3 @@ public partial class InMemoryOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         public static partial void Reset(ILogger logger, string topic, string resetCause);
     }
 }
-

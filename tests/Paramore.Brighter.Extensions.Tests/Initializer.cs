@@ -22,16 +22,14 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
+/// <summary>
+/// Provides the logger factory explicitly passed to tests that capture Brighter log events.
+/// </summary>
 internal static class Initializer
 {
     public static readonly ILoggerFactory Factory = new LoggerFactory();
-
-    [ModuleInitializer]
-    public static void Initialize() => ApplicationLogging.LoggerFactory = Factory;
 }

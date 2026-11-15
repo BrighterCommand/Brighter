@@ -41,7 +41,7 @@ public class ProviderDeclinesAlwaysNewWithoutConsultingAccessorTests
     public void When_the_ask_carries_always_new_the_provider_should_not_consult_the_accessor()
     {
         // Arrange
-        var context = new DefaultHttpContext { RequestServices = new ServiceCollection().BuildServiceProvider() };
+        var context = new DefaultHttpContext { RequestServices = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory).BuildServiceProvider() };
         var accessor = new RecordingHttpContextAccessor(context);
         var provider = new HttpContextScopeProvider(accessor);
 
@@ -57,7 +57,7 @@ public class ProviderDeclinesAlwaysNewWithoutConsultingAccessorTests
     public void When_the_ask_carries_join_ambient_the_provider_should_consult_the_accessor()
     {
         // Arrange
-        var requestServices = new ServiceCollection().BuildServiceProvider();
+        var requestServices = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory).BuildServiceProvider();
         var context = new DefaultHttpContext { RequestServices = requestServices };
         var accessor = new RecordingHttpContextAccessor(context);
         var provider = new HttpContextScopeProvider(accessor);

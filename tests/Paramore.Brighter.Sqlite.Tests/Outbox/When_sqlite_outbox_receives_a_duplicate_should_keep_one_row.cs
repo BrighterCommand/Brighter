@@ -53,7 +53,7 @@ public class SqliteOutboxDuplicateConstraintTests
     {
         //Arrange
         using var database = new SqliteConstraintDatabase(inbox: false, binary: binary, constraint: constraint);
-        var outbox = new SqliteOutbox(database.Configuration);
+        var outbox = new SqliteOutbox(configuration: database.Configuration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteOutbox>.Instance);
         var message = new Message(
             new MessageHeader(Id.Random(), new RoutingKey("test-topic"), MessageType.MT_EVENT),
             new MessageBody("original"));

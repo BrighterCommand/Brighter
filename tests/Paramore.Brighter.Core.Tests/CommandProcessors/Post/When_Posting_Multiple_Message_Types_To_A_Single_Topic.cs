@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -27,7 +27,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private readonly InMemoryOutbox _outbox;
         private readonly InternalBus _internalBus = new();
 
-        public CommandProcessorPostCommandMultiChannelTopicTests ()
+        public CommandProcessorPostCommandMultiChannelTopicTests()
         {
             _myCommand.Value = "Hello World";
 
@@ -36,23 +36,23 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             var cloudEventsType = new CloudEventsType("io.goparamore.brighter.mycommand");
             var otherEventsType = new CloudEventsType("io.goparamore.brighter.myothercommand");
-            
+
             var messageProducer = new InMemoryMessageProducer(
-                _internalBus, 
-                new Publication
+                _internalBus,
+                Initializer.TestLoggerFactory, new Publication
                 {
-                    Topic = routingKey, 
-                    Type = cloudEventsType, 
+                    Topic = routingKey,
+                    Type = cloudEventsType,
                     RequestType = typeof(MyCommand)
                 }
                 );
-            
+
             //This producer is for a different command type, but the same topic
             var otherMessageProducer = new InMemoryMessageProducer(
-                _internalBus, 
-                new Publication
+                _internalBus,
+                Initializer.TestLoggerFactory, new Publication
                 {
-                    Topic = routingKey, 
+                    Topic = routingKey,
                     Type = otherEventsType,
                     RequestType = typeof(MyOtherCommand)
                 });
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, type: cloudEventsType),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
-            
+
             _messageTwo = new Message(
                 new MessageHeader(_myOtherCommand.Id, routingKey, MessageType.MT_COMMAND, type: otherEventsType),
                 new MessageBody(JsonSerializer.Serialize(_myOtherCommand, JsonSerialisationOptions.Options))
@@ -70,9 +70,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory((mapperType) => mapperType switch
                 {
-                    var t when mapperType == typeof(MyCommandMessageMapper)   => new MyCommandMessageMapper(),
+                    var t when mapperType == typeof(MyCommandMessageMapper) => new MyCommandMessageMapper(),
                     var t when mapperType == typeof(MyOtherCommandMessageMapper) => new MyOtherCommandMessageMapper()
-                }), 
+                }),
                 null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
             messageMapperRegistry.Register<MyOtherCommand, MyOtherCommandMessageMapper>();
@@ -80,24 +80,24 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var resiliencePipeline = new ResiliencePipelineRegistry<string>().AddBrighterDefault();
             var messageProducers = new Dictionary<ProducerKey, IAmAMessageProducer>
             {
-                { new ProducerKey(routingKey, cloudEventsType), messageProducer }, 
+                { new ProducerKey(routingKey, cloudEventsType), messageProducer },
                 { new ProducerKey(routingKey, otherEventsType), otherMessageProducer }
             };
 
             var producerRegistry = new ProducerRegistry(messageProducers);
 
             var tracer = new BrighterTracer(timeProvider);
-            _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-            
+            _outbox = new InMemoryOutbox(timeProvider) { Tracer = tracer };
+
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-                producerRegistry, 
-                resiliencePipeline, 
+                producerRegistry,
+                resiliencePipeline,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _outbox
+                Initializer.TestLoggerFactory, _outbox
             );
 
             _commandProcessor = new CommandProcessor(
@@ -105,8 +105,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new DefaultPolicy(),
                 resiliencePipeline,
                 bus,
-                new InMemorySchedulerFactory()
-            );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]
@@ -116,13 +115,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _commandProcessor.Post(_myOtherCommand);
 
             Assert.True(_internalBus.Stream(new RoutingKey(Topic)).Any());
-            
+
             var message = _outbox.Get(_myCommand.Id, new RequestContext());
             Assert.NotNull(message);
-            
+
             var otherMessage = _outbox.Get(_myOtherCommand.Id, new RequestContext());
             Assert.NotNull(otherMessage);
-            
+
             Assert.Equal(_message, message);
             Assert.Equal(_messageTwo, otherMessage);
         }

@@ -26,8 +26,8 @@ public class CombinedProducerRegistryTests
             }
         };
 
-        var firstProducerFactory = new InMemoryMessageProducerFactory(bus, firstProducers, InstrumentationOptions.All);
-        var secondProducerFactory = new InMemoryMessageProducerFactory(bus, secondProducers, InstrumentationOptions.All);
+        var firstProducerFactory = new InMemoryMessageProducerFactory(bus, firstProducers, Initializer.TestLoggerFactory, InstrumentationOptions.All);
+        var secondProducerFactory = new InMemoryMessageProducerFactory(bus, secondProducers, Initializer.TestLoggerFactory, InstrumentationOptions.All);
 
         var combinedRegistryFactory = new CombinedProducerRegistryFactory(firstProducerFactory, secondProducerFactory);
         var producerRegistry = combinedRegistryFactory.Create();

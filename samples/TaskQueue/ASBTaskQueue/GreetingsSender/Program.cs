@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using Greetings.Ports.Commands;
 using Greetings.Ports.Events;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,33 +16,35 @@ namespace GreetingsSender
         {
             var serviceCollection = new ServiceCollection();
 
-            serviceCollection.AddLogging();
+            serviceCollection.AddLogging(logging => logging.AddConsole());
 
             //TODO: add your ASB qualified name here
             var asbClientProvider = new ServiceBusVisualStudioCredentialClientProvider("fim-development-bus.servicebus.windows.net");
 
-            var producerRegistry = new AzureServiceBusProducerRegistryFactory(
-                asbClientProvider,
-                [
-                    new AzureServiceBusPublication
-                    {
-                        Topic = new RoutingKey("greeting.event"),
-                    },
-                    new AzureServiceBusPublication
-                    {
-                        Topic = new RoutingKey("greeting.addGreetingCommand"),
-                    },
-                    new AzureServiceBusPublication
-                    {
-                        Topic = new RoutingKey("greeting.Asyncevent"),
-                    }
-                ]
-            ).Create();
-            
             serviceCollection.AddBrighter()
-                .AddProducers((config) =>
+                .AddProducers(provider =>
                 {
+                    var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+                    var producerRegistry = new AzureServiceBusProducerRegistryFactory(
+                        asbClientProvider,
+                        [
+                            new AzureServiceBusPublication
+                            {
+                                Topic = new RoutingKey("greeting.event"),
+                            },
+                            new AzureServiceBusPublication
+                            {
+                                Topic = new RoutingKey("greeting.addGreetingCommand"),
+                            },
+                            new AzureServiceBusPublication
+                            {
+                                Topic = new RoutingKey("greeting.Asyncevent"),
+                            }
+                        ],
+                        loggerFactory: loggerFactory).Create();
+                    var config = new ProducersConfiguration();
                     config.ProducerRegistry = producerRegistry;
+                    return config;
                 })
                 .AutoFromAssemblies();
 
@@ -61,12 +64,12 @@ namespace GreetingsSender
                 Console.WriteLine("Sending....");
                 var distroGreeting = new GreetingEvent("Paul - Distributed");
                 commandProcessor.DepositPost(distroGreeting);
-                
+
                 commandProcessor.Post(new GreetingEvent("Paul"));
                 commandProcessor.Post(new GreetingAsyncEvent("Paul - Async"));
 
                 commandProcessor.ClearOutbox([distroGreeting.Id.Value]);
-                
+
                 Console.WriteLine("Press q to Quit or any other key to continue");
 
                 var keyPress = Console.ReadKey();

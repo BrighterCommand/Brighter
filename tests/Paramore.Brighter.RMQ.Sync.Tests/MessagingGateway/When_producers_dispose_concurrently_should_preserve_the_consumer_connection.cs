@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -48,9 +48,9 @@ public class RmqConcurrentGatewayDisposalTests
         };
         var routingKey = new RoutingKey(Guid.NewGuid().ToString());
         using var consumer = new RmqMessageConsumer(connection, new ChannelName(Guid.NewGuid().ToString()),
-            routingKey, isDurable: true);
+            routingKey, isDurable: true, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         consumer.Purge();
-        var pool = new RmqMessageGatewayConnectionPool(connection.Name, connection.Heartbeat);
+        var pool = new RmqMessageGatewayConnectionPool(connection.Name, connection.Heartbeat, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var factory = new ConnectionFactory { Uri = connection.AmpqUri.Uri };
         var sharedConnection = pool.GetConnection(factory);
         var messages = Enumerable.Range(0, 8)
@@ -61,7 +61,7 @@ public class RmqConcurrentGatewayDisposalTests
         // Act
         await Task.WhenAll(messages.Select(message => Task.Run(() =>
         {
-            using var producer = new RmqMessageProducer(connection);
+            using var producer = new RmqMessageProducer(connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             producer.Send(message);
         }))).WaitAsync(TimeSpan.FromSeconds(30));
 

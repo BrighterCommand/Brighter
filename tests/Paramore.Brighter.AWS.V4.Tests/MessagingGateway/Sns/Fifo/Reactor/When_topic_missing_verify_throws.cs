@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 using Xunit;
@@ -31,7 +33,7 @@ public class AwsValidateMissingTopicTests
             {
                 MakeChannels = OnMissingChannel.Validate,
                 TopicAttributes = new SnsAttributes(type: SqsType.Fifo, tags: [new Tag { Key = "Environment", Value = "Test" }])
-            });
+            }, loggerFactory: NullLoggerFactory.Instance);
 
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
 

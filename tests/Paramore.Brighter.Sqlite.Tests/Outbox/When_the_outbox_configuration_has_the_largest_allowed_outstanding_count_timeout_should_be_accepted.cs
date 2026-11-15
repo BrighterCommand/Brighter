@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel <guilhermeaappel@gmail.com>
 
@@ -37,7 +37,7 @@ public class OutboxLargestOutstandingCountTimeoutTests
         var connectionProvider = new SqliteConnectionProvider(configuration);
 
         //Act
-        var exception = Record.Exception(() => new SqliteOutbox(configuration, connectionProvider));
+        var exception = Record.Exception(() => new SqliteOutbox(configuration: configuration, connectionProvider: connectionProvider, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteOutbox>.Instance));
 
         //Assert
         Assert.Null(exception);

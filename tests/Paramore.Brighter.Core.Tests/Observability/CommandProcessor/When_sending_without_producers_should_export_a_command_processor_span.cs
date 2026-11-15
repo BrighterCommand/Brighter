@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia <irakli.gabisonia94@gmail.com>
@@ -69,7 +69,8 @@ public class CommandProcessorWithoutProducersTracingTests
             .NoExternalBus()
             .ConfigureInstrumentation(provider.GetRequiredService<IAmABrighterTracer>(), InstrumentationOptions.RequestInformation)
             .RequestContextFactory(new InMemoryRequestContextFactory())
-            .RequestSchedulerFactory(new InMemorySchedulerFactory())
+            .RequestSchedulerFactory(new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory))
+            .ConfigureLogging(Initializer.TestLoggerFactory)
             .Build());
 
         return services.BuildServiceProvider();

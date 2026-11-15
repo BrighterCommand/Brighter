@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia <irakli.gabisonia94@gmail.com>
 
@@ -79,13 +79,11 @@ public class MessageTypeMismatchContinuationTests
 
         var contextFactory = new InMemoryRequestContextFactory();
         var processor = new Brighter.CommandProcessor(subscribers, handlers, contextFactory,
-            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         var channelName = new ChannelName("message-type-mismatch-continuation");
         IAmAMessagePump pump = pumpType == MessagePumpType.Reactor
-            ? new ServiceActivator.Reactor(processor, _ => typeof(RoutingCommand), mappers,
-                new EmptyMessageTransformerFactory(), contextFactory, new Channel(channelName, topic, consumer))
-            : new ServiceActivator.Proactor(processor, _ => typeof(RoutingCommand), mappers,
-                new EmptyMessageTransformerFactoryAsync(), contextFactory, new ChannelAsync(channelName, topic, consumer));
+            ? new ServiceActivator.Reactor(commandProcessor: processor, mapRequestType: _ => typeof(RoutingCommand), messageMapperRegistry: mappers, messageTransformerFactory: new EmptyMessageTransformerFactory(), requestContextFactory: contextFactory, channel: new Channel(channelName, topic, consumer), loggerFactory: Initializer.TestLoggerFactory)
+            : new ServiceActivator.Proactor(commandProcessor: processor, mapRequestType: _ => typeof(RoutingCommand), messageMapperRegistry: mappers, messageTransformerFactory: new EmptyMessageTransformerFactoryAsync(), requestContextFactory: contextFactory, channel: new ChannelAsync(channelName, topic, consumer), loggerFactory: Initializer.TestLoggerFactory);
 
         //Act
         Exception? exception = Record.Exception(pump.Run);

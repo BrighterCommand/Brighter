@@ -21,7 +21,7 @@ public class When_reading_tripped_topics_throws_should_report_tripped_topics_unr
         //Arrange
         var marker = $"unreadable-topics-{Guid.NewGuid():N}";
         var state = ActiveStateWithThreeFailedSweeps();
-        var check = new OutboxSweeperInvestigateHealthCheck(state, new TimedOutboxSweeperOptions(), () => new ThrowingOutboxCircuitBreaker(marker), 3);
+        var check = new OutboxSweeperInvestigateHealthCheck(state: state, options: new TimedOutboxSweeperOptions(), findCircuitBreaker: () => new ThrowingOutboxCircuitBreaker(marker), failureThreshold: 3, loggerFactory: Initializer.TestLoggerFactory);
 
         //Act
         HealthCheckResult result = default;
@@ -39,7 +39,7 @@ public class When_reading_tripped_topics_throws_should_report_tripped_topics_unr
         //Arrange
         var marker = $"unreadable-lookup-{Guid.NewGuid():N}";
         var state = ActiveStateWithThreeFailedSweeps();
-        var check = new OutboxSweeperInvestigateHealthCheck(state, new TimedOutboxSweeperOptions(), () => throw new InvalidOperationException(marker), 3);
+        var check = new OutboxSweeperInvestigateHealthCheck(state: state, options: new TimedOutboxSweeperOptions(), findCircuitBreaker: () => throw new InvalidOperationException(marker), failureThreshold: 3, loggerFactory: Initializer.TestLoggerFactory);
 
         //Act
         HealthCheckResult result = default;

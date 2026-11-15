@@ -20,24 +20,24 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         public PipelineGlobalInboxTests()
         {
             IAmAnInboxSync inbox = new InMemoryInbox(new FakeTimeProvider());
-            
+
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
-            
-            var container = new ServiceCollection();
+
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyCommandHandler>(_ => new MyCommandHandler(_receivedMessages));
             container.AddSingleton(inbox);
             container.AddTransient<UseInboxHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
- 
+
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            
+
             _requestContext = new RequestContext();
-            
+
             InboxConfiguration inboxConfiguration = new();
 
-            _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory, inboxConfiguration);
-            PipelineBuilder<MyCommand>.ClearPipelineCache(); 
+            _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory, Initializer.TestLoggerFactory, inboxConfiguration);
+            PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
         [Fact]
@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         {
             //act
             _chainOfResponsibility = _chainBuilder.Build(new MyCommand(), _requestContext);
-            
+
             //assert
             var tracer = TracePipeline(_chainOfResponsibility.First());
             Assert.Contains("UseInboxHandler", tracer.ToString());
@@ -56,6 +56,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             firstInPipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
- 
+
     }
 }

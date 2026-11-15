@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
@@ -26,13 +28,13 @@ public class InboxProvisionerTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             inboxTableName: _freshTableName);
-        var runner = new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config);
+        var runner = new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config, loggerFactory: NullLoggerFactory.Instance);
         var provisioner = new SqliteInboxProvisioner(
             new SqliteBoxDetectionHelper(),
             new SqliteInboxMigrationCatalog(),
             new SqlitePayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: NullLoggerFactory.Instance);
 
         // Act
         await provisioner.ProvisionAsync();
@@ -76,13 +78,13 @@ WHERE [BoxTableName] = @BoxTableName AND [MigrationVersion] = @ExpectedVersion";
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             inboxTableName: _existingTableName);
-        var runner = new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config);
+        var runner = new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config, loggerFactory: NullLoggerFactory.Instance);
         var provisioner = new SqliteInboxProvisioner(
             new SqliteBoxDetectionHelper(),
             new SqliteInboxMigrationCatalog(),
             new SqlitePayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: NullLoggerFactory.Instance);
 
         // Act
         await provisioner.ProvisionAsync();

@@ -55,7 +55,7 @@ public class GcpStreamSubscriberSettingsPresetTests
                 builder.ChannelCredentials = ChannelCredentials.Insecure;
             });
 
-        var factory = new GcpPubSubConsumerFactory(connection);
+        var factory = new GcpPubSubConsumerFactory(connection: connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Act
         IAmAMessageConsumerSync? consumer = null;

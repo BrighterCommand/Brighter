@@ -74,7 +74,7 @@ public class DlqBackedGcpChannelIamToleranceTests
         var dlqChannelName = new ChannelName(dlqTopicName.Value);
 
         var connection = CreateConnection();
-        var channelFactory = new GcpPubSubChannelFactory(connection);
+        var channelFactory = new GcpPubSubChannelFactory(connection: connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var subscription = new GcpPubSubSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
@@ -90,7 +90,7 @@ public class DlqBackedGcpChannelIamToleranceTests
             },
             makeChannels: OnMissingChannel.Create,
             subscriptionMode: SubscriptionMode.Pull
-            // subscriberMember intentionally NOT set (members-unset case)
+        // subscriberMember intentionally NOT set (members-unset case)
         );
 
         IAmAChannelSync? channel = null;
@@ -170,7 +170,7 @@ public class DlqBackedGcpChannelIamToleranceTests
         const string member = "serviceAccount:test@brighter-test.iam.gserviceaccount.com";
 
         var connection = CreateConnection();
-        var channelFactory = new GcpPubSubChannelFactory(connection);
+        var channelFactory = new GcpPubSubChannelFactory(connection: connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var subscription = new GcpPubSubSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),

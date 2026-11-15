@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 asyncTransformerFactory,
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                new InMemoryOutbox(timeProvider) { Tracer = tracer },
+                Initializer.TestLoggerFactory, new InMemoryOutbox(timeProvider) { Tracer = tracer },
                 ownsRegistry: true,
                 ownsTransformerFactories: true);
 
@@ -80,7 +80,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 asyncTransformerFactory,
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                new InMemoryOutbox(timeProvider) { Tracer = tracer },
+                Initializer.TestLoggerFactory, new InMemoryOutbox(timeProvider) { Tracer = tracer },
                 ownsRegistry: true,
                 ownsTransformerFactories: true);
 
@@ -125,7 +125,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 asyncTransformerFactory,
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                new InMemoryOutbox(timeProvider) { Tracer = tracer },
+                Initializer.TestLoggerFactory, new InMemoryOutbox(timeProvider) { Tracer = tracer },
                 ownsRegistry: true,
                 ownsTransformerFactories: true);
 

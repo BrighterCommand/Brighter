@@ -12,7 +12,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 public class KafkaConsumerDeclareTests : IDisposable
 {
     private readonly ITestOutputHelper _output;
-    private readonly string _queueName = Guid.NewGuid().ToString(); 
+    private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly IAmAProducerRegistry _producerRegistry;
     private readonly IAmAMessageConsumerSync _consumer;
@@ -25,7 +25,7 @@ public class KafkaConsumerDeclareTests : IDisposable
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
-                Name = "Kafka Producer Send Test", 
+                Name = "Kafka Producer Send Test",
                 BootStrapServers = new[] {"localhost:9092"}
             },
             [
@@ -40,16 +40,16 @@ public class KafkaConsumerDeclareTests : IDisposable
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Assume
                 }
-            ]).Create();
- 
+            ], loggerFactory: Initializer.TestLoggerFactory).Create();
+
         _consumer = new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Consumer Test",
                     BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .Create(new KafkaSubscription<MyCommand>(
-                    channelName: new ChannelName(_queueName), 
+                    channelName: new ChannelName(_queueName),
                     routingKey: new RoutingKey(_topic),
                     groupId: groupId,
                     numOfPartitions: 1,
@@ -58,7 +58,7 @@ public class KafkaConsumerDeclareTests : IDisposable
                     makeChannels: OnMissingChannel.Create
                 )
             );
-             
+
     }
 
     [Fact]
@@ -66,9 +66,9 @@ public class KafkaConsumerDeclareTests : IDisposable
     {
         //Let topic propogate
         await Task.Delay(500);
-        
+
         var routingKey = new RoutingKey(_topic);
-            
+
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND)
             {
@@ -79,7 +79,7 @@ public class KafkaConsumerDeclareTests : IDisposable
 
         var producer = ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey));
         producer.Send(message);
-        
+
         //ensure the messages are sent
         ((KafkaMessageProducer)producer).Flush();
 
@@ -101,10 +101,10 @@ public class KafkaConsumerDeclareTests : IDisposable
                 maxTries++;
                 messages = _consumer.Receive(TimeSpan.FromMilliseconds(10000));
                 _consumer.Acknowledge(messages[0]);
-                    
+
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                     break;
-                        
+
             }
             catch (ChannelFailureException cfx)
             {

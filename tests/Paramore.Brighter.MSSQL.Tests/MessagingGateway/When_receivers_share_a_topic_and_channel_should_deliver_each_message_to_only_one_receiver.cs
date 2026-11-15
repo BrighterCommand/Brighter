@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -43,11 +43,11 @@ public class MsSqlCompetingReceiversTests : IDisposable
     public void When_receivers_share_a_topic_and_channel_should_deliver_each_message_to_only_one_receiver()
     {
         //Arrange
-        var factory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+        var factory = new ChannelFactory(msSqlMessageConsumerFactory: new MsSqlMessageConsumerFactory(msSqlConfiguration: _configuration, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<ChannelFactory>.Instance);
         using var first = factory.CreateSyncChannel(CreateSubscription("first", MessagePumpType.Reactor));
         using var second = factory.CreateSyncChannel(CreateSubscription("second", MessagePumpType.Reactor));
         using var producer = (IAmAMessageProducerSync)new MsSqlMessageProducerFactory(
-            _configuration, [new Publication { Topic = _topic }]).Create().Single().Value;
+msSqlConfiguration: _configuration, publications: [new Publication { Topic = _topic }], loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create().Single().Value;
         var firstMessage = CreateMessage("first message");
         var secondMessage = CreateMessage("second message");
         producer.Send(firstMessage);
@@ -68,11 +68,11 @@ public class MsSqlCompetingReceiversTests : IDisposable
     public async Task When_receivers_share_a_topic_and_channel_should_deliver_each_message_to_only_one_receiver_async()
     {
         //Arrange
-        var factory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+        var factory = new ChannelFactory(msSqlMessageConsumerFactory: new MsSqlMessageConsumerFactory(msSqlConfiguration: _configuration, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<ChannelFactory>.Instance);
         using var first = await factory.CreateAsyncChannelAsync(CreateSubscription("first", MessagePumpType.Proactor));
         using var second = await factory.CreateAsyncChannelAsync(CreateSubscription("second", MessagePumpType.Proactor));
         await using var producer = (IAmAMessageProducerAsync)(await new MsSqlMessageProducerFactory(
-            _configuration, [new Publication { Topic = _topic }]).CreateAsync()).Single().Value;
+msSqlConfiguration: _configuration, publications: [new Publication { Topic = _topic }], loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync()).Single().Value;
         var firstMessage = CreateMessage("first message");
         var secondMessage = CreateMessage("second message");
         await producer.SendAsync(firstMessage);

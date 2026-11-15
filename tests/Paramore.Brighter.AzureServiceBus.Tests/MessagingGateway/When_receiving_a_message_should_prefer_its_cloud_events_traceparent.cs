@@ -55,7 +55,7 @@ public class AzureServiceBusCloudEventsTraceParentPrecedenceTests
                 ["Diagnostic-Id"] = diagnosticId!
             });
         await using var client = new InMemoryServiceBusClient(native);
-        var factory = new AzureServiceBusConsumerFactory(client);
+        var factory = new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
             subscriptionName: new SubscriptionName("orders-subscription"),
             channelName: new ChannelName("orders-channel"),

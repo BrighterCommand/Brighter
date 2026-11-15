@@ -51,8 +51,8 @@ public class When_the_gauges_are_observed_after_many_sweeps_and_topics_should_ke
         using var metrics = new ServiceCollection().AddMetrics().BuildServiceProvider();
         var meterFactory = metrics.GetRequiredService<IMeterFactory>();
         var state = new OutboxSweeperState(new FakeTimeProvider());
-        var breaker = new InMemoryOutboxCircuitBreaker();
-        var meter = new SweeperMeter(meterFactory, state, () => breaker);
+        var breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
+        var meter = new SweeperMeter(meterFactory: meterFactory, state: state, findCircuitBreaker: () => breaker, loggerFactory: Initializer.TestLoggerFactory);
         var attributeSets = new Dictionary<string, HashSet<string>>();
         using var listener = new MeterListener();
         listener.InstrumentPublished = (instrument, l) =>

@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 
                 throw new ConfigurationException($"No mapper found for {type.Name}");
             }), null);
-            
+
             messageMapperRegistry.Register<MyRequest, MyRequestMessageMapper>();
             messageMapperRegistry.Register<MyResponse, MyResponseMessageMapper>();
 
@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             {
                 new Subscription<MyResponse>()
             };
-            
+
             var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
                 .AddBrighterDefault();
 
@@ -51,21 +51,21 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { 
-                    routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication {Topic = routingKey, RequestType = typeof(MyRequest)})
+                {
+                    routingKey, new InMemoryMessageProducer(new InternalBus(), Initializer.TestLoggerFactory, new Publication {Topic = routingKey, RequestType = typeof(MyRequest)})
                 }
             });
 
             var tracer = new BrighterTracer(fakeTimeProvider);
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-                producerRegistry, 
-                resiliencePipelineRegistry, 
+                producerRegistry,
+                resiliencePipelineRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                new InMemoryOutbox( fakeTimeProvider) {Tracer = tracer}
+                Initializer.TestLoggerFactory, new InMemoryOutbox( fakeTimeProvider) {Tracer = tracer}
             );
 
             _commandProcessor = new CommandProcessor(
@@ -76,10 +76,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 resiliencePipelineRegistry,
                 bus,
                 replySubscriptions:replySubs,
-                responseChannelFactory: new InMemoryChannelFactory(new InternalBus(), TimeProvider.System),
-                requestSchedulerFactory: new InMemorySchedulerFactory()
-            );
-           
+                responseChannelFactory: new InMemoryChannelFactory(new InternalBus(), TimeProvider.System, loggerFactory: Initializer.TestLoggerFactory),
+                requestSchedulerFactory: new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                loggerFactory: Initializer.TestLoggerFactory);
+
             PipelineBuilder<MyRequest>.ClearPipelineCache();
         }
 
@@ -90,7 +90,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             var exception = Catch.Exception(() => _commandProcessor.Call<MyRequest, MyResponse>(
                 _myRequest, timeOut: TimeSpan.FromMilliseconds(0))
             );
-            
+
             //should throw an exception as we require a timeout to be set
             Assert.IsType<InvalidOperationException>(exception);
         }

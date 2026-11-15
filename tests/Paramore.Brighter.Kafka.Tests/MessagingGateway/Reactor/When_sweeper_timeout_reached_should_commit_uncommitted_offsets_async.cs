@@ -48,7 +48,7 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsets : IAsyncDis
     {
         var groupId = Uuid.New().ToString("N");
         _output = output;
-        
+
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
@@ -67,7 +67,7 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsets : IAsyncDis
                 RequestTimeoutMs = 2000,
                 MakeChannels = OnMissingChannel.Create
             }
-            ]).Create();
+            ], loggerFactory: Initializer.TestLoggerFactory).Create();
 
         // Create a fake time provider to control time in the test
         _fakeTimeProvider = new FakeTimeProvider();
@@ -80,8 +80,8 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsets : IAsyncDis
             commitBatchSize: 20,  //Large commit batch size to ensure sweeper is triggered
             sweepUncommittedOffsetsInterval: TimeSpan.FromSeconds(30),
             messagePumpType: MessagePumpType.Proactor,
-            numOfPartitions: 1, 
-            replicationFactor: 1, 
+            numOfPartitions: 1,
+            replicationFactor: 1,
             makeChannels: OnMissingChannel.Create) { TimeProvider = _fakeTimeProvider };
 
         _consumer = (KafkaMessageConsumer) new KafkaMessageConsumerFactory(
@@ -89,7 +89,7 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsets : IAsyncDis
                 {
                     Name = "Kafka Consumer Test",
                     BootStrapServers = ["localhost:9092"]
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .Create(subscription);
     }
 
@@ -99,10 +99,10 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsets : IAsyncDis
         //Arrange
         //allow time for topic to propagate
         Task.Delay(1000).GetAwaiter().GetResult();
-        
+
         var routingKey = new RoutingKey(_topic);
         var producerAsync = _producerRegistry.LookupSyncBy(routingKey);
-            
+
         //send 5 messages to Kafka (less than the batch size of 20)
         var sentMessages = new string[5];
         for (int i = 0; i < 5; i++)
@@ -114,7 +114,7 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsets : IAsyncDis
                 new MessageBody($"test content [{_queueName}]")));
             sentMessages[i] = msgId;
         }
-        
+
         //We should not need to flush, as the async does not queue work - but in case this changes
         ((KafkaMessageProducer)producerAsync).Flush();
 
@@ -160,7 +160,7 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsets : IAsyncDis
                     _consumer.Acknowledge(messages[0]);
                     return messages[0];
                 }
-                
+
                 //wait before retry
                 Task.Delay(1000).GetAwaiter().GetResult();
             }

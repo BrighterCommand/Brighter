@@ -42,8 +42,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 {
     /// <summary>
     /// Class RmqMessageConsumer.
-    /// The <see cref="RmqMessageConsumer"/> is used on the server to receive messages from the broker. It abstracts away the details of 
-    /// inter-process communication tasks from the server. It handles subscription establishment, request reception and dispatching, 
+    /// The <see cref="RmqMessageConsumer"/> is used on the server to receive messages from the broker. It abstracts away the details of
+    /// inter-process communication tasks from the server. It handles subscription establishment, request reception and dispatching,
     /// result sending, and error handling.
     /// <remarks>This version of the consumer supports the RMQ V6 Client and its blocking API. For support of the V7 non-blocking API, please use
     /// the package Paramore.Brighter.MessagingGateway.RMQ.Async.
@@ -54,7 +54,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <inheritdoc />
         public MessagingSystem MessagingSystem => MessagingSystem.RabbitMQ;
 
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
+        private readonly ILogger _logger;
+        private readonly RmqMessageCreator _messageCreator;
 
         private PullConsumer? _consumer;
         private int _disposed;
@@ -93,11 +94,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <param name="maxQueueLength">How lare can the buffer grow before we stop accepting new work?</param>
         /// <param name="makeChannels">Should we validate, or create missing channels</param>
         /// <param name="scheduler">Optional scheduler for delayed message delivery when native delay is not supported</param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger.</param>
         public RmqMessageConsumer(
             RmqMessagingGatewayConnection connection,
             ChannelName queueName,
             RoutingKey routingKey,
             bool isDurable,
+            ILoggerFactory loggerFactory,
             bool highAvailability = false,
             int batchSize = 1,
             ChannelName? deadLetterQueueName = null,
@@ -106,7 +109,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             int? maxQueueLength = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             IAmAMessageScheduler? scheduler = null)
-            : this(connection, queueName, new RoutingKeys([routingKey]), isDurable, highAvailability,
+            : this(connection, queueName, new RoutingKeys([routingKey]), isDurable, loggerFactory, highAvailability,
                 batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, maxQueueLength, makeChannels, scheduler)
         {
         }
@@ -126,11 +129,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <param name="maxQueueLength">The maximum number of messages on the queue before we begin to reject publication of messages</param>
         /// <param name="makeChannels">Should we validate or create missing channels</param>
         /// <param name="scheduler">Optional scheduler for delayed message delivery when native delay is not supported</param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger.</param>
         public RmqMessageConsumer(
             RmqMessagingGatewayConnection connection,
             ChannelName queueName,
             RoutingKeys routingKeys,
             bool isDurable,
+            ILoggerFactory loggerFactory,
             bool highAvailability = false,
             int batchSize = 1,
             ChannelName? deadLetterQueueName = null,
@@ -139,8 +144,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             int? maxQueueLength = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             IAmAMessageScheduler? scheduler = null)
-            : base(connection)
+            : base(connection, loggerFactory)
         {
+            _logger = loggerFactory.CreateBrighterLogger<RmqMessageConsumer>();
+            _messageCreator = new RmqMessageCreator(LoggerFactory.CreateBrighterLogger<RmqMessageCreator>());
             _queueName = queueName;
             _routingKeys = routingKeys;
             _isDurable = isDurable;
@@ -168,13 +175,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             try
             {
                 EnsureBroker();
-                Log.AcknowledgingMessage(s_logger, message.Id.Value, deliveryTag);
+                Log.AcknowledgingMessage(_logger, message.Id.Value, deliveryTag);
                 //NOTE: Ensure Broker will create a channel if it is not already created
                 Channel!.BasicAck(deliveryTag, false);
             }
             catch (Exception exception)
             {
-                Log.ErrorAcknowledgingMessage(s_logger, exception, message.Id.Value, deliveryTag);
+                Log.ErrorAcknowledgingMessage(_logger, exception, message.Id.Value, deliveryTag);
                 throw;
             }
         }
@@ -188,7 +195,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             try
             {
                 EnsureChannel();
-                Log.PurgingChannel(s_logger, _queueName.Value);
+                Log.PurgingChannel(_logger, _queueName.Value);
                 _consumer?.stopForPurge(_consumerTag);
 
                 try
@@ -211,11 +218,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             }
             catch (Exception exception)
             {
-                Log.ErrorPurgingChannel(s_logger, exception, _queueName.Value);
+                Log.ErrorPurgingChannel(_logger, exception, _queueName.Value);
                 throw;
             }
         }
-        
+
         /// <summary>
         /// Nacks the specified message, releasing it back to RabbitMQ for redelivery.
         /// </summary>
@@ -227,12 +234,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             try
             {
                 EnsureBroker();
-                Log.NackingMessage(s_logger, message.Id.Value, deliveryTag);
+                Log.NackingMessage(_logger, message.Id.Value, deliveryTag);
                 Channel!.BasicNack(deliveryTag, false, true);
             }
             catch (Exception exception)
             {
-                Log.ErrorNackingMessage(s_logger, exception, message.Id.Value, deliveryTag);
+                Log.ErrorNackingMessage(_logger, exception, message.Id.Value, deliveryTag);
                 throw;
             }
         }
@@ -246,15 +253,15 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         public Message[] Receive(TimeSpan? timeOut = null)
         {
             ThrowIfDisposed();
-           
+
             if (Connection.Exchange is null)
                 throw new InvalidOperationException("RmqMessageConsumer.Receive - value of Connection.Exchange cannot be null");
-            
+
             if (Connection.AmpqUri is null)
                 throw new InvalidOperationException("RmqMessageConsumer.Receive - value of Connection.AmpqUri cannot be null");
 
-            Log.PreparingToRetrieveMessage(s_logger, _queueName.Value, string.Join(";", _routingKeys.Select(rk => rk.Value)), Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
-            
+            Log.PreparingToRetrieveMessage(_logger, _queueName.Value, string.Join(";", _routingKeys.Select(rk => rk.Value)), Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
+
             timeOut ??= TimeSpan.FromMilliseconds(5);
 
             try
@@ -269,17 +276,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     var messages = new Message[resultCount];
                     for (var i = 0; i < resultCount; i++)
                     {
-                        var message = RmqMessageCreator.CreateMessage(results[i]);
+                        var message = _messageCreator.CreateMessage(results[i]);
                         messages[i] = message;
 
-                        Log.ReceivedMessage(s_logger, _queueName.Value, string.Join(";", _routingKeys.Select(rk => rk.Value)), Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
+                        Log.ReceivedMessage(_logger, _queueName.Value, string.Join(";", _routingKeys.Select(rk => rk.Value)), Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
                     }
 
                     return messages;
                 }
                 else
                 {
-                    
+
                     return [_noopMessage];
                 }
             }
@@ -303,7 +310,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             return [_noopMessage]; // Default return in case of exception
         }
-        
+
         /// <summary>
         /// Rejects the specified message.
         /// </summary>
@@ -322,9 +329,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 EnsureBroker(_queueName);
                 var reasonString = reason is null ? nameof(RejectionReason.DeliveryError) : reason.RejectionReason.ToString();
                 var description = reason is null ? "unknown" : reason.Description ?? "unknown";
-            
-                Log.NoAckMessage(s_logger, message.Id.Value, message.DeliveryTag, reasonString, description);
-                
+
+                Log.NoAckMessage(_logger, message.Id.Value, message.DeliveryTag, reasonString, description);
+
                 if (reason?.RejectionReason == RejectionReason.Unacceptable && !RoutingKey.IsNullOrEmpty(InvalidMessageRoutingKey))
                 {
                     ForwardToInvalidChannel(message, reason);
@@ -338,7 +345,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             }
             catch (Exception exception)
             {
-                Log.ErrorNoAckMessage(s_logger, exception, message.Id.Value);
+                Log.ErrorNoAckMessage(_logger, exception, message.Id.Value);
                 throw;
             }
         }
@@ -351,8 +358,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <returns>True if the message was successfully requeued and the original acknowledged, false otherwise.</returns>
         /// <remarks>
         /// <para>
-        /// This operation is not atomic. The message is first published back to the queue, and only then 
-        /// is the original message acknowledged (removed from the queue). This ordering is intentional to 
+        /// This operation is not atomic. The message is first published back to the queue, and only then
+        /// is the original message acknowledged (removed from the queue). This ordering is intentional to
         /// minimize message loss risk:
         /// </para>
         /// <list type="bullet">
@@ -360,7 +367,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         ///     <description>If the publish fails, the original message remains on the queue (at-least-once delivery).</description>
         ///   </item>
         ///   <item>
-        ///     <description>If the ack fails after a successful publish, the message may be delivered twice 
+        ///     <description>If the ack fails after a successful publish, the message may be delivered twice
         ///     (duplicate risk, not loss). Consumers should be idempotent to handle this scenario.</description>
         ///   </item>
         /// </list>
@@ -372,7 +379,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             try
             {
-                Log.RequeueingMessage(s_logger, message.Id.Value, timeout.Value.TotalMilliseconds);
+                Log.RequeueingMessage(_logger, message.Id.Value, timeout.Value.TotalMilliseconds);
                 EnsureBroker(_queueName);
 
                 // Step 1: Publish the message back to the queue first.
@@ -380,7 +387,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 // timeout is guaranteed non-null here due to the ??= TimeSpan.Zero coalescing at the top of this method
                 if (DelaySupported || timeout <= TimeSpan.Zero)
                 {
-                    var rmqMessagePublisher = new RmqMessagePublisher(Channel!, Connection);
+                    var rmqMessagePublisher = new RmqMessagePublisher(Channel!, Connection, LoggerFactory);
                     rmqMessagePublisher.RequeueMessage(message, _queueName, timeout.Value);
                 }
                 else
@@ -393,15 +400,15 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 // If this fails after a successful publish, the message may be duplicated (not lost).
                 // Consumers should be idempotent to handle potential duplicates.
                 var deliveryTag = message.DeliveryTag;
-                Log.DeletingMessage(s_logger, message.Id.Value, deliveryTag);
-                
+                Log.DeletingMessage(_logger, message.Id.Value, deliveryTag);
+
                 Channel!.BasicAck(deliveryTag, false);
 
                 return true;
             }
             catch (Exception exception)
             {
-                Log.ErrorRequeueingMessage(s_logger, exception, message.Id.Value);
+                Log.ErrorRequeueingMessage(_logger, exception, message.Id.Value);
                 return false;
             }
         }
@@ -412,7 +419,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
 #pragma warning disable CS0420 // LazyInitializer handles the memory barrier for the volatile field
             LazyInitializer.EnsureInitialized(ref _requeueProducer, ref _requeueProducerInitialized,
-                ref _requeueProducerLock, () => new RmqMessageProducer(Connection)
+                ref _requeueProducerLock, () => new RmqMessageProducer(Connection, loggerFactory: LoggerFactory)
                 {
                     Scheduler = _scheduler
                 });
@@ -424,10 +431,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
             if (Connection.Exchange is null)
                 throw new InvalidOperationException("RmqMessageConsumer.EnsureChannel - value of Connection.Exchange cannot be null");
-            
+
             if (Connection.AmpqUri is null)
                 throw new InvalidOperationException("RmqMessageConsumer.EnsureChannel - value of Connection.AmpqUri cannot be null");
-            
+
             if (Channel == null || Channel.IsClosed)
             {
                 EnsureBroker(_queueName);
@@ -451,7 +458,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
                 CreateConsumer();
 
-                Log.CreatedChannel(s_logger, Channel!.ChannelNumber, _queueName.Value, string.Join(";", _routingKeys.Select(rk => rk.Value)), Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
+                Log.CreatedChannel(_logger, Channel!.ChannelNumber, _queueName.Value, string.Join(";", _routingKeys.Select(rk => rk.Value)), Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
             }
         }
 
@@ -483,18 +490,18 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
             if (Channel == null)
                 throw new InvalidOperationException("RmqMessageConsumer.CreateConsumer - value of Channel cannot be null");
-            
+
             if (Connection.Exchange is null)
                 throw new InvalidOperationException("RmqMessageConsumer.CreateConsumer - value of Connection.Exchange cannot be null");
-            
+
             if (Connection.AmpqUri is null)
                 throw new InvalidOperationException("RmqMessageConsumer.CreateConsumer - value of Connection.AmpqUri cannot be null");
-            
-            _consumer = new PullConsumer(Channel, _batchSize);
+
+            _consumer = new PullConsumer(Channel, _batchSize, LoggerFactory);
 
             Channel.BasicConsume(_queueName.Value, false, _consumerTag, false, false, SetQueueArguments(), _consumer);
 
-            Log.CreatedConsumer(s_logger, _queueName.Value, string.Join(";", _routingKeys.Select(rk => rk.Value)), Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
+            Log.CreatedConsumer(_logger, _queueName.Value, string.Join(";", _routingKeys.Select(rk => rk.Value)), Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
         }
 
         private void ForwardToInvalidChannel(Message message, MessageRejectionReason reason)
@@ -515,7 +522,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 message.Header.Bag[HeaderNames.REJECTION_TIMESTAMP] = DateTimeOffset.UtcNow.ToString("o");
                 message.Header.Topic = InvalidMessageRoutingKey!;
                 channel.ConfirmSelect();
-                var publisher = new RmqMessagePublisher(channel, Connection);
+                var publisher = new RmqMessagePublisher(channel, Connection, loggerFactory: LoggerFactory);
                 publisher.PublishMessage(message, mandatory: true);
                 channel.WaitForConfirmsOrDie(TimeSpan.FromSeconds(Connection.ContinuationTimeout));
                 if (Volatile.Read(ref returned) != null)
@@ -532,11 +539,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
             if (Channel == null)
                 throw new InvalidOperationException("RmqMessageConsumer.CreateQueue - value of Channel cannot be null");
-            
+
             if (Connection.AmpqUri is null)
                 throw new InvalidOperationException("RmqMessageConsumer.CreateQueue - value of Connection.AmpqUri cannot be null");
-            
-            Log.CreatingQueue(s_logger, _queueName.Value, Connection.AmpqUri.GetSanitizedUri());
+
+            Log.CreatingQueue(_logger, _queueName.Value, Connection.AmpqUri.GetSanitizedUri());
             Channel.QueueDeclare(_queueName.Value, _isDurable, false, false, SetQueueArguments());
             if (!RoutingKey.IsNullOrEmpty(InvalidMessageRoutingKey))
                 Channel.QueueDeclare(InvalidMessageRoutingKey.Value, _isDurable, false, false, new Dictionary<string, object>());
@@ -548,10 +555,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
             if (Channel == null)
                 throw new InvalidOperationException("RmqMessageConsumer.BindQueue - value of Channel cannot be null");
-            
+
             if (Connection.Exchange is null)
                 throw new InvalidOperationException("RmqMessageConsumer.BindQueue - value of Connection.Exchange cannot be null");
-            
+
             foreach (var key in _routingKeys)
             {
                 Channel.QueueBind(_queueName.Value, Connection.Exchange.Name, key, new Dictionary<string, object>());
@@ -567,17 +574,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
         private void HandleException(Exception exception, bool resetConnection = false)
         {
-            Log.ErrorListeningToQueue(s_logger, exception, _queueName.Value, string.Join(";", _routingKeys.Select(rk => rk.Value)), Connection.Exchange?.Name ?? string.Empty, Connection.AmpqUri?.GetSanitizedUri() ?? string.Empty);
+            Log.ErrorListeningToQueue(_logger, exception, _queueName.Value, string.Join(";", _routingKeys.Select(rk => rk.Value)), Connection.Exchange?.Name ?? string.Empty, Connection.AmpqUri?.GetSanitizedUri() ?? string.Empty);
             if (resetConnection) ResetConnectionToBroker();
             throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", exception);
         }
-        
+
         private void ValidateQueue()
         {
             if (Channel == null)
                 throw new InvalidOperationException("RmqMessageConsumer.ValidateQueue - value of Channel cannot be null");
-            
-            Log.ValidatingQueue(s_logger, _queueName.Value, Connection.AmpqUri!.GetSanitizedUri());
+
+            Log.ValidatingQueue(_logger, _queueName.Value, Connection.AmpqUri!.GetSanitizedUri());
 
             try
             {
@@ -718,10 +725,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             [LoggerMessage(LogLevel.Error, "RmqMessageConsumer: There was an error listening to queue {ChannelName} via exchange {RoutingKeys} via exchange {ExchangeName} on subscription {URL}")]
             public static partial void ErrorListeningToQueue(ILogger logger, Exception exception, string channelName, string routingKeys, string exchangeName, string url);
-            
+
             [LoggerMessage(LogLevel.Debug, "RmqMessageConsumer: Validating queue {ChannelName} on subscription {URL}")]
             public static partial void ValidatingQueue(ILogger logger, string channelName, string url);
         }
     }
 }
-

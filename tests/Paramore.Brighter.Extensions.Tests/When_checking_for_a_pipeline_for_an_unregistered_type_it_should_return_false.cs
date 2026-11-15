@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,7 +14,7 @@ public class TransformPipelineBuilderHasPipelineForUnregisteredTypeTests
     public void When_checking_for_a_pipeline_for_an_unregistered_type_it_should_return_false()
     {
         //arrange
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddSingleton(new MapperDisposalLog());
         collection.AddTransient<DisposableMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Transient });
@@ -22,7 +24,7 @@ public class TransformPipelineBuilderHasPipelineForUnregisteredTypeTests
         var mapperRegistry = new MessageMapperRegistry(mapperFactory, null);
         //no Register call for MinimalCommand
 
-        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new EmptyMessageTransformerFactory());
+        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new EmptyMessageTransformerFactory(), loggerFactory: NullLoggerFactory.Instance);
 
         //act + assert — no mapper registered and no default, so no pipeline
         Assert.False(pipelineBuilder.HasPipeline<MinimalCommand>());

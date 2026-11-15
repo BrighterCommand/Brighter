@@ -43,10 +43,7 @@ public class MsSqlMessageQueueLoggingTests
         var logs = new InMemoryQueueLogCapture();
         using var loggerFactory = LoggerFactory.Create(builder =>
             builder.SetMinimumLevel(LogLevel.Debug).AddProvider(logs));
-        var previousLoggerFactory = ApplicationLogging.LoggerFactory;
-        ApplicationLogging.LoggerFactory = loggerFactory;
 
-        try
         {
             // This closed generic has its own static logger, independent of other queue tests.
             RuntimeHelpers.RunClassConstructor(typeof(MsSqlMessageQueue<MsSqlMessageQueueLoggingTests>).TypeHandle);
@@ -66,7 +63,7 @@ public class MsSqlMessageQueueLoggingTests
 
                 //Act
                 _ = new MsSqlMessageQueue<MsSqlMessageQueueLoggingTests>(
-                    configuration, new MsSqlConnectionProvider(configuration));
+                    configuration, new MsSqlConnectionProvider(configuration), loggerFactory: loggerFactory);
 
                 //Assert
                 var entry = Assert.Single(logs.Entries);
@@ -89,10 +86,6 @@ public class MsSqlMessageQueueLoggingTests
                     Assert.DoesNotContain(connectionString, text);
                 });
             }
-        }
-        finally
-        {
-            ApplicationLogging.LoggerFactory = previousLoggerFactory;
         }
     }
 }

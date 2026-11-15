@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
@@ -8,8 +10,8 @@ using Paramore.Brighter.Transforms.Transformers;
 
 namespace Paramore.Brighter.Gcp.Tests.Transformers;
 
-[Trait("Category", "GCS")] 
-public class LargeMessagePayloadWrapTests : IDisposable 
+[Trait("Category", "GCS")]
+public class LargeMessagePayloadWrapTests : IDisposable
 {
     private string? _id;
     private WrapPipelineAsync<MyLargeCommand>? _transformPipeline;
@@ -24,14 +26,14 @@ public class LargeMessagePayloadWrapTests : IDisposable
     {
         //arrange
         TransformPipelineBuilderAsync.ClearPipelineCache();
-            
+
         var mapperRegistry =
             new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync(
                 _ => new MyLargeCommandMessageMapperAsync())
             );
-           
+
         mapperRegistry.RegisterAsync<MyLargeCommand, MyLargeCommandMessageMapperAsync>();
-            
+
         _myCommand = new MyLargeCommand(6000);
 
         _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
@@ -41,15 +43,15 @@ public class LargeMessagePayloadWrapTests : IDisposable
             Credential = GatewayFactory.GetCredential(),
             BucketName = _bucketName
         };
-        
-        _luggageStore = new GcsLuggageStore(_luggageStoreOptions);
+
+        _luggageStore = new GcsLuggageStore(_luggageStoreOptions, loggerFactory: NullLoggerFactory.Instance);
         _luggageStore.EnsureStoreExists();
 
         var transformerFactoryAsync = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
         _publication = new Publication { Topic = new RoutingKey("MyLargeCommand"), RequestType = typeof(MyLargeCommand) };
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, InstrumentationOptions.None);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, NullLoggerFactory.Instance, InstrumentationOptions.None);
     }
 
     [Fact]
@@ -64,7 +66,7 @@ public class LargeMessagePayloadWrapTests : IDisposable
         Assert.NotNull(message.Header.DataRef);
         _id = (string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
         Assert.Equal($"Claim Check {_id}", message.Body.Value);
-            
+
         Assert.True(await _luggageStore.HasClaimAsync(_id));
     }
 

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -47,7 +47,7 @@ public class AzureServiceBusQueueValidationTests
         // Arrange
         var administration = new InMemoryServiceBusAdministrationClient();
         await using var client = new InMemoryServiceBusClient(ServiceBusModelFactory.ServiceBusReceivedMessage(), administration);
-        var wrapper = new AdministrationClientWrapper(client);
+        var wrapper = new AdministrationClientWrapper(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var queueName = invalidSetting == "name" ? string.Empty : "orders";
         var idleTimeout = invalidSetting == "idle" ? TimeSpan.Zero : TimeSpan.FromMinutes(15);
         var configuration = new AzureServiceBusSubscriptionConfiguration

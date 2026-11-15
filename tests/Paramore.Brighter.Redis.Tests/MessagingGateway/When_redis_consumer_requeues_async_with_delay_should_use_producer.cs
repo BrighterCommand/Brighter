@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -52,7 +54,7 @@ public class When_redis_consumer_requeues_async_with_delay_should_use_producer :
         var queueName = new ChannelName($"Requeue-Async-Delay-Queue-{Guid.NewGuid()}");
 
         _scheduler = new SpySchedulerAsync();
-        _consumer = new RedisMessageConsumer(configuration, queueName, topic, _scheduler);
+        _consumer = new RedisMessageConsumer(configuration, queueName, topic, NullLoggerFactory.Instance, _scheduler);
 
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),

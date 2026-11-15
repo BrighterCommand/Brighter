@@ -75,16 +75,18 @@ var host = Host.CreateDefaultBuilder(args)
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
-
-        services.AddConsumers(options =>
+        services.AddConsumers(provider =>
         {
+            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection, loggerFactory: loggerFactory);
+            var options = new ConsumersOptions();
             options.Subscriptions = subscriptions;
             options.DefaultChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
+            return options;
         })
         // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
         // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-        .UseScheduler(new InMemorySchedulerFactory())
+        .UseScheduler(provider => new InMemorySchedulerFactory(provider.GetRequiredService<ILoggerFactory>()))
         .AutoFromAssemblies();
 
         services.AddHostedService<ServiceActivatorHostedService>();

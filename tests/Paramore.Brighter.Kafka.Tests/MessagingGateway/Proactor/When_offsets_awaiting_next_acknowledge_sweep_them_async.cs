@@ -41,14 +41,14 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            ]).CreateAsync().Result;
+            ], loggerFactory: Initializer.TestLoggerFactory).CreateAsync().Result;
 
         _consumer = (KafkaMessageConsumer) new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Consumer Test",
                     BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .CreateAsync(new KafkaSubscription<MyCommand>(
                     channelName: new ChannelName(_queueName),
                     routingKey: new RoutingKey(_topic),
@@ -65,10 +65,10 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
     {
         //allow time for topic to propogate
         await Task.Delay(1000);
-        
+
         var routingKey = new RoutingKey(_topic);
         var producerAsync = ((IAmAMessageProducerAsync)_producerRegistry.LookupAsyncBy(routingKey));
-            
+
         //send x messages to Kafka
         var sentMessages = new string[10];
         for (int i = 0; i < 10; i++)
@@ -80,7 +80,7 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
                 new MessageBody($"test content [{_queueName}]")));
             sentMessages[i] = msgId;
         }
-        
+
         //We should not need to flush, as the async does not queue work  - but in case this changes
         ((KafkaMessageProducer)producerAsync).Flush();
 
@@ -114,7 +114,7 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
 
        _consumer.Close();
        return;
-       
+
         async Task<Message> ReadMessageAsync()
         {
             Message[] messages = new []{new Message()};
@@ -132,7 +132,7 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
                         await _consumer.AcknowledgeAsync(messages[0]);
                         return messages[0];
                     }
-                    
+
                     //wait before retry
                     await Task.Delay(1000);
 

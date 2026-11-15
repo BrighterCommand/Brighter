@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -39,7 +39,7 @@ public class ScannedEventHandlersTests
     public void When_scanning_assemblies_repeatedly_should_preserve_distinct_event_handlers(bool addConsumers)
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         var builder = addConsumers ? services.AddConsumers() : services.AddBrighter();
         builder.HandlersFromAssemblies([typeof(ScannedNotification).Assembly], null);
         builder.HandlersFromAssemblies([typeof(ScannedNotification).Assembly], null);

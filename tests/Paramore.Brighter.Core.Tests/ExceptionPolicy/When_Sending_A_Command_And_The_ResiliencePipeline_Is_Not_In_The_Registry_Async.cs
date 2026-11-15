@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -23,16 +23,16 @@ public class CommandProcessorMissingResiliencePipelineFromRegistryAsyncTests
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyCommand, MyDoesNotFailResiliencePipelineHandlerAsync>();
 
-        var container = new ServiceCollection();
+        var container = new ServiceCollection().AddLogging();
         container.AddTransient<MyDoesNotFailResiliencePipelineHandlerAsync>();
         container.AddTransient<ResilienceExceptionPolicyHandlerAsync<MyCommand>>();
-        container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
+        container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
         var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
         MyDoesNotFailResiliencePipelineHandlerAsync.ReceivedCommand = false;
 
-        _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+        _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
     }
 
     //We have to catch the final exception that bubbles out after retry

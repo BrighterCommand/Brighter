@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.BoxProvisioning.MsSql;
 
@@ -37,8 +38,9 @@ public class MsSqlOutboxProvisioner : SqlBoxProvisioner<SqlConnection, SqlTransa
         IAmABoxMigrationCatalog catalog,
         IAmABoxPayloadModeValidator<SqlConnection> payloadValidator,
         IAmARelationalDatabaseConfiguration configuration,
-        IAmABoxMigrationRunner migrationRunner)
-        : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, BoxType.Outbox)
+        IAmABoxMigrationRunner migrationRunner,
+        ILoggerFactory loggerFactory)
+        : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, BoxType.Outbox, loggerFactory)
     {
     }
 

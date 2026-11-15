@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia <irakli.gabisonia94@gmail.com>
@@ -70,7 +70,7 @@ public class DispatcherUnopenedConsumerDisposalTests : IObserver<LogEvent>
             noOfPerformers: performerCount,
             timeOut: TimeSpan.FromMilliseconds(10),
             emptyChannelDelay: TimeSpan.FromMilliseconds(10));
-        using var dispatcher = new Dispatcher(new SpyCommandProcessor(), [subscription], registry, registry);
+        using var dispatcher = new Dispatcher(commandProcessor: new SpyCommandProcessor(), subscriptions: [subscription], messageMapperRegistry: registry, messageMapperRegistryAsync: registry, loggerFactory: Initializer.TestLoggerFactory);
         _dispatcher = dispatcher;
         using var observer = TestCorrelator.GetLogEventStreamFromCurrentContext().Subscribe(this);
 

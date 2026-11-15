@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -54,7 +54,7 @@ public class MsSqlFanOutTests : IDisposable
             SubscriberChannels = [new ChannelName("first"), new ChannelName("second")]
         };
         _producer = (MsSqlMessageProducer)new MsSqlMessageProducerFactory(
-            _configuration, [_publication]).Create().Single().Value;
+msSqlConfiguration: _configuration, publications: [_publication], loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create().Single().Value;
     }
 
     [Theory]
@@ -425,12 +425,14 @@ public class MsSqlFanOutTests : IDisposable
     {
         //Arrange
         await using var producer = (IAmAMessageProducerAsync)(await new MsSqlMessageProducerFactory(
-            _configuration, [_publication]).CreateAsync()).Single().Value;
-        var factory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+msSqlConfiguration: _configuration, publications: [_publication], loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync()).Single().Value;
+        var factory = new ChannelFactory(msSqlMessageConsumerFactory: new MsSqlMessageConsumerFactory(msSqlConfiguration: _configuration, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<ChannelFactory>.Instance);
         using var first = await factory.CreateAsyncChannelAsync(new MsSqlSubscription<Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand>(
-            new("first"), new("first"), _topic) { IsIndependentSubscriber = true });
+            new("first"), new("first"), _topic)
+        { IsIndependentSubscriber = true });
         using var second = factory.CreateAsyncChannel(new MsSqlSubscription<Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand>(
-            new("second"), new("second"), _topic) { IsIndependentSubscriber = true });
+            new("second"), new("second"), _topic)
+        { IsIndependentSubscriber = true });
         var message = CreateMessage();
 
         //Act
@@ -447,7 +449,7 @@ public class MsSqlFanOutTests : IDisposable
     public async Task When_rejecting_one_copy_should_leave_the_other_subscriber_untouched(bool async)
     {
         //Arrange
-        using var first = new MsSqlMessageConsumer(_configuration, "first", true, deadLetterRoutingKey: new RoutingKey("dead"));
+        using var first = new MsSqlMessageConsumer(msSqlConfiguration: _configuration, topic: "first", isIndependentSubscriber: true, deadLetterRoutingKey: new RoutingKey("dead"), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         using var second = Consumer("second");
         using var dead = Consumer("dead");
         var message = CreateMessage();
@@ -501,7 +503,7 @@ public class MsSqlFanOutTests : IDisposable
         TransactionScopeAsyncFlowOption.Enabled);
 
     private MsSqlMessageConsumer Consumer(string channel) =>
-        (MsSqlMessageConsumer)new MsSqlMessageConsumerFactory(_configuration).Create(
+        (MsSqlMessageConsumer)new MsSqlMessageConsumerFactory(msSqlConfiguration: _configuration, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(
             new MsSqlSubscription(new SubscriptionName(Guid.NewGuid().ToString()), new ChannelName(channel), _topic, requestType: typeof(Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand)) { IsIndependentSubscriber = true });
 
     private Message CreateMessage() => new(new MessageHeader(Id.Random(), _topic, MessageType.MT_EVENT), new MessageBody("payload"));

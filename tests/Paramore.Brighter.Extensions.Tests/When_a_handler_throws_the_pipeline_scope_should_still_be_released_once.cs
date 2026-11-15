@@ -43,7 +43,7 @@ public class HandlerThrowsPipelineScopeReleasedOnceTests
     {
         // Arrange
         var recorder = new CountingDisposableRecorder();
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddScoped<CountingDisposable>();
         services.AddSingleton(recorder);
         services.AddBrighter(options =>

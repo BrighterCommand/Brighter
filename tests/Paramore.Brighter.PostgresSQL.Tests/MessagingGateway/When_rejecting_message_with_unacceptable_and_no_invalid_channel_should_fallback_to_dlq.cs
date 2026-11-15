@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.Postgres;
@@ -58,12 +60,12 @@ public class PostgresMessageConsumerUnacceptableFallbackDlqTests : IDisposable
 
         var producerRegistry = new PostgresProducerRegistryFactory(
             connection,
-            [new PostgresPublication { Topic = topic }]
-        ).Create();
+            [new PostgresPublication { Topic = topic }],
+            loggerFactory: NullLoggerFactory.Instance).Create();
 
         _producer = (IAmAMessageProducerSync)producerRegistry.LookupBy(topic);
 
-        var consumerFactory = new PostgresConsumerFactory(connection);
+        var consumerFactory = new PostgresConsumerFactory(connection, loggerFactory: NullLoggerFactory.Instance);
         _consumer = consumerFactory.Create(sub);
 
         var dlqSub = new PostgresSubscription<MyCommand>(

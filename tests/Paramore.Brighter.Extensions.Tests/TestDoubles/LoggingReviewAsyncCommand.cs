@@ -1,6 +1,6 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2026 Irakli Gabisonia
+Copyright © 2026 Tom Longhurst
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,15 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Reflection;
-using Paramore.Brighter.Logging;
-using Xunit.Sdk;
+namespace Paramore.Brighter.Extensions.Tests.TestDoubles;
 
-namespace Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
-
-internal sealed class ResetApplicationLoggingAttribute : BeforeAfterTestAttribute
-{
-    public override void Before(MethodInfo methodUnderTest) => ApplicationLogging.LoggerFactory = Initializer.Factory;
-
-    public override void After(MethodInfo methodUnderTest) => ApplicationLogging.LoggerFactory = Initializer.Factory;
-}
+public sealed class LoggingReviewAsyncCommand() : Command(Id.Random());

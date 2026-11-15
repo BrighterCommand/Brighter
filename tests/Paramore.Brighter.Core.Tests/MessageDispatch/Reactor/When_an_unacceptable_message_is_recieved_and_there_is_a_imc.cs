@@ -49,32 +49,32 @@ public class MessagePumpUnacceptableMessageInvalidMessageChannelTests
         SpyRequeueCommandProcessor commandProcessor = new();
 
         _bus = new InternalBus();
-            
+
         _channel = new Channel(
-            new (Channel), 
-            _routingKey, 
-            new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, invalidMessageTopic: _invalidMessageKey, ackTimeout: TimeSpan.FromMilliseconds(1000))
+            new (Channel),
+            _routingKey,
+            new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, invalidMessageTopic: _invalidMessageKey, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory)
         );
-            
+
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
             null);
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-            
+
         _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyEvent),
-            messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel)
+            messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel, loggerFactory: Initializer.TestLoggerFactory)
         {
             Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
         };
 
         var myMessage = JsonSerializer.Serialize(new MyEvent());
         var unacceptableMessage = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
+            new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE),
             new MessageBody(myMessage)
         );
 
         _channel.Enqueue(unacceptableMessage);
-            
+
     }
 
     [Fact]

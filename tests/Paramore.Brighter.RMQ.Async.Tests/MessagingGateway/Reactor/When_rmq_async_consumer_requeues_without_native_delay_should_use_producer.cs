@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -60,7 +62,7 @@ public class RmqMessageConsumerDelayTests : IDisposable
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),
             new MessageBody("test content for delay requeue"));
 
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
 
         var subscription = new RmqSubscription(
             subscriptionName: new SubscriptionName("rmq-delay-producer-test"),
@@ -69,7 +71,7 @@ public class RmqMessageConsumerDelayTests : IDisposable
             requestType: typeof(MyCommand),
             messagePumpType: MessagePumpType.Reactor);
 
-        _channel = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection))
+        _channel = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection, loggerFactory: NullLoggerFactory.Instance))
             .CreateSyncChannel(subscription);
 
         new QueueFactory(rmqConnection, queueName, new RoutingKeys(topic), isDurable: subscription.IsDurable)

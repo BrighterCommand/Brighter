@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using Google.Api.Gax;
 using Google.Cloud.PubSub.V1;
+using System;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
@@ -12,10 +14,12 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// dedicated pull consumers, as well as ensuring the underlying subscription exists.
 /// </summary>
 /// <param name="connection">The connection details for the Google Cloud Pub/Sub gateway.</param>
-public class GcpPubSubConsumerFactory(GcpMessagingGatewayConnection connection)
-    : GcpPubSubMessageGateway(connection), IAmAMessageConsumerFactory
+/// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for the consumers.</param>
+public class GcpPubSubConsumerFactory(GcpMessagingGatewayConnection connection, ILoggerFactory loggerFactory)
+    : GcpPubSubMessageGateway(connection, loggerFactory), IAmAMessageConsumerFactory
 {
     private readonly GcpMessagingGatewayConnection _connection = connection;
+    private readonly ILoggerFactory _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
 
     /// <summary>
     /// Creates a synchronous message consumer for the given subscription.
@@ -82,13 +86,7 @@ public class GcpPubSubConsumerFactory(GcpMessagingGatewayConnection connection)
             // Create a new, non-shared consumer that uses the Pull API for each request,
             // wiring the Brighter rejection routing keys so Reject routes rather than discards.
             return new GcpPullMessageConsumer(
-                _connection,
-                subscriptionName,
-                pubSubSubscription.BufferSize,
-                pubSubSubscription.TimeProvider,
-                deadLetterRoutingKey: pubSubSubscription.DeadLetterRoutingKey,
-                invalidMessageRoutingKey: pubSubSubscription.InvalidMessageRoutingKey,
-                makeChannels: pubSubSubscription.MakeChannels);
+connection: _connection, subscriptionName: subscriptionName, batchSize: pubSubSubscription.BufferSize, timeProvider: pubSubSubscription.TimeProvider, deadLetterRoutingKey: pubSubSubscription.DeadLetterRoutingKey, invalidMessageRoutingKey: pubSubSubscription.InvalidMessageRoutingKey, makeChannels: pubSubSubscription.MakeChannels, loggerFactory: _loggerFactory);
         }
 
         // If not Pull, use Stream mode. Stream mode consumers are shared per subscription to manage
@@ -107,21 +105,15 @@ public class GcpPubSubConsumerFactory(GcpMessagingGatewayConnection connection)
         // Return a wrapper consumer that delegates to the shared stream consumer, wiring the
         // Brighter rejection routing keys so Reject routes rather than discards.
         return new GcpPubSubStreamMessageConsumer(
-            _connection,
-            consumer,
-            subscriptionName,
-            pubSubSubscription.TimeProvider,
-            deadLetterRoutingKey: pubSubSubscription.DeadLetterRoutingKey,
-            invalidMessageRoutingKey: pubSubSubscription.InvalidMessageRoutingKey,
-            makeChannels: pubSubSubscription.MakeChannels);
+connection: _connection, consumer: consumer, subscriptionName: subscriptionName, timeProvider: pubSubSubscription.TimeProvider, deadLetterRoutingKey: pubSubSubscription.DeadLetterRoutingKey, invalidMessageRoutingKey: pubSubSubscription.InvalidMessageRoutingKey, makeChannels: pubSubSubscription.MakeChannels, loggerFactory: _loggerFactory);
     }
 
     private GcpStreamConsumer CreateStreamConsumer(GcpPubSubSubscription subscription,
         Google.Cloud.PubSub.V1.SubscriptionName subscriptionName) =>
-        new(CreateSubscriberClient(
+        new(client: CreateSubscriberClient(
             subscriptionName,
             subscription.BufferSize * subscription.NoOfPerformers,
-            subscription.StreamingConfiguration));
+            subscription.StreamingConfiguration), loggerFactory: _loggerFactory);
 
     private Google.Cloud.PubSub.V1.SubscriberClient CreateSubscriberClient(Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
         long maxInFlightMessages,

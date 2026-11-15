@@ -30,11 +30,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _myResponse = new MyResponse(replyAddress) { ReplyValue = "Hello World" };
 
             InMemoryMessageProducer messageProducer = new(_internalBus,
-                new Publication
-                {
-                    Topic = producerRoutingKey,
-                    RequestType = typeof(MyResponse)
-                });
+            Initializer.TestLoggerFactory, new Publication
+            {
+                Topic = producerRoutingKey,
+                RequestType = typeof(MyResponse)
+            });
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _outbox
+                Initializer.TestLoggerFactory, _outbox
             );
 
             _commandProcessor = new CommandProcessor(
@@ -69,8 +69,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new DefaultPolicy(),
                 resiliencePipelineRegistry,
                 bus,
-                new InMemorySchedulerFactory()
-            );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]

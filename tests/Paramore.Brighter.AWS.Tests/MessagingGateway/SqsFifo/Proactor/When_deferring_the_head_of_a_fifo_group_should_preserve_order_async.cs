@@ -59,8 +59,7 @@ public class SqsFifoDeferredOrderingAsyncTests : IAsyncLifetime
             _provider.GetOrCreateChannelName(), OnMissingChannel.Create);
         _producer = await _provider.CreateProducerAsync(publication);
         using var pumpChannel = new QuitAfterRequeueChannelAsync(subscription.ChannelName, publication.Topic!,
-            new SqsMessageConsumer(GatewayFactory.CreateFactory(), publication.Topic!.Value,
-                queueAttributes: publication.QueueAttributes));
+            new SqsMessageConsumer(awsConnection: GatewayFactory.CreateFactory(), queueName: publication.Topic!.Value, queueAttributes: publication.QueueAttributes, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         var observerSubscription = _provider.CreateSubscription(publication.Topic!,
             subscription.ChannelName, OnMissingChannel.Create);
         _channel = await _provider.CreateChannelAsync(observerSubscription);

@@ -61,7 +61,7 @@ public class AzureServiceBusForwardingPurgeTests
                 DefaultMessageTimeToLive = TimeSpan.FromHours(1),
                 ForwardTo = queueName
             });
-            var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(provider));
+            var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider: provider, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
             var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
                 channelName: new ChannelName("a"), routingKey: new RoutingKey(topicName),
                 makeChannels: makeChannels,

@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Npgsql;
@@ -146,13 +148,13 @@ public class PostgreSqlMultiBoxGlobalToPerSchemaFlipTests : IAsyncLifetime
             schemaName: _schemaName);
         var runner = new PostgreSqlBoxMigrationRunner(
             new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30),
-            scope: scope);
+            scope: scope, loggerFactory: NullLoggerFactory.Instance);
         return new PostgreSqlOutboxProvisioner(
-            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlBoxDetectionHelper(logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlBoxDetectionHelper>()),
             new PostgreSqlOutboxMigrationCatalog(),
             new PostgreSqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: NullLoggerFactory.Instance);
     }
 
     private PostgreSqlInboxProvisioner BuildInboxProvisioner(MigrationHistoryScope scope)
@@ -163,13 +165,13 @@ public class PostgreSqlMultiBoxGlobalToPerSchemaFlipTests : IAsyncLifetime
             schemaName: _schemaName);
         var runner = new PostgreSqlBoxMigrationRunner(
             new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30),
-            scope: scope);
+            scope: scope, loggerFactory: NullLoggerFactory.Instance);
         return new PostgreSqlInboxProvisioner(
-            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlBoxDetectionHelper(logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlBoxDetectionHelper>()),
             new PostgreSqlInboxMigrationCatalog(),
             new PostgreSqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: NullLoggerFactory.Instance);
     }
 
     private async Task EnsureSchemaExistsAsync(string schemaName)

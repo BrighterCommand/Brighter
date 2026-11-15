@@ -26,7 +26,6 @@ using System;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Policies.Attributes;
 using Paramore.Brighter.Policies.Handlers;
@@ -41,17 +40,26 @@ namespace Paramore.Brighter
     /// We recommend deriving your concrete handler from <see cref="RequestHandler{T}"/> instead of implementing the interface as it provides boilerplate
     /// code for calling the next handler in sequence in the pipeline and describing the path
     /// By default the <see cref="Name"/> is based of the Type name, and the <see cref="DescribePath"/> adds that <see cref="Name"/> into the <see cref="IAmAPipelineTracer"/> list.
-    /// By default the <see cref="Handle"/> method will log the calls and forward the call to the handler's <see cref="Successor"/>. You should call 
+    /// By default the <see cref="Handle"/> method will log the calls and forward the call to the handler's <see cref="Successor"/>. You should call
     /// <code>
-    /// base.Handle(command); 
+    /// base.Handle(command);
     /// </code>
     /// within your derived class handler to forward the call to the next handler in the chain.
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
-    public abstract partial class RequestHandler<TRequest>(InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) : IHandleRequests<TRequest> where TRequest : class, IRequest
+    public abstract partial class RequestHandler<TRequest>(InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) : IHandleRequests<TRequest>, IRequireLoggerFactory where TRequest : class, IRequest
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RequestHandler<TRequest>>();
+        private ILogger? _logger;
+
+        private ILogger Logger => _logger ?? throw new InvalidOperationException(
+            "Call ConfigureLogging(loggerFactory) on each manually constructed handler before executing the chain.");
+
+        /// <summary>Configures relay logging for a manually constructed handler. Pipelines configure this automatically.</summary>
+        /// <param name="loggerFactory">The application-owned logger factory.</param>
+        /// <exception cref="ArgumentNullException">The factory is null.</exception>
+        public void ConfigureLogging(ILoggerFactory loggerFactory)
+            => _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateBrighterLogger<RequestHandler<TRequest>>();
 
         private IHandleRequests<TRequest>? _successor;
 
@@ -105,12 +113,12 @@ namespace Paramore.Brighter
         {
             if (Context?.Span != null)
             {
-                BrighterTracer.WriteHandlerEvent(Context.Span, this.GetType().Name, isAsync:false, instrumentationOptions, isSink:_successor == null);
-            }   
-            
+                BrighterTracer.WriteHandlerEvent(Context.Span, this.GetType().Name, isAsync: false, instrumentationOptions, isSink: _successor == null);
+            }
+
             if (_successor != null)
             {
-                Log.PassingRequestFromTo(s_logger, Name, _successor.Name);
+                Log.PassingRequestFromTo(Logger, Name, _successor.Name);
                 return _successor.Handle(request);
             }
 
@@ -122,7 +130,7 @@ namespace Paramore.Brighter
         /// This allows for graceful  degradation. Using the <see cref="FallbackPolicyAttribute"/> handler you can configure a policy to catch either all <see cref="Exception"/>'s or
         /// just <see cref="BrokenCircuitException"/> that occur later in the pipeline, and then call the <see cref="Fallback"/> path.
         /// Note that the <see cref="FallbackPolicyAttribute"/> target handler might be 'beginning of chain' and need to pass through to actual handler that is end of chain.
-        /// Because of this we need to call Fallback on the chain. Later step handlers don't know the context of failure so they cannot know if any operations they had, 
+        /// Because of this we need to call Fallback on the chain. Later step handlers don't know the context of failure so they cannot know if any operations they had,
         /// that could fail (such as DB access) were the cause of the failure chain being hit.
         /// Steps that don't know how to handle should pass through.
         /// Useful alternatives for Fallback are to try via the cache.
@@ -140,12 +148,12 @@ namespace Paramore.Brighter
         {
             if (Context?.Span != null)
             {
-                BrighterTracer.WriteHandlerEvent(Context.Span, $"{this.GetType().Name} Fallback", isAsync:false, instrumentationOptions, isSink:_successor == null);
-            }   
-            
+                BrighterTracer.WriteHandlerEvent(Context.Span, $"{this.GetType().Name} Fallback", isAsync: false, instrumentationOptions, isSink: _successor == null);
+            }
+
             if (_successor != null)
             {
-                Log.FallingBackFromTo(s_logger, Name, _successor.Name);
+                Log.FallingBackFromTo(Logger, Name, _successor.Name);
                 return _successor.Fallback(command);
             }
 
@@ -172,5 +180,9 @@ namespace Paramore.Brighter
             public static partial void FallingBackFromTo(ILogger logger, HandlerName handlerName, HandlerName nextHandler);
         }
     }
-}
 
+    internal interface IRequireLoggerFactory
+    {
+        void ConfigureLogging(ILoggerFactory loggerFactory);
+    }
+}

@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MySql
     /// <summary>
     /// A connection provider that uses the connection string to create a connection
     /// </summary>
-    public class MySqlTransactionProvider : RelationalDbTransactionProvider 
+    public class MySqlTransactionProvider : RelationalDbTransactionProvider
     {
         private readonly string _connectionString;
 
@@ -43,13 +43,13 @@ namespace Paramore.Brighter.MySql
         /// Initialise a new instance of MySql Connection provider from a connection string
         /// </summary>
         /// <param name="configuration">MySql Configuration</param>
-        public MySqlTransactionProvider(IAmARelationalDatabaseConfiguration configuration)
+        public MySqlTransactionProvider(IAmARelationalDatabaseConfiguration? configuration)
         {
             if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
                 throw new ArgumentNullException(nameof(configuration.ConnectionString));
             _connectionString = configuration!.ConnectionString;
         }
-        
+
         /// <summary>
         /// Commit the transaction
         /// </summary>
@@ -85,7 +85,7 @@ namespace Paramore.Brighter.MySql
             if (Connection.State != ConnectionState.Open) await Connection.OpenAsync();
             return Connection;
         }
-        
+
         /// <summary>
         /// Creates and opens a MySql Transaction
         /// This is a shared transaction and you should manage it through the unit of work
@@ -111,6 +111,6 @@ namespace Paramore.Brighter.MySql
                 Transaction = await ((MySqlConnection) Connection).BeginTransactionAsync(cancellationToken);
             return Transaction!;
         }
- 
+
     }
 }

@@ -45,14 +45,7 @@ public class ProactorOutboxClearContextTests
         var outstanding = new Message(new MessageHeader(Id.Random(), _outgoing, MessageType.MT_EVENT), new MessageBody("posted by the handler"));
         outbox.Add(outstanding, new RequestContext());
         var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
-            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { _outgoing, producer } }),
-            resiliencePipelines,
-            new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => null!), null),
-            new EmptyMessageTransformerFactory(),
-            new EmptyMessageTransformerFactoryAsync(),
-            new BrighterTracer(TimeProvider.System),
-            new FindPublicationByPublicationTopicOrRequestType(),
-            outbox);
+producerRegistry: new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { _outgoing, producer } }), resiliencePipelineRegistry: resiliencePipelines, mapperRegistry: new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => null!), null), messageTransformerFactory: new EmptyMessageTransformerFactory(), messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: new BrighterTracer(TimeProvider.System), publicationFinder: new FindPublicationByPublicationTopicOrRequestType(), outbox: outbox, loggerFactory: Initializer.TestLoggerFactory);
 
         var commandProcessor = new OutboxClearingCommandProcessor(mediator, outstanding.Id);
         var (pump, channel) = CreatePump(commandProcessor);
@@ -75,18 +68,19 @@ public class ProactorOutboxClearContextTests
     {
         var incomingBus = new InternalBus();
         var channel = new ChannelAsync(new("myChannel"), _incoming,
-            new InMemoryMessageConsumer(_incoming, incomingBus, new FakeTimeProvider(), ackTimeout: TimeSpan.FromMilliseconds(1000)));
+            new InMemoryMessageConsumer(topic: _incoming, bus: incomingBus, timeProvider: new FakeTimeProvider(), ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory));
 
         var mappers = new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync(_ => new MyCommandMessageMapperAsync()));
         mappers.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
 
-        var pump = new ServiceActivator.Proactor(commandProcessor, _ => typeof(MyCommand),
-            mappers, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel)
+        var pump = new ServiceActivator.Proactor(commandProcessor: commandProcessor, mapRequestType: _ => typeof(MyCommand), messageMapperRegistry: mappers, messageTransformerFactory: new EmptyMessageTransformerFactoryAsync(), requestContextFactory: new InMemoryRequestContextFactory(), channel: channel, loggerFactory: Initializer.TestLoggerFactory)
         {
-            Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 1
+            Channel = channel,
+            TimeOut = TimeSpan.FromMilliseconds(5000),
+            RequeueCount = 1
         };
 
-        var command = new TransformPipelineBuilderAsync(mappers, null, InstrumentationOptions.All)
+        var command = new TransformPipelineBuilderAsync(mapperRegistryAsync: mappers, messageTransformerFactoryAsync: null, instrumentationOptions: InstrumentationOptions.All, loggerFactory: Initializer.TestLoggerFactory)
             .BuildWrapPipeline<MyCommand>()
             .WrapAsync(new MyCommand(), new RequestContext(), new Publication { Topic = _incoming })
             .Result;

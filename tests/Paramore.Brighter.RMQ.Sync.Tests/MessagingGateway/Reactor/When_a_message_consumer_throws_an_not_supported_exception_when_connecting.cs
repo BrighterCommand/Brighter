@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
@@ -38,7 +40,7 @@ public class RmqMessageConsumerChannelFailureTests : IDisposable
 
     public RmqMessageConsumerChannelFailureTests()
     {
-        var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), 
+        var messageHeader = new MessageHeader(Guid.NewGuid().ToString(),
             new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND);
 
         messageHeader.UpdateHandledCount();
@@ -50,9 +52,9 @@ public class RmqMessageConsumerChannelFailureTests : IDisposable
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        _sender = new RmqMessageProducer(rmqConnection);
+        _sender = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
         var queueName = new ChannelName(Guid.NewGuid().ToString());
-            
+
         _badReceiver = new NotSupportedRmqMessageConsumer(rmqConnection,queueName, sentMessage.Header.Topic, false, 1, false);
 
         _sender.Send(sentMessage);
@@ -71,7 +73,7 @@ public class RmqMessageConsumerChannelFailureTests : IDisposable
             exceptionHappened = true;
             Assert.True((cfe.InnerException) is NotSupportedException);
         }
-            
+
         Assert.True(exceptionHappened);
     }
 

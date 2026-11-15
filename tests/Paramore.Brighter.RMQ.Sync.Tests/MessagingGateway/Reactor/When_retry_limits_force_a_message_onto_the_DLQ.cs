@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Mime;
@@ -35,7 +37,7 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
         //what do we send
         var myCommand = new MyDeferredCommand { Value = "Hello Requeue" };
         _message = new Message(
-            new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId, 
+            new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
                 contentType: contentType
             ),
             new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
@@ -68,12 +70,12 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
         //how do we send to the queue
         _sender = new RmqMessageProducer(rmqConnection, new RmqPublication
         {
-            Topic = routingKey, 
+            Topic = routingKey,
             RequestType = typeof(MyDeferredCommand)
-        });
+        }, loggerFactory: NullLoggerFactory.Instance);
 
         //set up our receiver
-        ChannelFactory channelFactory = new(new RmqMessageConsumerFactory(rmqConnection));
+        ChannelFactory channelFactory = new(new RmqMessageConsumerFactory(rmqConnection, loggerFactory: NullLoggerFactory.Instance));
         _channel = channelFactory.CreateSyncChannel(_subscription);
 
         //how do we handle a command
@@ -90,19 +92,19 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
             requestContextFactory: new InMemoryRequestContextFactory(),
             policyRegistry: new PolicyRegistry(),
             resilienceResiliencePipelineRegistry: new ResiliencePipelineRegistry<string>(),
-            requestSchedulerFactory: new InMemorySchedulerFactory()
-        );
+            requestSchedulerFactory: new InMemorySchedulerFactory(loggerFactory: NullLoggerFactory.Instance),
+            loggerFactory: NullLoggerFactory.Instance);
 
         //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
             null
         );
-            
+
         messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
-            
-        _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyDeferredCommand), messageMapperRegistry, 
-            new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel)
+
+        _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyDeferredCommand), messageMapperRegistry,
+            new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel, loggerFactory: NullLoggerFactory.Instance)
         {
             Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 0
         };
@@ -112,8 +114,8 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
             queueName: deadLetterQueueName,
             routingKey: deadLetterRoutingKey,
             isDurable: false,
-            makeChannels: OnMissingChannel.Assume
-        );
+            makeChannels: OnMissingChannel.Assume,
+            loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact(Skip = "Breaks due to fault in Task Scheduler running after context has closed")]
@@ -122,8 +124,8 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
     {
         //NOTE: This test is **slow** because it needs to ensure infrastructure and then wait whilst we requeue a message a number of times,
         //then propagate to the DLQ
-            
-        //start a message pump, let it create infrastructure 
+
+        //start a message pump, let it create infrastructure
         var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
         await Task.Delay(20000);
 
@@ -133,7 +135,7 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
         //Let the message be handled and deferred until it reaches the DLQ
         await Task.Delay(20000);
 
-        //send a quit message to the pump to terminate it 
+        //send a quit message to the pump to terminate it
         var quitMessage = MessageFactory.CreateQuitMessage(_subscription.RoutingKey);
         _channel.Enqueue(quitMessage);
 

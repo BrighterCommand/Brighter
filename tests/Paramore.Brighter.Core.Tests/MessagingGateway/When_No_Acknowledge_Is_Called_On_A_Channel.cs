@@ -38,14 +38,14 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
 
         public ChannelNackTests()
         {
-            IAmAMessageConsumerSync gateway = new InMemoryMessageConsumer(new RoutingKey(_routingKey), _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000));
+            IAmAMessageConsumerSync gateway = new InMemoryMessageConsumer(new RoutingKey(_routingKey), _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory);
 
             _channel = new Channel(new(ChannelName), _routingKey, gateway);
 
             var sentMessage = new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody("a test body"));
-            
+
             _bus.Enqueue(sentMessage);
         }
 
@@ -55,8 +55,8 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         {
             var receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(1000));
             _channel.Reject(receivedMessage);
-            
-            _timeProvider.Advance(TimeSpan.FromSeconds(2)); //allow for message to timeout if not rejected 
+
+            _timeProvider.Advance(TimeSpan.FromSeconds(2)); //allow for message to timeout if not rejected
 
             Assert.Empty(_bus.Stream(new RoutingKey(_routingKey)));
         }

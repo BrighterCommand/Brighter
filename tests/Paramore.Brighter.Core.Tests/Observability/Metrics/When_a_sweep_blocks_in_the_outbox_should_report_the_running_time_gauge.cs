@@ -52,14 +52,10 @@ public class SweeperRunningTimeGaugeTests
         using var provider = services.BuildServiceProvider();
         using var metrics = new ServiceCollection().AddMetrics().BuildServiceProvider();
         var meterFactory = metrics.GetRequiredService<IMeterFactory>();
-        var meter = new SweeperMeter(meterFactory, state);
+        var meter = new SweeperMeter(meterFactory: meterFactory, state: state, loggerFactory: Initializer.TestLoggerFactory);
         using var recorded = new RunningTimeListener(meterFactory);
         var sweeper = new TimedOutboxSweeper(
-            provider.GetRequiredService<IServiceScopeFactory>(),
-            new InMemoryLock(),
-            new TimedOutboxSweeperOptions { TimerInterval = 60, MinimumMessageAge = TimeSpan.Zero },
-            timeProvider: timeProvider,
-            state: state);
+serviceScopeFactory: provider.GetRequiredService<IServiceScopeFactory>(), distributedLock: new InMemoryLock(), options: new TimedOutboxSweeperOptions { TimerInterval = 60, MinimumMessageAge = TimeSpan.Zero }, timeProvider: timeProvider, state: state, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<TimedOutboxSweeper>(Initializer.TestLoggerFactory));
 
         try
         {
@@ -91,7 +87,7 @@ public class SweeperRunningTimeGaugeTests
         //Arrange
         using var metrics = new ServiceCollection().AddMetrics().BuildServiceProvider();
         var meterFactory = metrics.GetRequiredService<IMeterFactory>();
-        var meter = new SweeperMeter(meterFactory, state: null);
+        var meter = new SweeperMeter(meterFactory: meterFactory, state: null, loggerFactory: Initializer.TestLoggerFactory);
         using var recorded = new RunningTimeListener(meterFactory);
 
         //Act

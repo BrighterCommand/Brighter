@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
@@ -23,56 +23,55 @@ public class MessageDispatchRejectMessageExceptionTestsAsync
     {
         var subscriberRegistry = new SubscriberRegistry();
         subscriberRegistry.RegisterAsync<MyRejectedEvent, MyRejectedEventHandlerAsync>();
-        
-        var handlerFactory = new SimpleHandlerFactory( 
+
+        var handlerFactory = new SimpleHandlerFactory(
             (type) => throw new ConfigurationException(),
-            (type) =>  new MyRejectedEventHandlerAsync()
+            (type) => new MyRejectedEventHandlerAsync()
         );
 
         var mapperFactory = new SimpleMessageMapperFactoryAsync((r) => new MyRejectedEventHandlerMessageMapperAsync());
         var messageMapperRegistryAsync = new MessageMapperRegistry(null, mapperFactory);
         messageMapperRegistryAsync.RegisterAsync<MyRejectedEvent, MyRejectedEventHandlerMessageMapperAsync>();
-            
+
 
         var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>();
         resiliencePipelineRegistry.AddBrighterDefault();
-        
+
         var commandProcessor = new CommandProcessor(
             subscriberRegistry,
             handlerFactory,
             new InMemoryRequestContextFactory(),
             new PolicyRegistry(),
             resiliencePipelineRegistry,
-            new InMemorySchedulerFactory()
-        );
-        
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
+
         var subscription = new InMemorySubscription<MyRejectedEvent>(
-            new SubscriptionName("test"), 
-            noOfPerformers: 1, 
-            timeOut: TimeSpan.FromMilliseconds(1000), 
-            channelFactory: new InMemoryChannelFactory(_bus, _timeProvider),
-            channelName: new ChannelName("myChannel"), 
+            new SubscriptionName("test"),
+            noOfPerformers: 1,
+            timeOut: TimeSpan.FromMilliseconds(1000),
+            channelFactory: new InMemoryChannelFactory(_bus, _timeProvider, loggerFactory: Initializer.TestLoggerFactory),
+            channelName: new ChannelName("myChannel"),
             messagePumpType: MessagePumpType.Proactor,
             routingKey: _routingKey
         );
 
         subscription.DeadLetterRoutingKey = _deadLetterRoutingKey;
-        
+
         _dispatcher = new Dispatcher(
-            commandProcessor, 
+            commandProcessor,
             new List<Subscription> { subscription },
-            null,
-            messageMapperRegistryAsync,
+            loggerFactory: Initializer.TestLoggerFactory,
+            messageMapperRegistryAsync: messageMapperRegistryAsync,
             requestContextFactory: new InMemoryRequestContextFactory()
         );
-        
+
         var @event = new MyRejectedEvent(Id.Random());
         var message = new MyRejectedEventHandlerMessageMapperAsync()
-            .MapToMessageAsync(@event, new Publication{Topic = _routingKey})
+            .MapToMessageAsync(@event, new Publication { Topic = _routingKey })
             .Result;
         _bus.Enqueue(message);
-        
-        _dispatcher.Receive(); 
+
+        _dispatcher.Receive();
     }
 
     [Fact]
@@ -82,13 +81,13 @@ public class MessageDispatchRejectMessageExceptionTestsAsync
         await Task.Delay(1000); // slopwatch:suppress SW004 - message pump runs on background thread with no sync point
 
         await _dispatcher.End();
-        
+
         Assert.Empty(_bus.Stream(_routingKey));
         Assert.NotEmpty(_bus.Stream(_deadLetterRoutingKey));
         var message = _bus.Dequeue(_deadLetterRoutingKey);
         var rejectionReason = $"Message rejected reason: {RejectionReason.DeliveryError} Description: {MyRejectedEventHandlerAsync.TestOfRejectionFlow}";
         Assert.Equal(rejectionReason, message.Header.Bag[Message.RejectionReasonHeaderName]);
     }
-    
-    
+
+
 }

@@ -26,22 +26,22 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
             registry.Register<MyCommand, MyFeatureSwitchedConfigHandler>();
             registry.RegisterAsync<MyCommandAsync, MyFeatureSwitchedConfigHandlerAsync>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddSingleton<MyFeatureSwitchedConfigHandler>();
             container.AddSingleton<MyFeatureSwitchedConfigHandlerAsync>();
             container.AddTransient<FeatureSwitchHandler<MyCommand>>();
             container.AddTransient<FeatureSwitchHandlerAsync<MyCommandAsync>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
-            
+
             _provider = container.BuildServiceProvider();
             ServiceProviderHandlerFactory handlerFactory = new(_provider);
-            
+
             IAmAFeatureSwitchRegistry fluentConfig = FluentConfigRegistryBuilder
-                .With()                
+                .With()
                 .StatusOf<MyFeatureSwitchedConfigHandler>().Is(FeatureSwitchStatus.On)
                 .StatusOf<MyFeatureSwitchedConfigHandlerAsync>().Is(FeatureSwitchStatus.On)
                 .Build();
-            
+
             _commandProcessor = CommandProcessorBuilder
                 .StartNew()
                 .ConfigureFeatureSwitches(fluentConfig)
@@ -50,7 +50,8 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
                 .NoExternalBus()
                 .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
-                .RequestSchedulerFactory(new InMemorySchedulerFactory())
+                .RequestSchedulerFactory(new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory))
+                .ConfigureLogging(Initializer.TestLoggerFactory)
                 .Build();
         }
 
@@ -61,7 +62,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
 
             Assert.True(_provider.GetService<MyFeatureSwitchedConfigHandler>()!.DidReceive());
         }
-        
+
         [Fact]
         public async Task When_Sending_A_Async_Command_To_The_Processor_When_A_Feature_Switch_Is_On_By_Fluent_Config()
         {

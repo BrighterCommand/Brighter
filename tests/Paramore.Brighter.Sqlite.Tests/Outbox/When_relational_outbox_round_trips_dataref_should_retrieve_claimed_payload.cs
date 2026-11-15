@@ -59,7 +59,7 @@ public class SqliteOutboxDataRefTests : RelationalOutboxDataRefTests
     protected override string CreateTableSql(bool binary) => SqliteOutboxBuilder.GetDDL(TableName, binary);
     /// <inheritdoc />
     protected override RelationDatabaseOutbox CreateOutbox(RelationalDatabaseConfiguration configuration) =>
-        new SqliteOutbox(configuration);
+        new SqliteOutbox(configuration: configuration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteOutbox>.Instance);
 
     /// <inheritdoc />
     protected override Task CleanupDatabaseAsync()

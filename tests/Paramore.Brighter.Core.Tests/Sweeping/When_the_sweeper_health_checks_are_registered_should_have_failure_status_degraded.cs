@@ -37,7 +37,7 @@ public class SweeperHealthChecksFailureStatusTests
     public void When_the_sweeper_health_checks_are_registered_should_have_failure_status_degraded()
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddOptions();
         services.AddHealthChecks().AddBrighterOutboxSweeperHealthChecks();
         using var provider = services.BuildServiceProvider();

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Xunit;
@@ -51,9 +53,7 @@ public class When_mssql_consumer_requeues_with_delay_should_use_producer : IDisp
 
         _scheduler = new SpySchedulerSync();
         _consumer = new MsSqlMessageConsumer(
-            testHelper.QueueConfiguration,
-            topicName,
-            _scheduler);
+            testHelper.QueueConfiguration,topicName,NullLoggerFactory.Instance,_scheduler);
 
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),

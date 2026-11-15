@@ -39,7 +39,8 @@ public class DeferredRelationalConfigurationTests
     public void When_deferring_producer_configuration_should_preserve_optional_database_lookup()
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
+        services.AddSingleton(Initializer.Factory);
         var configuration = new RelationalDatabaseConfiguration("Data Source=:memory:");
         SqliteOutbox? outbox = null;
         var factoryCalls = 0;
@@ -49,7 +50,7 @@ public class DeferredRelationalConfigurationTests
         {
             factoryCalls++;
             var databaseConfiguration = sp.GetService<IAmARelationalDatabaseConfiguration>() ?? configuration;
-            outbox = new SqliteOutbox(databaseConfiguration);
+            outbox = new SqliteOutbox(databaseConfiguration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteOutbox>.Instance);
             return new ProducersConfiguration
             {
                 Outbox = outbox,

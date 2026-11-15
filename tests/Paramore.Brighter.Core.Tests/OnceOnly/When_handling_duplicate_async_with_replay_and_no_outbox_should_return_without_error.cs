@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             registry.RegisterAsync<MyCommand, MyStoredCommandToReplayHandlerAsync>();
 
             //Arrange — NO outbox is registered, so UseInboxHandlerAsync receives null for its optional outbox
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyStoredCommandToReplayHandlerAsync>();
             container.AddSingleton<IAmAnInboxAsync>(inbox);
             container.AddTransient<UseInboxHandlerAsync<MyCommand>>();
@@ -67,7 +67,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
-                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]

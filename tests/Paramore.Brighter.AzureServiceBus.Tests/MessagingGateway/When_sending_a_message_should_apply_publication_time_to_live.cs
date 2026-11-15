@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia <irakli.gabisonia94@gmail.com>
@@ -25,6 +25,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -273,8 +275,8 @@ public class AzureServiceBusPublicationTimeToLiveTests
         var administrationClient = new FakeAdministrationClient();
         var senderProvider = new FakeServiceBusSenderProvider(_sender);
         return useQueues
-            ? new AzureServiceBusQueueMessageProducer(administrationClient, senderProvider, _publication)
-            : new AzureServiceBusTopicMessageProducer(administrationClient, senderProvider, _publication);
+            ? new AzureServiceBusQueueMessageProducer(administrationClient, senderProvider, _publication, loggerFactory: NullLoggerFactory.Instance)
+            : new AzureServiceBusTopicMessageProducer(administrationClient, senderProvider, _publication, loggerFactory: NullLoggerFactory.Instance);
     }
 
     private static Message CreateMessage() => new(

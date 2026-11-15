@@ -46,7 +46,7 @@ public class StaleMessageMonitorInvalidStaleAgeTests
     public void When_the_stale_age_is_invalid_should_throw_a_configuration_exception(TimeSpan staleMessageAge)
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         var builder = new ServiceCollectionBrighterBuilder(
             services,
             new ServiceCollectionSubscriberRegistry(services),

@@ -22,7 +22,7 @@ public class When_a_third_party_circuit_breaker_reports_tripped_topics_should_re
         state.LockObtained();
         state.SweepEnded(SweepOutcome.Completed);
         var breaker = new ListedTopicsCircuitBreaker("orders", "payments");
-        var check = new OutboxSweeperInvestigateHealthCheck(state, new TimedOutboxSweeperOptions(), () => breaker, 3);
+        var check = new OutboxSweeperInvestigateHealthCheck(state: state, options: new TimedOutboxSweeperOptions(), findCircuitBreaker: () => breaker, failureThreshold: 3, loggerFactory: Initializer.TestLoggerFactory);
 
         //Act
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);

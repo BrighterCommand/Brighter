@@ -25,6 +25,7 @@ THE SOFTWARE. */
 #nullable enable
 
 using System;
+using Paramore.Brighter.Core.Tests.TestHelpers;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -175,6 +176,7 @@ public class LegacyPolicyPumpActionTests
         {
             var request = new ResilienceActionCommandAsync(exception);
             var handler = new ExceptionPolicyHandlerAsync<ResilienceActionCommandAsync> { Context = context };
+            using var pipeline = HandlerTestPipeline.Create(handler, request);
             handler.InitializeFromAttributeParams(names);
             handler.SetSuccessor(new ResilienceActionHandlerAsync { Context = context });
             for (var i = 0; i < failures.Length; i++)
@@ -187,6 +189,7 @@ public class LegacyPolicyPumpActionTests
         {
             var request = new ResilienceActionCommand(exception);
             var handler = new ExceptionPolicyHandler<ResilienceActionCommand> { Context = context };
+            using var pipeline = HandlerTestPipeline.Create(handler, request);
             handler.InitializeFromAttributeParams(names);
             handler.SetSuccessor(new ResilienceActionHandler { Context = context });
             for (var i = 0; i < failures.Length; i++)

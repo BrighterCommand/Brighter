@@ -48,7 +48,7 @@ public class AzureServiceBusLockRenewalLifetimeTests
         await using var client = new InMemoryLockingServiceBusClient(receiver);
         var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
             channelName: new ChannelName("locks"), routingKey: new RoutingKey("locks"), makeChannels: OnMissingChannel.Assume);
-        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(subscription);
+        await using var consumer = new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync(subscription);
         Task nestedDisposal = Task.CompletedTask;
         var callbackEnteredDisposal = false;
         receiver.RenewalCancellationCallback = () =>
@@ -96,7 +96,7 @@ public class AzureServiceBusLockRenewalLifetimeTests
             channelName: new ChannelName("locks"), routingKey: new RoutingKey("locks"),
             bufferSize: 1, makeChannels: OnMissingChannel.Assume,
             subscriptionConfiguration: new AzureServiceBusSubscriptionConfiguration { RequireSession = true });
-        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(subscription);
+        await using var consumer = new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync(subscription);
         var first = Assert.Single(await consumer.ReceiveAsync());
         receiver.BlockReceive = true;
         receiver.BlockCompletion = true;
@@ -145,7 +145,7 @@ public class AzureServiceBusLockRenewalLifetimeTests
         await using var client = new InMemoryLockingServiceBusClient(receiver);
         var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
             channelName: new ChannelName("locks"), routingKey: new RoutingKey("locks"), makeChannels: OnMissingChannel.Assume);
-        using var consumer = new AzureServiceBusConsumerFactory(client).Create(subscription);
+        using var consumer = new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(subscription);
         var asyncConsumer = (IAmAMessageConsumerAsync)consumer;
         var message = Assert.Single(await asyncConsumer.ReceiveAsync());
         await receiver.RenewalStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -192,7 +192,7 @@ public class AzureServiceBusLockRenewalLifetimeTests
         await using var client = new InMemoryLockingServiceBusClient(firstReceiver, replacement);
         var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
             channelName: new ChannelName("locks"), routingKey: new RoutingKey("locks"), makeChannels: OnMissingChannel.Assume);
-        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(subscription);
+        await using var consumer = new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync(subscription);
         await consumer.ReceiveAsync();
         await firstReceiver.RenewalStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         firstReceiver.ReceiveException = new InvalidOperationException("The connection failed.");
@@ -220,7 +220,7 @@ public class AzureServiceBusLockRenewalLifetimeTests
             {
                 MaxAutoLockRenewalDuration = TimeSpan.FromMilliseconds(1500)
             });
-        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(subscription);
+        await using var consumer = new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync(subscription);
         await consumer.ReceiveAsync();
 
         // Act
@@ -244,7 +244,7 @@ public class AzureServiceBusLockRenewalLifetimeTests
         var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
             channelName: new ChannelName("locks"), routingKey: new RoutingKey("locks"), makeChannels: OnMissingChannel.Assume,
             subscriptionConfiguration: new AzureServiceBusSubscriptionConfiguration { UseServiceBusQueue = true });
-        using var consumer = new AzureServiceBusConsumerFactory(client).Create(subscription);
+        using var consumer = new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(subscription);
         var asyncConsumer = (IAmAMessageConsumerAsync)consumer;
         await asyncConsumer.ReceiveAsync();
         await receiver.RenewalStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -271,7 +271,7 @@ public class AzureServiceBusLockRenewalLifetimeTests
         await using var client = new InMemoryLockingServiceBusClient(receiver);
         var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
             channelName: new ChannelName("locks"), routingKey: new RoutingKey("locks"), makeChannels: OnMissingChannel.Assume);
-        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(subscription);
+        await using var consumer = new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync(subscription);
         var message = Assert.Single(await consumer.ReceiveAsync());
         await receiver.RenewalStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
@@ -321,7 +321,7 @@ public class AzureServiceBusLockRenewalLifetimeTests
             channelName: new ChannelName("locks"), routingKey: new RoutingKey("locks"),
             bufferSize: 2, makeChannels: OnMissingChannel.Assume,
             subscriptionConfiguration: new AzureServiceBusSubscriptionConfiguration { RequireSession = true });
-        using var consumer = new AzureServiceBusConsumerFactory(client).Create(subscription);
+        using var consumer = new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(subscription);
         var asyncConsumer = (IAmAMessageConsumerAsync)consumer;
         var messages = await asyncConsumer.ReceiveAsync();
         Assert.Equal(2, messages.Length);

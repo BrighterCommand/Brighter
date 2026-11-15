@@ -21,27 +21,27 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         public PipelineGlobalInboxContextTests()
         {
             _inbox = new InMemoryInbox(new FakeTimeProvider());
-            
+
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyGlobalInboxCommandHandler>();
-            
-            var container = new ServiceCollection();
+
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyGlobalInboxCommandHandler>();
             container.AddSingleton(_inbox);
             container.AddTransient<UseInboxHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
- 
+
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            
+
             _requestContext = new RequestContext();
-            
+
             InboxConfiguration inboxConfiguration = new(
-                scope: InboxScope.All, 
+                scope: InboxScope.All,
                 context: (handlerType) => CONTEXT_KEY);
 
-            _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory, inboxConfiguration);
+            _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory, Initializer.TestLoggerFactory, inboxConfiguration);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
-            
+
         }
 
         [Fact]
@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         {
             //act
             _chainOfResponsibility = _chainBuilder.Build(new MyCommand(), _requestContext);
-            
+
             var firstHandler = _chainOfResponsibility.First();
             var myCommmand = new MyCommand();
             firstHandler.Handle(myCommmand);

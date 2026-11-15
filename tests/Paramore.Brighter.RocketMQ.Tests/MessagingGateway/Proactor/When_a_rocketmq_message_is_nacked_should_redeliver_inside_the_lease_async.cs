@@ -72,7 +72,7 @@ public class RocketMqNackRedeliveryTestsAsync : IAsyncLifetime
             receiveMessageTimeout: s_receiveMessageTimeout,
             invisibilityTimeout: s_invisibilityTimeout);
 
-        _consumer = new RocketMessageConsumerFactory(connection).CreateAsync(subscription);
+        _consumer = new RocketMessageConsumerFactory(connection: connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync(subscription);
     }
 
     public async Task DisposeAsync()

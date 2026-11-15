@@ -57,7 +57,7 @@ public class AzureServiceBusRetryRedeliveryDeduplicationTests
         try
         {
             await using var faultClient = new CompletionFaultServiceBusClient(client, administration);
-            var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(faultClient));
+            var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider: faultClient, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
             var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
                 new SubscriptionName("retry"), new ChannelName(queue), new RoutingKey(queue),
                 messagePumpType: synchronous ? MessagePumpType.Reactor : MessagePumpType.Proactor,

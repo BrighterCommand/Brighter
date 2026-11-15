@@ -40,14 +40,14 @@ public class KafkaConsumerDeclareTestsAsync : IAsyncDisposable, IDisposable
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Assume
                 }
-            ]).Create();
+            ], loggerFactory: Initializer.TestLoggerFactory).Create();
 
         _consumer = new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Consumer Test",
                     BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .CreateAsync(new KafkaSubscription<MyCommand>(
                 channelName: new ChannelName(_queueName),
                 routingKey: new RoutingKey(_topic),
@@ -62,8 +62,8 @@ public class KafkaConsumerDeclareTestsAsync : IAsyncDisposable, IDisposable
     public async Task When_a_consumer_declares_topics()
     {
         //Let topic propagate in the broker
-        await Task.Delay(1000); 
-        
+        await Task.Delay(1000);
+
         var routingKey = new RoutingKey(_topic);
 
         var message = new Message(
@@ -76,7 +76,7 @@ public class KafkaConsumerDeclareTestsAsync : IAsyncDisposable, IDisposable
 
         var producerAsync = ((IAmAMessageProducerAsync)_producerRegistry.LookupBy(routingKey));
         await producerAsync.SendAsync(message);
-        
+
         //We should not need to flush, as the async does not queue work  - but in case this changes
         ((KafkaMessageProducer)producerAsync).Flush();
 
@@ -96,7 +96,7 @@ public class KafkaConsumerDeclareTestsAsync : IAsyncDisposable, IDisposable
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                     break;
-                
+
                 //wait before retry
                 await Task.Delay(1000);
 
@@ -126,6 +126,6 @@ public class KafkaConsumerDeclareTestsAsync : IAsyncDisposable, IDisposable
     {
             _producerRegistry.Dispose();
             await _consumer.DisposeAsync();
-            
+
     }
 }
