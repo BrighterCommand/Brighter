@@ -28,7 +28,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -39,7 +38,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// </summary>
 public class SqlBoxProvisionerHookOrderTests
 {
-    [Fact]
+    [Test]
     public async Task When_table_exists_with_history_it_should_call_GetMaxVersion_then_validate_payload_then_migrate()
     {
         //Arrange
@@ -61,8 +60,7 @@ public class SqlBoxProvisionerHookOrderTests
         await provisioner.ProvisionAsync();
 
         //Assert
-        Assert.Equal(
-            new[]
+        await Assert.That(log).IsEquivalentTo(new[]
             {
                 "CreateConnection",
                 "OpenAsync",
@@ -72,15 +70,14 @@ public class SqlBoxProvisionerHookOrderTests
                 "ValidateAsync",
                 "Dispose",
                 "MigrateAsync"
-            },
-            log);
-        Assert.NotNull(migrationRunner.CapturedTableState);
-        Assert.True(migrationRunner.CapturedTableState!.TableExists);
-        Assert.True(migrationRunner.CapturedTableState!.HistoryExists);
-        Assert.Equal(5, migrationRunner.CapturedTableState!.CurrentVersion);
+            }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+        await Assert.That(migrationRunner.CapturedTableState).IsNotNull();
+        await Assert.That(migrationRunner.CapturedTableState!.TableExists).IsTrue();
+        await Assert.That(migrationRunner.CapturedTableState!.HistoryExists).IsTrue();
+        await Assert.That(migrationRunner.CapturedTableState!.CurrentVersion).IsEqualTo(5);
     }
 
-    [Fact]
+    [Test]
     public async Task When_table_exists_without_history_it_should_take_bootstrap_branch_then_validate_payload_then_migrate()
     {
         //Arrange
@@ -102,8 +99,7 @@ public class SqlBoxProvisionerHookOrderTests
         await provisioner.ProvisionAsync();
 
         //Assert
-        Assert.Equal(
-            new[]
+        await Assert.That(log).IsEquivalentTo(new[]
             {
                 "CreateConnection",
                 "OpenAsync",
@@ -113,14 +109,13 @@ public class SqlBoxProvisionerHookOrderTests
                 "ValidateAsync",
                 "Dispose",
                 "MigrateAsync"
-            },
-            log);
-        Assert.NotNull(migrationRunner.CapturedTableState);
-        Assert.True(migrationRunner.CapturedTableState!.TableExists);
-        Assert.False(migrationRunner.CapturedTableState!.HistoryExists);
+            }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+        await Assert.That(migrationRunner.CapturedTableState).IsNotNull();
+        await Assert.That(migrationRunner.CapturedTableState!.TableExists).IsTrue();
+        await Assert.That(migrationRunner.CapturedTableState!.HistoryExists).IsFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task When_table_does_not_exist_it_should_skip_history_and_payload_checks_and_call_migrate_with_fresh_state()
     {
         //Arrange
@@ -140,20 +135,18 @@ public class SqlBoxProvisionerHookOrderTests
         await provisioner.ProvisionAsync();
 
         //Assert
-        Assert.Equal(
-            new[]
+        await Assert.That(log).IsEquivalentTo(new[]
             {
                 "CreateConnection",
                 "OpenAsync",
                 "DoesTableExistAsync",
                 "Dispose",
                 "MigrateAsync"
-            },
-            log);
-        Assert.NotNull(migrationRunner.CapturedTableState);
-        Assert.False(migrationRunner.CapturedTableState!.TableExists);
-        Assert.False(migrationRunner.CapturedTableState!.HistoryExists);
-        Assert.Equal(0, migrationRunner.CapturedTableState!.CurrentVersion);
+            }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+        await Assert.That(migrationRunner.CapturedTableState).IsNotNull();
+        await Assert.That(migrationRunner.CapturedTableState!.TableExists).IsFalse();
+        await Assert.That(migrationRunner.CapturedTableState!.HistoryExists).IsFalse();
+        await Assert.That(migrationRunner.CapturedTableState!.CurrentVersion).IsEqualTo(0);
     }
 
     private sealed class TestSqlBoxProvisioner : SqlBoxProvisioner<FakeDbConnection, FakeDbTransaction>

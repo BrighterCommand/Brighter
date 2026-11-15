@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Consumer;
 
@@ -35,8 +34,8 @@ namespace Paramore.Brighter.InMemory.Tests.Consumer;
 /// </summary>
 public class AsyncInMemoryMessageConsumerDisposeTests
 {
-    [Fact]
-    public void Should_dispose_without_error_when_producer_was_never_created()
+    [Test]
+    public async Task Should_dispose_without_error_when_producer_was_never_created()
     {
         // Arrange
         var bus = new InternalBus();
@@ -45,12 +44,11 @@ public class AsyncInMemoryMessageConsumerDisposeTests
         var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider);
 
         // Act & Assert - should not throw
-        var exception = Record.Exception(() => consumer.Dispose());
-        Assert.Null(exception);
+        await Assert.That(() => consumer.Dispose()).ThrowsNothing();
     }
 
-    [Fact]
-    public void Should_dispose_producer_when_it_was_created_during_requeue()
+    [Test]
+    public async Task Should_dispose_producer_when_it_was_created_during_requeue()
     {
         // Arrange
         var bus = new InternalBus();
@@ -65,15 +63,14 @@ public class AsyncInMemoryMessageConsumerDisposeTests
 
         // Put message on bus, receive it, then requeue with delay (creates producer)
         bus.Enqueue(message);
-        consumer.Receive();
-        consumer.Requeue(message, TimeSpan.FromSeconds(30));
+        await consumer.ReceiveAsync();
+        await consumer.RequeueAsync(message, TimeSpan.FromSeconds(30));
 
         // Act & Assert - should not throw
-        var exception = Record.Exception(() => consumer.Dispose());
-        Assert.Null(exception);
+        await Assert.That(() => consumer.Dispose()).ThrowsNothing();
     }
 
-    [Fact]
+    [Test]
     public async Task Should_dispose_async_without_error_when_producer_was_never_created()
     {
         // Arrange
@@ -83,11 +80,10 @@ public class AsyncInMemoryMessageConsumerDisposeTests
         var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider);
 
         // Act & Assert - should not throw
-        var exception = await Record.ExceptionAsync(async () => await consumer.DisposeAsync());
-        Assert.Null(exception);
+        await Assert.That(async () => await consumer.DisposeAsync()).ThrowsNothing();
     }
 
-    [Fact]
+    [Test]
     public async Task Should_dispose_async_producer_when_it_was_created_during_requeue()
     {
         // Arrange
@@ -103,23 +99,11 @@ public class AsyncInMemoryMessageConsumerDisposeTests
 
         // Put message on bus, receive it, then requeue with delay (creates producer)
         bus.Enqueue(message);
-        consumer.Receive();
-        consumer.Requeue(message, TimeSpan.FromSeconds(30));
+        await consumer.ReceiveAsync();
+        await consumer.RequeueAsync(message, TimeSpan.FromSeconds(30));
 
         // Act & Assert - should not throw
-        var exception = await Record.ExceptionAsync(async () => await consumer.DisposeAsync());
-        Assert.Null(exception);
+        await Assert.That(async () => await consumer.DisposeAsync()).ThrowsNothing();
     }
 
-    /// <summary>
-    /// A simple spy scheduler for testing.
-    /// </summary>
-    private sealed class SpyScheduler : IAmAMessageSchedulerSync
-    {
-        public string Schedule(Message message, DateTimeOffset at) => Guid.NewGuid().ToString();
-        public string Schedule(Message message, TimeSpan delay) => Guid.NewGuid().ToString();
-        public bool ReScheduler(string schedulerId, DateTimeOffset at) => true;
-        public bool ReScheduler(string schedulerId, TimeSpan delay) => true;
-        public void Cancel(string id) { }
-    }
 }

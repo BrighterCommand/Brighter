@@ -2,14 +2,14 @@ using System;
 using System.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class TransformPipelineBuilderHasPipelineForUnregisteredTypeTests
 {
-    [Fact]
-    public void When_checking_for_a_pipeline_for_an_unregistered_type_it_should_return_false()
+    [Test]
+    public async System.Threading.Tasks.Task When_checking_for_a_pipeline_for_an_unregistered_type_it_should_return_false()
     {
         //arrange
         var collection = new ServiceCollection();
@@ -25,7 +25,7 @@ public class TransformPipelineBuilderHasPipelineForUnregisteredTypeTests
         var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new EmptyMessageTransformerFactory());
 
         //act + assert — no mapper registered and no default, so no pipeline
-        Assert.False(pipelineBuilder.HasPipeline<MinimalCommand>());
+        await Assert.That(pipelineBuilder.HasPipeline<MinimalCommand>()).IsFalse();
     }
 
     private sealed class MinimalCommand : Command

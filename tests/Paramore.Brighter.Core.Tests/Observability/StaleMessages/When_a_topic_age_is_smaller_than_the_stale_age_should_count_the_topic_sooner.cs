@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,7 +34,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -43,7 +42,7 @@ public class SmallestTopicAgeAgainstTheStoreTests
     private const string DESTINATION = "messaging.destination.name";
     private readonly TimerCountingTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Fact]
+    [Test]
     public async Task When_a_topic_age_is_smaller_than_the_stale_age_should_count_the_topic_sooner()
     {
         //Arrange
@@ -76,22 +75,22 @@ public class SmallestTopicAgeAgainstTheStoreTests
 
         //Act
         await monitor.StartAsync(default);
-        AdvanceThroughDueTimes(readings, 3);
-        WaitUntilTheMonitorWaits(readings);
+        await AdvanceThroughDueTimes(readings, 3);
+        await WaitUntilTheMonitorWaits(readings);
         _clock.Advance(TimeSpan.FromSeconds(30));
         outbox.Add(OrdersEvent(), context);
         _clock.Advance(TimeSpan.FromSeconds(30));
         WaitForCompletions(readings, 4);
-        AdvanceThroughDueTimes(readings, 2);
-        WaitUntilTheMonitorWaits(readings);
+        await AdvanceThroughDueTimes(readings, 2);
+        await WaitUntilTheMonitorWaits(readings);
         _clock.Advance(TimeSpan.FromSeconds(30));
         var at120630 = metrics.Observe();
 
         //Assert
-        var overall = Assert.Single(at120630, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES);
-        Assert.Equal(0, overall.Value);
-        var topic = Assert.Single(at120630, m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES);
-        Assert.Equal("orders=1", $"{topic.Attributes[DESTINATION]}={topic.Value}");
+        var overall = await Assert.That(System.Linq.Enumerable.Where(at120630, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)).HasSingleItem();
+        await Assert.That(overall.Value).IsEqualTo(0);
+        var topic = await Assert.That(System.Linq.Enumerable.Where(at120630, m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES)).HasSingleItem();
+        await Assert.That($"{topic.Attributes[DESTINATION]}={topic.Value}").IsEqualTo("orders=1");
     }
 
     private static InMemoryMessageProducer Producer(RoutingKey topic, string type, TimeSpan? staleMessageAge) =>
@@ -100,21 +99,21 @@ public class SmallestTopicAgeAgainstTheStoreTests
     private static Message OrdersEvent() =>
         new(new MessageHeader(Id.Random(), new RoutingKey("orders"), MessageType.MT_EVENT), new MessageBody("{}"));
 
-    private void AdvanceThroughDueTimes(OutboxStaleMessageReadings readings, int dueTimes)
+    private async System.Threading.Tasks.Task AdvanceThroughDueTimes(OutboxStaleMessageReadings readings, int dueTimes)
     {
         for (var i = 0; i < dueTimes; i++)
         {
             var completed = readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed);
-            WaitUntilTheMonitorWaits(readings);
+            await WaitUntilTheMonitorWaits(readings);
             _clock.Advance(TimeSpan.FromMinutes(1));
             WaitForCompletions(readings, completed + 1);
         }
     }
 
-    private void WaitUntilTheMonitorWaits(OutboxStaleMessageReadings readings)
+    private async Task WaitUntilTheMonitorWaits(OutboxStaleMessageReadings readings)
     {
         var completed = readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed);
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= completed + 1, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= completed + 1, TimeSpan.FromSeconds(5))).IsTrue();
     }
 
     private static void WaitForCompletions(OutboxStaleMessageReadings readings, long completions) =>

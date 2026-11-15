@@ -29,9 +29,8 @@ using Google.Api.Gax;
 using Google.Cloud.PubSub.V1;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 using DeadLetterPolicy = Paramore.Brighter.MessagingGateway.GcpPubSub.DeadLetterPolicy;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 
 /// <summary>
@@ -47,8 +46,8 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 /// redelivery.
 /// </summary>
 /// <summary>Stream (unordered), sync (Reactor) path.</summary>
-[Trait("Category", "GcpPubSubStream")]
-[Collection("Stream")]
+[Property("Category", "GcpPubSubStream")]
+[NotInParallel("Stream")]
 public class GcpStreamLeaseLapseDeliveryCountTests
 {
     private const int AckDeadlineSeconds = 10;
@@ -64,8 +63,8 @@ public class GcpStreamLeaseLapseDeliveryCountTests
     /// Reject or Requeue) and polling every 500 ms for up to 45 s presents a redelivery m2 with a
     /// strictly greater <c>HandledCount</c> than m1's.
     /// </summary>
-    [Fact]
-    public void When_a_gcp_stream_lease_lapses_should_present_greater_delivery_count()
+    [Test]
+    public async Task When_a_gcp_stream_lease_lapses_should_present_greater_delivery_count()
     {
         // Arrange
         var provider = new GcpStreamMessageGatewayProvider();
@@ -118,14 +117,14 @@ public class GcpStreamLeaseLapseDeliveryCountTests
 
             var message = new DefaultMessageBuilder().SetTopic(routingKey).Build();
             // Evident data: a freshly-built Message presents HandledCount 0 before it is ever sent.
-            Assert.Equal(0, message.Header.HandledCount);
+            await Assert.That(message.Header.HandledCount).IsEqualTo(0);
             producer.Send(message);
 
             // Act — receive m1 and hold it: no Acknowledge, Reject or Requeue. Poll every 500 ms,
             // up to 45 s, for the lease-lapse redelivery (6.13: ~15 s with the client AckDeadline
             // also set to 10 s).
             var m1 = channel.Receive(TimeSpan.FromSeconds(20));
-            Assert.NotEqual(MessageType.MT_NONE, m1.Header.MessageType);
+            await Assert.That(m1.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var m2 = new Message();
             var stopwatch = Stopwatch.StartNew();
@@ -137,11 +136,9 @@ public class GcpStreamLeaseLapseDeliveryCountTests
             }
 
             // Assert — the lease-lapse redelivery presents a strictly greater count than m1's (AC-42).
-            Assert.NotEqual(MessageType.MT_NONE, m2.Header.MessageType);
-            Assert.Equal(m1.Id, m2.Id);
-            Assert.True(m2.Header.HandledCount > m1.Header.HandledCount,
-                $"AC-42: the lease-lapse redelivery's count {m2.Header.HandledCount} must be "
-                + $"strictly greater than the first delivery's count {m1.Header.HandledCount}");
+            await Assert.That(m2.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+            await Assert.That(m2.Id).IsEqualTo(m1.Id);
+            await Assert.That(m2.Header.HandledCount > m1.Header.HandledCount).IsTrue();
 
             // Settle m2 then m1, so the stream consumer's WaitForProcessing shutdown completes.
             channel.Acknowledge(m2);
@@ -161,8 +158,8 @@ public class GcpStreamLeaseLapseDeliveryCountTests
 /// WITHOUT a partition key on the same ordering-enabled subscription still exercises the stream
 /// consumer's lease-lapse path.
 /// </summary>
-[Trait("Category", "GcpPubSubStreamOrdering")]
-[Collection("StreamOrdering")]
+[Property("Category", "GcpPubSubStreamOrdering")]
+[NotInParallel("StreamOrdering")]
 public class GcpStreamOrderingLeaseLapseDeliveryCountTests
 {
     private const int AckDeadlineSeconds = 10;
@@ -175,8 +172,8 @@ public class GcpStreamOrderingLeaseLapseDeliveryCountTests
     /// partition key (the keyless alternative), since a keyed message's redelivery is withheld
     /// while m1 is outstanding (6.13).
     /// </summary>
-    [Fact]
-    public void When_a_gcp_stream_ordering_lease_lapses_should_present_greater_delivery_count()
+    [Test]
+    public async Task When_a_gcp_stream_ordering_lease_lapses_should_present_greater_delivery_count()
     {
         // Arrange
         var provider = new GcpStreamOrderingMessageGatewayProvider();
@@ -227,12 +224,12 @@ public class GcpStreamOrderingLeaseLapseDeliveryCountTests
             // redelivered while m1 is held (6.13); the keyless message still exercises the stream
             // consumer's lease-lapse path on the ordering-enabled configuration.
             var message = new DefaultMessageBuilder().SetTopic(routingKey).Build();
-            Assert.Equal(0, message.Header.HandledCount);
+            await Assert.That(message.Header.HandledCount).IsEqualTo(0);
             producer.Send(message);
 
             // Act
             var m1 = channel.Receive(TimeSpan.FromSeconds(20));
-            Assert.NotEqual(MessageType.MT_NONE, m1.Header.MessageType);
+            await Assert.That(m1.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var m2 = new Message();
             var stopwatch = Stopwatch.StartNew();
@@ -244,11 +241,9 @@ public class GcpStreamOrderingLeaseLapseDeliveryCountTests
             }
 
             // Assert
-            Assert.NotEqual(MessageType.MT_NONE, m2.Header.MessageType);
-            Assert.Equal(m1.Id, m2.Id);
-            Assert.True(m2.Header.HandledCount > m1.Header.HandledCount,
-                $"AC-42: the lease-lapse redelivery's count {m2.Header.HandledCount} must be "
-                + $"strictly greater than the first delivery's count {m1.Header.HandledCount}");
+            await Assert.That(m2.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+            await Assert.That(m2.Id).IsEqualTo(m1.Id);
+            await Assert.That(m2.Header.HandledCount > m1.Header.HandledCount).IsTrue();
 
             channel.Acknowledge(m2);
             channel.Acknowledge(m1);

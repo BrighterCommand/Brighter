@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia <irakli.gabisonia94@gmail.com>
@@ -29,14 +29,13 @@ using System.Net.Mime;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.TestDoubles;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
 public class CustomContentTypePersistedFormatTests
 {
-    [Fact]
-    public void When_serializing_a_message_with_a_custom_content_type_converter_should_preserve_its_persisted_format()
+    [Test]
+    public async Task When_serializing_a_message_with_a_custom_content_type_converter_should_preserve_its_persisted_format()
     {
         // Arrange
         var settings = new JsonSerializerSettings();
@@ -50,9 +49,9 @@ public class CustomContentTypePersistedFormatTests
         var json = JObject.Parse(JsonConvert.SerializeObject(message, settings));
 
         // Assert
-        Assert.Equal(JTokenType.String, json["Header"]!["ContentType"]!.Type);
-        Assert.Equal(contentType.ToString(), json["Header"]!["ContentType"]!.Value<string>());
-        Assert.Equal(JTokenType.String, json["Body"]!["ContentType"]!.Type);
-        Assert.Equal(contentType.ToString(), json["Body"]!["ContentType"]!.Value<string>());
+        await Assert.That(json["Header"]!["ContentType"]!.Type).IsEqualTo(JTokenType.String);
+        await Assert.That(json["Header"]!["ContentType"]!.Value<string>()).IsEqualTo(contentType.ToString());
+        await Assert.That(json["Body"]!["ContentType"]!.Type).IsEqualTo(JTokenType.String);
+        await Assert.That(json["Body"]!["ContentType"]!.Value<string>()).IsEqualTo(contentType.ToString());
     }
 }

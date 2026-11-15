@@ -32,7 +32,7 @@ using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Core.Tests.Confirmation.TestDoubles;
 using Paramore.Brighter.Extensions;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.Confirmation;
 
@@ -40,7 +40,7 @@ public class AsyncPublishConfirmationTests
 {
     private static readonly RoutingKey s_topic = new("Async.Publish.Confirmation.Topic");
 
-    [Fact]
+    [Test]
     public async Task When_disposing_async_confirmation_producer_should_await_callback()
     {
         // Arrange
@@ -62,8 +62,7 @@ public class AsyncPublishConfirmationTests
         try
         {
             // Assert
-            await Assert.ThrowsAsync<TimeoutException>(
-                async () => await disposeTask.WaitAsync(TimeSpan.FromMilliseconds(100)));
+            await Assert.That(async () => await disposeTask.WaitAsync(TimeSpan.FromMilliseconds(100))).ThrowsExactly<TimeoutException>();
         }
         finally
         {
@@ -71,10 +70,10 @@ public class AsyncPublishConfirmationTests
             await disposeTask.WaitAsync(TimeSpan.FromSeconds(1));
         }
 
-        Assert.True(outbox.WasDispatched(message.Id, requestContext));
+        await Assert.That(outbox.WasDispatched(message.Id, requestContext)).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_async_confirmation_is_off_should_not_wait_for_async_dispatch()
     {
         // Arrange
@@ -102,7 +101,7 @@ public class AsyncPublishConfirmationTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task When_disposing_with_concurrent_sends_should_drain_every_confirmation()
     {
         // Arrange
@@ -123,12 +122,10 @@ public class AsyncPublishConfirmationTests
         await producer.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2));
 
         // Assert
-        Assert.Equal(
-            messages.Select(message => message.Id.Value).OrderBy(id => id),
-            confirmed.OrderBy(id => id));
+        await Assert.That(confirmed.OrderBy(id => id)).IsEquivalentTo(messages.Select(message => message.Id.Value).OrderBy(id => id), TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
-    [Fact]
+    [Test]
     public async Task When_an_async_confirmation_subscriber_throws_dispose_still_drains()
     {
         // Arrange
@@ -152,7 +149,7 @@ public class AsyncPublishConfirmationTests
         await producer.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2));
 
         // Assert
-        Assert.Equal(new[] { firstMessage.Id.Value, secondMessage.Id.Value }, confirmed);
+        await Assert.That(confirmed).IsEquivalentTo(new[] { firstMessage.Id.Value, secondMessage.Id.Value }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
     private static Message CreateMessage() => new(

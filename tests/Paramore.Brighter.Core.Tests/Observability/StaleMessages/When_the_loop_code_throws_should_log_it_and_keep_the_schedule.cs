@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -35,11 +35,11 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
-[Collection(StaleMessageLoggingCollection.Name)]
+[NotInParallel]
+[ClassDataSource<StaleMessageLoggingFixture>(Shared = SharedType.PerTestSession)]
 public class LoopCodeFailureTests
 {
     private const string COUNT = "paramore.brighter.outbox.stale.count";
@@ -53,7 +53,7 @@ public class LoopCodeFailureTests
         _logs = fixture.Logs;
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_loop_code_throws_should_log_it_and_keep_the_schedule()
     {
         //Arrange
@@ -83,7 +83,7 @@ public class LoopCodeFailureTests
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         var readings = metrics.Services.GetRequiredService<OutboxStaleMessageReadings>();
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromSeconds(59));
 
         var failedAt = s_start.AddMinutes(1);
@@ -106,17 +106,17 @@ public class LoopCodeFailureTests
 
             if (now == failedAt)
             {
-                Assert.True(SpinWait.SpinUntil(
+                await Assert.That(SpinWait.SpinUntil(
                     () => _logs.Entries.Any(entry => entry.LogLevel == LogLevel.Error),
-                    TimeSpan.FromSeconds(5)));
-                WaitUntilTheMonitorWaits(2);
+                    TimeSpan.FromSeconds(5))).IsTrue();
+                await WaitUntilTheMonitorWaits(2);
             }
             if (now == measuredAt)
             {
-                Assert.True(SpinWait.SpinUntil(
+                await Assert.That(SpinWait.SpinUntil(
                     () => readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed) >= 2,
-                    TimeSpan.FromSeconds(5)));
-                WaitUntilTheMonitorWaits(3);
+                    TimeSpan.FromSeconds(5))).IsTrue();
+                await WaitUntilTheMonitorWaits(3);
             }
 
             var observed = metrics.Observe();
@@ -127,11 +127,11 @@ public class LoopCodeFailureTests
         }
 
         //Assert
-        Assert.Null(heldAt);
-        var error = Assert.Single(_logs.Entries, entry => entry.LogLevel == LogLevel.Error);
-        Assert.Same(loggerFailed, error.Exception?.GetBaseException());
-        Assert.Equal([failedAt, measuredAt], outbox.CountCalls.Select(call => call.CalledAt));
-        Assert.True(CompletedOverall(afterTheMeasurement) > CompletedOverall(afterTheFailure));
+        await Assert.That(heldAt).IsNull();
+        var error = await Assert.That(System.Linq.Enumerable.Where(_logs.Entries, entry => entry.LogLevel == LogLevel.Error)).HasSingleItem();
+        await Assert.That(error.Exception?.GetBaseException()).IsSameReferenceAs(loggerFailed);
+        await Assert.That(outbox.CountCalls.Select(call => call.CalledAt)).IsEqualTo([failedAt, measuredAt]);
+        await Assert.That(CompletedOverall(afterTheMeasurement) > CompletedOverall(afterTheFailure)).IsTrue();
     }
 
     private static long CompletedOverall(IEnumerable<StaleMeasurement> measurements) =>
@@ -150,6 +150,6 @@ public class LoopCodeFailureTests
         return SpinWait.SpinUntil(() => advance.IsCompleted, TimeSpan.FromSeconds(5));
     }
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

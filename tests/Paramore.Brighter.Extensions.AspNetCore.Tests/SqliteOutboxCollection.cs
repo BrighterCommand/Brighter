@@ -22,14 +22,13 @@ THE SOFTWARE. */
 
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
 /// <summary>
 /// Isolates SQLite outbox construction from other test hosts replacing or disposing the global logger factory.
 /// </summary>
-[CollectionDefinition(NAME, DisableParallelization = true)]
+[System.Obsolete]
 public sealed class SqliteOutboxCollection
 {
     /// <summary>The collection for tests that construct a SQLite outbox.</summary>

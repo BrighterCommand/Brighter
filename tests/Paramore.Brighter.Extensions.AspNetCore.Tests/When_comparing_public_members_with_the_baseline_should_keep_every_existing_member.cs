@@ -32,8 +32,7 @@ using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
 /// <summary>
@@ -133,8 +132,8 @@ public class PublicApiBaselineTests
         ]
     };
 
-    [Fact]
-    public void When_comparing_public_members_with_the_baseline_should_keep_every_existing_member()
+    [Test]
+    public async Task When_comparing_public_members_with_the_baseline_should_keep_every_existing_member()
     {
         //Arrange
         var missing = new List<string>();
@@ -154,9 +153,9 @@ public class PublicApiBaselineTests
             .ToArray();
 
         //Assert
-        Assert.True(missing.Count == 0, "Baseline members missing or not source-compatible:" + Environment.NewLine + string.Join(Environment.NewLine, missing));
-        Assert.Equal(circuitBreakerBaseline, circuitBreakerMembers);
-        Assert.Equal([nameof(ObsoleteAttribute)], healthCheckAttributes);
+        await Assert.That(missing.Count == 0).IsTrue();
+        await Assert.That(circuitBreakerMembers).IsEqualTo(circuitBreakerBaseline);
+        await Assert.That(healthCheckAttributes).IsEqualTo([nameof(ObsoleteAttribute)]);
     }
 
     private static string[] DeclaredMembers(Type type)

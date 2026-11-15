@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -36,7 +35,7 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// Two provisioners with the same table name in different MySQL databases take different lock names,
 /// so while A holds its <c>GET_LOCK</c>, B, with a one-second timeout, still completes (ADR 0057 §5b).
 /// </summary>
-public class MySqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
+public class MySqlRunnerDistinctSchemaNonBlockingTests
 {
     private const string DefaultDatabase = "BrighterTests";
     private const string MasterConnectionString = "Server=localhost;Uid=root;Pwd=root";
@@ -45,7 +44,7 @@ public class MySqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
     private readonly string _billingDatabase = $"brighter_billing_{Guid.NewGuid():N}";
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_mysql_runner_runs_two_provisioners_in_distinct_schemas_they_should_not_block_each_other()
     {
         //Arrange
@@ -78,10 +77,10 @@ public class MySqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
         {
             await holdingLock.AcquireSeen.Task;
 
-            var taskBException = await Record.ExceptionAsync(() => provisionerB.ProvisionAsync());
+            var taskBException = await TestExceptionRecorder.CaptureAsync(() => provisionerB.ProvisionAsync());
 
             //Assert
-            Assert.Null(taskBException);
+            await Assert.That(taskBException).IsNull();
         }
         finally
         {
@@ -102,8 +101,10 @@ public class MySqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
         await command.ExecuteNonQueryAsync();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

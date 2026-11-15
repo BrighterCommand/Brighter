@@ -29,7 +29,6 @@ using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -38,14 +37,14 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 /// <c>sp_getapplock</c> reads as "do not wait" (ADR 0058, Guards and contracts). The test uses the
 /// detection-helper constructor, the only one where the timeout is optional.
 /// </summary>
-public class MsSqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
+public class MsSqlRunnerDefaultLockTimeoutTests
 {
     private static readonly TimeSpan s_expectedDefaultLockTimeout = TimeSpan.FromSeconds(30);
 
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_mssql_runner_is_constructed_without_lock_timeout_default_should_be_thirty_seconds()
     {
         //Arrange
@@ -60,14 +59,18 @@ public class MsSqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act
-        await Assert.ThrowsAsync<MigrationLockDeadlockException>(() => runner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, freshHint));
+        await Assert.That(() => runner.MigrateAsync(
+            _tableName, schemaName: null, BoxType.Outbox, freshHint)).ThrowsExactly<MigrationLockDeadlockException>();
 
         //Assert
-        Assert.Equal(s_expectedDefaultLockTimeout, fakeLock.AcquiredTimeout);
+        await Assert.That(fakeLock.AcquiredTimeout).IsEqualTo(s_expectedDefaultLockTimeout);
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

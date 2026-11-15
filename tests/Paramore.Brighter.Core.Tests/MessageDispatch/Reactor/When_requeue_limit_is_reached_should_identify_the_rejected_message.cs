@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -32,18 +33,17 @@ using Paramore.Brighter.Core.Tests.Defer.TestDoubles;
 using Paramore.Brighter.Defer.Handlers;
 using Paramore.Brighter.JsonConverters;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor;
 
 public class MessagePumpRequeueRejectionMessageIdTests
 {
-    [Theory]
-    [InlineData(false, null, "current-message-id")]
-    [InlineData(true, null, "current-message-id")]
-    [InlineData(true, "", "current-message-id")]
-    [InlineData(true, "original-message-id", "original-message-id")]
-    public void When_requeue_limit_is_reached_should_identify_the_rejected_message(
+    [Test]
+    [Arguments(false, null, "current-message-id")]
+    [Arguments(true, null, "current-message-id")]
+    [Arguments(true, "", "current-message-id")]
+    [Arguments(true, "original-message-id", "original-message-id")]
+    public async System.Threading.Tasks.Task When_requeue_limit_is_reached_should_identify_the_rejected_message(
         bool hasOriginalMessageId, string? originalMessageId, string expectedMessageId)
     {
         //Arrange
@@ -90,9 +90,7 @@ public class MessagePumpRequeueRejectionMessageIdTests
         messagePump.Run();
 
         //Assert
-        var rejectedMessage = Assert.Single(bus.Stream(deadLetterRoutingKey));
-        Assert.Equal(
-            $"Message rejected reason: {RejectionReason.DeliveryError} Description: Handle Count Exceeded for message {expectedMessageId}",
-            rejectedMessage.Header.Bag[Message.RejectionReasonHeaderName]);
+        var rejectedMessage = await Assert.That(bus.Stream(deadLetterRoutingKey)).HasSingleItem();
+        await Assert.That(rejectedMessage.Header.Bag[Message.RejectionReasonHeaderName]).IsEqualTo($"Message rejected reason: {RejectionReason.DeliveryError} Description: Handle Count Exceeded for message {expectedMessageId}");
     }
 }

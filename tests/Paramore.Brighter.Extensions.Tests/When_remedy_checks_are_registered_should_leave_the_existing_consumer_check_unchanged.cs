@@ -36,24 +36,23 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.Hosting;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 /// <summary>
 /// Characterises that registering the remedy checks leaves the existing consumer check's results unchanged.
 /// </summary>
-[Collection(DispatcherHealthCheckCollection.NAME)]
+[NotInParallel]
 public class ExistingConsumerCheckUnchangedByRemedyChecksTests
 {
     private const string CheckName = "brighter-consumers";
     private static readonly TimeSpan s_guard = TimeSpan.FromSeconds(10);
 
-    [Theory]
-    [InlineData("short burst", HealthStatus.Healthy)]
-    [InlineData("persistent failure", HealthStatus.Degraded)]
-    [InlineData("some missing", HealthStatus.Degraded)]
-    [InlineData("none running", HealthStatus.Unhealthy)]
+    [Test]
+    [Arguments("short burst", HealthStatus.Healthy)]
+    [Arguments("persistent failure", HealthStatus.Degraded)]
+    [Arguments("some missing", HealthStatus.Degraded)]
+    [Arguments("none running", HealthStatus.Unhealthy)]
     public async Task When_remedy_checks_are_registered_should_leave_the_existing_consumer_check_unchanged(
         string state, HealthStatus expectedStatus)
     {
@@ -71,11 +70,11 @@ public class ExistingConsumerCheckUnchangedByRemedyChecksTests
         var withConsumerChecksEntry = await ExistingCheckEntry(withConsumerChecks);
 
         //Assert
-        Assert.Equal(expectedStatus, aloneEntry.Status);
-        Assert.Equal(aloneEntry.Status, withSweeperEntry.Status);
-        Assert.Equal(aloneEntry.Description, withSweeperEntry.Description);
-        Assert.Equal(aloneEntry.Status, withConsumerChecksEntry.Status);
-        Assert.Equal(aloneEntry.Description, withConsumerChecksEntry.Description);
+        await Assert.That(aloneEntry.Status).IsEqualTo(expectedStatus);
+        await Assert.That(withSweeperEntry.Status).IsEqualTo(aloneEntry.Status);
+        await Assert.That(withSweeperEntry.Description).IsEqualTo(aloneEntry.Description);
+        await Assert.That(withConsumerChecksEntry.Status).IsEqualTo(aloneEntry.Status);
+        await Assert.That(withConsumerChecksEntry.Description).IsEqualTo(aloneEntry.Description);
     }
 
     private static ServiceCollection ExistingCheckServices(MultiSubscriptionReceiveHealthTestHost host)
@@ -91,7 +90,7 @@ public class ExistingConsumerCheckUnchangedByRemedyChecksTests
     {
         await using var provider = services.BuildServiceProvider();
         var report = await provider.GetRequiredService<HealthCheckService>().CheckHealthAsync();
-        Assert.True(report.Entries.TryGetValue(CheckName, out var entry));
+        await Assert.That(report.Entries.TryGetValue(CheckName, out var entry)).IsTrue();
         return entry;
     }
 

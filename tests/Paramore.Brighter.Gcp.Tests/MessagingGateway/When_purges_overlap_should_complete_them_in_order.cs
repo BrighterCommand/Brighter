@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia
@@ -30,20 +30,19 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 
-[Trait("Category", "GcpPubSub")]
-[Trait("Category", "GcpPubSubPurge")]
-[Trait("Requires", "PubSubEmulator")]
+[Property("Category", "GcpPubSub")]
+[Property("Category", "GcpPubSubPurge")]
+[Property("Requires", "PubSubEmulator")]
 public class GcpPurgeSerializationTests
 {
-    [Theory]
-    [InlineData(false, SubscriptionMode.Pull)]
-    [InlineData(true, SubscriptionMode.Pull)]
-    [InlineData(false, SubscriptionMode.Stream)]
-    [InlineData(true, SubscriptionMode.Stream)]
+    [Test]
+    [Arguments(false, SubscriptionMode.Pull)]
+    [Arguments(true, SubscriptionMode.Pull)]
+    [Arguments(false, SubscriptionMode.Stream)]
+    [Arguments(true, SubscriptionMode.Stream)]
     public async Task When_purges_overlap_should_complete_them_in_order(bool useAsync, SubscriptionMode mode)
     {
         //Arrange
@@ -71,7 +70,7 @@ public class GcpPurgeSerializationTests
             await Task.WhenAny(second, Task.Delay(TimeSpan.FromSeconds(1)));
 
             //Assert
-            Assert.False(second.IsCompleted, "The second purge must wait for the first purge to finish.");
+            await Assert.That(second.IsCompleted).IsFalse().Because("The second purge must wait for the first purge to finish.");
         }
         finally
         {
@@ -80,6 +79,6 @@ public class GcpPurgeSerializationTests
             if (second != null)
                 await second.WaitAsync(TimeSpan.FromSeconds(20));
         }
-        Assert.Equal(2, calls);
+        await Assert.That(calls).IsEqualTo(2);
     }
 }

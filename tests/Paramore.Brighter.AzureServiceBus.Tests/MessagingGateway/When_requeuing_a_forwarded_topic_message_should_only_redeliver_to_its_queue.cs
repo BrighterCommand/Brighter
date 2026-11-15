@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -28,23 +28,22 @@ using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "AzureServiceBus")]
-[Collection("AzureServiceBus")]
+[Property("Category", "AzureServiceBus")]
+[NotInParallel("AzureServiceBus")]
 public class AzureServiceBusForwardedRetryIsolationTests
 {
-    [Theory]
-    [InlineData(OnMissingChannel.Create, false, false)]
-    [InlineData(OnMissingChannel.Create, true, false)]
-    [InlineData(OnMissingChannel.Validate, false, false)]
-    [InlineData(OnMissingChannel.Validate, true, false)]
-    [InlineData(OnMissingChannel.Assume, false, false)]
-    [InlineData(OnMissingChannel.Assume, true, false)]
-    [InlineData(OnMissingChannel.Create, false, true)]
-    [InlineData(OnMissingChannel.Create, true, true)]
+    [Test]
+    [Arguments(OnMissingChannel.Create, false, false)]
+    [Arguments(OnMissingChannel.Create, true, false)]
+    [Arguments(OnMissingChannel.Validate, false, false)]
+    [Arguments(OnMissingChannel.Validate, true, false)]
+    [Arguments(OnMissingChannel.Assume, false, false)]
+    [Arguments(OnMissingChannel.Assume, true, false)]
+    [Arguments(OnMissingChannel.Create, false, true)]
+    [Arguments(OnMissingChannel.Create, true, true)]
     public async Task When_requeuing_a_forwarded_topic_message_should_only_redeliver_to_its_queue(
         OnMissingChannel makeChannels, bool synchronous, bool requireSession)
     {
@@ -97,11 +96,11 @@ public class AzureServiceBusForwardedRetryIsolationTests
                 });
             using var syncRetrying = synchronous ? factory.CreateSyncChannel(subscription) : null;
             await using var asyncRetrying = synchronous ? null : await factory.CreateAsyncChannelAsync(subscription);
-            Assert.True((await administration.QueueExistsAsync(queueName)).Value);
+            await Assert.That((await administration.QueueExistsAsync(queueName)).Value).IsTrue();
             var forwardingSubscription = await administration.GetSubscriptionAsync(topicName, "a");
-            Assert.EndsWith(queueName, forwardingSubscription.Value.ForwardTo.TrimEnd('/'));
-            Assert.False(forwardingSubscription.Value.RequiresSession);
-            Assert.Equal(requireSession, (await administration.GetQueueAsync(queueName)).Value.RequiresSession);
+            await Assert.That(forwardingSubscription.Value.ForwardTo.TrimEnd('/')).EndsWith(queueName);
+            await Assert.That(forwardingSubscription.Value.RequiresSession).IsFalse();
+            await Assert.That((await administration.GetQueueAsync(queueName)).Value.RequiresSession).IsEqualTo(requireSession);
 
             await using var otherB = client.CreateReceiver(topicName, "b");
             await using var otherC = client.CreateReceiver(topicName, "c");
@@ -117,39 +116,39 @@ public class AzureServiceBusForwardedRetryIsolationTests
             var received = await ReceiveRetryAsync(TimeSpan.FromSeconds(10));
             var receivedB = await otherB.ReceiveMessageAsync(TimeSpan.FromSeconds(10));
             var receivedC = await otherC.ReceiveMessageAsync(TimeSpan.FromSeconds(10));
-            Assert.Equal(original.MessageId, received.Id.Value);
-            Assert.NotNull(receivedB);
-            Assert.NotNull(receivedC);
-            Assert.Equal(original.MessageId, receivedB.MessageId);
-            Assert.Equal(original.MessageId, receivedC.MessageId);
+            await Assert.That(received.Id.Value).IsEqualTo(original.MessageId);
+            await Assert.That(receivedB).IsNotNull();
+            await Assert.That(receivedC).IsNotNull();
+            await Assert.That(receivedB.MessageId).IsEqualTo(original.MessageId);
+            await Assert.That(receivedC.MessageId).IsEqualTo(original.MessageId);
             await otherB.CompleteMessageAsync(receivedB);
             await otherC.CompleteMessageAsync(receivedC);
 
             // Act
             received.Header.UpdateHandledCount();
             var elapsed = Stopwatch.StartNew();
-            Assert.True(synchronous
+            await Assert.That(synchronous
                 ? syncRetrying!.Requeue(received, TimeSpan.FromSeconds(5))
-                : await asyncRetrying!.RequeueAsync(received, TimeSpan.FromSeconds(5)));
+                : await asyncRetrying!.RequeueAsync(received, TimeSpan.FromSeconds(5))).IsTrue();
 
             // Assert
             if (!requireSession)
             {
                 var beforeDelay = await ReceiveRetryAsync(TimeSpan.FromSeconds(1));
-                Assert.Equal(MessageType.MT_NONE, beforeDelay.Header.MessageType);
+                await Assert.That(beforeDelay.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
             }
 
             var redelivered = await ReceiveRetryAsync(TimeSpan.FromSeconds(10));
-            Assert.True(elapsed.Elapsed >= TimeSpan.FromSeconds(4.5), "The retry must respect its scheduled delay.");
-            Assert.NotEqual(original.MessageId, redelivered.Id.Value);
-            Assert.Equal(original.MessageId, redelivered.Header.Bag[Message.OriginalMessageIdHeaderName]);
-            Assert.Equal(original.MessageId, received.Id.Value);
-            Assert.Equal(original.Body.ToString(), redelivered.Body.Value);
-            Assert.Equal(1, redelivered.Header.HandledCount);
-            Assert.Equal(new RoutingKey(topicName), redelivered.Header.Topic);
-            Assert.Equal(new RoutingKey(topicName), received.Header.Topic);
-            Assert.Null(await otherB.ReceiveMessageAsync(TimeSpan.FromSeconds(1)));
-            Assert.Null(await otherC.ReceiveMessageAsync(TimeSpan.FromSeconds(1)));
+            await Assert.That(elapsed.Elapsed >= TimeSpan.FromSeconds(4.5)).IsTrue().Because("The retry must respect its scheduled delay.");
+            await Assert.That(redelivered.Id.Value).IsNotEqualTo(original.MessageId);
+            await Assert.That(redelivered.Header.Bag[Message.OriginalMessageIdHeaderName]).IsEqualTo(original.MessageId);
+            await Assert.That(received.Id.Value).IsEqualTo(original.MessageId);
+            await Assert.That(redelivered.Body.Value).IsEqualTo(original.Body.ToString());
+            await Assert.That(redelivered.Header.HandledCount).IsEqualTo(1);
+            await Assert.That(redelivered.Header.Topic).IsEqualTo(new RoutingKey(topicName));
+            await Assert.That(received.Header.Topic).IsEqualTo(new RoutingKey(topicName));
+            await Assert.That(await otherB.ReceiveMessageAsync(TimeSpan.FromSeconds(1))).IsNull();
+            await Assert.That(await otherC.ReceiveMessageAsync(TimeSpan.FromSeconds(1))).IsNull();
             if (synchronous)
                 syncRetrying!.Acknowledge(redelivered);
             else

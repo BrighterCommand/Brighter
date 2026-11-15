@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,7 +34,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -43,7 +42,7 @@ public class OutboxAboveTheCeilingTests
     private const string DESTINATION = "messaging.destination.name";
     private readonly TimerCountingTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Fact]
+    [Test]
     public async Task When_an_outbox_returns_more_than_the_ceiling_should_record_the_ceiling()
     {
         //Arrange
@@ -75,34 +74,32 @@ public class OutboxAboveTheCeilingTests
 
         //Act
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(readings);
+        await WaitUntilTheMonitorWaits(readings);
         _clock.Advance(TimeSpan.FromMinutes(1));
-        WaitForCompletions(readings, StaleMessageCount.Overall, 1);
-        WaitForCompletions(readings, StaleMessageCount.PerTopic, 1);
+        await WaitForCompletions(readings, StaleMessageCount.Overall, 1);
+        await WaitForCompletions(readings, StaleMessageCount.PerTopic, 1);
         var at120100 = metrics.Observe();
 
         //Assert
-        var overall = Assert.Single(at120100, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES);
-        Assert.Equal(100, overall.Value);
-        Assert.Equal(
-            new[] { "orders=100", "payments=0" },
-            at120100
+        var overall = await Assert.That(System.Linq.Enumerable.Where(at120100, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)).HasSingleItem();
+        await Assert.That(overall.Value).IsEqualTo(100);
+        await Assert.That(at120100
                 .Where(m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES)
                 .Select(m => $"{m.Attributes[DESTINATION]}={m.Value}")
-                .OrderBy(series => series, StringComparer.Ordinal));
+                .OrderBy(series => series, StringComparer.Ordinal)).IsEqualTo(new[] { "orders=100", "payments=0" });
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
         new(new InternalBus(), new Publication { Topic = new RoutingKey(topic) });
 
-    private void WaitUntilTheMonitorWaits(OutboxStaleMessageReadings readings)
+    private async Task WaitUntilTheMonitorWaits(OutboxStaleMessageReadings readings)
     {
         var completed = readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed);
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= completed + 1, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= completed + 1, TimeSpan.FromSeconds(5))).IsTrue();
     }
 
-    private static void WaitForCompletions(OutboxStaleMessageReadings readings, StaleMessageCount count, long completions) =>
-        Assert.True(SpinWait.SpinUntil(
+    private static async Task WaitForCompletions(OutboxStaleMessageReadings readings, StaleMessageCount count, long completions) =>
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(count, StaleMeasurementOutcome.Completed) >= completions,
-            TimeSpan.FromSeconds(5)));
+            TimeSpan.FromSeconds(5))).IsTrue();
 }

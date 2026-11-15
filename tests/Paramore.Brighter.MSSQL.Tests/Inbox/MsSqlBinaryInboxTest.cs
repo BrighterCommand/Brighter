@@ -1,6 +1,7 @@
-﻿namespace Paramore.Brighter.MSSQL.Tests.Inbox;
+namespace Paramore.Brighter.MSSQL.Tests.Inbox;
+[TUnit.Core.InheritsTests]
 
-public class MsSqlBinaryInboxTest : MsSqlTextInboxTest 
+public class MsSqlBinaryInboxTest : MsSqlTextInboxTest
 {
     protected override bool BinaryMessagePayload  => true;
 }

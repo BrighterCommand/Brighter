@@ -25,14 +25,13 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
 public class BaggageCapacityUpdateTests
 {
-    [Fact]
-    public void When_updating_full_baggage_should_preserve_its_capacity_limit()
+    [Test]
+    public async Task When_updating_full_baggage_should_preserve_its_capacity_limit()
     {
         // Arrange
         var baggage = new Baggage();
@@ -42,10 +41,13 @@ public class BaggageCapacityUpdateTests
         baggage.Add("key0", "updated");
 
         // Assert
-        Assert.Equal(32, baggage.Count());
-        Assert.Equal("updated", baggage.Single(pair => pair.Key == "key0").Value);
-        Assert.Throws<InvalidOperationException>(() => baggage.Add("extra", "overflow"));
-        Assert.Equal(32, baggage.Count());
-        Assert.All(baggage.Where(pair => pair.Key != "key0"), pair => Assert.Equal("original", pair.Value));
+        await Assert.That(baggage.Count()).IsEqualTo(32);
+        await Assert.That(baggage.Single(pair => pair.Key == "key0").Value).IsEqualTo("updated");
+        await Assert.That(() => baggage.Add("extra", "overflow")).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(baggage.Count()).IsEqualTo(32);
+        foreach (var pair in baggage.Where(pair => pair.Key != "key0"))
+{
+    await Assert.That(pair.Value).IsEqualTo("original");
+}
     }
 }

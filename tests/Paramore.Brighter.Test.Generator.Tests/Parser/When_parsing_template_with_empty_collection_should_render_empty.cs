@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.Parser;
 
@@ -15,7 +14,7 @@ public class WhenParsingTemplateWithEmptyCollectionShouldRenderEmpty : IDisposab
         Directory.CreateDirectory(_testDirectory);
     }
 
-    [Fact]
+    [Test]
     public async Task When_parsing_template_with_empty_collection_should_render_empty()
     {
         // Arrange
@@ -33,7 +32,7 @@ public class WhenParsingTemplateWithEmptyCollectionShouldRenderEmpty : IDisposab
 
         // Assert
         var result = await File.ReadAllTextAsync(outputPath);
-        Assert.Empty(result);
+        await Assert.That(result).IsEmpty();
     }
 
     public void Dispose()

@@ -37,7 +37,6 @@ using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -45,7 +44,7 @@ public class SweepHangsAcquiringTheLockTests
 {
     private const string RestartCheck = "brighter-outbox-sweeper-restart";
 
-    [Fact]
+    [Test]
     public async Task When_a_sweep_hangs_acquiring_the_lock_should_report_a_hung_sweep()
     {
         //Arrange
@@ -69,13 +68,13 @@ public class SweepHangsAcquiringTheLockTests
             var report = await healthChecks.CheckHealthAsync(CancellationToken.None);
 
             //Assert
-            Assert.True(reachedLock, "The sweep did not reach the lock");
+            await Assert.That(reachedLock).IsTrue().Because("The sweep did not reach the lock");
             var restart = report.Entries[RestartCheck];
-            Assert.Equal(HealthStatus.Degraded, restart.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, restart.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), restart.Data[RemedyCheckConvention.RemedyKindKey]);
-            var conditions = Assert.IsType<string[]>(restart.Data[RemedyCheckConvention.ConditionsKey]);
-            Assert.Equal(new[] { "hung_sweep" }, conditions);
+            await Assert.That(restart.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That(restart.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(restart.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+            var conditions = await Assert.That(restart.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>();
+            await Assert.That(conditions).IsEqualTo(new[] { "hung_sweep" });
         }
         finally
         {

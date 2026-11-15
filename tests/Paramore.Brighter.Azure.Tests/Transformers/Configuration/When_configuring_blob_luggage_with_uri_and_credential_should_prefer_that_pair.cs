@@ -26,17 +26,15 @@ THE SOFTWARE. */
 
 using Azure.Identity;
 using Paramore.Brighter.Transformers.Azure;
-using Xunit;
-using Assert = Xunit.Assert;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Azure.Tests.Transformers.Configuration;
 
 public class AzureBlobLuggageUriCredentialPrecedenceTests
 {
-    [Xunit.Theory]
-    [InlineData(null, null)]
-    [InlineData("not-a-connection-string", "luggage")]
-    public void When_configuring_blob_luggage_with_uri_and_credential_should_prefer_that_pair(
+    [Test]
+    [Arguments(null, null)]
+    [Arguments("not-a-connection-string", "luggage")]
+    public async Task When_configuring_blob_luggage_with_uri_and_credential_should_prefer_that_pair(
         string? connectionString, string? containerName)
     {
         // Arrange
@@ -49,9 +47,9 @@ public class AzureBlobLuggageUriCredentialPrecedenceTests
         };
 
         // Act
-        var exception = Record.Exception(() => new AzureBlobLuggageStore(options));
+        var exception = TestExceptionRecorder.Capture(() => new AzureBlobLuggageStore(options));
 
         // Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 }

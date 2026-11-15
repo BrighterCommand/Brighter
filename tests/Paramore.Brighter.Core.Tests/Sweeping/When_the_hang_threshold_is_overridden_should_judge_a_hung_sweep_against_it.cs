@@ -6,13 +6,12 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Paramore.Brighter.Outbox.Hosting.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class When_the_hang_threshold_is_overridden_should_judge_a_hung_sweep_against_it_tests
 {
-    [Fact]
+    [Test]
     public async Task When_the_hang_threshold_is_overridden_should_not_report_a_sweep_within_it_as_hung()
     {
         //Arrange
@@ -24,12 +23,12 @@ public class When_the_hang_threshold_is_overridden_should_judge_a_hung_sweep_aga
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
 
         //Assert
-        Assert.Equal(HealthStatus.Healthy, result.Status);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), result.Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Contains("120s", result.Description);
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(result.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+        await Assert.That(result.Description).Contains("120s");
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_hang_threshold_is_overridden_should_report_a_sweep_past_it_as_hung()
     {
         //Arrange
@@ -41,14 +40,14 @@ public class When_the_hang_threshold_is_overridden_should_judge_a_hung_sweep_aga
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
 
         //Assert
-        Assert.Equal(HealthStatus.Degraded, result.Status);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), result.Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Contains("121s", result.Description);
-        Assert.Contains("120s", result.Description);
-        Assert.Contains("10s", result.Description);
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(result.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+        await Assert.That(result.Description).Contains("121s");
+        await Assert.That(result.Description).Contains("120s");
+        await Assert.That(result.Description).Contains("10s");
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_sweep_runs_exactly_the_default_threshold_should_report_it_as_three_seconds()
     {
         //Arrange
@@ -60,12 +59,12 @@ public class When_the_hang_threshold_is_overridden_should_judge_a_hung_sweep_aga
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
 
         //Assert
-        Assert.Equal(HealthStatus.Healthy, result.Status);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), result.Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Contains("3s", result.Description);
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(result.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+        await Assert.That(result.Description).Contains("3s");
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_sweep_runs_a_millisecond_past_the_default_threshold_should_report_three_decimals()
     {
         //Arrange
@@ -77,11 +76,11 @@ public class When_the_hang_threshold_is_overridden_should_judge_a_hung_sweep_aga
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
 
         //Assert
-        Assert.Equal(HealthStatus.Degraded, result.Status);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), result.Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Contains("3.001s", result.Description);
-        Assert.Contains("3s", result.Description);
-        Assert.Contains("1s", result.Description);
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(result.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+        await Assert.That(result.Description).Contains("3.001s");
+        await Assert.That(result.Description).Contains("3s");
+        await Assert.That(result.Description).Contains("1s");
     }
 
     private static OutboxSweeperState RunningSweep(TimeSpan runningTime)

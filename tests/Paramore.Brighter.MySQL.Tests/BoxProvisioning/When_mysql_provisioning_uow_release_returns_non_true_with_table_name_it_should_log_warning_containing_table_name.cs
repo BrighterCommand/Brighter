@@ -31,7 +31,6 @@ using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -39,16 +38,20 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// When the UoW is given a table name, its Warning for a 0 or NULL <c>RELEASE_LOCK</c> names the table
 /// as well as the lock key, since a long key is hashed and no longer contains it (ADR 0057 §5b).
 /// </summary>
-public class MySqlProvisioningUnitOfWorkReleaseNonTrueTests : IAsyncLifetime
+public class MySqlProvisioningUnitOfWorkReleaseNonTrueTests
 {
     private readonly MySqlConnection _connection = new(Const.DefaultConnectingString);
 
+    [Before(HookType.Test)]
+
     public async Task InitializeAsync() => await _connection.OpenAsync();
+    [After(HookType.Test)]
+
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Theory]
-    [InlineData(false, "0")]
-    [InlineData(null, "NULL")]
+    [Test]
+    [Arguments(false, "0")]
+    [Arguments(null, "NULL")]
     public async Task When_mysql_provisioning_uow_release_returns_non_true_with_table_name_it_should_log_warning_containing_table_name(
         bool? releaseResult, string expectedMarker)
     {
@@ -63,17 +66,17 @@ public class MySqlProvisioningUnitOfWorkReleaseNonTrueTests : IAsyncLifetime
         await uow.BeginAsync(lockResource, TimeSpan.FromSeconds(5), CancellationToken.None);
 
         // Act
-        var thrown = await Record.ExceptionAsync(() => uow.CommitAsync(CancellationToken.None));
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => uow.CommitAsync(CancellationToken.None));
 
         // Assert
-        Assert.Null(thrown);
-        Assert.Equal(lockResource, advisoryLock.ReleasedKey);
+        await Assert.That(thrown).IsNull();
+        await Assert.That(advisoryLock.ReleasedKey).IsEqualTo(lockResource);
 
         var warnings = logger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        Assert.Single(warnings);
-        Assert.Contains(tableName, warnings[0].Message, StringComparison.Ordinal);
-        Assert.Contains(lockResource, warnings[0].Message, StringComparison.Ordinal);
-        Assert.Contains(expectedMarker, warnings[0].Message, StringComparison.Ordinal);
-        Assert.Null(warnings[0].Exception);
+        await Assert.That(warnings).HasSingleItem();
+        await Assert.That(warnings[0].Message).Contains(tableName);
+        await Assert.That(warnings[0].Message).Contains(lockResource);
+        await Assert.That(warnings[0].Message).Contains(expectedMarker);
+        await Assert.That(warnings[0].Exception).IsNull();
     }
 }

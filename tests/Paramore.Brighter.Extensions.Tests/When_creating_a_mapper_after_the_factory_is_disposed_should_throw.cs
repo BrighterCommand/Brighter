@@ -1,14 +1,14 @@
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class MapperFactoryDisposedCreateTests
 {
-    [Fact]
-    public void When_creating_a_mapper_after_the_factory_is_disposed_should_throw()
+    [Test]
+    public async System.Threading.Tasks.Task When_creating_a_mapper_after_the_factory_is_disposed_should_throw()
     {
         //arrange
         var collection = new ServiceCollection();
@@ -24,7 +24,7 @@ public class MapperFactoryDisposedCreateTests
         var creatingAfterDispose = () => factory.Create(typeof(NonDisposableMapper));
 
         //assert
-        Assert.Throws<ObjectDisposedException>(creatingAfterDispose);
+        await Assert.That(creatingAfterDispose).ThrowsExactly<ObjectDisposedException>();
     }
 
     private sealed class MinimalCommand : Command

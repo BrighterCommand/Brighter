@@ -25,15 +25,14 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class AzureServiceBusFailedBatchMappingTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_mapping_a_received_batch_fails_should_release_its_locks(bool useQueue)
     {
         // Arrange
@@ -49,13 +48,13 @@ public class AzureServiceBusFailedBatchMappingTests
         await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(subscription);
 
         // Act
-        await Assert.ThrowsAsync<FormatException>(() => consumer.ReceiveAsync());
+        await Assert.That(() => consumer.ReceiveAsync()).ThrowsExactly<FormatException>();
 
         // Assert
-        Assert.True(receiver.IsClosed);
-        Assert.Equal(0, receiver.RenewalsInFlight);
+        await Assert.That(receiver.IsClosed).IsTrue();
+        await Assert.That(receiver.RenewalsInFlight).IsEqualTo(0);
         var attempts = receiver.RenewalAttemptCount;
         await Task.Delay(TimeSpan.FromMilliseconds(1200));
-        Assert.Equal(attempts, receiver.RenewalAttemptCount);
+        await Assert.That(receiver.RenewalAttemptCount).IsEqualTo(attempts);
     }
 }

@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,7 +22,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -31,57 +31,54 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// </summary>
 public class AssertSafeIdentifierTests
 {
-    [Theory]
-    [InlineData("O'Brien")]              // single quote — breaks an information_schema probe
-    [InlineData("Outbox; DROP")]         // semicolon — statement terminator
-    [InlineData("my-outbox")]            // hyphen — invalid in bare identifiers
-    [InlineData("1Outbox")]              // leading digit — invalid as bare identifier across all backends
-    [InlineData("")]                     // empty
-    [InlineData("_underscore_leading")]  // leading underscore — Spanner reserves `_`-prefixed identifiers
-    public void When_assert_safe_identifier_is_called_with_known_unsafe_inputs_it_should_throw(string unsafeIdentifier)
+    [Test]
+    [Arguments("O'Brien")]              // single quote — breaks an information_schema probe
+    [Arguments("Outbox; DROP")]         // semicolon — statement terminator
+    [Arguments("my-outbox")]            // hyphen — invalid in bare identifiers
+    [Arguments("1Outbox")]              // leading digit — invalid as bare identifier across all backends
+    [Arguments("")]                     // empty
+    [Arguments("_underscore_leading")]  // leading underscore — Spanner reserves `_`-prefixed identifiers
+    public async Task When_assert_safe_identifier_is_called_with_known_unsafe_inputs_it_should_throw(string unsafeIdentifier)
     {
         //Arrange
         const string parameterName = "tableName";
 
         //Act
-        var exception = Assert.Throws<ConfigurationException>(
-            () => Identifiers.AssertSafe(unsafeIdentifier, parameterName));
+        var exception = await Assert.That(() => Identifiers.AssertSafe(unsafeIdentifier, parameterName)).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.Contains(parameterName, exception.Message);
-        Assert.Contains(unsafeIdentifier, exception.Message);
+        await Assert.That(exception.Message).Contains(parameterName);
+        await Assert.That(exception.Message).Contains(unsafeIdentifier);
     }
 
-    [Theory]
-    [InlineData("Outbox")]
-    [InlineData("my_outbox_v2")]
-    [InlineData("Outbox123")]
+    [Test]
+    [Arguments("Outbox")]
+    [Arguments("my_outbox_v2")]
+    [Arguments("Outbox123")]
     public void When_assert_safe_identifier_is_called_with_safe_inputs_it_should_not_throw(string safeIdentifier)
     {
         //Act + Assert
         Identifiers.AssertSafe(safeIdentifier, "tableName");
     }
 
-    [Fact]
-    public void When_assert_safe_identifier_is_called_with_a_null_identifier_it_should_throw()
+    [Test]
+    public async Task When_assert_safe_identifier_is_called_with_a_null_identifier_it_should_throw()
     {
         //Act
-        var exception = Assert.Throws<ConfigurationException>(
-            () => Identifiers.AssertSafe(null!, "tableName"));
+        var exception = await Assert.That(() => Identifiers.AssertSafe(null!, "tableName")).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.Contains("tableName", exception.Message);
+        await Assert.That(exception.Message).Contains("tableName");
     }
 
-    [Fact]
-    public void When_assert_safe_identifier_is_called_with_a_null_identifier_it_should_not_blame_the_regex()
+    [Test]
+    public async Task When_assert_safe_identifier_is_called_with_a_null_identifier_it_should_not_blame_the_regex()
     {
         //Act
-        var exception = Assert.Throws<ConfigurationException>(
-            () => Identifiers.AssertSafe(null!, "tableName"));
+        var exception = await Assert.That(() => Identifiers.AssertSafe(null!, "tableName")).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.DoesNotContain("regex", exception.Message);
-        Assert.Contains("null", exception.Message);
+        await Assert.That(exception.Message).DoesNotContain("regex");
+        await Assert.That(exception.Message).Contains("null");
     }
 }

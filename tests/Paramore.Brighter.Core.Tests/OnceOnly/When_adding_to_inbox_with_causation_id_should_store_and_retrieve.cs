@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,7 +26,6 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
@@ -44,8 +44,8 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             _contextKey = "MyContextKey";
         }
 
-        [Fact]
-        public void When_adding_to_inbox_with_causation_id_should_store_and_retrieve()
+        [Test]
+        public async System.Threading.Tasks.Task When_adding_to_inbox_with_causation_id_should_store_and_retrieve()
         {
             //Arrange
             var requestContext = new RequestContext();
@@ -57,10 +57,10 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
                 .GetCausationId(_command.Id, _contextKey, requestContext);
 
             //Assert
-            Assert.Equal(CausationId, storedCausationId);
+            await Assert.That(storedCausationId).IsEqualTo(CausationId);
         }
 
-        [Fact]
+        [Test]
         public async Task When_adding_to_inbox_with_causation_id_should_store_and_retrieve_async()
         {
             //Arrange
@@ -73,11 +73,11 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
                 .GetCausationIdAsync(_command.Id, _contextKey, requestContext);
 
             //Assert
-            Assert.Equal(CausationId, storedCausationId);
+            await Assert.That(storedCausationId).IsEqualTo(CausationId);
         }
 
-        [Fact]
-        public void When_adding_to_inbox_without_causation_id_should_return_null()
+        [Test]
+        public async System.Threading.Tasks.Task When_adding_to_inbox_without_causation_id_should_return_null()
         {
             //Arrange — no CausationId placed in the context bag
             var requestContext = new RequestContext();
@@ -88,17 +88,17 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
                 .GetCausationId(_command.Id, _contextKey, requestContext);
 
             //Assert
-            Assert.Null(storedCausationId);
+            await Assert.That(storedCausationId).IsNull();
         }
 
-        [Fact]
-        public void When_asking_in_memory_inbox_if_it_supports_causation_tracking_should_be_true()
+        [Test]
+        public async System.Threading.Tasks.Task When_asking_in_memory_inbox_if_it_supports_causation_tracking_should_be_true()
         {
             //Act
             var supportsCausationTracking = ((IAmACausationTrackingInbox)_inbox).SupportsCausationTracking();
 
             //Assert
-            Assert.True(supportsCausationTracking);
+            await Assert.That(supportsCausationTracking).IsTrue();
         }
     }
 }

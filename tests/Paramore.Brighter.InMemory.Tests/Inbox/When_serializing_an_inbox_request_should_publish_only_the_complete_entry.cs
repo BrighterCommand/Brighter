@@ -24,16 +24,15 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Inbox;
 
-[Trait("Category", "InMemory")]
+[Property("Category", "InMemory")]
 public class InMemoryInboxEntryPublicationTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_serializing_an_inbox_request_should_publish_only_the_complete_entry(bool useAsync)
     {
         //Arrange
@@ -57,13 +56,13 @@ public class InMemoryInboxEntryPublicationTests
             inbox.Add(command, contextKey, context);
 
         //Assert
-        Assert.False(existedDuringSerialization);
-        Assert.Equal(0, countDuringSerialization);
-        Assert.True(inbox.Exists<InboxSerializationCommand>(command.Id, contextKey, context));
-        Assert.Equal(1, inbox.EntryCount);
+        await Assert.That(existedDuringSerialization).IsFalse();
+        await Assert.That(countDuringSerialization).IsEqualTo(0);
+        await Assert.That(inbox.Exists<InboxSerializationCommand>(command.Id, contextKey, context)).IsTrue();
+        await Assert.That(inbox.EntryCount).IsEqualTo(1);
         var stored = inbox.Get<InboxSerializationCommand>(command.Id, contextKey, context);
-        Assert.Equal(command.Id, stored.Id);
-        Assert.Equal("complete payload", stored.Value);
-        Assert.Equal("complete-causation", inbox.GetCausationId(command.Id, contextKey, context));
+        await Assert.That(stored.Id).IsEqualTo(command.Id);
+        await Assert.That(stored.Value).IsEqualTo("complete payload");
+        await Assert.That(inbox.GetCausationId(command.Id, contextKey, context)).IsEqualTo("complete-causation");
     }
 }

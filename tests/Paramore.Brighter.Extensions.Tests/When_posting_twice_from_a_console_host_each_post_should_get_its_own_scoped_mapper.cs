@@ -7,14 +7,14 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ScopedMapperPerPostTests
 {
-    [Fact]
-    public void When_posting_twice_from_a_console_host_each_post_should_get_its_own_scoped_mapper()
+    [Test]
+    public async System.Threading.Tasks.Task When_posting_twice_from_a_console_host_each_post_should_get_its_own_scoped_mapper()
     {
         //arrange — a console host: no ambient, no IAmAScopeProvider registered. An FR-22.2-conformant
         //lifetime triple: all three Scoped
@@ -72,6 +72,6 @@ public class ScopedMapperPerPostTests
 
         //assert — two distinct mapper instances, the first disposed strictly before the second was
         //constructed (the ordering, not merely the distinctness)
-        Assert.Equal(new[] { "Constructed:1", "Disposed:1", "Constructed:2", "Disposed:2" }, recorder.Events);
+        await Assert.That(recorder.Events).IsEquivalentTo(new[] { "Constructed:1", "Disposed:1", "Constructed:2", "Disposed:2" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 }

@@ -25,17 +25,16 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class AzureServiceBusExpiredLockTests
 {
-    [Theory]
-    [InlineData(false, 0)]
-    [InlineData(true, 0)]
-    [InlineData(false, 1500)]
-    [InlineData(true, 1500)]
+    [Test]
+    [Arguments(false, 0)]
+    [Arguments(true, 0)]
+    [Arguments(false, 1500)]
+    [Arguments(true, 1500)]
     public async Task When_buffered_message_lock_expires_should_skip_dispatch(bool useAsync, int renewalMilliseconds)
     {
         // Arrange
@@ -70,14 +69,14 @@ public class AzureServiceBusExpiredLockTests
         }
 
         // Assert
-        Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
-        Assert.Equal(1, receiver.CompletedCount);
-        if (renewalMilliseconds == 0) Assert.Equal(0, receiver.RenewalCount);
-        else Assert.True(receiver.RenewalCount > 0);
+        await Assert.That(received.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
+        await Assert.That(receiver.CompletedCount).IsEqualTo(1);
+        if (renewalMilliseconds == 0) await Assert.That(receiver.RenewalCount).IsEqualTo(0);
+        else await Assert.That(receiver.RenewalCount > 0).IsTrue();
     }
 
-    [Fact]
-    public void When_renewal_duration_is_negative_should_reject_configuration()
+    [Test]
+    public async Task When_renewal_duration_is_negative_should_reject_configuration()
     {
         // Arrange
         var receiver = new InMemoryLockingServiceBusReceiver(1, TimeSpan.FromSeconds(2));
@@ -91,13 +90,13 @@ public class AzureServiceBusExpiredLockTests
             });
 
         // Act
-        var exception = Assert.Throws<ConfigurationException>(() => factory.Create(subscription));
+        var exception = (await Assert.That(() => factory.Create(subscription)).ThrowsExactly<ConfigurationException>());
 
         // Assert
-        Assert.Contains("MaxAutoLockRenewalDuration", exception.Message);
+        await Assert.That(exception.Message).Contains("MaxAutoLockRenewalDuration");
     }
 
-    [Fact]
+    [Test]
     public async Task When_renewal_fails_transiently_should_retry_while_the_lock_is_valid()
     {
         // Arrange
@@ -112,17 +111,17 @@ public class AzureServiceBusExpiredLockTests
         await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(subscription);
 
         // Act
-        var message = Assert.Single(await consumer.ReceiveAsync());
+        var message = await Assert.That(await consumer.ReceiveAsync()).HasSingleItem();
         await Task.Delay(TimeSpan.FromSeconds(5));
         await consumer.AcknowledgeAsync(message);
 
         // Assert
-        Assert.Equal(1, receiver.CompletedCount);
-        Assert.True(receiver.RenewalAttemptCount >= 2);
-        Assert.True(receiver.RenewalCount >= 1);
+        await Assert.That(receiver.CompletedCount).IsEqualTo(1);
+        await Assert.That(receiver.RenewalAttemptCount >= 2).IsTrue();
+        await Assert.That(receiver.RenewalCount >= 1).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_buffered_message_loses_its_lock_should_skip_dispatch()
     {
         // Arrange
@@ -145,8 +144,8 @@ public class AzureServiceBusExpiredLockTests
         var received = await channel.ReceiveAsync(null);
 
         // Assert
-        Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
-        Assert.Equal(1, receiver.RenewalAttemptCount);
-        Assert.Equal(0, receiver.RenewalCount);
+        await Assert.That(received.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
+        await Assert.That(receiver.RenewalAttemptCount).IsEqualTo(1);
+        await Assert.That(receiver.RenewalCount).IsEqualTo(0);
     }
 }

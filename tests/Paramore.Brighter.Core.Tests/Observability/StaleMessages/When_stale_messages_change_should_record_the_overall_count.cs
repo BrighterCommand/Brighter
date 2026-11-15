@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,7 +34,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -42,7 +41,7 @@ public class StaleOverallCountFollowsTheStoreTests
 {
     private readonly TimerCountingTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Fact]
+    [Test]
     public async Task When_stale_messages_change_should_record_the_overall_count()
     {
         //Arrange
@@ -74,51 +73,51 @@ public class StaleOverallCountFollowsTheStoreTests
 
         //Act
         await monitor.StartAsync(default);
-        AdvanceThroughDueTimes(readings, 4);
+        await AdvanceThroughDueTimes(readings, 4);
         outbox.Add(m3, context);
-        AdvanceThroughDueTimes(readings, 2);
-        WaitUntilTheMonitorWaits(readings);
+        await AdvanceThroughDueTimes(readings, 2);
+        await WaitUntilTheMonitorWaits(readings);
         _clock.Advance(TimeSpan.FromSeconds(30));
         var at120630 = OverallValues(metrics);
         _clock.Advance(TimeSpan.FromSeconds(10));
         outbox.MarkDispatched(m1.Id, context);
         _clock.Advance(TimeSpan.FromSeconds(20));
         WaitForCompletions(readings, 7);
-        WaitUntilTheMonitorWaits(readings);
+        await WaitUntilTheMonitorWaits(readings);
         _clock.Advance(TimeSpan.FromSeconds(30));
         var at120730 = OverallValues(metrics);
         _clock.Advance(TimeSpan.FromSeconds(30));
         WaitForCompletions(readings, 8);
-        AdvanceThroughDueTimes(readings, 2);
-        WaitUntilTheMonitorWaits(readings);
+        await AdvanceThroughDueTimes(readings, 2);
+        await WaitUntilTheMonitorWaits(readings);
         _clock.Advance(TimeSpan.FromSeconds(30));
         var at121030 = OverallValues(metrics);
 
         //Assert
-        Assert.Equal(new[] { 1L }, at120630);
-        Assert.Equal(new[] { 0L }, at120730);
-        Assert.Equal(new[] { 1L }, at121030);
-        Assert.DoesNotContain(hostedServices, service => service is TimedOutboxSweeper);
+        await Assert.That(at120630).IsEqualTo(new[] { 1L });
+        await Assert.That(at120730).IsEqualTo(new[] { 0L });
+        await Assert.That(at121030).IsEqualTo(new[] { 1L });
+        await Assert.That(System.Linq.Enumerable.Any(hostedServices, service => service is TimedOutboxSweeper)).IsFalse();
     }
 
     private static Message OrdersEvent() =>
         new(new MessageHeader(Id.Random(), new RoutingKey("orders"), MessageType.MT_EVENT), new MessageBody("{}"));
 
-    private void AdvanceThroughDueTimes(OutboxStaleMessageReadings readings, int dueTimes)
+    private async System.Threading.Tasks.Task AdvanceThroughDueTimes(OutboxStaleMessageReadings readings, int dueTimes)
     {
         for (var i = 0; i < dueTimes; i++)
         {
             var completed = readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed);
-            WaitUntilTheMonitorWaits(readings);
+            await WaitUntilTheMonitorWaits(readings);
             _clock.Advance(TimeSpan.FromMinutes(1));
             WaitForCompletions(readings, completed + 1);
         }
     }
 
-    private void WaitUntilTheMonitorWaits(OutboxStaleMessageReadings readings)
+    private async Task WaitUntilTheMonitorWaits(OutboxStaleMessageReadings readings)
     {
         var completed = readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed);
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= completed + 1, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= completed + 1, TimeSpan.FromSeconds(5))).IsTrue();
     }
 
     private static void WaitForCompletions(OutboxStaleMessageReadings readings, long completions) =>

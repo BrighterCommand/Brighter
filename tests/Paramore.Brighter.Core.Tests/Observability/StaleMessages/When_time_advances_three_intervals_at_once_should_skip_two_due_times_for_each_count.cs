@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -35,11 +35,11 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
-[Collection(StaleMessageLoggingCollection.Name)]
+[NotInParallel]
+[ClassDataSource<StaleMessageLoggingFixture>(Shared = SharedType.PerTestSession)]
 public class SkippedDueTimesForEachCountTests
 {
     private readonly TimerCountingTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
@@ -50,7 +50,7 @@ public class SkippedDueTimesForEachCountTests
         _logs = fixture.Logs;
     }
 
-    [Fact]
+    [Test]
     public async Task When_time_advances_three_intervals_at_once_should_skip_two_due_times_for_each_count()
     {
         //Arrange
@@ -77,37 +77,37 @@ public class SkippedDueTimesForEachCountTests
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         var readings = metrics.Services.GetRequiredService<OutboxStaleMessageReadings>();
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
 
         //Act
         _clock.Advance(TimeSpan.FromMinutes(3));
-        WaitForCompletions(readings, StaleMessageCount.Overall);
-        WaitForCompletions(readings, StaleMessageCount.PerTopic);
+        await WaitForCompletions(readings, StaleMessageCount.Overall);
+        await WaitForCompletions(readings, StaleMessageCount.PerTopic);
 
         //Assert
-        Assert.Equal(2, readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Skipped));
-        Assert.Equal(2, readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Skipped));
-        Assert.Equal(1, readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed));
-        Assert.Equal(1, readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Completed));
+        await Assert.That(readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Skipped)).IsEqualTo(2);
+        await Assert.That(readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Skipped)).IsEqualTo(2);
+        await Assert.That(readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed)).IsEqualTo(1);
+        await Assert.That(readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Completed)).IsEqualTo(1);
 
         var dueTime = new DateTimeOffset(2026, 1, 1, 12, 3, 0, TimeSpan.Zero);
-        Assert.Equal([dueTime], outbox.CountCalls.Select(call => call.CalledAt));
-        Assert.Equal([dueTime], outbox.TopicCountCalls.Select(call => call.CalledAt));
+        await Assert.That(outbox.CountCalls.Select(call => call.CalledAt)).IsEqualTo([dueTime]);
+        await Assert.That(outbox.TopicCountCalls.Select(call => call.CalledAt)).IsEqualTo([dueTime]);
 
         var warnings = _logs.Entries.Where(entry => entry.LogLevel == LogLevel.Warning).Select(entry => entry.Message).ToArray();
-        Assert.Equal(2, warnings.Length);
-        Assert.Contains(warnings, message => message.Contains("skipped 2 due times of the Overall count"));
-        Assert.Contains(warnings, message => message.Contains("skipped 2 due times of the PerTopic count"));
+        await Assert.That(warnings.Length).IsEqualTo(2);
+        await Assert.That(System.Linq.Enumerable.Any(warnings, message => message.Contains("skipped 2 due times of the Overall count"))).IsTrue();
+        await Assert.That(System.Linq.Enumerable.Any(warnings, message => message.Contains("skipped 2 due times of the PerTopic count"))).IsTrue();
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
         new(new InternalBus(), new Publication { Topic = new RoutingKey(topic) });
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 
-    private static void WaitForCompletions(OutboxStaleMessageReadings readings, StaleMessageCount count) =>
-        Assert.True(SpinWait.SpinUntil(
+    private static async Task WaitForCompletions(OutboxStaleMessageReadings readings, StaleMessageCount count) =>
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(count, StaleMeasurementOutcome.Completed) >= 1,
-            TimeSpan.FromSeconds(5)));
+            TimeSpan.FromSeconds(5))).IsTrue();
 }

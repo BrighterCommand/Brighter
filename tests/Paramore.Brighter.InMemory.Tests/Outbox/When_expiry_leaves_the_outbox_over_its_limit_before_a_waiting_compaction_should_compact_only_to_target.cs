@@ -28,14 +28,13 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.Builders;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Outbox
 {
-    [Trait("Category", "InMemory")]
+    [Property("Category", "InMemory")]
     public class OutboxCompactionTargetSizeTests
     {
-        [Fact]
+        [Test]
         public async Task When_expiry_leaves_the_outbox_over_its_limit_before_a_waiting_compaction_should_compact_only_to_target()
         {
             //Arrange
@@ -83,7 +82,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
                 //A read is due an expiry scan, which occupies the cleanup worker
                 timeProvider.Advance(TimeSpan.FromMilliseconds(100));
                 outbox.Get(liveId, context);
-                Assert.True(outbox.ExpiryEntered.Wait(TimeSpan.FromSeconds(5)), "Expiry scan should have occupied the cleanup worker");
+                await Assert.That(outbox.ExpiryEntered.Wait(TimeSpan.FromSeconds(5))).IsTrue().Because("Expiry scan should have occupied the cleanup worker");
 
                 //Act - this add is due a compaction, sized at 10 - 2 = 8 entries, which must wait for the expiry scan
                 outbox.Add(new MessageTestDataBuilder(), context);
@@ -105,7 +104,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
 
             //Assert - expiry leaves 8 (7 live + the undispatched add), still over the limit, so compaction
             //removes 8 - 2 = 6 rather than the 8 it was sized at, stopping at the target size
-            Assert.Equal(targetSize, outbox.EntryCount);
+            await Assert.That(outbox.EntryCount).IsEqualTo(targetSize);
         }
     }
 }

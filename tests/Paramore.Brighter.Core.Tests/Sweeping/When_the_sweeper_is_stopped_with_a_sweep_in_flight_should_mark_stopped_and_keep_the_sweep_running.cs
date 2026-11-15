@@ -6,13 +6,12 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class SweeperStateStoppedTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_sweeper_is_stopped_with_a_sweep_in_flight_should_mark_stopped_and_keep_the_sweep_running()
     {
         //Arrange
@@ -36,11 +35,11 @@ public class SweeperStateStoppedTests
             var abandoned = state.Read();
 
             //Assert
-            Assert.True(reachedMediator, "The sweep did not reach the mediator");
-            Assert.True(abandoned.IsStopped);
-            Assert.False(abandoned.IsActive);
-            Assert.True(abandoned.IsSweepInProgress);
-            Assert.Equal(TimeSpan.FromSeconds(56), abandoned.RunningTime);
+            await Assert.That(reachedMediator).IsTrue().Because("The sweep did not reach the mediator");
+            await Assert.That(abandoned.IsStopped).IsTrue();
+            await Assert.That(abandoned.IsActive).IsFalse();
+            await Assert.That(abandoned.IsSweepInProgress).IsTrue();
+            await Assert.That(abandoned.RunningTime).IsEqualTo(TimeSpan.FromSeconds(56));
         }
         finally
         {
@@ -49,7 +48,7 @@ public class SweeperStateStoppedTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_sweeper_is_stopped_before_it_started_should_mark_stopped()
     {
         //Arrange
@@ -67,12 +66,12 @@ public class SweeperStateStoppedTests
         sweeper.Dispose();
 
         //Assert
-        Assert.True(stopped.IsStopped);
-        Assert.False(stopped.IsActive);
+        await Assert.That(stopped.IsStopped).IsTrue();
+        await Assert.That(stopped.IsActive).IsFalse();
     }
 
-    [Fact]
-    public void When_the_sweeper_is_disposed_should_mark_stopped()
+    [Test]
+    public async Task When_the_sweeper_is_disposed_should_mark_stopped()
     {
         //Arrange
         var timeProvider = new FakeTimeProvider();
@@ -88,8 +87,8 @@ public class SweeperStateStoppedTests
         var disposed = state.Read();
 
         //Assert
-        Assert.True(disposed.IsStopped);
-        Assert.False(disposed.IsActive);
+        await Assert.That(disposed.IsStopped).IsTrue();
+        await Assert.That(disposed.IsActive).IsFalse();
     }
 
     private static TimedOutboxSweeper CreateSweeper(ServiceProvider provider, FakeTimeProvider timeProvider, OutboxSweeperState state) =>

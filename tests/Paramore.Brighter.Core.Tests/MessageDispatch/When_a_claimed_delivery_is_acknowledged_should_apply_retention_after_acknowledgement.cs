@@ -27,18 +27,17 @@ using System;
 using Paramore.Brighter.Actions;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.MessageDispatch;
 
 public class ClaimCheckAcknowledgementCleanupTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
-    public void When_a_claimed_delivery_is_acknowledged_should_apply_retention_after_acknowledgement(
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
+    public async Task When_a_claimed_delivery_is_acknowledged_should_apply_retention_after_acknowledgement(
         bool useAsync, bool retain)
     {
         //Arrange
@@ -48,11 +47,14 @@ public class ClaimCheckAcknowledgementCleanupTests
         scenario.Run();
 
         //Assert
-        Assert.Equal(scenario.Payload, Assert.Single(scenario.HandledPayloads));
-        Assert.Equal(1, scenario.Channel.AcknowledgeCount);
-        Assert.True(Assert.Single(scenario.LuggageAtAcknowledge));
-        Assert.Equal(retain, scenario.Storage.HasClaim(scenario.ClaimId));
-        Assert.NotEmpty(scenario.ScopedStores);
-        Assert.All(scenario.ScopedStores, storage => Assert.True(storage.IsDisposed));
+        await Assert.That((await Assert.That(scenario.HandledPayloads).HasSingleItem())).IsEqualTo(scenario.Payload);
+        await Assert.That(scenario.Channel.AcknowledgeCount).IsEqualTo(1);
+        await Assert.That((await Assert.That(scenario.LuggageAtAcknowledge).HasSingleItem())).IsTrue();
+        await Assert.That(scenario.Storage.HasClaim(scenario.ClaimId)).IsEqualTo(retain);
+        await Assert.That(scenario.ScopedStores).IsNotEmpty();
+        foreach (var storage in scenario.ScopedStores)
+{
+    await Assert.That(storage.IsDisposed).IsTrue();
+}
     }
 }

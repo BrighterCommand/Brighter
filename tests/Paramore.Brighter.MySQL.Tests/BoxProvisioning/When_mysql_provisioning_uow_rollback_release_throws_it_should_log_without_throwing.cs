@@ -31,7 +31,6 @@ using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -40,15 +39,19 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// and carrying the exception, and does not rethrow: a throw would hide the migration's own failure in
 /// the runner's catch (ADR 0058 §B.3).
 /// </summary>
-public class MySqlProvisioningUnitOfWorkRollbackReleaseThrowsTests : IAsyncLifetime
+public class MySqlProvisioningUnitOfWorkRollbackReleaseThrowsTests
 {
     private readonly MySqlConnection _connection = new(Const.DefaultConnectingString);
 
+    [Before(HookType.Test)]
+
     public async Task InitializeAsync() => await _connection.OpenAsync();
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_mysql_provisioning_uow_rollback_release_throws_it_should_log_without_throwing()
     {
         // Arrange
@@ -65,15 +68,15 @@ public class MySqlProvisioningUnitOfWorkRollbackReleaseThrowsTests : IAsyncLifet
             cancellationToken: CancellationToken.None);
 
         // Act
-        var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(CancellationToken.None));
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => uow.RollbackAsync(CancellationToken.None));
 
         // Assert
-        Assert.Null(thrown);
-        Assert.Equal("test_lock_resource", advisoryLock.ReleasedKey);
+        await Assert.That(thrown).IsNull();
+        await Assert.That(advisoryLock.ReleasedKey).IsEqualTo("test_lock_resource");
 
         var warnings = logger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        Assert.Single(warnings);
-        Assert.Contains("test_lock_resource", warnings[0].Message, StringComparison.Ordinal);
-        Assert.Same(releaseFault, warnings[0].Exception);
+        await Assert.That(warnings).HasSingleItem();
+        await Assert.That(warnings[0].Message).Contains("test_lock_resource");
+        await Assert.That(warnings[0].Exception).IsSameReferenceAs(releaseFault);
     }
 }

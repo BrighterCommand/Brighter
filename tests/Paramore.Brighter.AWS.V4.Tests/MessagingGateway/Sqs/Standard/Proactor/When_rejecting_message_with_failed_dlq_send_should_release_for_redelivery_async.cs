@@ -31,7 +31,6 @@ using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Standard.Proactor;
 
@@ -39,7 +38,7 @@ namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Standard.Proactor;
 /// Pins issue #4415: when the routing send to a configured DLQ fails, the source message must be
 /// released for redelivery (not deleted), matching spec 0037 R-19's GCP behaviour.
 /// </summary>
-[Trait("Category", "AWS")]
+[Property("Category", "AWS")]
 public class SqsMessageConsumerFailedDlqSendReleasesSourceTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
@@ -95,7 +94,7 @@ public class SqsMessageConsumerFailedDlqSendReleasesSourceTestsAsync : IDisposab
             makeChannels: OnMissingChannel.Validate);
     }
 
-    [Fact]
+    [Test]
     public async Task When_rejecting_message_with_failed_dlq_send_should_release_for_redelivery_async()
     {
         //Arrange
@@ -106,11 +105,11 @@ public class SqsMessageConsumerFailedDlqSendReleasesSourceTestsAsync : IDisposab
         var result = await _consumer.RejectAsync(message, new MessageRejectionReason(RejectionReason.DeliveryError, "Test delivery error"));
 
         //Assert — settled by this call, but released for redelivery, not deleted
-        Assert.True(result);
+        await Assert.That(result).IsTrue();
 
         var redelivered = (await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(5000))).First();
-        Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-        Assert.Equal(_message.Body.Value, redelivered.Body.Value);
+        await Assert.That(redelivered.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await Assert.That(redelivered.Body.Value).IsEqualTo(_message.Body.Value);
     }
 
     public void Dispose()

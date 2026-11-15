@@ -27,7 +27,6 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -39,7 +38,7 @@ public class MsSqlAdvisoryLockTimeoutValidationTests
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
 
-    [Fact]
+    [Test]
     public async Task When_lock_timeout_exceeds_int_max_milliseconds_acquire_should_throw()
     {
         //Arrange
@@ -53,12 +52,12 @@ public class MsSqlAdvisoryLockTimeoutValidationTests
         var advisoryLock = new MsSqlAdvisoryLock();
 
         //Act + Assert
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+        await Assert.That(() =>
             advisoryLock.AcquireAsync(
-                connection, transaction, "any_resource", overflowingTimeout, default));
+                connection, transaction, "any_resource", overflowingTimeout, default)).ThrowsExactly<ArgumentOutOfRangeException>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_lock_timeout_is_negative_acquire_should_throw()
     {
         //Arrange
@@ -72,12 +71,12 @@ public class MsSqlAdvisoryLockTimeoutValidationTests
         var advisoryLock = new MsSqlAdvisoryLock();
 
         //Act + Assert
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+        await Assert.That(() =>
             advisoryLock.AcquireAsync(
-                connection, transaction, "any_resource", negativeTimeout, default));
+                connection, transaction, "any_resource", negativeTimeout, default)).ThrowsExactly<ArgumentOutOfRangeException>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_lock_timeout_is_at_int_max_milliseconds_acquire_should_succeed()
     {
         //Arrange
@@ -92,13 +91,13 @@ public class MsSqlAdvisoryLockTimeoutValidationTests
         var advisoryLock = new MsSqlAdvisoryLock();
 
         //Act
-        var ex = await Record.ExceptionAsync(() =>
+        var ex = await TestExceptionRecorder.CaptureAsync(() =>
             advisoryLock.AcquireAsync(
                 connection, transaction, lockResource, boundaryTimeout, default));
 
         //Assert
-        Assert.IsNotType<ArgumentOutOfRangeException>(ex);
-        Assert.Null(ex);
+        await Assert.That(ex).IsNotTypeOf<ArgumentOutOfRangeException>();
+        await Assert.That(ex).IsNull();
 
         await transaction.RollbackAsync();
     }

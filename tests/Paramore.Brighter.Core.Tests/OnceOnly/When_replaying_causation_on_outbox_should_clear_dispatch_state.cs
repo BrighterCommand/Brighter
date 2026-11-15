@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,7 +28,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
@@ -70,24 +70,24 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             _timeProvider.Advance(TimeSpan.FromSeconds(10));
         }
 
-        [Fact]
-        public void When_replaying_causation_on_outbox_should_clear_dispatch_state()
+        [Test]
+        public async System.Threading.Tasks.Task When_replaying_causation_on_outbox_should_clear_dispatch_state()
         {
             //Act
             ((IAmACausationTrackingOutbox)_outbox).ReplayCausation(CausationA, _contextA);
 
             //Assert — the two CausationA messages are outstanding again
             var outstanding = _outbox.OutstandingMessages(TimeSpan.Zero, _contextA).Select(m => m.Id.Value).ToArray();
-            Assert.Contains(_firstMessageWithCausationA, outstanding);
-            Assert.Contains(_secondMessageWithCausationA, outstanding);
+            await Assert.That(outstanding).Contains(_firstMessageWithCausationA);
+            await Assert.That(outstanding).Contains(_secondMessageWithCausationA);
 
             //Assert — the CausationB message is untouched and still dispatched
             var dispatched = _outbox.DispatchedMessages(TimeSpan.FromSeconds(5), _contextB).Select(m => m.Id.Value).ToArray();
-            Assert.Contains(_messageWithCausationB, dispatched);
-            Assert.DoesNotContain(_messageWithCausationB, outstanding);
+            await Assert.That(dispatched).Contains(_messageWithCausationB);
+            await Assert.That(outstanding).DoesNotContain(_messageWithCausationB);
         }
 
-        [Fact]
+        [Test]
         public async Task When_replaying_causation_on_outbox_should_clear_dispatch_state_async()
         {
             //Act
@@ -95,23 +95,23 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
             //Assert — the two CausationA messages are outstanding again
             var outstanding = _outbox.OutstandingMessages(TimeSpan.Zero, _contextA).Select(m => m.Id.Value).ToArray();
-            Assert.Contains(_firstMessageWithCausationA, outstanding);
-            Assert.Contains(_secondMessageWithCausationA, outstanding);
+            await Assert.That(outstanding).Contains(_firstMessageWithCausationA);
+            await Assert.That(outstanding).Contains(_secondMessageWithCausationA);
 
             //Assert — the CausationB message is untouched and still dispatched
             var dispatched = _outbox.DispatchedMessages(TimeSpan.FromSeconds(5), _contextB).Select(m => m.Id.Value).ToArray();
-            Assert.Contains(_messageWithCausationB, dispatched);
-            Assert.DoesNotContain(_messageWithCausationB, outstanding);
+            await Assert.That(dispatched).Contains(_messageWithCausationB);
+            await Assert.That(outstanding).DoesNotContain(_messageWithCausationB);
         }
 
-        [Fact]
-        public void When_asking_in_memory_outbox_if_it_supports_causation_tracking_should_be_true()
+        [Test]
+        public async System.Threading.Tasks.Task When_asking_in_memory_outbox_if_it_supports_causation_tracking_should_be_true()
         {
             //Act
             var supportsCausationTracking = ((IAmACausationTrackingOutbox)_outbox).SupportsCausationTracking();
 
             //Assert
-            Assert.True(supportsCausationTracking);
+            await Assert.That(supportsCausationTracking).IsTrue();
         }
 
         private static Message CreateMessage(string id)

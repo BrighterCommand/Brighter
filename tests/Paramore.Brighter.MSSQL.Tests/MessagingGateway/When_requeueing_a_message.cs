@@ -1,18 +1,17 @@
-﻿using System;
+using System;
 using System.Net.Mime;
 using System.Text.Json;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 {
-    [Trait("Category", "MSSQL")]
+    [Category("MSSQL")]
     public class MsSqlMessageConsumerRequeueTests
     {
         private readonly Message _message;
-        private readonly IAmAProducerRegistry _producerRegistry; 
+        private readonly IAmAProducerRegistry _producerRegistry;
         private readonly IAmAChannelFactory _channelFactory;
         private readonly MsSqlSubscription<MyCommand> _subscription;
         private readonly RoutingKey _topic;
@@ -27,7 +26,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             _topic = new RoutingKey($"Consumer-Requeue-Tests-{Guid.NewGuid()}");
 
             _message = new Message(
-                new MessageHeader(myCommand.Id, _topic, MessageType.MT_COMMAND, correlationId:correlationId, 
+                new MessageHeader(myCommand.Id, _topic, MessageType.MT_COMMAND, correlationId:correlationId,
                     replyTo:new RoutingKey(replyTo), contentType:contentType),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
             );
@@ -39,7 +38,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                 new SubscriptionName(channelName),
                 new ChannelName(_topic), new RoutingKey(_topic),
                 messagePumpType: MessagePumpType.Reactor);
-            
+
             _producerRegistry = new MsSqlProducerRegistryFactory(
                 testHelper.QueueConfiguration,
                 [new Publication {Topic = new RoutingKey(_topic)}]
@@ -47,8 +46,8 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             _channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration));
         }
 
-        [Fact]
-        public void When_requeueing_a_message()
+        [Test]
+        public async Task When_requeueing_a_message()
         {
             ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(_message);
             var channel = _channelFactory.CreateSyncChannel(_subscription);
@@ -60,7 +59,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             //clear the queue
             channel.Acknowledge(requeuedMessage);
 
-            Assert.Equal(message.Body.Value, requeuedMessage.Body.Value);
+            await Assert.That(requeuedMessage.Body.Value).IsEqualTo(message.Body.Value);
         }
     }
 }

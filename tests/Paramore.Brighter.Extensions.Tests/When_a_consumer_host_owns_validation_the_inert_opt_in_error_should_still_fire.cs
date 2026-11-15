@@ -31,13 +31,13 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Validation;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ConsumerHostInertOptInValidationTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_consumer_host_owns_validation_the_inert_opt_in_error_should_still_fire()
     {
         // Arrange — AddBrighter before AddConsumers, so the producer's BrighterOptions (JoinAmbient, all
@@ -56,15 +56,14 @@ public class ConsumerHostInertOptInValidationTests
 
         // Act & Assert — startup still fails, surfaced by ServiceActivatorHostedService rather than
         // BrighterValidationHostedService, carrying the same FR-22.1 message
-        var exception = await Assert.ThrowsAsync<PipelineValidationException>(
-            () => hostedService.StartAsync(CancellationToken.None));
+        var exception = await Assert.That(() => hostedService.StartAsync(CancellationToken.None)).ThrowsExactly<PipelineValidationException>();
 
-        Assert.Contains("JoinAmbient", exception.Message);
-        Assert.Contains("HandlerLifetime", exception.Message);
-        Assert.Contains("MapperLifetime", exception.Message);
-        Assert.Contains("TransformerLifetime", exception.Message);
-        Assert.Contains("Transient", exception.Message);
-        Assert.Contains("no effect", exception.Message);
-        Assert.Contains("docs/guides/lifetimes-and-scoping.md", exception.Message);
+        await Assert.That(exception.Message).Contains("JoinAmbient");
+        await Assert.That(exception.Message).Contains("HandlerLifetime");
+        await Assert.That(exception.Message).Contains("MapperLifetime");
+        await Assert.That(exception.Message).Contains("TransformerLifetime");
+        await Assert.That(exception.Message).Contains("Transient");
+        await Assert.That(exception.Message).Contains("no effect");
+        await Assert.That(exception.Message).Contains("docs/guides/lifetimes-and-scoping.md");
     }
 }

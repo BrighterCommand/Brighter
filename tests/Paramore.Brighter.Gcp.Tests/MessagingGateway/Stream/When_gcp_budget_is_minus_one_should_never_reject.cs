@@ -28,7 +28,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 
@@ -40,8 +39,8 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 /// This is the "-1" clause of AC-35 and is unguarded — it holds regardless of R-13's branch,
 /// because the guard lives in the pump (<c>MessagePump.cs:171</c>), not in the GCP consumers.
 /// </summary>
-[Trait("Category", "GcpPubSubStream")]
-[Collection("Stream")]
+[Property("Category", "GcpPubSubStream")]
+[NotInParallel("Stream")]
 public class GcpStreamBudgetMinusOneNeverRejectsReactorTests
 {
     /// <summary>
@@ -55,7 +54,7 @@ public class GcpStreamBudgetMinusOneNeverRejectsReactorTests
     /// does not wait on the ack deadline — so, like the pull consumer, redelivery is prompt and the
     /// dispatch count will far exceed 3 within 60 s.
     /// </remarks>
-    [Fact]
+    [Test]
     public async Task When_gcp_budget_is_minus_one_should_never_reject()
     {
         // Arrange
@@ -121,12 +120,11 @@ public class GcpStreamBudgetMinusOneNeverRejectsReactorTests
             var dispatchCount = ConformanceDeferredPump.GetDispatchCount(key);
 
             // Assert — R-6 / AC-5: handler invoked more than 3 times with budget -1
-            Assert.True(dispatchCount > 3,
-                $"Expected dispatch count > 3 after 60 s with requeueCount: -1, but was {dispatchCount}");
+            await Assert.That(dispatchCount > 3).IsTrue().Because($"Expected dispatch count > 3 after 60 s with requeueCount: -1, but was {dispatchCount}");
 
             // No DeliveryError rejection was issued — the Brighter DLQ must be empty
             var dlqMessage = provider.GetMessageFromDeadLetterQueue(subscription);
-            Assert.Equal(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
         }
         finally
         {

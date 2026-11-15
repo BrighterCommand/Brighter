@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 
@@ -37,8 +36,8 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 /// on the next receive, not hold it until the subscription's invisibility lease lapses. The FR-16
 /// conformance tests cannot tell the two apart: their 30 s ceiling admits a lease-lapse redelivery.
 /// </summary>
-[Trait("Category", "RocketMQ")]
-public class RocketMqNackRedeliveryTestsAsync : IAsyncLifetime
+[Property("Category", "RocketMQ")]
+public class RocketMqNackRedeliveryTestsAsync
 {
     private const string Topic = "rmq_nack_p";
     private static readonly TimeSpan s_invisibilityTimeout = TimeSpan.FromSeconds(10);
@@ -50,7 +49,7 @@ public class RocketMqNackRedeliveryTestsAsync : IAsyncLifetime
     private RocketMqMessageProducer? _producer;
     private IAmAMessageConsumerAsync? _consumer;
 
-    public async Task InitializeAsync()
+    [Before(HookType.Test)]public async Task InitializeAsync()
     {
         var connection = GatewayFactory.CreateConnection();
         var routingKey = new RoutingKey(Topic);
@@ -75,7 +74,7 @@ public class RocketMqNackRedeliveryTestsAsync : IAsyncLifetime
         _consumer = new RocketMessageConsumerFactory(connection).CreateAsync(subscription);
     }
 
-    public async Task DisposeAsync()
+    [After(HookType.Test)]public async Task DisposeAsync()
     {
         if (_consumer != null)
             await _consumer.DisposeAsync();
@@ -84,7 +83,7 @@ public class RocketMqNackRedeliveryTestsAsync : IAsyncLifetime
             await _producer.DisposeAsync();
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_rocketmq_message_is_nacked_should_redeliver_inside_the_lease_async()
     {
         // Arrange
@@ -95,7 +94,7 @@ public class RocketMqNackRedeliveryTestsAsync : IAsyncLifetime
         await _producer!.SendAsync(message);
 
         var received = await ReceiveOursAsync(message.Id);
-        Assert.NotNull(received);
+        await Assert.That(received).IsNotNull();
 
         // Act
         await _consumer!.NackAsync(received!);
@@ -105,10 +104,8 @@ public class RocketMqNackRedeliveryTestsAsync : IAsyncLifetime
         var redelivered = await ReceiveOursAsync(message.Id);
         var elapsed = sinceNack.Elapsed;
 
-        Assert.NotNull(redelivered);
-        Assert.True(elapsed < s_redeliveryBound,
-            $"Nacked message redelivered after {elapsed.TotalSeconds:F1} s; expected under " +
-            $"{s_redeliveryBound.TotalSeconds:F0} s, inside the {s_invisibilityTimeout.TotalSeconds:F0} s lease");
+        await Assert.That(redelivered).IsNotNull();
+        await Assert.That(elapsed < s_redeliveryBound).IsTrue();
 
         await _consumer.AcknowledgeAsync(redelivered!);
     }

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,21 +34,18 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleMessageMonitorValidPublicationStaleAgeTests
 {
-    public static TheoryData<TimeSpan> ValidStaleAges => new()
+    public static List<TimeSpan> ValidStaleAges => new()
     {
-        TimeSpan.FromMilliseconds(1),
-        TimeSpan.FromDays(365),
-        TimeSpan.FromMinutes(10)
+        TimeSpan.FromMilliseconds(1),        TimeSpan.FromDays(365),        TimeSpan.FromMinutes(10)
     };
 
-    [Theory]
-    [MemberData(nameof(ValidStaleAges))]
+    [Test]
+    [MethodDataSource(nameof(ValidStaleAges))]
     public async Task When_a_publication_has_a_valid_stale_age_should_start(TimeSpan staleMessageAge)
     {
         //Arrange
@@ -82,6 +79,6 @@ public class StaleMessageMonitorValidPublicationStaleAgeTests
         await monitor.StartAsync(default);
 
         //Assert
-        Assert.True(readings.IsStarted);
+        await Assert.That(readings.IsStarted).IsTrue();
     }
 }

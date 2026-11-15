@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -33,13 +33,12 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch;
 
 public class DispatcherEndRequestedTests
 {
-    [Fact]
+    [Test]
     public async Task When_end_is_called_on_an_awaiting_dispatcher_should_record_it_and_allow_receive()
     {
         // Arrange
@@ -68,15 +67,16 @@ public class DispatcherEndRequestedTests
             // Act
             await dispatcher.End().WaitAsync(TimeSpan.FromSeconds(10));
             var awaiting = dispatcher.GetLifecycleSnapshot();
-            var receiveException = Record.Exception(() => dispatcher.Receive());
+            Exception? receiveException = null;
+            try { dispatcher.Receive(); } catch (Exception e) { receiveException = e; }
             var running = dispatcher.GetLifecycleSnapshot();
 
             // Assert
-            Assert.Equal(DispatcherState.DS_AWAITING, awaiting.State);
-            Assert.True(awaiting.EndRequested);
-            Assert.Null(receiveException);
-            Assert.Equal(DispatcherState.DS_RUNNING, running.State);
-            Assert.False(running.EndRequested);
+            await Assert.That(awaiting.State).IsEqualTo(DispatcherState.DS_AWAITING);
+            await Assert.That(awaiting.EndRequested).IsTrue();
+            await Assert.That(receiveException).IsNull();
+            await Assert.That(running.State).IsEqualTo(DispatcherState.DS_RUNNING);
+            await Assert.That(running.EndRequested).IsFalse();
         }
         finally
         {

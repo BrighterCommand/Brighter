@@ -6,13 +6,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Assertions;
+using TUnit.Core;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SqsFifo.Proactor;
 
-[Trait("Category", "Sqs")]
-[Collection("SqsFifo")]
-public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync : IAsyncLifetime
+[Property("Category", "Sqs")]
+[NotInParallel("SqsFifo")]
+public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -32,10 +33,14 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
         _messageBuilder = new FifoMessageBuilder();
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {
@@ -60,7 +65,8 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
     /// the question it is named for, however green it goes.
     /// </para>
     /// </remarks>
-    [Fact]
+    [Test]
+    
     public async Task When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue_async()
     {
         // Arrange
@@ -75,8 +81,7 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
 
         // A budget the pump can exhaust. -1 means "requeue for ever" and the pump would never
         // reject, so the behaviour is untestable rather than failing.
-        Assert.True(_subscription.RequeueCount > 0,
-            "FR-23 needs a positive RequeueCount on the subscription; the provider declares none.");
+        await Assert.That(_subscription.RequeueCount > 0).IsTrue().Because("FR-23 needs a positive RequeueCount on the subscription; the provider declares none.");
 
         var message = _messageBuilder
             .SetTopic(_publication.Topic!)
@@ -113,16 +118,14 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
         // observation window closes here — if the budget did not hold, the pump would have kept
         // redelivering between the poll break and the await, and the count would be larger.
         var dispatchCount = ConformanceDeferredPump.GetDispatchCount(ConformanceDeferredPump.KeyOf(message));
-        Assert.True(dispatchCount <= _subscription.RequeueCount,
-            $"expected at most {_subscription.RequeueCount} dispatches (RequeueCount), "
-            + $"but got {dispatchCount} — the budget was not enforced");
+        await Assert.That(dispatchCount <= _subscription.RequeueCount).IsTrue();
 
-        Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         // Identity, asserted here rather than through IAmAMessageAssertion: the shared assertion
         // compares HandledCount, and for this behaviour it necessarily differs - the pump stamps
         // each delivery on the way past. That difference is the evidence, not a mismatch.
-        ConformanceDeferredPump.AssertIsTheMessageSent(message, dlqMessage);
+        await ConformanceDeferredPump.AssertIsTheMessageSent(message, dlqMessage);
 
         // The pump spent the budget, and nothing else routed the message: it arrives carrying the
         // deliveries it took to exhaust it.
@@ -136,8 +139,7 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
         // differ only in which copy gets recorded. RequeueCount - 1 is the strongest bound true of
         // both, and still fails anything dead-lettered before the budget ran down.
         var deliveriesExpected = _subscription.RequeueCount - 1;
-        Assert.True(dlqMessage.Header.HandledCount >= deliveriesExpected,
-            $"expected at least {deliveriesExpected} deliveries before dead-lettering, "
+        await Assert.That(dlqMessage.Header.HandledCount >= deliveriesExpected).IsTrue().Because($"expected at least {deliveriesExpected} deliveries before dead-lettering, "
             + $"but the dead-lettered message reports {dlqMessage.Header.HandledCount}");
 
         // R-5: when the provider's gateway stamps Brighter rejection metadata, the dead-letter
@@ -146,9 +148,7 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
         var keys = _messageGatewayProvider.RejectionMetadataKeys;
         if (keys.StampsRejectionMetadata)
         {
-            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason),
-                $"dead-letter message must carry rejection reason key '{keys.RejectionReason}'");
-            Assert.Equal("DeliveryError", dlqMessage.Header.Bag[keys.RejectionReason].ToString());
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason)).IsTrue().Because($"dead-letter message must carry rejection reason key '{keys.RejectionReason}'");
+            await Assert.That(dlqMessage.Header.Bag[keys.RejectionReason].ToString()).IsEqualTo("DeliveryError");
         }
-    }
-}
+    }}

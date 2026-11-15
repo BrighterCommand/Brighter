@@ -2,14 +2,14 @@ using System;
 using System.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class TransformPipelineMapperReleaseTests
 {
-    [Fact]
-    public void When_disposing_a_wrap_pipeline_should_release_the_transient_disposable_mapper()
+    [Test]
+    public async System.Threading.Tasks.Task When_disposing_a_wrap_pipeline_should_release_the_transient_disposable_mapper()
     {
         //arrange
         var disposals = new MapperDisposalLog();
@@ -38,8 +38,8 @@ public class TransformPipelineMapperReleaseTests
         mapperFactory.Dispose();
 
         //assert
-        Assert.Equal(1, disposalsAfterPipelineDisposed);
-        Assert.Equal(1, disposals.Count);
+        await Assert.That(disposalsAfterPipelineDisposed).IsEqualTo(1);
+        await Assert.That(disposals.Count).IsEqualTo(1);
     }
 
     private sealed class MinimalCommand : Command

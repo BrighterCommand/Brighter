@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class CombinedArmDeclaredTransportTypeListsAlternativesValidationTests
 {
-    [Fact]
-    public void When_the_combined_arm_has_a_declared_transport_type_should_list_the_alternatives()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_combined_arm_has_a_declared_transport_type_should_list_the_alternatives()
     {
         // Arrange — a combined factory whose inner set does NOT contain the declared type
         // (DeclaredChannelFactory), so this is a real mismatch, distinct from AC-7
@@ -51,12 +51,10 @@ public class CombinedArmDeclaredTransportTypeListsAlternativesValidationTests
 
         // Assert — both remedies offered; the subscription-side remedy lists all inner
         // factories, in constructor order, as alternatives
-        var result = Assert.Single(results);
-        Assert.EndsWith(
-            "— either configure a channel factory of type Paramore.Brighter.Core.Tests.Validation.TestDoubles.DeclaredChannelFactory, " +
+        var result = await Assert.That(results).HasSingleItem();
+        await Assert.That(result.Error!.Message).EndsWith("— either configure a channel factory of type Paramore.Brighter.Core.Tests.Validation.TestDoubles.DeclaredChannelFactory, " +
             "or use a subscription type whose ChannelFactoryType is one of: " +
             "Paramore.Brighter.Core.Tests.Validation.TestDoubles.NonMatchingChannelFactory, " +
-            "Paramore.Brighter.Core.Tests.Validation.TestDoubles.AlphaBus.ChannelFactory",
-            result.Error!.Message);
+            "Paramore.Brighter.Core.Tests.Validation.TestDoubles.AlphaBus.ChannelFactory");
     }
 }

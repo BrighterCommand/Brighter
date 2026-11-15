@@ -1,4 +1,5 @@
-﻿#region Licence
+#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -28,16 +29,15 @@ using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.Handlers;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline;
 
 public class GlobalInboxScopeAsyncCommandTests
 {
-    [Theory]
-    [InlineData(InboxScope.Commands, true)]
-    [InlineData(InboxScope.Events, false)]
-    [InlineData(InboxScope.All, true)]
+    [Test]
+    [Arguments(InboxScope.Commands, true)]
+    [Arguments(InboxScope.Events, false)]
+    [Arguments(InboxScope.All, true)]
     public async Task When_handling_commands_should_apply_the_global_inbox_scope_async(InboxScope scope, bool shouldUseInbox)
     {
         // Arrange
@@ -58,8 +58,7 @@ public class GlobalInboxScopeAsyncCommandTests
         await pipeline.HandleAsync(request);
 
         // Assert
-        Assert.Equal(shouldUseInbox ? 1 : 2, request.HandleCount);
-        Assert.Equal(shouldUseInbox,
-            await inbox.ExistsAsync<InboxScopeAsyncCommand>(request.Id, typeof(InboxScopeAsyncCommandHandler).FullName!, null));
+        await Assert.That(request.HandleCount).IsEqualTo(shouldUseInbox ? 1 : 2);
+        await Assert.That(await inbox.ExistsAsync<InboxScopeAsyncCommand>(request.Id, typeof(InboxScopeAsyncCommandHandler).FullName!, null)).IsEqualTo(shouldUseInbox);
     }
 }

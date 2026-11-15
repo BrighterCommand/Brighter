@@ -1,4 +1,5 @@
-﻿#region Licence
+#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -23,20 +24,19 @@ THE SOFTWARE. */
 #endregion
 
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "ASB")]
+[Property("Category", "ASB")]
 public class AzureServiceBusNativeSubjectPublishingTests
 {
-    [Theory]
-    [InlineData("order-placed")]
-    [InlineData("შეკვეთა/注文")]
-    [InlineData(" ")]
-    [InlineData("")]
-    [InlineData(null)]
-    public void When_publishing_a_message_should_map_its_native_subject(string? subject)
+    [Test]
+    [Arguments("order-placed")]
+    [Arguments("შეკვეთა/注文")]
+    [Arguments(" ")]
+    [Arguments("")]
+    [Arguments(null)]
+    public async System.Threading.Tasks.Task When_publishing_a_message_should_map_its_native_subject(string? subject)
     {
         // Arrange
         var header = new MessageHeader(Id.Random(), new RoutingKey("orders"), MessageType.MT_EVENT,
@@ -49,13 +49,13 @@ public class AzureServiceBusNativeSubjectPublishingTests
         // Assert
         if (string.IsNullOrEmpty(subject))
         {
-            Assert.Null(published.Subject);
-            Assert.False(published.ApplicationProperties.ContainsKey("cloudEvents:subject"));
+            await Assert.That(published.Subject).IsNull();
+            await Assert.That(published.ApplicationProperties.ContainsKey("cloudEvents:subject")).IsFalse();
         }
         else
         {
-            Assert.Equal(subject, published.Subject);
-            Assert.Equal(subject, published.ApplicationProperties["cloudEvents:subject"]);
+            await Assert.That(published.Subject).IsEqualTo(subject);
+            await Assert.That(published.ApplicationProperties["cloudEvents:subject"]).IsEqualTo(subject);
         }
     }
 }

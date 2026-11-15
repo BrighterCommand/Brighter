@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -30,7 +29,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 // few milliseconds on dedicated threads, then waits (bounded) for consumers to start or stop. Run
 // beside the rest of the assembly, those waits starve for CPU and thread-pool time and time out
 // intermittently. The collection runs alone, after the parallel collections have finished.
-[CollectionDefinition(NAME, DisableParallelization = true)]
+[System.Obsolete]
 public class DispatcherHealthCheckCollection
 {
     public const string NAME = "Dispatcher health checks";

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -40,16 +40,17 @@ using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Scheduler.Handlers;
 using Polly.Registry;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.AWSScheduler.V4.Tests;
 
 public class AwsScheduledPostContextTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_scheduling_a_post_should_preserve_context_metadata(bool isAsync, bool useDateTime)
     {
         //Arrange
@@ -107,21 +108,21 @@ public class AwsScheduledPostContextTests
         }
         headers["x-attempt"] = 4;
         properties["tenant"] = "changed";
-        using var createSchedule = JsonDocument.Parse(Assert.Single(http.Requests));
+        using var createSchedule = JsonDocument.Parse((await Assert.That(http.Requests).HasSingleItem()));
         using var target = JsonDocument.Parse(createSchedule.RootElement.GetProperty("Target").GetProperty("Input").GetString()!);
         var envelope = JsonSerializer.Deserialize<FireAwsScheduler>(target.RootElement.GetProperty("Message").GetString()!,
             Paramore.Brighter.JsonConverters.JsonSerialisationOptions.Options)!;
         await processor.SendAsync(envelope);
 
         //Assert
-        Assert.Equal(RequestSchedulerType.Post, envelope.SchedulerType);
-        Assert.Equal(isAsync, envelope.Async);
-        var message = Assert.Single(bus.Stream(topic));
-        Assert.Equal(request.Id, message.Id);
-        Assert.Equal(3, message.Header.Bag["x-attempt"]);
-        Assert.Equal("partition-1", message.Header.PartitionKey.Value);
+        await Assert.That(envelope.SchedulerType).IsEqualTo(RequestSchedulerType.Post);
+        await Assert.That(envelope.Async).IsEqualTo(isAsync);
+        var message = await Assert.That(bus.Stream(topic)).HasSingleItem();
+        await Assert.That(message.Id).IsEqualTo(request.Id);
+        await Assert.That(message.Header.Bag["x-attempt"]).IsEqualTo(3);
+        await Assert.That(message.Header.PartitionKey.Value).IsEqualTo("partition-1");
         using var json = JsonDocument.Parse(message.Body.Value);
-        Assert.Equal("tenant-1", json.RootElement.GetProperty("tenant").GetString());
+        await Assert.That(json.RootElement.GetProperty("tenant").GetString()).IsEqualTo("tenant-1");
     }
 
     private sealed class RequestSchedulerFactory(AwsScheduler scheduler) : IAmARequestSchedulerFactory
@@ -140,7 +141,7 @@ public class AwsScheduledPostContextTests
         {
             protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             {
-                Assert.Contains("/schedules/", request.RequestUri!.AbsolutePath);
+                await Assert.That(request.RequestUri!.AbsolutePath).Contains("/schedules/");
                 requests.Add(await request.Content!.ReadAsStringAsync(cancellationToken));
                 return new HttpResponseMessage(HttpStatusCode.OK)
                 {

@@ -31,16 +31,15 @@ using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "ASB")]
+[Category("ASB")]
 public class AzureServiceBusSubscriptionRuleTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_an_existing_subscription_should_apply_its_configured_rule(bool isAsync)
     {
         //Arrange
@@ -52,17 +51,17 @@ public class AzureServiceBusSubscriptionRuleTests
         await ReceiveAsync(client, configuration, isAsync);
 
         //Assert
-        Assert.Equal("region = 'new'", Assert.IsType<SqlRuleFilter>(client.Rules["sqlFilter"].Filter).SqlExpression);
-        Assert.Equal(1, client.UpdatedRules);
+        await Assert.That((await Assert.That(client.Rules["sqlFilter"].Filter).IsTypeOf<SqlRuleFilter>()).SqlExpression).IsEqualTo("region = 'new'");
+        await Assert.That(client.UpdatedRules).IsEqualTo(1);
     }
 
-    [Theory]
-    [InlineData("sql", false)]
-    [InlineData("sql", true)]
-    [InlineData("correlation", false)]
-    [InlineData("correlation", true)]
-    [InlineData("true", false)]
-    [InlineData("false", true)]
+    [Test]
+    [Arguments("sql", false)]
+    [Arguments("sql", true)]
+    [Arguments("correlation", false)]
+    [Arguments("correlation", true)]
+    [Arguments("true", false)]
+    [Arguments("false", true)]
     public async Task When_creating_a_subscription_should_apply_its_full_rule(string filterType, bool isAsync)
     {
         //Arrange
@@ -73,15 +72,15 @@ public class AzureServiceBusSubscriptionRuleTests
         await ReceiveAsync(client, new AzureServiceBusSubscriptionConfiguration { Rule = rule }, isAsync);
 
         //Assert
-        var stored = Assert.Single(client.Rules).Value;
-        Assert.Equal(rule.Name, stored.Name);
-        Assert.Equal(rule.Filter, stored.Filter);
-        Assert.Equal(rule.Action, stored.Action);
+        var stored = (await Assert.That(client.Rules).HasSingleItem()).Value;
+        await Assert.That(stored.Name).IsEqualTo(rule.Name);
+        await Assert.That(stored.Filter).IsEqualTo(rule.Filter);
+        await Assert.That(stored.Action).IsEqualTo(rule.Action);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_a_named_rule_is_missing_should_create_it_before_removing_the_default(bool isAsync)
     {
         //Arrange
@@ -94,17 +93,17 @@ public class AzureServiceBusSubscriptionRuleTests
         await ReceiveAsync(client, new AzureServiceBusSubscriptionConfiguration { Rule = rule }, isAsync);
 
         //Assert
-        Assert.Equal(rule.Filter, client.Rules[rule.Name].Filter);
-        Assert.Equal(rule.Action, client.Rules[rule.Name].Action);
-        Assert.False(client.Rules.ContainsKey("$Default"));
-        Assert.True(client.Rules.ContainsKey("external"));
-        Assert.Equal(1, client.CreatedRules);
-        Assert.Equal(1, client.DeletedRules);
+        await Assert.That(client.Rules[rule.Name].Filter).IsEqualTo(rule.Filter);
+        await Assert.That(client.Rules[rule.Name].Action).IsEqualTo(rule.Action);
+        await Assert.That(client.Rules.ContainsKey("$Default")).IsFalse();
+        await Assert.That(client.Rules.ContainsKey("external")).IsTrue();
+        await Assert.That(client.CreatedRules).IsEqualTo(1);
+        await Assert.That(client.DeletedRules).IsEqualTo(1);
     }
 
-    [Theory]
-    [InlineData("sql")]
-    [InlineData("correlation")]
+    [Test]
+    [Arguments("sql")]
+    [Arguments("correlation")]
     public async Task When_a_rule_changes_should_update_its_filter_and_action(string filterType)
     {
         //Arrange
@@ -119,12 +118,12 @@ public class AzureServiceBusSubscriptionRuleTests
         await ReceiveAsync(client, new AzureServiceBusSubscriptionConfiguration { Rule = desired });
 
         //Assert
-        Assert.Equal(desired.Filter, client.Rules[desired.Name].Filter);
-        Assert.Equal(desired.Action, client.Rules[desired.Name].Action);
-        Assert.Equal(1, client.UpdatedRules);
+        await Assert.That(client.Rules[desired.Name].Filter).IsEqualTo(desired.Filter);
+        await Assert.That(client.Rules[desired.Name].Action).IsEqualTo(desired.Action);
+        await Assert.That(client.UpdatedRules).IsEqualTo(1);
     }
 
-    [Fact]
+    [Test]
     public async Task When_only_the_action_changes_should_update_the_rule()
     {
         //Arrange
@@ -136,13 +135,13 @@ public class AzureServiceBusSubscriptionRuleTests
         await ReceiveAsync(client, new AzureServiceBusSubscriptionConfiguration { Rule = desired });
 
         //Assert
-        Assert.Equal(desired.Action, client.Rules[desired.Name].Action);
-        Assert.Equal(1, client.UpdatedRules);
+        await Assert.That(client.Rules[desired.Name].Action).IsEqualTo(desired.Action);
+        await Assert.That(client.UpdatedRules).IsEqualTo(1);
     }
 
-    [Theory]
-    [InlineData("sql")]
-    [InlineData("correlation")]
+    [Test]
+    [Arguments("sql")]
+    [Arguments("correlation")]
     public async Task When_the_rule_already_matches_should_not_update_it(string filterType)
     {
         //Arrange
@@ -156,14 +155,14 @@ public class AzureServiceBusSubscriptionRuleTests
         await ReceiveAsync(client, desired);
 
         //Assert
-        Assert.Single(client.Rules);
-        Assert.Equal(0, client.CreatedRules);
-        Assert.Equal(0, client.UpdatedRules);
+        await Assert.That(client.Rules).HasSingleItem();
+        await Assert.That(client.CreatedRules).IsEqualTo(0);
+        await Assert.That(client.UpdatedRules).IsEqualTo(0);
     }
 
-    [Theory]
-    [InlineData(OnMissingChannel.Assume)]
-    [InlineData(OnMissingChannel.Validate)]
+    [Test]
+    [Arguments(OnMissingChannel.Assume)]
+    [Arguments(OnMissingChannel.Validate)]
     public async Task When_channel_creation_is_disabled_should_not_modify_rules(OnMissingChannel mode)
     {
         //Arrange
@@ -174,14 +173,14 @@ public class AzureServiceBusSubscriptionRuleTests
         await ReceiveAsync(client, new AzureServiceBusSubscriptionConfiguration { Rule = CreateRule("sql") }, makeChannels: mode);
 
         //Assert
-        Assert.Equal("$Default", Assert.Single(client.Rules).Key);
-        Assert.Equal(0, client.ReadRules);
-        Assert.Equal(0, client.CreatedRules);
-        Assert.Equal(0, client.UpdatedRules);
-        Assert.Equal(0, client.DeletedRules);
+        await Assert.That((await Assert.That(client.Rules).HasSingleItem()).Key).IsEqualTo("$Default");
+        await Assert.That(client.ReadRules).IsEqualTo(0);
+        await Assert.That(client.CreatedRules).IsEqualTo(0);
+        await Assert.That(client.UpdatedRules).IsEqualTo(0);
+        await Assert.That(client.DeletedRules).IsEqualTo(0);
     }
 
-    [Fact]
+    [Test]
     public async Task When_no_rule_is_configured_should_preserve_existing_rules()
     {
         //Arrange
@@ -192,11 +191,11 @@ public class AzureServiceBusSubscriptionRuleTests
         await ReceiveAsync(client, new AzureServiceBusSubscriptionConfiguration());
 
         //Assert
-        Assert.Equal("external", Assert.Single(client.Rules).Key);
-        Assert.Equal(0, client.ReadRules);
+        await Assert.That((await Assert.That(client.Rules).HasSingleItem()).Key).IsEqualTo("external");
+        await Assert.That(client.ReadRules).IsEqualTo(0);
     }
 
-    [Fact]
+    [Test]
     public async Task When_no_rule_is_configured_should_create_the_default_on_a_new_subscription()
     {
         //Arrange
@@ -206,12 +205,12 @@ public class AzureServiceBusSubscriptionRuleTests
         await ReceiveAsync(client, new AzureServiceBusSubscriptionConfiguration());
 
         //Assert
-        var rule = Assert.Single(client.Rules).Value;
-        Assert.Equal("$Default", rule.Name);
-        Assert.IsType<TrueRuleFilter>(rule.Filter);
+        var rule = (await Assert.That(client.Rules).HasSingleItem()).Value;
+        await Assert.That(rule.Name).IsEqualTo("$Default");
+        await Assert.That(rule.Filter).IsTypeOf<TrueRuleFilter>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_default_rule_is_explicitly_configured_should_update_without_deleting_it()
     {
         //Arrange
@@ -223,14 +222,14 @@ public class AzureServiceBusSubscriptionRuleTests
         await ReceiveAsync(client, new AzureServiceBusSubscriptionConfiguration { Rule = rule });
 
         //Assert
-        Assert.Equal(rule.Filter, Assert.Single(client.Rules).Value.Filter);
-        Assert.Equal(0, client.DeletedRules);
+        await Assert.That((await Assert.That(client.Rules).HasSingleItem()).Value.Filter).IsEqualTo(rule.Filter);
+        await Assert.That(client.DeletedRules).IsEqualTo(0);
     }
 
-    [Theory]
-    [InlineData("create")]
-    [InlineData("update")]
-    [InlineData("delete")]
+    [Test]
+    [Arguments("create")]
+    [Arguments("update")]
+    [Arguments("delete")]
     public async Task When_reconciling_a_rule_fails_should_preserve_the_default_and_allow_retry(string operation)
     {
         //Arrange
@@ -254,34 +253,34 @@ public class AzureServiceBusSubscriptionRuleTests
         await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(subscription);
 
         //Act / Assert
-        var error = await Assert.ThrowsAsync<ChannelFailureException>(() => consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1)));
-        Assert.Same(failure, error.InnerException);
-        Assert.True(client.Rules.ContainsKey("$Default"));
+        var error = await Assert.That(() => consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1))).ThrowsExactly<ChannelFailureException>();
+        await Assert.That(error.InnerException).IsSameReferenceAs(failure);
+        await Assert.That(client.Rules.ContainsKey("$Default")).IsTrue();
         client.CreateRuleException = null;
         client.UpdateRuleException = null;
         client.DeleteRuleException = null;
         await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1));
-        var rule = Assert.Single(client.Rules).Value;
-        Assert.Equal("orders", rule.Name);
-        Assert.Equal(configuration.Rule.Filter, rule.Filter);
-        Assert.Equal(configuration.Rule.Action, rule.Action);
+        var rule = (await Assert.That(client.Rules).HasSingleItem()).Value;
+        await Assert.That(rule.Name).IsEqualTo("orders");
+        await Assert.That(rule.Filter).IsEqualTo(configuration.Rule.Filter);
+        await Assert.That(rule.Action).IsEqualTo(configuration.Rule.Action);
     }
 
-    [Fact]
-    public void When_both_rule_options_are_set_should_fail_during_subscription_construction()
+    [Test]
+    public async Task When_both_rule_options_are_set_should_fail_during_subscription_construction()
     {
         //Arrange
         var configuration = new AzureServiceBusSubscriptionConfiguration { Rule = CreateRule("sql"), SqlFilter = "1=1" };
 
         //Act / Assert
-        Assert.Throws<ConfigurationException>(() => new AzureServiceBusSubscription<ASBTestCommand>(
+        await Assert.That(() => new AzureServiceBusSubscription<ASBTestCommand>(
             subscriptionName: new SubscriptionName("rules"), channelName: new ChannelName("rules"),
-            routingKey: new RoutingKey("orders"), subscriptionConfiguration: configuration));
+            routingKey: new RoutingKey("orders"), subscriptionConfiguration: configuration)).ThrowsExactly<ConfigurationException>();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_another_consumer_creates_the_entity_should_still_apply_the_configured_rule(bool subscriptionRace)
     {
         //Arrange
@@ -298,10 +297,10 @@ public class AzureServiceBusSubscriptionRuleTests
         await ReceiveAsync(client, new AzureServiceBusSubscriptionConfiguration { Rule = desired });
 
         //Assert
-        var rule = Assert.Single(client.Rules).Value;
-        Assert.Equal(desired.Name, rule.Name);
-        Assert.Equal(desired.Filter, rule.Filter);
-        Assert.Equal(desired.Action, rule.Action);
+        var rule = (await Assert.That(client.Rules).HasSingleItem()).Value;
+        await Assert.That(rule.Name).IsEqualTo(desired.Name);
+        await Assert.That(rule.Filter).IsEqualTo(desired.Filter);
+        await Assert.That(rule.Action).IsEqualTo(desired.Action);
     }
 
     private static CreateRuleOptions CreateRule(string filterType)

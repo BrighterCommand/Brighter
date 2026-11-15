@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -35,32 +35,31 @@ using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Polly;
 using Polly.Registry;
 using Polly.Retry;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class OutboxResilienceRegistryTests
 {
-    public static TheoryData<bool, bool, bool, bool, bool, bool> RegistryCases
+    public static List<(bool,bool,bool,bool,bool,bool)> RegistryCases
     {
         get
         {
-            var cases = new TheoryData<bool, bool, bool, bool, bool, bool>();
+            var cases = new List<(bool,bool,bool,bool,bool,bool)>();
             foreach (var useProducerFactory in new[] { false, true })
                 foreach (var sendAsync in new[] { false, true })
                     foreach (var resolveMediatorFirst in new[] { false, true })
                     {
                         foreach (var addConsumers in new[] { false, true })
                             foreach (var useOptionsFactory in new[] { false, true })
-                                cases.Add(addConsumers, useOptionsFactory, useProducerFactory, sendAsync, resolveMediatorFirst, false);
-                        cases.Add(false, false, useProducerFactory, sendAsync, resolveMediatorFirst, true);
+                                cases.Add((addConsumers, useOptionsFactory, useProducerFactory, sendAsync, resolveMediatorFirst, false));
+                        cases.Add((false, false, useProducerFactory, sendAsync, resolveMediatorFirst, true));
                     }
             return cases;
         }
     }
 
-    [Theory]
-    [MemberData(nameof(RegistryCases))]
+    [Test]
+    [MethodDataSource(nameof(RegistryCases))]
     public async Task When_setting_the_options_registry_should_apply_the_pipeline_to_outbox_sends(
         bool addConsumers, bool useOptionsFactory, bool useProducerFactory,
         bool sendAsync, bool resolveMediatorFirst, bool postConfigure)
@@ -130,9 +129,9 @@ public class OutboxResilienceRegistryTests
             processor.Post(new DefaultMapperEvent());
 
         // Assert
-        Assert.Single(bus.Stream(topic));
-        Assert.Equal(2, sendAttempts);
-        Assert.Equal(1, retries);
-        Assert.Same(registry, provider.GetRequiredService<IBrighterOptions>().ResiliencePipelineRegistry);
+        await Assert.That(bus.Stream(topic)).HasSingleItem();
+        await Assert.That(sendAttempts).IsEqualTo(2);
+        await Assert.That(retries).IsEqualTo(1);
+        await Assert.That(provider.GetRequiredService<IBrighterOptions>().ResiliencePipelineRegistry).IsSameReferenceAs(registry);
     }
 }

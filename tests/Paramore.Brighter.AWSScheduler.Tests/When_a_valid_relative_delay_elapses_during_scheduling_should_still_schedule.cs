@@ -31,8 +31,7 @@ using Paramore.Brighter;
 using Paramore.Brighter.Scheduler;
 using Paramore.Brighter.MessageScheduler.AWS;
 using Paramore.Brighter.AWSScheduler.Tests.TestDoubles;
-using Assert = Xunit.Assert;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.AWSScheduler.Tests;
 
 public class AwsSchedulerDeadlineTests
@@ -60,23 +59,23 @@ public class AwsSchedulerDeadlineTests
         _context.Bag[RequestContextBagNames.PartitionKey] = new PartitionKey("deadline-partition");
     }
 
-    [Xunit.Theory]
-    [Xunit.InlineData("message", false, 0)]
-    [Xunit.InlineData("message", false, 1)]
-    [Xunit.InlineData("message", true, 0)]
-    [Xunit.InlineData("message", true, 1)]
-    [Xunit.InlineData("request", false, 0)]
-    [Xunit.InlineData("request", false, 1)]
-    [Xunit.InlineData("request", true, 0)]
-    [Xunit.InlineData("request", true, 1)]
-    [Xunit.InlineData("request-context", false, 0)]
-    [Xunit.InlineData("request-context", false, 1)]
-    [Xunit.InlineData("request-context", true, 0)]
-    [Xunit.InlineData("request-context", true, 1)]
-    [Xunit.InlineData("reschedule", false, 0)]
-    [Xunit.InlineData("reschedule", false, 1)]
-    [Xunit.InlineData("reschedule", true, 0)]
-    [Xunit.InlineData("reschedule", true, 1)]
+    [Test]
+    [Arguments("message", false, 0)]
+    [Arguments("message", false, 1)]
+    [Arguments("message", true, 0)]
+    [Arguments("message", true, 1)]
+    [Arguments("request", false, 0)]
+    [Arguments("request", false, 1)]
+    [Arguments("request", true, 0)]
+    [Arguments("request", true, 1)]
+    [Arguments("request-context", false, 0)]
+    [Arguments("request-context", false, 1)]
+    [Arguments("request-context", true, 0)]
+    [Arguments("request-context", true, 1)]
+    [Arguments("reschedule", false, 0)]
+    [Arguments("reschedule", false, 1)]
+    [Arguments("reschedule", true, 0)]
+    [Arguments("reschedule", true, 1)]
     public async Task When_a_valid_relative_delay_elapses_during_scheduling_should_still_schedule(
         string operation, bool isAsync, int delaySeconds)
     {
@@ -88,41 +87,40 @@ public class AwsSchedulerDeadlineTests
         var result = await InvokeAsync(operation, isAsync, delay);
 
         //Assert
-        Assert.Equal(operation == "reschedule" ? bool.TrueString : "deadline-id", result);
-        var sent = Assert.Single(_http.Handler.Requests, r => r.Method != HttpMethod.Get);
-        Assert.Equal(operation == "reschedule" ? HttpMethod.Put : HttpMethod.Post, sent.Method);
-        Assert.Equal(operation == "reschedule" ? 2 : 1, _http.Handler.Requests.Count);
+        await Assert.That(result).IsEqualTo(operation == "reschedule" ? bool.TrueString : "deadline-id");
+        var sent = await Assert.That(System.Linq.Enumerable.Where(_http.Handler.Requests, r => r.Method != HttpMethod.Get)).HasSingleItem();
+        await Assert.That(sent.Method).IsEqualTo(operation == "reschedule" ? HttpMethod.Put : HttpMethod.Post);
+        await Assert.That(_http.Handler.Requests.Count).IsEqualTo(operation == "reschedule" ? 2 : 1);
         using var json = JsonDocument.Parse(sent.Body);
-        Assert.Equal($"at({_clock.InitialUtcNow.Add(delay):yyyy-MM-ddTHH:mm:ss})",
-            json.RootElement.GetProperty("ScheduleExpression").GetString());
-        Assert.Equal("UTC", json.RootElement.GetProperty("ScheduleExpressionTimezone").GetString());
+        await Assert.That(json.RootElement.GetProperty("ScheduleExpression").GetString()).IsEqualTo($"at({_clock.InitialUtcNow.Add(delay):yyyy-MM-ddTHH:mm:ss})");
+        await Assert.That(json.RootElement.GetProperty("ScheduleExpressionTimezone").GetString()).IsEqualTo("UTC");
         if (operation == "request-context")
         {
             using var target = JsonDocument.Parse(json.RootElement.GetProperty("Target").GetProperty("Input").GetString()!);
             var envelope = JsonSerializer.Deserialize<FireAwsScheduler>(
                 target.RootElement.GetProperty("Message").GetString()!,
                 Paramore.Brighter.JsonConverters.JsonSerialisationOptions.Options)!;
-            Assert.Contains("deadline-partition", envelope.RequestContextData!);
+            await Assert.That(envelope.RequestContextData!).Contains("deadline-partition");
         }
     }
 
-    [Xunit.Theory]
-    [Xunit.InlineData("message", false, "negative-delay")]
-    [Xunit.InlineData("message", false, "past-date")]
-    [Xunit.InlineData("message", true, "negative-delay")]
-    [Xunit.InlineData("message", true, "past-date")]
-    [Xunit.InlineData("request", false, "negative-delay")]
-    [Xunit.InlineData("request", false, "past-date")]
-    [Xunit.InlineData("request", true, "negative-delay")]
-    [Xunit.InlineData("request", true, "past-date")]
-    [Xunit.InlineData("request-context", false, "negative-delay")]
-    [Xunit.InlineData("request-context", false, "past-date")]
-    [Xunit.InlineData("request-context", true, "negative-delay")]
-    [Xunit.InlineData("request-context", true, "past-date")]
-    [Xunit.InlineData("reschedule", false, "negative-delay")]
-    [Xunit.InlineData("reschedule", false, "past-date")]
-    [Xunit.InlineData("reschedule", true, "negative-delay")]
-    [Xunit.InlineData("reschedule", true, "past-date")]
+    [Test]
+    [Arguments("message", false, "negative-delay")]
+    [Arguments("message", false, "past-date")]
+    [Arguments("message", true, "negative-delay")]
+    [Arguments("message", true, "past-date")]
+    [Arguments("request", false, "negative-delay")]
+    [Arguments("request", false, "past-date")]
+    [Arguments("request", true, "negative-delay")]
+    [Arguments("request", true, "past-date")]
+    [Arguments("request-context", false, "negative-delay")]
+    [Arguments("request-context", false, "past-date")]
+    [Arguments("request-context", true, "negative-delay")]
+    [Arguments("request-context", true, "past-date")]
+    [Arguments("reschedule", false, "negative-delay")]
+    [Arguments("reschedule", false, "past-date")]
+    [Arguments("reschedule", true, "negative-delay")]
+    [Arguments("reschedule", true, "past-date")]
     public async Task When_a_schedule_has_invalid_timing_should_reject_it_before_calling_the_backend(
         string operation, bool isAsync, string invalidTiming)
     {
@@ -131,12 +129,12 @@ public class AwsSchedulerDeadlineTests
         TimeSpan? delay = invalidTiming == "negative-delay" ? TimeSpan.FromSeconds(-1) : null;
 
         //Act
-        var exception = await Xunit.Record.ExceptionAsync(() => InvokeAsync(operation, isAsync, delay));
+        var exception = await TestExceptionRecorder.CaptureAsync(() => InvokeAsync(operation, isAsync, delay));
 
         //Assert
-        var invalid = Assert.IsType<ArgumentOutOfRangeException>(exception);
-        Assert.Equal(delay.HasValue ? "delay" : "at", invalid.ParamName);
-        Assert.Empty(_http.Handler.Requests);
+        var invalid = await Assert.That(exception).IsTypeOf<ArgumentOutOfRangeException>();
+        await Assert.That(invalid.ParamName).IsEqualTo(delay.HasValue ? "delay" : "at");
+        await Assert.That(_http.Handler.Requests).IsEmpty();
     }
 
     private async Task PrepareAsync(string operation)

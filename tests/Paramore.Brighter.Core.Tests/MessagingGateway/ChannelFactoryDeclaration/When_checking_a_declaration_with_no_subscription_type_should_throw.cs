@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -20,25 +21,48 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
+
+
 #endregion
 
+
+
 using System;
+
 using Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration.TestDoubles;
-using Xunit;
+
+
+
+
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration;
 
+
+
 public class ChannelFactoryDeclarationNoSubscriptionTypeTests
+
 {
-    [Fact]
-    public void When_checking_a_declaration_with_no_subscription_type_should_throw()
+
+    [Test]
+
+    public async System.Threading.Tasks.Task When_checking_a_declaration_with_no_subscription_type_should_throw()
+
     {
+
         // Arrange
+
         // Evident Data: subscriptionType is literally null; declaredFactoryType is a sound declaration,
+
         // so only the null subscriptionType can be responsible for the exception
+
         var declaredFactoryType = typeof(SoundChannelFactory);
 
+
+
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => Paramore.Brighter.SubscriptionChannelFactoryDeclaration.Check(null!, declaredFactoryType));
+
+        await Assert.That(() => Paramore.Brighter.SubscriptionChannelFactoryDeclaration.Check(null!, declaredFactoryType)).ThrowsExactly<ArgumentNullException>();
+
     }
+
 }

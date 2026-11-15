@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Net.Mime;
 using System.Text.Json;
@@ -6,15 +6,14 @@ using System.Threading;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.Postgres;
 using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway;
 
-[Trait("Category", "PostgresSql")]
+[Property("Category", "PostgresSql")]
 public class PostgreSqlMessageConsumerRequeueTests : IDisposable
 {
     private readonly Message _message;
-    private readonly IAmAProducerRegistry _producerRegistry; 
+    private readonly IAmAProducerRegistry _producerRegistry;
     private readonly IAmAChannelFactory _channelFactory;
     private readonly PostgresSubscription<MyCommand> _subscription;
     private readonly RoutingKey _topic;
@@ -29,7 +28,7 @@ public class PostgreSqlMessageConsumerRequeueTests : IDisposable
         _topic = new RoutingKey($"Consumer-Requeue-Tests-{Guid.NewGuid()}");
 
         _message = new Message(
-            new MessageHeader(myCommand.Id, _topic, MessageType.MT_COMMAND, correlationId:correlationId, 
+            new MessageHeader(myCommand.Id, _topic, MessageType.MT_COMMAND, correlationId:correlationId,
                 replyTo:new RoutingKey(replyTo), contentType:contentType),
             new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
         );
@@ -41,29 +40,29 @@ public class PostgreSqlMessageConsumerRequeueTests : IDisposable
             new SubscriptionName(channelName),
             new ChannelName(_topic), new RoutingKey(_topic),
             messagePumpType: MessagePumpType.Reactor);
-            
+
         _producerRegistry = new PostgresProducerRegistryFactory(
                 new PostgresMessagingGatewayConnection(testHelper.Configuration),
             [new PostgresPublication {Topic = new RoutingKey(_topic)}]
         ).Create();
-        
+
         _channelFactory = new PostgresChannelFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration));
     }
 
-    [Theory]
-    [InlineData(100)]
-    [InlineData(1500)]
-    public void When_requeueing_a_message_should_redeliver_it(int requeueDelayInMilliseconds)
+    [Test]
+    [Arguments(100)]
+    [Arguments(1500)]
+    public async System.Threading.Tasks.Task When_requeueing_a_message_should_redeliver_it(int requeueDelayInMilliseconds)
     {
         // Arrange
         ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(_message);
         using var channel = _channelFactory.CreateSyncChannel(_subscription);
         var message = channel.Receive(TimeSpan.FromMilliseconds(2000));
-        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
-        Assert.Equal(_message.Id, message.Id);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+        await Assert.That(message.Id).IsEqualTo(_message.Id);
 
         // Act
-        Assert.True(channel.Requeue(message, TimeSpan.FromMilliseconds(requeueDelayInMilliseconds)));
+        await Assert.That(channel.Requeue(message, TimeSpan.FromMilliseconds(requeueDelayInMilliseconds))).IsTrue();
 
         // Assert
         var requeuedMessage = new Message();
@@ -79,11 +78,11 @@ public class PostgreSqlMessageConsumerRequeueTests : IDisposable
             Thread.Sleep(TimeSpan.FromMilliseconds(200));
         }
 
-        Assert.Equal(MessageType.MT_COMMAND, requeuedMessage.Header.MessageType);
+        await Assert.That(requeuedMessage.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
         channel.Acknowledge(requeuedMessage);
 
-        Assert.Equal(_message.Id, requeuedMessage.Id);
-        Assert.Equal(_message.Body.Value, requeuedMessage.Body.Value);
+        await Assert.That(requeuedMessage.Id).IsEqualTo(_message.Id);
+        await Assert.That(requeuedMessage.Body.Value).IsEquivalentTo(_message.Body.Value);
     }
 
     public void Dispose()

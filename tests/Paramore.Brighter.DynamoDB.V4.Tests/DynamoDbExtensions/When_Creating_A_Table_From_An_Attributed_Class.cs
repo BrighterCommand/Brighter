@@ -6,14 +6,13 @@ using Amazon.DynamoDBv2.Model;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.DynamoDb.V4;
 using Paramore.Brighter.Outbox.DynamoDB;
-using Xunit;
 
 namespace Paramore.Brighter.DynamoDB.V4.Tests.DynamoDbExtensions;
 
 public class DynamboDbFactoryGenerateCreateRequestTests
 {
-    [Fact]
-    public void When_Creating_A_Table_From_An_Attributed_Class()
+    [Test]
+    public async Task When_Creating_A_Table_From_An_Attributed_Class()
     {
         //arrange
         var tableRequestFactory = new DynamoDbTableFactory();
@@ -33,20 +32,20 @@ public class DynamboDbFactoryGenerateCreateRequestTests
         );
 
         //assert
-        Assert.Equal("MyEntity", tableRequest.TableName);
-        Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "StringProperty" && attr.AttributeType == ScalarAttributeType.S);
-        Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "NumberProperty" && attr.AttributeType == ScalarAttributeType.N);
-        Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "ByteArrayProperty" && attr.AttributeType == ScalarAttributeType.B);
-        Assert.DoesNotContain(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "UnmarkedProperty");
-        Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "MappedName" && attr.AttributeType == ScalarAttributeType.S);
-        Assert.DoesNotContain(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "IgnoredProperty");
-        Assert.Contains(tableRequest.KeySchema, kse => kse.AttributeName == "Id" && kse.KeyType == KeyType.HASH);
-        Assert.Contains(tableRequest.GlobalSecondaryIndexes,
+        await Assert.That(tableRequest.TableName).IsEqualTo("MyEntity");
+        await Assert.That((tableRequest.AttributeDefinitions).Any(attr => attr.AttributeName == "StringProperty" && attr.AttributeType == ScalarAttributeType.S)).IsTrue();
+        await Assert.That((tableRequest.AttributeDefinitions).Any(attr => attr.AttributeName == "NumberProperty" && attr.AttributeType == ScalarAttributeType.N)).IsTrue();
+        await Assert.That((tableRequest.AttributeDefinitions).Any(attr => attr.AttributeName == "ByteArrayProperty" && attr.AttributeType == ScalarAttributeType.B)).IsTrue();
+        await Assert.That((tableRequest.AttributeDefinitions).Any(attr => attr.AttributeName == "UnmarkedProperty")).IsFalse();
+        await Assert.That((tableRequest.AttributeDefinitions).Any(attr => attr.AttributeName == "MappedName" && attr.AttributeType == ScalarAttributeType.S)).IsTrue();
+        await Assert.That((tableRequest.AttributeDefinitions).Any(attr => attr.AttributeName == "IgnoredProperty")).IsFalse();
+        await Assert.That((tableRequest.KeySchema).Any(kse => kse.AttributeName == "Id" && kse.KeyType == KeyType.HASH)).IsTrue();
+        await Assert.That((tableRequest.GlobalSecondaryIndexes).Any(
             gsi => gsi.IndexName == "GlobalSecondaryIndex"
                    && Enumerable.Any<KeySchemaElement>(gsi.KeySchema, kse => kse.AttributeName == "GlobalSecondaryId" && kse.KeyType == KeyType.HASH)
-                   && Enumerable.Any<KeySchemaElement>(gsi.KeySchema, kse => kse.AttributeName == "GlobalSecondaryRangeKey" && kse.KeyType == KeyType.RANGE));
-        Assert.Contains(tableRequest.LocalSecondaryIndexes, lsi => lsi.IndexName == "LocalSecondaryIndex"
-                                                                   && Enumerable.Any<KeySchemaElement>(lsi.KeySchema, kse => kse.AttributeName == "LocalSecondaryRangeKey" && kse.KeyType == KeyType.RANGE));
+                   && Enumerable.Any<KeySchemaElement>(gsi.KeySchema, kse => kse.AttributeName == "GlobalSecondaryRangeKey" && kse.KeyType == KeyType.RANGE))).IsTrue();
+        await Assert.That((tableRequest.LocalSecondaryIndexes).Any(lsi => lsi.IndexName == "LocalSecondaryIndex"
+                                                                    && Enumerable.Any<KeySchemaElement>(lsi.KeySchema, kse => kse.AttributeName == "LocalSecondaryRangeKey" && kse.KeyType == KeyType.RANGE))).IsTrue();
     }
 
     //Required

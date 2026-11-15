@@ -29,7 +29,6 @@ using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.Legacy;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -37,7 +36,7 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// A MySQL chain that fails at V6 keeps the V4/V5 migrations and history rows it already committed
 /// (DDL commits implicitly, ADR 0057 §5a) and the next run resumes from <c>MAX(V)</c>.
 /// </summary>
-public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
+public class MySqlRunnerMidChainFailureResumeTests
 {
     private const int SeedVersion = 3;
     private const int BrokenVersion = 6;
@@ -53,7 +52,7 @@ public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_mysql_runner_fails_mid_chain_it_should_resume_from_max_applied_version_on_next_invocation()
     {
         //Arrange
@@ -71,28 +70,24 @@ public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
         var staleHint = new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: SeedVersion);
 
         //Act + Assert
-        await Assert.ThrowsAsync<MySqlException>(() => brokenRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, staleHint));
+        await Assert.That(() => brokenRunner.MigrateAsync(
+            _tableName, schemaName: null, BoxType.Outbox, staleHint)).ThrowsExactly<MySqlException>();
 
         var rowsByVersion = await GetHistoryRowsByVersion();
-        Assert.Equal(3, rowsByVersion.Count);
-        Assert.True(rowsByVersion.ContainsKey(SeedVersion));
-        Assert.True(rowsByVersion.ContainsKey(SeedVersion + 1));
-        Assert.True(rowsByVersion.ContainsKey(SeedVersion + 2));
-        Assert.StartsWith($"bootstrap: detected at V{SeedVersion}", rowsByVersion[SeedVersion]);
-        Assert.False(
-            rowsByVersion[SeedVersion + 1].StartsWith("bootstrap:", StringComparison.Ordinal),
-            "V4 should be an applied migration row, not a synthetic bootstrap row");
-        Assert.False(
-            rowsByVersion[SeedVersion + 2].StartsWith("bootstrap:", StringComparison.Ordinal),
-            "V5 should be an applied migration row, not a synthetic bootstrap row");
+        await Assert.That(rowsByVersion.Count).IsEqualTo(3);
+        await Assert.That(rowsByVersion.ContainsKey(SeedVersion)).IsTrue();
+        await Assert.That(rowsByVersion.ContainsKey(SeedVersion + 1)).IsTrue();
+        await Assert.That(rowsByVersion.ContainsKey(SeedVersion + 2)).IsTrue();
+        await Assert.That(rowsByVersion[SeedVersion]).StartsWith($"bootstrap: detected at V{SeedVersion}");
+        await Assert.That(rowsByVersion[SeedVersion + 1].StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse().Because("V4 should be an applied migration row, not a synthetic bootstrap row");
+        await Assert.That(rowsByVersion[SeedVersion + 2].StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse().Because("V5 should be an applied migration row, not a synthetic bootstrap row");
 
         var columnsAfterFailure = await GetTableColumns();
-        Assert.Contains(V4Column, columnsAfterFailure);
-        Assert.Contains(V5Column, columnsAfterFailure);
-        Assert.DoesNotContain(V6Column, columnsAfterFailure);
+        await Assert.That(columnsAfterFailure).Contains(V4Column);
+        await Assert.That(columnsAfterFailure).Contains(V5Column);
+        await Assert.That(columnsAfterFailure).DoesNotContain(V6Column);
 
-        Assert.Equal(1, await GetMarkerRowCount());
+        await Assert.That(await GetMarkerRowCount()).IsEqualTo(1);
 
         //Act
         var realRunner = new MySqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30));
@@ -106,21 +101,19 @@ public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
 
         //Assert
         var rowsAfterRetry = await GetHistoryRowsByVersion();
-        Assert.Equal(6, rowsAfterRetry.Count);
+        await Assert.That(rowsAfterRetry.Count).IsEqualTo(6);
 
         for (var v = SeedVersion + 1; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
-            Assert.True(rowsAfterRetry.ContainsKey(v), $"Expected applied row for V{v}");
-            Assert.False(
-                rowsAfterRetry[v].StartsWith("bootstrap:", StringComparison.Ordinal),
-                $"V{v} should be an applied migration row on retry");
+            await Assert.That(rowsAfterRetry.ContainsKey(v)).IsTrue().Because($"Expected applied row for V{v}");
+            await Assert.That(rowsAfterRetry[v].StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse().Because($"V{v} should be an applied migration row on retry");
         }
 
         var columnsAfterRetry = await GetTableColumns();
-        Assert.Contains(V6Column, columnsAfterRetry);
-        Assert.Contains(V7Column, columnsAfterRetry);
-        Assert.Contains(V8Column, columnsAfterRetry);
-        Assert.Equal(1, await GetMarkerRowCount());
+        await Assert.That(columnsAfterRetry).Contains(V6Column);
+        await Assert.That(columnsAfterRetry).Contains(V7Column);
+        await Assert.That(columnsAfterRetry).Contains(V8Column);
+        await Assert.That(await GetMarkerRowCount()).IsEqualTo(1);
     }
 
     private async Task SeedMarkerRow()
@@ -191,7 +184,11 @@ ORDER BY `MigrationVersion`";
         return (long)(await command.ExecuteScalarAsync())!;
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

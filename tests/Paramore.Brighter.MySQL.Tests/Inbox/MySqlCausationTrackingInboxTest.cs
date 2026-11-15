@@ -3,6 +3,7 @@ using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.MySql;
 
 namespace Paramore.Brighter.MySQL.Tests.Inbox;
+[TUnit.Core.InheritsTests]
 
 public class MySqlCausationTrackingInboxTest : CausationTrackingInboxBaseTests
 {

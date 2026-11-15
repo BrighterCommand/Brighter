@@ -5,12 +5,11 @@
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.Outbox;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerBinary.OutstandingCount;
 
-[Trait("Category", "Spanner")]
-[Collection("Spanner")]
+[Property("Category", "Spanner")]
+[NotInParallel("Spanner")]
 public class WhenAnOutstandingCountIsCancelledShouldEndTheCall : OutstandingCountCancellationOutboxBaseTests<System.Data.Common.DbTransaction>
 {
     private readonly IAmAnOutstandingCountOutboxProvider _outboxProvider = new SpannerBinaryOutboxProvider();
@@ -18,9 +17,8 @@ public class WhenAnOutstandingCountIsCancelledShouldEndTheCall : OutstandingCoun
     protected override Task<OutstandingCountCancellationSetup<System.Data.Common.DbTransaction>> PrepareStoreAsync(TimeSpan holdFor) =>
         _outboxProvider.PrepareCancellationAsync(holdFor);
 
-    [Fact]
+    [Test]
     public async Task When_an_outstanding_count_is_cancelled_should_end_the_call()
     {
         await AssertCancellationEndsTheCountAsync();
-    }
-}
+    }}

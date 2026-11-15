@@ -6,13 +6,13 @@ using FakeItEasy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Paramore.Brighter.MySql.EntityFrameworkCore;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class MySqlEntityFrameworkTransactionProviderCommitAsyncTests
 {
-    [Fact]
+    [Test]
     public async Task When_mysql_ef_commit_async_fails_should_propagate_exception()
     {
         // Arrange
@@ -25,8 +25,7 @@ public class MySqlEntityFrameworkTransactionProviderCommitAsyncTests
         var provider = new MySqlEntityFrameworkTransactionProvider<DbContext>(context);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => provider.CommitAsync(CancellationToken.None));
+        await Assert.That(() => provider.CommitAsync(CancellationToken.None)).ThrowsExactly<InvalidOperationException>();
     }
 }
 #endif

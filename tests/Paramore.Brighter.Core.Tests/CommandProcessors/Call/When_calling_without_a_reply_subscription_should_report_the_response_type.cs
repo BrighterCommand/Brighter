@@ -28,14 +28,13 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Extensions;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call;
 
 public class CommandProcessorMissingReplySubscriptionTests
 {
-    [Fact]
-    public void When_calling_without_a_reply_subscription_should_report_the_response_type()
+    [Test]
+    public async System.Threading.Tasks.Task When_calling_without_a_reply_subscription_should_report_the_response_type()
     {
         //Arrange
         var commandProcessor = new CommandProcessor(
@@ -47,10 +46,10 @@ public class CommandProcessorMissingReplySubscriptionTests
             new InMemorySchedulerFactory());
 
         //Act
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            commandProcessor.Call<MyRequest, MyResponse>(new MyRequest()));
+        var exception = await Assert.That(() =>
+            commandProcessor.Call<MyRequest, MyResponse>(new MyRequest())).ThrowsExactly<InvalidOperationException>();
 
         //Assert
-        Assert.Equal($"No Subscription registered for replies of type {typeof(MyResponse)}", exception.Message);
+        await Assert.That(exception.Message).IsEqualTo($"No Subscription registered for replies of type {typeof(MyResponse)}");
     }
 }

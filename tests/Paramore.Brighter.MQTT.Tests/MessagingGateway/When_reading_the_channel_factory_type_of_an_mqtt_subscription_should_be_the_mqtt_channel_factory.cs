@@ -24,15 +24,15 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.MessagingGateway.MQTT;
 using Paramore.Brighter.MQTT.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway;
 
-[Trait("Category", "MQTT")]
+[Property("Category", "MQTT")]
 public class MqttSubscriptionChannelFactoryTypeTests
 {
-    [Fact]
-    public void When_reading_the_channel_factory_type_of_an_mqtt_subscription_should_be_the_mqtt_channel_factory()
+    [Test]
+    public async System.Threading.Tasks.Task When_reading_the_channel_factory_type_of_an_mqtt_subscription_should_be_the_mqtt_channel_factory()
     {
         // Arrange — no explicit messagePumpType is needed: MqttSubscription<T> already defaults to Proactor
         var subscription = new MqttSubscription<MyCommand>(
@@ -44,6 +44,6 @@ public class MqttSubscriptionChannelFactoryTypeTests
         var channelFactoryType = subscription.ChannelFactoryType;
 
         // Assert
-        Assert.Equal(typeof(ChannelFactory), channelFactoryType);
+        await Assert.That(channelFactoryType).IsEqualTo(typeof(ChannelFactory));
     }
 }

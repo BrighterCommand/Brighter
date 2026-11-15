@@ -7,7 +7,6 @@ using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -16,7 +15,7 @@ public class SweepsWithDefaultCircuitBreakerOptionsTests
     private const int DEFAULT_COOLDOWN_COUNT = 10;
     private static readonly TimeSpan s_timeout = TimeSpan.FromSeconds(5);
 
-    [Fact]
+    [Test]
     public async Task When_sweeps_run_on_schedule_with_default_options_should_exclude_a_tripped_topic_from_exactly_ten_sweeps()
     {
         //Arrange
@@ -42,14 +41,17 @@ public class SweepsWithDefaultCircuitBreakerOptionsTests
             if (sweep > 1)
                 clock.Advance(TimeSpan.FromSeconds(5));
             var swept = measurements.WaitFor(m => m.Of(RecordedSweeperMeasurements.Sweeps).Count == sweep, s_timeout);
-            Assert.True(swept, $"Sweep {sweep} did not complete");
+            await Assert.That(swept).IsTrue().Because($"Sweep {sweep} did not complete");
             publishedAfterSweep[sweep - 1] = outbox.Bus.Stream(outbox.RoutingKey).Any();
         }
         await sweeper.StopAsync(CancellationToken.None);
         sweeper.Dispose();
 
         //Assert
-        Assert.All(publishedAfterSweep.Take(DEFAULT_COOLDOWN_COUNT), published => Assert.False(published));
-        Assert.True(publishedAfterSweep[DEFAULT_COOLDOWN_COUNT]);
+        foreach (var published in publishedAfterSweep.Take(DEFAULT_COOLDOWN_COUNT))
+{
+    await Assert.That(published).IsFalse();
+}
+        await Assert.That(publishedAfterSweep[DEFAULT_COOLDOWN_COUNT]).IsTrue();
     }
 }

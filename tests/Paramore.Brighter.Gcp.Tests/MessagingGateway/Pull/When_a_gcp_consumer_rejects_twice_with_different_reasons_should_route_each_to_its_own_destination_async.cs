@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
@@ -36,11 +35,11 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// so the rejection router must not reuse the producer it built for the first destination when the
 /// second rejection chooses the other one.
 /// </summary>
-[Trait("Category", "GcpPubSubPull")]
-[Collection("Pull")]
+[Property("Category", "GcpPubSubPull")]
+[NotInParallel("Pull")]
 public class GcpConsumerRejectsTwiceRoutingAsyncTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_gcp_consumer_rejects_twice_with_different_reasons_should_route_each_to_its_own_destination_async()
     {
         var provider = new GcpPullMessageGatewayProvider();
@@ -79,11 +78,11 @@ public class GcpConsumerRejectsTwiceRoutingAsyncTests
 
             // Assert — the DeliveryError copy is on the DLQ
             var dlqMessage = await WaitForAsync(() => provider.GetMessageFromDeadLetterQueueAsync(subscription));
-            Assert.Equal(deliveryErrorMessage.Id, dlqMessage.Id);
+            await Assert.That(dlqMessage.Id).IsEqualTo(deliveryErrorMessage.Id);
 
             // Assert — the Unacceptable copy is on the invalid-message topic, not the DLQ
             var invalidMessage = await WaitForAsync(() => provider.GetMessageFromInvalidChannelAsync(subscription));
-            Assert.Equal(unacceptableMessage.Id, invalidMessage.Id);
+            await Assert.That(invalidMessage.Id).IsEqualTo(unacceptableMessage.Id);
         }
         finally
         {
@@ -118,7 +117,7 @@ public class GcpConsumerRejectsTwiceRoutingAsyncTests
             await Task.Delay(500);
         }
 
-        Assert.NotEqual(MessageType.MT_NONE, message.Header.MessageType);
+        await Assert.That(message.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
         return message;
     }
 }

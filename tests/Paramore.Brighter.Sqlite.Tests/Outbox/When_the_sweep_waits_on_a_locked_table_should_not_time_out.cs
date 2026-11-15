@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel <guilhermeaappel@gmail.com>
 
@@ -24,14 +24,13 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Sqlite.Tests.Outbox;
 
 public class OutstandingSweepNoTimeoutTests
 {
-    [Fact]
-    public void When_the_sweep_waits_on_a_locked_table_should_not_time_out()
+    [Test]
+    public async Task When_the_sweep_waits_on_a_locked_table_should_not_time_out()
     {
         //Arrange
         using var locked = new LockedSqliteOutbox();
@@ -40,12 +39,12 @@ public class OutstandingSweepNoTimeoutTests
 
         //Act
         IEnumerable<Message> messages = null;
-        var exception = Record.Exception(() => messages = locked.Outbox.OutstandingMessages(TimeSpan.Zero, new RequestContext()));
+        var exception = TestExceptionRecorder.Capture(() => messages = locked.Outbox.OutstandingMessages(TimeSpan.Zero, new RequestContext()));
         stopwatch.Stop();
 
         //Assert
-        Assert.Null(exception);
-        Assert.Single(messages);
-        Assert.True(stopwatch.Elapsed >= TimeSpan.FromSeconds(16), $"The sweep returned after {stopwatch.Elapsed}, before the lock was released");
+        await Assert.That(exception).IsNull();
+        await Assert.That(messages).HasSingleItem();
+        await Assert.That(stopwatch.Elapsed >= TimeSpan.FromSeconds(16)).IsTrue().Because($"The sweep returned after {stopwatch.Elapsed}, before the lock was released");
     }
 }

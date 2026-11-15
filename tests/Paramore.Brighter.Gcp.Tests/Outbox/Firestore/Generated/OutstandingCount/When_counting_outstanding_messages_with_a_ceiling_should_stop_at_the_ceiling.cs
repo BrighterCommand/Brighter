@@ -7,12 +7,11 @@
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.Outbox;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Outbox.Firestore.OutstandingCount;
 
-[Trait("Category", "Firestore")]
-[Collection("FirestoreOutbox")]
+[Property("Category", "Firestore")]
+[NotInParallel("FirestoreOutbox")]
 public class WhenCountingOutstandingMessagesWithACeilingShouldStopAtTheCeiling : OutstandingCountOutboxBaseTests<Paramore.Brighter.Firestore.FirestoreTransaction>
 {
     private readonly IAmAnOutstandingCountOutboxProvider _outboxProvider = new FirestoreOutboxProvider();
@@ -35,15 +34,14 @@ public class WhenCountingOutstandingMessagesWithACeilingShouldStopAtTheCeiling :
         await Outbox.AddAsync(aged, new RequestContext());
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_outstanding_messages_with_a_ceiling_of_three_should_return_three()
     {
         await AssertCeilingOfThreeAsync();
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_outstanding_messages_with_a_ceiling_of_five_should_return_five()
     {
         await AssertCeilingOfFiveAsync();
-    }
-}
+    }}

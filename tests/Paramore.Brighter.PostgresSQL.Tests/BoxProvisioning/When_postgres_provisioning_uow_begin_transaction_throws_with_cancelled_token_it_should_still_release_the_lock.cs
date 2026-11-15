@@ -30,7 +30,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -39,11 +38,13 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// token, so pg_advisory_unlock reaches the server (ADR 0058 §B.3). Npgsql's nested-transaction guard fires before its
 /// cancellation check, so an outer transaction makes BeginTransactionAsync throw even with a cancelled token.
 /// </summary>
-public class PostgreSqlProvisioningUnitOfWorkBeginTransactionCancelledTests : IAsyncLifetime
+public class PostgreSqlProvisioningUnitOfWorkBeginTransactionCancelledTests
 {
     private readonly NpgsqlConnection _connection = new(PostgreSqlSettings.TestsBrighterConnectionString);
     private readonly FakePostgreSqlAdvisoryLock _advisoryLock = new(releaseResult: true);
     private NpgsqlTransaction? _blockingTransaction;
+
+    [Before(HookType.Test)]
 
     public async Task InitializeAsync()
     {
@@ -51,13 +52,15 @@ public class PostgreSqlProvisioningUnitOfWorkBeginTransactionCancelledTests : IA
         _blockingTransaction = await _connection.BeginTransactionAsync();
     }
 
+    [After(HookType.Test)]
+
     public async Task DisposeAsync()
     {
         if (_blockingTransaction is not null) await _blockingTransaction.DisposeAsync();
         await _connection.DisposeAsync();
     }
 
-    [Fact]
+    [Test]
     public async Task When_postgres_provisioning_uow_begin_transaction_throws_with_cancelled_token_it_should_still_release_the_lock()
     {
         const string lockKey = "test_lock_resource_cancelled_token_cleanup";
@@ -69,16 +72,16 @@ public class PostgreSqlProvisioningUnitOfWorkBeginTransactionCancelledTests : IA
         cts.Cancel();
         var cancelledToken = cts.Token;
 
-        var thrown = await Record.ExceptionAsync(() => uow.BeginAsync(
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => uow.BeginAsync(
             lockResource: lockKey,
             lockTimeout: TimeSpan.FromSeconds(5),
             cancellationToken: cancelledToken));
 
-        Assert.IsType<InvalidOperationException>(thrown);
+        await Assert.That(thrown).IsTypeOf<InvalidOperationException>();
 
-        Assert.Equal(lockKey, _advisoryLock.ReleasedKey);
+        await Assert.That(_advisoryLock.ReleasedKey).IsEqualTo(lockKey);
 
-        Assert.NotNull(_advisoryLock.ReleasedCancellationToken);
-        Assert.False(_advisoryLock.ReleasedCancellationToken!.Value.IsCancellationRequested);
+        await Assert.That(_advisoryLock.ReleasedCancellationToken).IsNotNull();
+        await Assert.That(_advisoryLock.ReleasedCancellationToken!.Value.IsCancellationRequested).IsFalse();
     }
 }

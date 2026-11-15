@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia
@@ -30,18 +30,17 @@ using System.Threading.Tasks;
 using Grpc.Core;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 
-[Trait("Category", "GcpPubSub")]
-[Trait("Category", "GcpPubSubPurge")]
-[Trait("Requires", "PubSubEmulator")]
+[Property("Category", "GcpPubSub")]
+[Property("Category", "GcpPubSubPurge")]
+[Property("Requires", "PubSubEmulator")]
 public class GcpPurgeCleanupFailureTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_purge_cleanup_fails_should_preserve_the_original_failure(bool useAsync)
     {
         //Arrange
@@ -58,11 +57,11 @@ public class GcpPurgeCleanupFailureTests
         };
 
         //Act
-        var failure = await Assert.ThrowsAsync<RpcException>(() => context.PurgeAsync(useAsync));
+        var failure = await Assert.That(() => context.PurgeAsync(useAsync)).ThrowsExactly<RpcException>();
 
         //Assert
-        Assert.Same(primary, failure);
-        var cleanupFailure = Assert.IsType<AggregateException>(failure.Data["PubSubPurgeCleanupException"]);
-        Assert.Contains(cleanup, cleanupFailure.InnerExceptions);
+        await Assert.That(failure).IsSameReferenceAs(primary);
+        var cleanupFailure = await Assert.That(failure.Data["PubSubPurgeCleanupException"]).IsTypeOf<AggregateException>();
+        await Assert.That(cleanupFailure.InnerExceptions).Contains(cleanup);
     }
 }

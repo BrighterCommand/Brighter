@@ -29,7 +29,7 @@ using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Observability;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch;
 
@@ -49,8 +49,8 @@ public class PropagatedMessagesKeepLinkingMessagePumpObservabilityTests : IDispo
             .Build();
     }
 
-    [Fact]
-    public void When_propagated_messages_are_consumed_should_keep_linking_the_message_pump_span()
+    [Test]
+    public async Task When_propagated_messages_are_consumed_should_keep_linking_the_message_pump_span()
     {
         //Arrange
         // two consecutive messages, both carrying a producer TraceParent, so each process span
@@ -86,20 +86,20 @@ public class PropagatedMessagesKeepLinkingMessagePumpObservabilityTests : IDispo
         _traceProvider.ForceFlush();
 
         //Assert
-        Assert.NotNull(pumpSpan);
-        Assert.NotNull(secondReceiveSpan);
-        Assert.NotNull(secondProcessSpan);
+        await Assert.That(pumpSpan).IsNotNull();
+        await Assert.That(secondReceiveSpan).IsNotNull();
+        await Assert.That(secondProcessSpan).IsNotNull();
 
         // both messages genuinely carry propagated context
-        Assert.NotNull(firstMessage.Header.TraceParent);
-        Assert.NotNull(secondMessage.Header.TraceParent);
+        await Assert.That(firstMessage.Header.TraceParent).IsNotNull();
+        await Assert.That(secondMessage.Header.TraceParent).IsNotNull();
 
         // the pump is restored as Activity.Current once the first message's spans end
-        Assert.Equal(pumpSpan, ambientBetweenIterations);
+        await Assert.That(ambientBetweenIterations).IsEqualTo(pumpSpan);
 
         // ...so the *second* message's spans still link back to the pump, not just the first
-        Assert.Contains(secondReceiveSpan!.Links, link => link.Context == pumpSpan!.Context);
-        Assert.Contains(secondProcessSpan!.Links, link => link.Context == pumpSpan!.Context);
+        await Assert.That((secondReceiveSpan!.Links).Any(link => link.Context == pumpSpan!.Context)).IsTrue();
+        await Assert.That((secondProcessSpan!.Links).Any(link => link.Context == pumpSpan!.Context)).IsTrue();
     }
 
     public void Dispose()

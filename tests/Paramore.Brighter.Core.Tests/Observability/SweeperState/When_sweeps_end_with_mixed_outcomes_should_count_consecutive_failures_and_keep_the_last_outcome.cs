@@ -1,13 +1,12 @@
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.SweeperState;
 
 public class SweeperStateConsecutiveFailureTests
 {
-    [Fact]
-    public void When_sweeps_end_with_mixed_outcomes_should_count_consecutive_failures_and_keep_the_last_outcome()
+    [Test]
+    public async Task When_sweeps_end_with_mixed_outcomes_should_count_consecutive_failures_and_keep_the_last_outcome()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
@@ -17,12 +16,12 @@ public class SweeperStateConsecutiveFailureTests
         var snapshot = state.Read();
 
         //Assert
-        Assert.Equal(3, snapshot.ConsecutiveFailedSweeps);
-        Assert.Equal(SweepOutcome.Failed, snapshot.LastOutcome);
+        await Assert.That(snapshot.ConsecutiveFailedSweeps).IsEqualTo(3);
+        await Assert.That(snapshot.LastOutcome).IsEqualTo(SweepOutcome.Failed);
     }
 
-    [Fact]
-    public void When_a_sweep_completes_between_failures_should_restart_the_count()
+    [Test]
+    public async Task When_a_sweep_completes_between_failures_should_restart_the_count()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
@@ -32,12 +31,12 @@ public class SweeperStateConsecutiveFailureTests
         var snapshot = state.Read();
 
         //Assert
-        Assert.Equal(1, snapshot.ConsecutiveFailedSweeps);
-        Assert.Equal(SweepOutcome.Failed, snapshot.LastOutcome);
+        await Assert.That(snapshot.ConsecutiveFailedSweeps).IsEqualTo(1);
+        await Assert.That(snapshot.LastOutcome).IsEqualTo(SweepOutcome.Failed);
     }
 
-    [Fact]
-    public void When_a_sweep_completes_after_failures_should_reset_the_count_to_zero()
+    [Test]
+    public async Task When_a_sweep_completes_after_failures_should_reset_the_count_to_zero()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
@@ -47,12 +46,12 @@ public class SweeperStateConsecutiveFailureTests
         var snapshot = state.Read();
 
         //Assert
-        Assert.Equal(0, snapshot.ConsecutiveFailedSweeps);
-        Assert.Equal(SweepOutcome.Completed, snapshot.LastOutcome);
+        await Assert.That(snapshot.ConsecutiveFailedSweeps).IsEqualTo(0);
+        await Assert.That(snapshot.LastOutcome).IsEqualTo(SweepOutcome.Completed);
     }
 
-    [Fact]
-    public void When_a_sweep_cannot_get_the_lock_after_failures_should_leave_the_count_unchanged()
+    [Test]
+    public async Task When_a_sweep_cannot_get_the_lock_after_failures_should_leave_the_count_unchanged()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
@@ -62,8 +61,8 @@ public class SweeperStateConsecutiveFailureTests
         var snapshot = state.Read();
 
         //Assert
-        Assert.Equal(2, snapshot.ConsecutiveFailedSweeps);
-        Assert.Equal(SweepOutcome.LockUnavailable, snapshot.LastOutcome);
+        await Assert.That(snapshot.ConsecutiveFailedSweeps).IsEqualTo(2);
+        await Assert.That(snapshot.LastOutcome).IsEqualTo(SweepOutcome.LockUnavailable);
     }
 
     private static void EndSweeps(OutboxSweeperState state, params SweepOutcome[] outcomes)

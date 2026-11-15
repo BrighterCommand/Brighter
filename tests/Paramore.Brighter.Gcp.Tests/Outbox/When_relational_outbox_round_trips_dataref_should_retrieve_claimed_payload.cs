@@ -27,7 +27,6 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 using System.Data.Common;
-using Xunit;
 using Google.Cloud.Spanner.Data;
 using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.Outbox.Spanner;
@@ -37,8 +36,8 @@ namespace Paramore.Brighter.Gcp.Tests.Outbox;
 /// <summary>
 /// Verifies DataRef round trips and legacy table compatibility using Spanner.
 /// </summary>
-[Trait("Category", "Spanner")]
-[Collection("Spanner")]
+[Property("Category", "Spanner")]
+[NotInParallel]
 public class SpannerOutboxDataRefTests : RelationalOutboxDataRefTests
 {
     /// <inheritdoc />

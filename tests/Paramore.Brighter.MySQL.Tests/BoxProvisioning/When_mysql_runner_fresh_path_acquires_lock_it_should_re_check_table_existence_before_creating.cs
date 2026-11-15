@@ -27,7 +27,6 @@ using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.Outbox.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -36,7 +35,7 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// another instance created, and bootstraps it instead of running V1's <c>CREATE TABLE</c>; existing
 /// rows survive (ADR 0057 §3).
 /// </summary>
-public class MySqlRunnerFreshPathRecheckTests : IAsyncLifetime
+public class MySqlRunnerFreshPathRecheckTests
 {
     private const string MarkerMessageId = "marker-row-must-survive";
 
@@ -51,7 +50,7 @@ public class MySqlRunnerFreshPathRecheckTests : IAsyncLifetime
         _runner = new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30));
     }
 
-    [Fact]
+    [Test]
     public async Task When_mysql_runner_fresh_path_acquires_lock_it_should_re_check_table_existence_before_creating()
     {
         //Arrange
@@ -67,12 +66,12 @@ public class MySqlRunnerFreshPathRecheckTests : IAsyncLifetime
             BoxType.Outbox,
             staleState);
 
-        var ex = await Record.ExceptionAsync(act);
+        var ex = await TestExceptionRecorder.CaptureAsync(act);
 
         //Assert
-        Assert.Null(ex);
-        Assert.True(await GetHistoryRowCount() >= 1, "Bootstrap branch should have inserted at least one history row");
-        Assert.Equal(1, await GetMarkerRowCount());
+        await Assert.That(ex).IsNull();
+        await Assert.That(await GetHistoryRowCount() >= 1).IsTrue().Because("Bootstrap branch should have inserted at least one history row");
+        await Assert.That(await GetMarkerRowCount()).IsEqualTo(1);
     }
 
     private async Task ExecuteDdl(string sql)
@@ -117,8 +116,10 @@ public class MySqlRunnerFreshPathRecheckTests : IAsyncLifetime
         return (long)(await command.ExecuteScalarAsync())!;
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

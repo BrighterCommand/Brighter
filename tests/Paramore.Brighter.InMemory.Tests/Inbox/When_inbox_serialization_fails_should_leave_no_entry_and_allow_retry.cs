@@ -27,16 +27,15 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.InMemory.Tests.Data;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Inbox;
 
-[Trait("Category", "InMemory")]
+[Property("Category", "InMemory")]
 public class InMemoryInboxSerializationFailureTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_inbox_serialization_fails_should_leave_no_entry_and_allow_retry(bool useAsync)
     {
         //Arrange
@@ -61,17 +60,16 @@ public class InMemoryInboxSerializationFailureTests
         }
 
         //Act
-        var error = await Record.ExceptionAsync(AddCommand);
+        var error = await TestExceptionRecorder.CaptureAsync(AddCommand);
 
         //Assert
-        Assert.IsType<InvalidOperationException>(error);
-        Assert.False(inbox.Exists<InboxSerializationCommand>(command.Id, contextKey, context));
-        Assert.Equal(1, inbox.EntryCount);
-        Assert.Null(inbox.GetCausationId(command.Id, contextKey, context));
-        Assert.Throws<RequestNotFoundException<InboxSerializationCommand>>(
-            () => inbox.Get<InboxSerializationCommand>(command.Id, contextKey, context));
-        Assert.Equal(existing.Id, inbox.Get<SimpleCommand>(existing.Id, contextKey, context).Id);
-        Assert.Equal("failed-causation", inbox.GetCausationId(existing.Id, contextKey, context));
+        await Assert.That(error).IsTypeOf<InvalidOperationException>();
+        await Assert.That(inbox.Exists<InboxSerializationCommand>(command.Id, contextKey, context)).IsFalse();
+        await Assert.That(inbox.EntryCount).IsEqualTo(1);
+        await Assert.That(inbox.GetCausationId(command.Id, contextKey, context)).IsNull();
+        await Assert.That(() => inbox.Get<InboxSerializationCommand>(command.Id, contextKey, context)).ThrowsExactly<RequestNotFoundException<InboxSerializationCommand>>();
+        await Assert.That(inbox.Get<SimpleCommand>(existing.Id, contextKey, context).Id).IsEqualTo(existing.Id);
+        await Assert.That(inbox.GetCausationId(existing.Id, contextKey, context)).IsEqualTo("failed-causation");
 
         //Act
         command.FailSerialization = false;
@@ -79,23 +77,23 @@ public class InMemoryInboxSerializationFailureTests
         await AddCommand();
 
         //Assert
-        Assert.True(inbox.Exists<InboxSerializationCommand>(command.Id, contextKey, context));
-        Assert.Equal(2, inbox.EntryCount);
+        await Assert.That(inbox.Exists<InboxSerializationCommand>(command.Id, contextKey, context)).IsTrue();
+        await Assert.That(inbox.EntryCount).IsEqualTo(2);
         var stored = inbox.Get<InboxSerializationCommand>(command.Id, contextKey, context);
-        Assert.Equal(command.Id, stored.Id);
-        Assert.Equal("retry payload", stored.Value);
-        Assert.Equal("retry-causation", inbox.GetCausationId(command.Id, contextKey, context));
+        await Assert.That(stored.Id).IsEqualTo(command.Id);
+        await Assert.That(stored.Value).IsEqualTo("retry payload");
+        await Assert.That(inbox.GetCausationId(command.Id, contextKey, context)).IsEqualTo("retry-causation");
 
         //Act
         command.Value = "rejected replacement";
         command.FailSerialization = true;
         context.Bag[RequestContextBagNames.CausationId] = "rejected-causation";
-        var replacementError = await Record.ExceptionAsync(AddCommand);
+        var replacementError = await TestExceptionRecorder.CaptureAsync(AddCommand);
 
         //Assert
-        Assert.IsType<InvalidOperationException>(replacementError);
-        Assert.Equal(2, inbox.EntryCount);
-        Assert.Equal("retry payload", inbox.Get<InboxSerializationCommand>(command.Id, contextKey, context).Value);
-        Assert.Equal("retry-causation", inbox.GetCausationId(command.Id, contextKey, context));
+        await Assert.That(replacementError).IsTypeOf<InvalidOperationException>();
+        await Assert.That(inbox.EntryCount).IsEqualTo(2);
+        await Assert.That(inbox.Get<InboxSerializationCommand>(command.Id, contextKey, context).Value).IsEqualTo("retry payload");
+        await Assert.That(inbox.GetCausationId(command.Id, contextKey, context)).IsEqualTo("retry-causation");
     }
 }

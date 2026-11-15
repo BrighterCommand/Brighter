@@ -27,18 +27,17 @@ using System;
 using Paramore.Brighter.Actions;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.MessageDispatch;
 
 public class ClaimCheckDeferredLuggageTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
-    public void When_a_nonretained_claim_is_deferred_should_keep_luggage_for_redelivery(
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
+    public async Task When_a_nonretained_claim_is_deferred_should_keep_luggage_for_redelivery(
         bool useAsync, bool aggregateException)
     {
         //Arrange
@@ -51,11 +50,14 @@ public class ClaimCheckDeferredLuggageTests
         scenario.Run();
 
         //Assert
-        Assert.Equal(scenario.Payload, Assert.Single(scenario.HandledPayloads));
-        Assert.Equal(1, scenario.Channel.RequeueCount);
-        Assert.True(scenario.LuggageAtRequeue);
-        Assert.True(scenario.Storage.HasClaim(scenario.ClaimId));
-        Assert.NotEmpty(scenario.ScopedStores);
-        Assert.All(scenario.ScopedStores, storage => Assert.True(storage.IsDisposed));
+        await Assert.That((await Assert.That(scenario.HandledPayloads).HasSingleItem())).IsEqualTo(scenario.Payload);
+        await Assert.That(scenario.Channel.RequeueCount).IsEqualTo(1);
+        await Assert.That(scenario.LuggageAtRequeue).IsTrue();
+        await Assert.That(scenario.Storage.HasClaim(scenario.ClaimId)).IsTrue();
+        await Assert.That(scenario.ScopedStores).IsNotEmpty();
+        foreach (var storage in scenario.ScopedStores)
+{
+    await Assert.That(storage.IsDisposed).IsTrue();
+}
     }
 }

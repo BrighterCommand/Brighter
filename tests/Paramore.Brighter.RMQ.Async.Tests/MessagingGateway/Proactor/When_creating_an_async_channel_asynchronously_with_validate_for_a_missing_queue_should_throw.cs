@@ -26,7 +26,6 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
@@ -35,10 +34,10 @@ namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 /// queue does not exist: the channel factory reports a <see cref="ChannelFailureException"/> instead
 /// (bugfix 0049, #4519).
 /// </summary>
-[Trait("Category", "RMQ")]
+[Property("Category", "RMQ")]
 public class RmqChannelFactoryAsyncChannelAsyncValidateTests
 {
-    [Fact]
+    [Test]
     public async Task When_creating_an_async_channel_asynchronously_with_validate_for_a_missing_queue_should_throw()
     {
         // Arrange
@@ -60,9 +59,9 @@ public class RmqChannelFactoryAsyncChannelAsyncValidateTests
         var channelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection));
 
         // Act
-        var exception = await Record.ExceptionAsync(() => channelFactory.CreateAsyncChannelAsync(subscription));
+        var exception = await TestExceptionRecorder.CaptureAsync(() => channelFactory.CreateAsyncChannelAsync(subscription));
 
         // Assert
-        Assert.IsType<ChannelFailureException>(exception);
+        await Assert.That(exception).IsTypeOf<ChannelFailureException>();
     }
 }

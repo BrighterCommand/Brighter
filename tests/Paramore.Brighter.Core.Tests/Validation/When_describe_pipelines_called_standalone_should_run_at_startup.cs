@@ -19,9 +19,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,31 +30,25 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class DescribePipelinesStandaloneTests
 {
-    [Fact]
-    public void When_describe_pipelines_called_should_register_diagnostic_hosted_service()
+    [Test]
+    public async Task When_describe_pipelines_called_should_register_diagnostic_hosted_service()
     {
         // Arrange
         var services = new ServiceCollection();
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services);
         var builder = new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
-
         // Act
         builder.DescribePipelines();
-
         // Assert — a diagnostic hosted service is registered
-        Assert.Contains(services, sd =>
-            sd.ServiceType == typeof(IHostedService)
-            && sd.ImplementationType?.Name == "BrighterDiagnosticHostedService");
+        await Assert.That((services).Any(sd => sd.ServiceType == typeof(IHostedService) && sd.ImplementationType?.Name == "BrighterDiagnosticHostedService")).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_describe_pipelines_standalone_should_produce_log_output_at_startup()
     {
         // Arrange — DescribePipelines without ValidatePipelines, real diagnostic writer with captured logs
@@ -67,13 +59,10 @@ public class DescribePipelinesStandaloneTests
         var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services);
         var builder = new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
         builder.DescribePipelines();
-
         // Use a capturing logger factory so we can verify log output
         var logEntries = new List<LogEntry>();
         services.AddSingleton<ILoggerFactory>(new CapturingLoggerFactory(logEntries));
-
         var provider = services.BuildServiceProvider();
-
         // Act — start all hosted services (simulates host startup)
         var hostedServices = provider.GetServices<IHostedService>().ToList();
         foreach (var svc in hostedServices)
@@ -82,30 +71,33 @@ public class DescribePipelinesStandaloneTests
         }
 
         // Assert — the diagnostic writer ran and produced the pipeline summary log
-        Assert.Contains(logEntries, e =>
-            e.LogLevel == LogLevel.Information
-            && e.Message.Contains("handler pipeline"));
+        await Assert.That((logEntries).Any(e => e.LogLevel == LogLevel.Information && e.Message.Contains("handler pipeline"))).IsTrue();
     }
 
     /// <summary>
     /// A logger factory that captures all log entries for test assertions.
     /// </summary>
-    private class CapturingLoggerFactory(List<LogEntry> entries) : ILoggerFactory
+    private class CapturingLoggerFactory(List<LogEntry> entries) : Microsoft.Extensions.Logging.ILoggerFactory, System.IDisposable
     {
         public ILogger CreateLogger(string categoryName) => new CapturingLogger(entries);
-        public void AddProvider(ILoggerProvider provider) { }
-        public void Dispose() { }
+        public void AddProvider(ILoggerProvider provider)
+        {
+        }
+
+        public void Dispose()
+        {
+        }
     }
 
     private class CapturingLogger(List<LogEntry> entries) : ILogger
     {
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
-            Func<TState, Exception?, string> formatter)
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
             entries.Add(new LogEntry(logLevel, formatter(state, exception)));
         }
 
         public bool IsEnabled(LogLevel logLevel) => true;
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
     }
 }

@@ -27,22 +27,21 @@ using System;
 using Paramore.Brighter.Actions;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.MessageDispatch;
 
 public class ClaimCheckRequeueEnvelopeTests
 {
-    [Theory]
-    [InlineData(false, false, false)]
-    [InlineData(false, false, true)]
-    [InlineData(false, true, false)]
-    [InlineData(false, true, true)]
-    [InlineData(true, false, false)]
-    [InlineData(true, false, true)]
-    [InlineData(true, true, false)]
-    [InlineData(true, true, true)]
-    public void When_a_claimed_message_is_deferred_should_requeue_the_original_claim(
+    [Test]
+    [Arguments(false, false, false)]
+    [Arguments(false, false, true)]
+    [Arguments(false, true, false)]
+    [Arguments(false, true, true)]
+    [Arguments(true, false, false)]
+    [Arguments(true, false, true)]
+    [Arguments(true, true, false)]
+    [Arguments(true, true, true)]
+    public async Task When_a_claimed_message_is_deferred_should_requeue_the_original_claim(
         bool useAsync, bool retain, bool dataRefOnly)
     {
         //Arrange
@@ -53,17 +52,17 @@ public class ClaimCheckRequeueEnvelopeTests
         scenario.Run();
 
         //Assert
-        Assert.Equal(scenario.Payload, Assert.Single(scenario.HandledPayloads));
-        Assert.Equal(1, scenario.Channel.RequeueCount);
-        Assert.Equal(scenario.ClaimBody, scenario.RequeuedBody);
-        var requeued = Assert.IsType<Message>(scenario.RequeuedMessage);
-        Assert.Equal(scenario.ClaimId, requeued.Header.DataRef);
+        await Assert.That((await Assert.That(scenario.HandledPayloads).HasSingleItem())).IsEqualTo(scenario.Payload);
+        await Assert.That(scenario.Channel.RequeueCount).IsEqualTo(1);
+        await Assert.That(scenario.RequeuedBody).IsEqualTo(scenario.ClaimBody);
+        var requeued = await Assert.That(scenario.RequeuedMessage).IsTypeOf<Message>();
+        await Assert.That(requeued.Header.DataRef).IsEqualTo(scenario.ClaimId);
         if (dataRefOnly)
-            Assert.False(requeued.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK));
+            await Assert.That(requeued.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK)).IsFalse();
         else
-            Assert.Equal(scenario.ClaimId, requeued.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK]);
-        Assert.Equal(4, requeued.Header.HandledCount);
-        Assert.Equal("lock-to-preserve", requeued.Header.Bag["transport-lock"]);
-        Assert.Equal(0, scenario.Channel.AcknowledgeCount);
+            await Assert.That(requeued.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK]).IsEqualTo(scenario.ClaimId);
+        await Assert.That(requeued.Header.HandledCount).IsEqualTo(4);
+        await Assert.That(requeued.Header.Bag["transport-lock"]).IsEqualTo("lock-to-preserve");
+        await Assert.That(scenario.Channel.AcknowledgeCount).IsEqualTo(0);
     }
 }

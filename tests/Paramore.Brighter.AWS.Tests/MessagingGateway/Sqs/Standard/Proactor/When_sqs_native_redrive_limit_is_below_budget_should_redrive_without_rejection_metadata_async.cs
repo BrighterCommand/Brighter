@@ -31,7 +31,6 @@ using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.MessagingGateway.SqsStandard;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor;
 
@@ -47,8 +46,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor;
 /// Covers both message creators via <paramref name="rawMessageDelivery"/>:
 /// <c>true</c> → <c>SqsMessageCreator</c>; <c>false</c> → <c>SqsInlineMessageCreator</c>.
 /// </summary>
-[Trait("Category", "AWS")]
-[Collection("SqsStandard")]
+[Property("Category", "AWS")]
+[NotInParallel("SqsStandard")]
 public class SqsNativeRedriveLimitBelowBudgetProactorTests : IDisposable, IAsyncDisposable
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
@@ -69,9 +68,9 @@ public class SqsNativeRedriveLimitBelowBudgetProactorTests : IDisposable, IAsync
     /// <see cref="RejectionMetadataKeyNames"/> keys are present in the copy (R-9, AC-9).
     /// No <c>HandledCount</c> is asserted (AC-41's "no count asserted" clause).
     /// </summary>
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
+    [Test]
+    [Arguments(true)]
+    [Arguments(false)]
     public async Task When_sqs_native_redrive_limit_is_below_budget_should_redrive_without_rejection_metadata_async(
         bool rawMessageDelivery)
     {
@@ -185,19 +184,14 @@ public class SqsNativeRedriveLimitBelowBudgetProactorTests : IDisposable, IAsync
         // Assert — R-9 / AC-9: the native target holds the message (SQS performed the redrive)
         var nativeMessage = await nativeTargetChannel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
-        Assert.NotEqual(MessageType.MT_NONE, nativeMessage.Header.MessageType);
+        await Assert.That(nativeMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         // R-9: the native copy carries NONE of the five Brighter rejection metadata keys
-        Assert.False(nativeMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason),
-            $"Native redrive copy must not carry '{RejectionMetadataKeyNames.RejectionReason}'");
-        Assert.False(nativeMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage),
-            $"Native redrive copy must not carry '{RejectionMetadataKeyNames.RejectionMessage}'");
-        Assert.False(nativeMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp),
-            $"Native redrive copy must not carry '{RejectionMetadataKeyNames.RejectionTimestamp}'");
-        Assert.False(nativeMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic),
-            $"Native redrive copy must not carry '{RejectionMetadataKeyNames.OriginalTopic}'");
-        Assert.False(nativeMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType),
-            $"Native redrive copy must not carry '{RejectionMetadataKeyNames.OriginalMessageType}'");
+        await Assert.That(nativeMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason)).IsFalse().Because($"Native redrive copy must not carry '{RejectionMetadataKeyNames.RejectionReason}'");
+        await Assert.That(nativeMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage)).IsFalse().Because($"Native redrive copy must not carry '{RejectionMetadataKeyNames.RejectionMessage}'");
+        await Assert.That(nativeMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp)).IsFalse().Because($"Native redrive copy must not carry '{RejectionMetadataKeyNames.RejectionTimestamp}'");
+        await Assert.That(nativeMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic)).IsFalse().Because($"Native redrive copy must not carry '{RejectionMetadataKeyNames.OriginalTopic}'");
+        await Assert.That(nativeMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType)).IsFalse().Because($"Native redrive copy must not carry '{RejectionMetadataKeyNames.OriginalMessageType}'");
     }
 
     public void Dispose()

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -35,7 +35,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -43,7 +42,7 @@ public class SmallestTopicAgeTests
 {
     private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Fact]
+    [Test]
     public async Task When_publications_share_a_topic_should_measure_it_at_their_smallest_age()
     {
         //Arrange
@@ -81,10 +80,8 @@ public class SmallestTopicAgeTests
             TimeSpan.FromSeconds(5));
 
         //Assert
-        var call = Assert.Single(outbox.TopicCountCalls);
-        Assert.Equal(
-            new Dictionary<RoutingKey, TimeSpan> { [new RoutingKey("orders")] = TimeSpan.FromMinutes(2) },
-            call.DispatchedSinceByTopic);
+        var call = await Assert.That(outbox.TopicCountCalls).HasSingleItem();
+        await Assert.That(call.DispatchedSinceByTopic).IsEqualTo(new Dictionary<RoutingKey, TimeSpan> { [new RoutingKey("orders")] = TimeSpan.FromMinutes(2) });
     }
 
     private static InMemoryMessageProducer Producer(RoutingKey topic, string type, TimeSpan? staleMessageAge) =>

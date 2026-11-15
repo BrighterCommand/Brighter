@@ -3,14 +3,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class TransientMapperResolutionThrowsScopeTests
 {
-    [Fact]
-    public void When_a_transient_mapper_resolution_throws_it_should_not_leak_a_scope()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_transient_mapper_resolution_throws_it_should_not_leak_a_scope()
     {
         // Arrange — the mapper is registered but its constructor dependency is NOT, so the
         // container throws while activating it (the most common DI misconfiguration). This is the
@@ -28,16 +28,24 @@ public class TransientMapperResolutionThrowsScopeTests
         // Act — resolution throws because the constructor dependency is unregistered. The scope
         // created for this resolution is never handed back to the caller, so nothing but
         // GetTransient itself can dispose it.
-        var thrown = Record.Exception(() => factory.Create(typeof(MapperWithUnregisteredDependency)));
+        Exception? thrown = null;
+        try
+        {
+            factory.Create(typeof(MapperWithUnregisteredDependency));
+        }
+        catch (Exception e)
+        {
+            thrown = e;
+        }
 
         // Assert — resolution threw (the misconfiguration), the scope was created, and it was
         // disposed rather than orphaned. Before the fix the scope was created (CreatedCount == 1)
         // but neither tracked in _outstandingScopes (the TryAdd never ran) nor disposed
         // (DisposedCount == 0), so it leaked: Release has no key to find it and Dispose only drains
         // what was tracked.
-        Assert.NotNull(thrown);
-        Assert.Equal(1, scopeTracker.CreatedCount);
-        Assert.Equal(scopeTracker.CreatedCount, scopeTracker.DisposedCount);
+        await Assert.That(thrown).IsNotNull();
+        await Assert.That(scopeTracker.CreatedCount).IsEqualTo(1);
+        await Assert.That(scopeTracker.DisposedCount).IsEqualTo(scopeTracker.CreatedCount);
     }
 
     private sealed class MinimalCommand : Command

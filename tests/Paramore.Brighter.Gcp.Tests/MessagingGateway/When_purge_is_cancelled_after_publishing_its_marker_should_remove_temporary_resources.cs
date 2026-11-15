@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia
@@ -30,16 +30,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 
-[Trait("Category", "GcpPubSub")]
-[Trait("Category", "GcpPubSubPurge")]
-[Trait("Requires", "PubSubEmulator")]
+[Property("Category", "GcpPubSub")]
+[Property("Category", "GcpPubSubPurge")]
+[Property("Requires", "PubSubEmulator")]
 public class GcpPurgeCancellationCleanupTests
 {
-    [Fact]
+    [Test]
     public async Task When_purge_is_cancelled_after_publishing_its_marker_should_remove_temporary_resources()
     {
         //Arrange
@@ -55,10 +54,10 @@ public class GcpPurgeCancellationCleanupTests
         };
 
         //Act
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => context.PurgeAsync(true, cancellation.Token));
+        await Assert.That(() => context.PurgeAsync(true, cancellation.Token)).Throws<OperationCanceledException>();
 
         //Assert
-        Assert.Empty(context.TemporarySubscriptions());
-        Assert.Empty(context.TemporaryTopics());
+        await Assert.That(context.TemporarySubscriptions()).IsEmpty();
+        await Assert.That(context.TemporaryTopics()).IsEmpty();
     }
 }

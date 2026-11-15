@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -43,7 +43,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         _logger = factory.CreateLogger<Generators.MessagingGatewayGenerator>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_metadata_test_reactor_file_should_exist_with_correct_name()
     {
         // Arrange
@@ -56,11 +56,10 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
 
         // Assert — Reactor file exists at the mandated path
         var reactorPath = ReactorOutputPath(configuration);
-        Assert.True(File.Exists(reactorPath),
-            $"Reactor canonical metadata file not found at {reactorPath}");
+        await Assert.That(File.Exists(reactorPath)).IsTrue().Because($"Reactor canonical metadata file not found at {reactorPath}");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_metadata_test_proactor_file_should_exist_with_correct_name()
     {
         // Arrange
@@ -73,11 +72,10 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
 
         // Assert — Proactor file exists at the mandated path (closing the Kafka Reactor-only gap)
         var proactorPath = ProactorOutputPath(configuration);
-        Assert.True(File.Exists(proactorPath),
-            $"Proactor canonical metadata file not found at {proactorPath}");
+        await Assert.That(File.Exists(proactorPath)).IsTrue().Because($"Proactor canonical metadata file not found at {proactorPath}");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_metadata_test_reactor_should_read_original_topic_via_provider_keys()
     {
         // Arrange
@@ -90,11 +88,11 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
 
         // Assert — OriginalTopic read via keys.OriginalTopic, not a hard-coded string
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("keys.OriginalTopic", content);
-        Assert.Contains("_publication.Topic!.Value", content);
+        await Assert.That(content).Contains("keys.OriginalTopic");
+        await Assert.That(content).Contains("_publication.Topic!.Value");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_metadata_test_proactor_should_read_original_topic_via_provider_keys()
     {
         // Arrange
@@ -107,11 +105,11 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
 
         // Assert — OriginalTopic read via keys.OriginalTopic
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("keys.OriginalTopic", content);
-        Assert.Contains("_publication.Topic!.Value", content);
+        await Assert.That(content).Contains("keys.OriginalTopic");
+        await Assert.That(content).Contains("_publication.Topic!.Value");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_metadata_test_reactor_should_assert_original_type_matches_sent_message()
     {
         // Arrange
@@ -124,11 +122,11 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
 
         // Assert — OriginalType read via keys.OriginalType and asserted equal to the sent message's own type
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("keys.OriginalType", content);
-        Assert.Contains("message.Header.MessageType.ToString()", content);
+        await Assert.That(content).Contains("keys.OriginalType");
+        await Assert.That(content).Contains("message.Header.MessageType.ToString()");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_metadata_test_proactor_should_assert_original_type_matches_sent_message()
     {
         // Arrange
@@ -141,11 +139,11 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
 
         // Assert — OriginalType read via keys.OriginalType and asserted equal to the sent message's own type
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("keys.OriginalType", content);
-        Assert.Contains("message.Header.MessageType.ToString()", content);
+        await Assert.That(content).Contains("keys.OriginalType");
+        await Assert.That(content).Contains("message.Header.MessageType.ToString()");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_metadata_test_reactor_should_assert_rejection_reason_equals_delivery_error()
     {
         // Arrange
@@ -158,11 +156,11 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
 
         // Assert — RejectionReason read via keys.RejectionReason and asserted equal to "DeliveryError"
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("keys.RejectionReason", content);
-        Assert.Contains("DeliveryError", content);
+        await Assert.That(content).Contains("keys.RejectionReason");
+        await Assert.That(content).Contains("DeliveryError");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_metadata_test_proactor_should_assert_rejection_reason_equals_delivery_error()
     {
         // Arrange
@@ -175,11 +173,11 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
 
         // Assert — RejectionReason read via keys.RejectionReason
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("keys.RejectionReason", content);
-        Assert.Contains("DeliveryError", content);
+        await Assert.That(content).Contains("keys.RejectionReason");
+        await Assert.That(content).Contains("DeliveryError");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_metadata_test_reactor_should_assert_rejection_message_equals_description()
     {
         // Arrange
@@ -192,10 +190,10 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
 
         // Assert — RejectionMessage read via keys.RejectionMessage; value equals description passed to Reject
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("keys.RejectionMessage", content);
+        await Assert.That(content).Contains("keys.RejectionMessage");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_metadata_test_proactor_should_assert_rejection_message_equals_description()
     {
         // Arrange
@@ -208,10 +206,10 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
 
         // Assert — RejectionMessage read via keys.RejectionMessage
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("keys.RejectionMessage", content);
+        await Assert.That(content).Contains("keys.RejectionMessage");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_metadata_test_reactor_should_assert_rejection_timestamp_is_parseable_iso8601()
     {
         // Arrange
@@ -224,12 +222,12 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
 
         // Assert — RejectionTimestamp read via keys.RejectionTimestamp and parsed as ISO-8601
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("keys.RejectionTimestamp", content);
-        Assert.Contains("DateTimeOffset.TryParse", content);
-        Assert.Contains("TimeSpan.FromMinutes(1)", content);
+        await Assert.That(content).Contains("keys.RejectionTimestamp");
+        await Assert.That(content).Contains("DateTimeOffset.TryParse");
+        await Assert.That(content).Contains("TimeSpan.FromMinutes(1)");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_metadata_test_proactor_should_assert_rejection_timestamp_is_parseable_iso8601()
     {
         // Arrange
@@ -242,12 +240,12 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
 
         // Assert — RejectionTimestamp read via keys.RejectionTimestamp and parsed
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("keys.RejectionTimestamp", content);
-        Assert.Contains("DateTimeOffset.TryParse", content);
-        Assert.Contains("TimeSpan.FromMinutes(1)", content);
+        await Assert.That(content).Contains("keys.RejectionTimestamp");
+        await Assert.That(content).Contains("DateTimeOffset.TryParse");
+        await Assert.That(content).Contains("TimeSpan.FromMinutes(1)");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_metadata_test_reactor_should_poll_dlq_inside_bounded_retry_loop()
     {
         // Arrange
@@ -260,13 +258,13 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
 
         // Assert — DLQ arrival polled inside the bounded retry loop
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("GetMessageFromDeadLetterQueue", content);
-        Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(60)", content);
-        Assert.Contains("500", content);
+        await Assert.That(content).Contains("GetMessageFromDeadLetterQueue");
+        await Assert.That(content).Contains("Stopwatch");
+        await Assert.That(content).Contains("TimeSpan.FromSeconds(60)");
+        await Assert.That(content).Contains("500");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_metadata_test_proactor_should_poll_dlq_inside_bounded_retry_loop()
     {
         // Arrange
@@ -279,16 +277,16 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
 
         // Assert — DLQ arrival polled inside the bounded retry loop
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("GetMessageFromDeadLetterQueueAsync", content);
-        Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(60)", content);
-        Assert.Contains("500", content);
+        await Assert.That(content).Contains("GetMessageFromDeadLetterQueueAsync");
+        await Assert.That(content).Contains("Stopwatch");
+        await Assert.That(content).Contains("TimeSpan.FromSeconds(60)");
+        await Assert.That(content).Contains("500");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_is_pass_reactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange — ledger cell is Pass; the [Test] must carry no Skip argument
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
@@ -296,13 +294,13 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact] present; Skip absent (conditional pattern renders nothing when Skip is empty)
+        // Assert — [Test] present; Skip absent (conditional pattern renders nothing when Skip is empty)
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("[Fact]", content);
-        Assert.DoesNotContain("Skip =", content);
+        await Assert.That(content).Contains("[Test]");
+        await Assert.That(content).DoesNotContain("[Skip(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_is_deferred_reactor_should_emit_skip_on_fact()
     {
         // Arrange — ledger cell is Deferred; the template must conditionally emit Skip
@@ -317,15 +315,15 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact, Skip = "Deferred: #9012 ..."] is emitted
+        // Assert — [Test, Skip = "Deferred: #9012 ..."] is emitted
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("Skip = \"Deferred: #9012", content);
+        await Assert.That(content).Contains("Skip(\"Deferred: #9012");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_is_pass_proactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange — ledger cell is Pass; the [Test] must carry no Skip argument
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
@@ -335,8 +333,8 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
 
         // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("[Fact]", content);
-        Assert.DoesNotContain("Skip =", content);
+        await Assert.That(content).Contains("[Test]");
+        await Assert.That(content).DoesNotContain("[Skip(");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

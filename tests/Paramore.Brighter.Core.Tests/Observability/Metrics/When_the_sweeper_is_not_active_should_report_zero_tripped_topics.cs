@@ -32,16 +32,15 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
 public class InactiveSweeperZeroTrippedTopicsGaugeTests
 {
     private const string TrippedTopics = "paramore.brighter.outbox_sweeper.tripped_topics";
 
-    [Fact]
-    public void When_the_sweeper_is_not_active_should_report_zero_tripped_topics_before_it_has_ended_a_sweep()
+    [Test]
+    public async Task When_the_sweeper_is_not_active_should_report_zero_tripped_topics_before_it_has_ended_a_sweep()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
@@ -51,11 +50,11 @@ public class InactiveSweeperZeroTrippedTopicsGaugeTests
         var values = ObserveWithOrdersTripped(state);
 
         //Assert
-        Assert.Equal([0L], values);
+        await Assert.That(values).IsEqualTo([0L]);
     }
 
-    [Fact]
-    public void When_the_sweeper_is_not_active_should_report_zero_tripped_topics_when_the_last_sweep_could_not_get_the_lock()
+    [Test]
+    public async Task When_the_sweeper_is_not_active_should_report_zero_tripped_topics_when_the_last_sweep_could_not_get_the_lock()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
@@ -66,11 +65,11 @@ public class InactiveSweeperZeroTrippedTopicsGaugeTests
         var values = ObserveWithOrdersTripped(state);
 
         //Assert
-        Assert.Equal([0L], values);
+        await Assert.That(values).IsEqualTo([0L]);
     }
 
-    [Fact]
-    public void When_the_sweeper_is_not_active_should_report_zero_tripped_topics_while_acquiring_the_lock_after_a_completed_sweep()
+    [Test]
+    public async Task When_the_sweeper_is_not_active_should_report_zero_tripped_topics_while_acquiring_the_lock_after_a_completed_sweep()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
@@ -83,11 +82,11 @@ public class InactiveSweeperZeroTrippedTopicsGaugeTests
         var values = ObserveWithOrdersTripped(state);
 
         //Assert
-        Assert.Equal([0L], values);
+        await Assert.That(values).IsEqualTo([0L]);
     }
 
-    [Fact]
-    public void When_the_sweeper_is_not_active_should_report_zero_tripped_topics_when_the_last_sweep_failed_without_obtaining_the_lock()
+    [Test]
+    public async Task When_the_sweeper_is_not_active_should_report_zero_tripped_topics_when_the_last_sweep_failed_without_obtaining_the_lock()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
@@ -98,11 +97,11 @@ public class InactiveSweeperZeroTrippedTopicsGaugeTests
         var values = ObserveWithOrdersTripped(state);
 
         //Assert
-        Assert.Equal([0L], values);
+        await Assert.That(values).IsEqualTo([0L]);
     }
 
-    [Fact]
-    public void When_the_sweeper_is_not_active_should_report_zero_tripped_topics_when_stopped_after_a_completed_sweep()
+    [Test]
+    public async Task When_the_sweeper_is_not_active_should_report_zero_tripped_topics_when_stopped_after_a_completed_sweep()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
@@ -115,11 +114,11 @@ public class InactiveSweeperZeroTrippedTopicsGaugeTests
         var values = ObserveWithOrdersTripped(state);
 
         //Assert
-        Assert.Equal([0L], values);
+        await Assert.That(values).IsEqualTo([0L]);
     }
 
-    [Fact]
-    public void When_the_sweeper_is_not_active_should_report_zero_tripped_topics_without_reading_the_circuit_breaker()
+    [Test]
+    public async Task When_the_sweeper_is_not_active_should_report_zero_tripped_topics_without_reading_the_circuit_breaker()
     {
         //Arrange
         var marker = $"tripped-topics-{Guid.NewGuid():N}";
@@ -131,8 +130,8 @@ public class InactiveSweeperZeroTrippedTopicsGaugeTests
         var values = Observe(state, () => new ThrowingOutboxCircuitBreaker(marker));
 
         //Assert
-        Assert.Equal([0L], values);
-        Assert.Empty(CapturingLogSink.Instance.Find(typeof(SweeperMeter).FullName!, marker));
+        await Assert.That(values).IsEqualTo([0L]);
+        await Assert.That(CapturingLogSink.Instance.Find(typeof(SweeperMeter).FullName!, marker)).IsEmpty();
     }
 
     private static List<long> ObserveWithOrdersTripped(OutboxSweeperState state)

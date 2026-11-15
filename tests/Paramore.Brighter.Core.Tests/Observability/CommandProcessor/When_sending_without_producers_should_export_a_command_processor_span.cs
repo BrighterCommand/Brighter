@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia <irakli.gabisonia94@gmail.com>
@@ -35,11 +35,10 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor;
 
-[Collection("Observability")]
+[NotInParallel("Observability")]
 public class CommandProcessorWithoutProducersTracingTests
 {
     private readonly List<Activity> _exportedActivities = [];
@@ -75,9 +74,9 @@ public class CommandProcessorWithoutProducersTracingTests
         return services.BuildServiceProvider();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_sending_without_producers_should_export_a_command_processor_span(bool isAsync)
     {
         // Arrange
@@ -99,20 +98,20 @@ public class CommandProcessorWithoutProducersTracingTests
 
         // Assert
         string handlerName = isAsync ? nameof(MyCommandHandlerAsync) : nameof(MyCommandHandler);
-        Assert.Equal(command.Id.Value, _receivedMessages[handlerName]);
-        Assert.True(tracing.ForceFlush());
-        Activity span = Assert.Single(_exportedActivities, activity =>
+        await Assert.That(_receivedMessages[handlerName]).IsEqualTo(command.Id.Value);
+        await Assert.That(tracing.ForceFlush()).IsTrue();
+        Activity span = await Assert.That(System.Linq.Enumerable.Where(_exportedActivities, activity =>
             activity.Source.Name == BrighterSemanticConventions.SourceName
-            && Equals(activity.GetTagItem(BrighterSemanticConventions.RequestId), command.Id.Value));
-        Assert.Equal($"{nameof(MyCommand)} send", span.DisplayName);
-        Assert.Equal(ActivityKind.Internal, span.Kind);
-        Assert.Equal(parent.TraceId, span.TraceId);
-        Assert.Equal(parent.SpanId, span.ParentSpanId);
+            && Equals(activity.GetTagItem(BrighterSemanticConventions.RequestId), command.Id.Value))).HasSingleItem();
+        await Assert.That(span.DisplayName).IsEqualTo($"{nameof(MyCommand)} send");
+        await Assert.That(span.Kind).IsEqualTo(ActivityKind.Internal);
+        await Assert.That(span.TraceId).IsEqualTo(parent.TraceId);
+        await Assert.That(span.ParentSpanId).IsEqualTo(parent.SpanId);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_publishing_without_producers_should_export_command_processor_and_handler_spans(bool isAsync)
     {
         // Arrange
@@ -134,19 +133,19 @@ public class CommandProcessorWithoutProducersTracingTests
 
         // Assert
         string handlerName = isAsync ? nameof(MyEventHandlerAsync) : nameof(MyEventHandler);
-        Assert.Equal(publishedEvent.Id.Value, _receivedMessages[handlerName]);
-        Assert.True(tracing.ForceFlush());
+        await Assert.That(_receivedMessages[handlerName]).IsEqualTo(publishedEvent.Id.Value);
+        await Assert.That(tracing.ForceFlush()).IsTrue();
         Activity[] spans = [.. _exportedActivities.Where(activity =>
             activity.Source.Name == BrighterSemanticConventions.SourceName
             && Equals(activity.GetTagItem(BrighterSemanticConventions.RequestId), publishedEvent.Id.Value))];
-        Assert.Equal(2, spans.Length);
-        Activity commandProcessorSpan = Assert.Single(spans, span => span.DisplayName == $"{nameof(MyEvent)} create");
-        Activity handlerSpan = Assert.Single(spans, span => span.DisplayName == $"{nameof(MyEvent)} publish");
-        Assert.Equal(ActivityKind.Internal, commandProcessorSpan.Kind);
-        Assert.Equal(ActivityKind.Internal, handlerSpan.Kind);
-        Assert.Equal(parent.TraceId, commandProcessorSpan.TraceId);
-        Assert.Equal(parent.SpanId, commandProcessorSpan.ParentSpanId);
-        Assert.Equal(commandProcessorSpan.TraceId, handlerSpan.TraceId);
-        Assert.Equal(commandProcessorSpan.SpanId, handlerSpan.ParentSpanId);
+        await Assert.That(spans.Length).IsEqualTo(2);
+        Activity commandProcessorSpan = await Assert.That(System.Linq.Enumerable.Where(spans, span => span.DisplayName == $"{nameof(MyEvent)} create")).HasSingleItem();
+        Activity handlerSpan = await Assert.That(System.Linq.Enumerable.Where(spans, span => span.DisplayName == $"{nameof(MyEvent)} publish")).HasSingleItem();
+        await Assert.That(commandProcessorSpan.Kind).IsEqualTo(ActivityKind.Internal);
+        await Assert.That(handlerSpan.Kind).IsEqualTo(ActivityKind.Internal);
+        await Assert.That(commandProcessorSpan.TraceId).IsEqualTo(parent.TraceId);
+        await Assert.That(commandProcessorSpan.ParentSpanId).IsEqualTo(parent.SpanId);
+        await Assert.That(handlerSpan.TraceId).IsEqualTo(commandProcessorSpan.TraceId);
+        await Assert.That(handlerSpan.ParentSpanId).IsEqualTo(commandProcessorSpan.SpanId);
     }
 }

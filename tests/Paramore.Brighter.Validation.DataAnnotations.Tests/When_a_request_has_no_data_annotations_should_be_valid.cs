@@ -24,14 +24,14 @@ THE SOFTWARE. */
 
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation.DataAnnotations.Tests.TestDoubles;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Validation.DataAnnotations.Tests;
 
 public class NoDataAnnotationsValidationTests
 {
-    [Fact]
-    public void When_a_request_has_no_data_annotations_should_be_valid()
+    [Test]
+    public async Task When_a_request_has_no_data_annotations_should_be_valid()
     {
         //Arrange
         var serviceProvider = new ServiceCollection().BuildServiceProvider();
@@ -39,9 +39,17 @@ public class NoDataAnnotationsValidationTests
         var request = new Ping { Value = "" };
 
         //Act
-        var exception = Record.Exception(() => handler.Handle(request));
+        Exception? exception = null;
+        try
+        {
+            handler.Handle(request);
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 }

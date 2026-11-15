@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,7 +34,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -43,7 +42,7 @@ public class UnrequestedTopicTests
     private const string DESTINATION = "messaging.destination.name";
     private readonly TimerCountingTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Fact]
+    [Test]
     public async Task When_the_per_topic_result_has_an_unrequested_topic_should_drop_it()
     {
         //Arrange
@@ -76,34 +75,32 @@ public class UnrequestedTopicTests
 
         //Act
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(readings);
+        await WaitUntilTheMonitorWaits(readings);
         _clock.Advance(TimeSpan.FromMinutes(1));
-        WaitForCompletions(readings, StaleMessageCount.Overall, 1);
-        WaitForCompletions(readings, StaleMessageCount.PerTopic, 1);
+        await WaitForCompletions(readings, StaleMessageCount.Overall, 1);
+        await WaitForCompletions(readings, StaleMessageCount.PerTopic, 1);
         var at120100 = metrics.Observe();
 
         //Assert
-        Assert.Equal(1, readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Completed));
+        await Assert.That(readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Completed)).IsEqualTo(1);
         var topics = at120100.Where(m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES).ToList();
-        Assert.Equal(
-            new[] { "orders=2", "payments=0" },
-            topics
+        await Assert.That(topics
                 .Select(m => $"{m.Attributes[DESTINATION]}={m.Value}")
-                .OrderBy(series => series, StringComparer.Ordinal));
-        Assert.DoesNotContain(topics, m => m.Attributes.Values.Any(value => value?.ToString() == "audit"));
+                .OrderBy(series => series, StringComparer.Ordinal)).IsEqualTo(new[] { "orders=2", "payments=0" });
+        await Assert.That(System.Linq.Enumerable.Any(topics, m => m.Attributes.Values.Any(value => value?.ToString() == "audit"))).IsFalse();
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
         new(new InternalBus(), new Publication { Topic = new RoutingKey(topic) });
 
-    private void WaitUntilTheMonitorWaits(OutboxStaleMessageReadings readings)
+    private async Task WaitUntilTheMonitorWaits(OutboxStaleMessageReadings readings)
     {
         var completed = readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed);
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= completed + 1, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= completed + 1, TimeSpan.FromSeconds(5))).IsTrue();
     }
 
-    private static void WaitForCompletions(OutboxStaleMessageReadings readings, StaleMessageCount count, long completions) =>
-        Assert.True(SpinWait.SpinUntil(
+    private static async Task WaitForCompletions(OutboxStaleMessageReadings readings, StaleMessageCount count, long completions) =>
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(count, StaleMeasurementOutcome.Completed) >= completions,
-            TimeSpan.FromSeconds(5)));
+            TimeSpan.FromSeconds(5))).IsTrue();
 }

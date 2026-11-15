@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Base.Test.Outbox;
 
+[TUnit.Core.InheritsTests]
 public abstract class RelationDatabaseOutboxAsyncTest : OutboxAsyncTest<DbTransaction>
 {
     private RelationDatabaseOutbox? _outbox;
@@ -16,26 +17,26 @@ public abstract class RelationDatabaseOutboxAsyncTest : OutboxAsyncTest<DbTransa
     protected abstract string TableNamePrefix { get; }
     protected abstract bool BinaryMessagePayload { get; }
     protected virtual string? SchemaName { get; } = null;
-    
+
     protected abstract RelationDatabaseOutbox CreateOutbox(RelationalDatabaseConfiguration configuration);
-    
+
     protected abstract Task CreateOutboxTableAsync(RelationalDatabaseConfiguration configuration);
-    
+
     protected abstract Task DeleteOutboxTableAsync(RelationalDatabaseConfiguration configuration);
-    
+
     protected override async Task BeforeEachTestAsync()
-    { 
+    {
         var connectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING");
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             connectionString = DefaultConnectingString;
         }
-        
-        Configuration = new RelationalDatabaseConfiguration(connectionString, 
+
+        Configuration = new RelationalDatabaseConfiguration(connectionString,
             outBoxTableName: $"{TableNamePrefix}{Uuid.New():N}",
             schemaName: SchemaName,
             binaryMessagePayload: BinaryMessagePayload);
-        
+
         _outbox = CreateOutbox(Configuration);
         await base.BeforeEachTestAsync();
     }

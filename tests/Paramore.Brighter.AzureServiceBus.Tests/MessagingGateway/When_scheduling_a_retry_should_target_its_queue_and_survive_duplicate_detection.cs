@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -36,31 +36,30 @@ using Paramore.Brighter.MessageScheduler.Azure;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "AzureServiceBus")]
-[Collection("AzureServiceBus")]
+[Property("Category", "AzureServiceBus")]
+[NotInParallel("AzureServiceBus")]
 public class AzureServiceBusScheduledRetryIsolationTests
 {
-    [Theory]
-    [InlineData(false, false, 1, false, 5, false)]
-    [InlineData(false, true, 1, false, 5, false)]
-    [InlineData(true, false, 1, false, 5, false)]
-    [InlineData(true, true, 1, false, 5, false)]
-    [InlineData(false, false, 0, false, 0, false)]
-    [InlineData(true, true, 0, false, 5, false)]
-    [InlineData(false, true, 0, true, 5, false)]
-    [InlineData(true, false, 0, true, 0, false)]
-    [InlineData(false, false, 2, false, 5, false)]
-    [InlineData(true, true, 2, true, 5, false)]
-    [InlineData(false, true, 1, true, 0, false)]
-    [InlineData(true, false, 1, true, 5, false)]
-    [InlineData(false, false, 1, false, 5, true)]
-    [InlineData(true, true, 1, false, 5, true)]
-    [InlineData(false, true, 1, true, 0, true)]
-    [InlineData(true, false, 1, true, 5, true)]
+    [Test]
+    [Arguments(false, false, 1, false, 5, false)]
+    [Arguments(false, true, 1, false, 5, false)]
+    [Arguments(true, false, 1, false, 5, false)]
+    [Arguments(true, true, 1, false, 5, false)]
+    [Arguments(false, false, 0, false, 0, false)]
+    [Arguments(true, true, 0, false, 5, false)]
+    [Arguments(false, true, 0, true, 5, false)]
+    [Arguments(true, false, 0, true, 0, false)]
+    [Arguments(false, false, 2, false, 5, false)]
+    [Arguments(true, true, 2, true, 5, false)]
+    [Arguments(false, true, 1, true, 0, false)]
+    [Arguments(true, false, 1, true, 5, false)]
+    [Arguments(false, false, 1, false, 5, true)]
+    [Arguments(true, true, 1, false, 5, true)]
+    [Arguments(false, true, 1, true, 0, true)]
+    [Arguments(true, false, 1, true, 5, true)]
     public async Task When_scheduling_a_retry_should_target_its_queue_and_survive_duplicate_detection(
         bool synchronous, bool requireSession, int schedulerMode, bool useQueue, int delaySeconds, bool useGlobalScheduler)
     {
@@ -110,12 +109,7 @@ public class AzureServiceBusScheduledRetryIsolationTests
                 RequeueScheduler = useGlobalScheduler ? RequeueSchedulerMode.Global : RequeueSchedulerMode.Native
             };
             var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(provider, retryPublication));
-            Assert.IsAssignableFrom<IAmAChannelFactoryWithScheduler>(factory).Scheduler = schedulerMode switch
-            {
-                1 => observedScheduler,
-                2 => new InMemorySchedulerFactory().Create(processor),
-                _ => null
-            };
+            await Assert.That(factory).IsAssignableTo<IAmAChannelFactoryWithScheduler>();
             var logicalTopic = useQueue ? retryQueue : topicName;
 
             var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
@@ -147,9 +141,9 @@ public class AzureServiceBusScheduledRetryIsolationTests
             original.ApplicationProperties["cloudEvents:source"] = "https://example.org/orders";
             await sender.SendMessageAsync(original);
             var received = await ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.Equal(original.MessageId, received.Id.Value);
+            await Assert.That(received.Id.Value).IsEqualTo(original.MessageId);
             var siblingOriginal = await sibling.ReceiveMessageAsync(TimeSpan.FromSeconds(10));
-            Assert.NotNull(siblingOriginal);
+            await Assert.That(siblingOriginal).IsNotNull();
             await sibling.CompleteMessageAsync(siblingOriginal);
 
             for (var attempt = 1; attempt <= 2; attempt++)
@@ -161,47 +155,45 @@ public class AzureServiceBusScheduledRetryIsolationTests
                 var callingThread = Environment.CurrentManagedThreadId;
                 using var activity = new Activity("ASB retry").SetIdFormat(ActivityIdFormat.W3C).Start();
                 var elapsed = Stopwatch.StartNew();
-                Assert.True(synchronous
+                await Assert.That(synchronous
                     ? syncChannel!.Requeue(received, delay)
-                    : await asyncChannel!.RequeueAsync(received, delay));
+                    : await asyncChannel!.RequeueAsync(received, delay)).IsTrue();
                 if (useGlobalScheduler && synchronous)
-                    Assert.Equal(callingThread, observedScheduler.LastSyncThread);
-                Assert.Contains(activity.Events, e =>
+                    await Assert.That(observedScheduler.LastSyncThread).IsEqualTo(callingThread);
+                await Assert.That(System.Linq.Enumerable.Any(activity.Events, e =>
                     e.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingSystem
-                        && Equals(t.Value, "azure_service_bus")));
+                        && Equals(t.Value, "azure_service_bus")))).IsTrue();
                 var redelivered = await ReceiveAsync(TimeSpan.FromSeconds(15));
 
                 // Assert
-                Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-                Assert.True(elapsed.Elapsed >= delay - TimeSpan.FromMilliseconds(500), "The retry arrived before its delay.");
-                Assert.NotEqual(previousId, redelivered.Id.Value);
-                Assert.NotEqual(original.MessageId, redelivered.Id.Value);
-                Assert.Equal(original.MessageId, redelivered.Header.Bag[Message.OriginalMessageIdHeaderName]);
-                Assert.Equal(attempt, redelivered.Header.HandledCount);
-                Assert.Equal(original.ApplicationProperties["cloudEvents:id"],
-                    redelivered.Header.Bag["cloudEvents:id"]);
-                Assert.Equal(original.ApplicationProperties["cloudEvents:source"],
-                    redelivered.Header.Source.ToString());
-                Assert.Equal(previousTraceParent, received.Header.TraceParent);
-                Assert.Equal(activity.Id, redelivered.Header.TraceParent?.Value);
-                Assert.Equal(original.Body.ToString(), redelivered.Body.Value);
-                Assert.Equal(original.CorrelationId, redelivered.Header.CorrelationId.Value);
-                Assert.Equal(new RoutingKey(logicalTopic), redelivered.Header.Topic);
-                Assert.Equal(previousId, received.Id.Value);
-                Assert.Equal(new RoutingKey(logicalTopic), received.Header.Topic);
+                await Assert.That(redelivered.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+                await Assert.That(elapsed.Elapsed >= delay - TimeSpan.FromMilliseconds(500)).IsTrue().Because("The retry arrived before its delay.");
+                await Assert.That(redelivered.Id.Value).IsNotEqualTo(previousId);
+                await Assert.That(redelivered.Id.Value).IsNotEqualTo(original.MessageId);
+                await Assert.That(redelivered.Header.Bag[Message.OriginalMessageIdHeaderName]).IsEqualTo(original.MessageId);
+                await Assert.That(redelivered.Header.HandledCount).IsEqualTo(attempt);
+                await Assert.That(redelivered.Header.Bag["cloudEvents:id"]).IsEqualTo(original.ApplicationProperties["cloudEvents:id"]);
+                await Assert.That(redelivered.Header.Source.ToString()).IsEqualTo(original.ApplicationProperties["cloudEvents:source"]);
+                await Assert.That(received.Header.TraceParent).IsEqualTo(previousTraceParent);
+                await Assert.That(redelivered.Header.TraceParent?.Value).IsEqualTo(activity.Id);
+                await Assert.That(redelivered.Body.Value).IsEqualTo(original.Body.ToString());
+                await Assert.That(redelivered.Header.CorrelationId.Value).IsEqualTo(original.CorrelationId);
+                await Assert.That(redelivered.Header.Topic).IsEqualTo(new RoutingKey(logicalTopic));
+                await Assert.That(received.Id.Value).IsEqualTo(previousId);
+                await Assert.That(received.Header.Topic).IsEqualTo(new RoutingKey(logicalTopic));
                 if (requireSession)
-                    Assert.Equal(original.SessionId, redelivered.Header.Bag["SessionId"]);
+                    await Assert.That(redelivered.Header.Bag["SessionId"]).IsEqualTo(original.SessionId);
                 received = redelivered;
             }
 
-            Assert.Equal(useGlobalScheduler && synchronous ? 2 : 0, observedScheduler.SyncCalls);
-            Assert.Equal(useGlobalScheduler && !synchronous ? 2 : 0, observedScheduler.AsyncCalls);
+            await Assert.That(observedScheduler.SyncCalls).IsEqualTo(useGlobalScheduler && synchronous ? 2 : 0);
+            await Assert.That(observedScheduler.AsyncCalls).IsEqualTo(useGlobalScheduler && !synchronous ? 2 : 0);
             if (synchronous)
                 syncChannel!.Acknowledge(received);
             else
                 await asyncChannel!.AcknowledgeAsync(received);
-            Assert.Null(await sibling.ReceiveMessageAsync(TimeSpan.FromSeconds(1)));
-            Assert.Null(await schedulerReceiver.ReceiveMessageAsync(TimeSpan.FromSeconds(1)));
+            await Assert.That(await sibling.ReceiveMessageAsync(TimeSpan.FromSeconds(1))).IsNull();
+            await Assert.That(await schedulerReceiver.ReceiveMessageAsync(TimeSpan.FromSeconds(1))).IsNull();
 
             Task<Message> ReceiveAsync(TimeSpan timeout) => synchronous
                 ? Task.FromResult(syncChannel!.Receive(timeout))

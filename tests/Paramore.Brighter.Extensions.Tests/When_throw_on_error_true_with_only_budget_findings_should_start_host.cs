@@ -36,7 +36,6 @@ using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -48,7 +47,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// </summary>
 public class ThrowOnErrorTrueWithOnlyBudgetFindingsTests
 {
-    [Fact]
+    [Test]
     public async Task When_throw_on_error_true_with_only_budget_findings_should_start_host()
     {
         // Arrange — one subscription per budget rule; handler registered so no "no handler" error obscures the test
@@ -103,17 +102,17 @@ public class ThrowOnErrorTrueWithOnlyBudgetFindingsTests
         var service = new ServiceActivatorHostedService(logger, dispatcher, provider, options);
 
         // Act — start the hosted service; budget warnings must not cause a PipelineValidationException
-        var exception = await Record.ExceptionAsync(() => service.StartAsync(CancellationToken.None));
+        var exception = await TestExceptionRecorder.CaptureAsync(() => service.StartAsync(CancellationToken.None));
 
         // Assert — primary: host starts without a PipelineValidationException (R-25, R-26, AC-32)
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
 
         // Supporting evidence: the registered validators see three Warning findings and no Errors
         var result = PipelineValidationResult.Combine(
             provider.GetServices<IAmAPipelineValidator>().Select(v => v.Validate()).ToArray());
-        Assert.True(result.IsValid);
-        Assert.Equal(3, result.Warnings.Count);
-        Assert.Empty(result.Errors);
+        await Assert.That(result.IsValid).IsTrue();
+        await Assert.That(result.Warnings.Count).IsEqualTo(3);
+        await Assert.That(result.Errors).IsEmpty();
 
         // Teardown
         await service.StopAsync(CancellationToken.None);

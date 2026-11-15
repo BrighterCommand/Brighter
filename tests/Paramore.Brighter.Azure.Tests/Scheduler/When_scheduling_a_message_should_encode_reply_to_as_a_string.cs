@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -34,10 +34,11 @@ namespace Paramore.Brighter.Azure.Tests.Scheduler;
 
 public class AzureScheduledMessageReplyToTests
 {
-    [TestCase(false, "")]
-    [TestCase(false, "reply-queue")]
-    [TestCase(true, "")]
-    [TestCase(true, "reply-queue")]
+    [Test]
+    [Arguments(false, "")]
+    [Arguments(false, "reply-queue")]
+    [Arguments(true, "")]
+    [Arguments(true, "reply-queue")]
     public async Task When_scheduling_a_message_should_encode_reply_to_as_a_string(bool isAsync, string replyTo)
     {
         //Arrange
@@ -54,9 +55,9 @@ public class AzureScheduledMessageReplyToTests
 
         //Assert
         var scheduled = sender.ScheduledMessages.Single();
-        Assert.That(scheduled.ApplicationProperties["ReplyTo"], Is.TypeOf<string>());
-        Assert.That(scheduled.ApplicationProperties["ReplyTo"], Is.EqualTo(string.Empty));
+        await Assert.That(scheduled.ApplicationProperties["ReplyTo"]).IsTypeOf<string>();
+        await Assert.That(scheduled.ApplicationProperties["ReplyTo"]).IsEqualTo(string.Empty);
         var envelope = JsonSerializer.Deserialize<FireAzureScheduler>(scheduled.Body.ToString(), JsonSerialisationOptions.Options)!;
-        Assert.That(envelope.Message!.Header.ReplyTo!.Value, Is.EqualTo(replyTo));
+        await Assert.That(envelope.Message!.Header.ReplyTo!.Value).IsEqualTo(replyTo);
     }
 }

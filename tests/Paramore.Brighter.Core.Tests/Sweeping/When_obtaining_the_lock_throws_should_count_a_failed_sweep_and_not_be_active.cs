@@ -6,7 +6,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -15,7 +14,7 @@ public class SweeperLockFailureStateTests
     private static readonly TimeSpan s_timerInterval = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan s_guard = TimeSpan.FromSeconds(10);
 
-    [Fact]
+    [Test]
     public async Task When_obtaining_the_lock_throws_should_count_a_failed_sweep_and_not_be_active()
     {
         //Arrange
@@ -40,7 +39,7 @@ public class SweeperLockFailureStateTests
                 timeProvider.Advance(s_timerInterval);
 
             var recorded = measurements.WaitFor(m => m.Of(RecordedSweeperMeasurements.Sweeps).Count >= sweep, s_guard);
-            Assert.True(recorded, $"The sweeper recorded only {measurements.Of(RecordedSweeperMeasurements.Sweeps).Count} of {sweepsToRun} sweeps");
+            await Assert.That(recorded).IsTrue().Because($"The sweeper recorded only {measurements.Of(RecordedSweeperMeasurements.Sweeps).Count} of {sweepsToRun} sweeps");
         }
 
         var ended = state.Read();
@@ -48,8 +47,8 @@ public class SweeperLockFailureStateTests
         sweeper.Dispose();
 
         //Assert
-        Assert.Equal(sweepsToRun, ended.ConsecutiveFailedSweeps);
-        Assert.Equal(SweepOutcome.Failed, ended.LastOutcome);
-        Assert.False(ended.IsActive);
+        await Assert.That(ended.ConsecutiveFailedSweeps).IsEqualTo(sweepsToRun);
+        await Assert.That(ended.LastOutcome).IsEqualTo(SweepOutcome.Failed);
+        await Assert.That(ended.IsActive).IsFalse();
     }
 }

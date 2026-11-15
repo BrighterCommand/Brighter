@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Testing;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
@@ -20,8 +20,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     /// </summary>
     public class DispatcherOwnershipTests
     {
-        [Fact]
-        public void When_the_dispatcher_does_not_own_its_factories_it_does_not_dispose_them()
+        [Test]
+        public async System.Threading.Tasks.Task When_the_dispatcher_does_not_own_its_factories_it_does_not_dispose_them()
         {
             //arrange — the manual-wiring default: the Dispatcher shares the registry/factories with another owner
             var syncMapperFactory = new DisposeCountingMapperFactory();
@@ -43,14 +43,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             //assert — nothing the Dispatcher does not own is disposed, so the shared graph stays usable for the
             //other owner
-            Assert.Equal(0, syncMapperFactory.DisposeCount);
-            Assert.Equal(0, asyncMapperFactory.DisposeCount);
-            Assert.Equal(0, syncTransformerFactory.DisposeCount);
-            Assert.Equal(0, asyncTransformerFactory.DisposeCount);
+            await Assert.That(syncMapperFactory.DisposeCount).IsEqualTo(0);
+            await Assert.That(asyncMapperFactory.DisposeCount).IsEqualTo(0);
+            await Assert.That(syncTransformerFactory.DisposeCount).IsEqualTo(0);
+            await Assert.That(asyncTransformerFactory.DisposeCount).IsEqualTo(0);
         }
 
-        [Fact]
-        public void When_the_dispatcher_owns_only_the_registry_it_disposes_only_the_registry()
+        [Test]
+        public async System.Threading.Tasks.Task When_the_dispatcher_owns_only_the_registry_it_disposes_only_the_registry()
         {
             //arrange — the two ownership flags are independent: own the (shared-elsewhere) transform factories'
             //counterpart registry only
@@ -74,14 +74,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             dispatcher.Dispose();
 
             //assert — the registry cascade disposes both mapper factories; the transform factories are left alone
-            Assert.Equal(1, syncMapperFactory.DisposeCount);
-            Assert.Equal(1, asyncMapperFactory.DisposeCount);
-            Assert.Equal(0, syncTransformerFactory.DisposeCount);
-            Assert.Equal(0, asyncTransformerFactory.DisposeCount);
+            await Assert.That(syncMapperFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(asyncMapperFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(syncTransformerFactory.DisposeCount).IsEqualTo(0);
+            await Assert.That(asyncTransformerFactory.DisposeCount).IsEqualTo(0);
         }
 
-        [Fact]
-        public void When_the_dispatcher_owns_only_the_transform_factories_it_disposes_only_them()
+        [Test]
+        public async System.Threading.Tasks.Task When_the_dispatcher_owns_only_the_transform_factories_it_disposes_only_them()
         {
             //arrange
             var syncMapperFactory = new DisposeCountingMapperFactory();
@@ -104,10 +104,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             dispatcher.Dispose();
 
             //assert — the transform factories are disposed; the shared registry (and its mapper factories) left alone
-            Assert.Equal(0, syncMapperFactory.DisposeCount);
-            Assert.Equal(0, asyncMapperFactory.DisposeCount);
-            Assert.Equal(1, syncTransformerFactory.DisposeCount);
-            Assert.Equal(1, asyncTransformerFactory.DisposeCount);
+            await Assert.That(syncMapperFactory.DisposeCount).IsEqualTo(0);
+            await Assert.That(asyncMapperFactory.DisposeCount).IsEqualTo(0);
+            await Assert.That(syncTransformerFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(asyncTransformerFactory.DisposeCount).IsEqualTo(1);
         }
 
         private sealed class DisposeCountingMapperFactory : IAmAMessageMapperFactory, IDisposable

@@ -29,14 +29,13 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class SweeperHealthChecksRegistrationTests
 {
-    [Fact]
-    public void When_the_sweeper_health_checks_are_added_should_register_two_checks_each_with_its_remedy_tag()
+    [Test]
+    public async Task When_the_sweeper_health_checks_are_added_should_register_two_checks_each_with_its_remedy_tag()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -48,15 +47,15 @@ public class SweeperHealthChecksRegistrationTests
         var registrations = provider.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value.Registrations;
 
         //Assert
-        Assert.Equal(2, registrations.Count);
-        var restart = Assert.Single(registrations, r => r.Name == "brighter-outbox-sweeper-restart");
-        Assert.Equal(new[] { RemedyCheckConvention.RestartTag }, restart.Tags.ToArray());
-        var investigate = Assert.Single(registrations, r => r.Name == "brighter-outbox-sweeper-investigate");
-        Assert.Equal(new[] { RemedyCheckConvention.InvestigateTag }, investigate.Tags.ToArray());
+        await Assert.That(registrations.Count).IsEqualTo(2);
+        var restart = await Assert.That(System.Linq.Enumerable.Where(registrations, r => r.Name == "brighter-outbox-sweeper-restart")).HasSingleItem();
+        await Assert.That(restart.Tags.ToArray()).IsEqualTo(new[] { RemedyCheckConvention.RestartTag });
+        var investigate = await Assert.That(System.Linq.Enumerable.Where(registrations, r => r.Name == "brighter-outbox-sweeper-investigate")).HasSingleItem();
+        await Assert.That(investigate.Tags.ToArray()).IsEqualTo(new[] { RemedyCheckConvention.InvestigateTag });
     }
 
-    [Fact]
-    public void When_the_sweeper_health_checks_are_not_added_should_register_neither_check()
+    [Test]
+    public async Task When_the_sweeper_health_checks_are_not_added_should_register_neither_check()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -68,7 +67,7 @@ public class SweeperHealthChecksRegistrationTests
         var registrations = provider.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value.Registrations;
 
         //Assert
-        Assert.DoesNotContain(registrations, r => r.Name == "brighter-outbox-sweeper-restart");
-        Assert.DoesNotContain(registrations, r => r.Name == "brighter-outbox-sweeper-investigate");
+        await Assert.That(System.Linq.Enumerable.Any(registrations, r => r.Name == "brighter-outbox-sweeper-restart")).IsFalse();
+        await Assert.That(System.Linq.Enumerable.Any(registrations, r => r.Name == "brighter-outbox-sweeper-investigate")).IsFalse();
     }
 }

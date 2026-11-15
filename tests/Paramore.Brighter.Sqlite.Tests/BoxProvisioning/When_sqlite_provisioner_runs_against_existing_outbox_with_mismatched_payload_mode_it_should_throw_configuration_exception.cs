@@ -26,16 +26,15 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
 using Paramore.Brighter.Outbox.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class OutboxPayloadModeMismatchTests : IAsyncLifetime
+public class OutboxPayloadModeMismatchTests
 {
     private readonly string _connectionString = Configuration.ConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_existing_outbox_body_is_text_and_provisioner_is_configured_for_binary_it_should_throw_configuration_exception()
     {
         //Arrange
@@ -53,11 +52,11 @@ public class OutboxPayloadModeMismatchTests : IAsyncLifetime
             new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config));
 
         //Act & Assert
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
-        Assert.Contains("mismatch", exception.Message, StringComparison.OrdinalIgnoreCase);
+        var exception = await Assert.That(() => provisioner.ProvisionAsync()).ThrowsExactly<ConfigurationException>();
+        await Assert.That(exception.Message).Contains("mismatch");
     }
 
-    [Fact]
+    [Test]
     public async Task When_existing_outbox_body_is_binary_and_provisioner_is_configured_for_text_it_should_throw_configuration_exception()
     {
         //Arrange
@@ -75,8 +74,8 @@ public class OutboxPayloadModeMismatchTests : IAsyncLifetime
             new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config));
 
         //Act & Assert
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
-        Assert.Contains("mismatch", exception.Message, StringComparison.OrdinalIgnoreCase);
+        var exception = await Assert.That(() => provisioner.ProvisionAsync()).ThrowsExactly<ConfigurationException>();
+        await Assert.That(exception.Message).Contains("mismatch");
     }
 
     private async Task CreateTable(string ddl)
@@ -88,8 +87,10 @@ public class OutboxPayloadModeMismatchTests : IAsyncLifetime
         await command.ExecuteNonQueryAsync();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

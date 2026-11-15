@@ -27,8 +27,7 @@ using System.Diagnostics;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 
 /// <summary>
@@ -36,7 +35,7 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 /// the next receive, not hold it until the subscription's invisibility lease lapses. The FR-16
 /// conformance tests cannot tell the two apart: their 30 s ceiling admits a lease-lapse redelivery.
 /// </summary>
-[Trait("Category", "RocketMQ")]
+[Property("Category", "RocketMQ")]
 public class RocketMqNackRedeliveryTests : IDisposable
 {
     private const string Topic = "rmq_nack_r";
@@ -80,8 +79,8 @@ public class RocketMqNackRedeliveryTests : IDisposable
         _producer.Dispose();
     }
 
-    [Fact]
-    public void When_a_rocketmq_message_is_nacked_should_redeliver_inside_the_lease()
+    [Test]
+    public async Task When_a_rocketmq_message_is_nacked_should_redeliver_inside_the_lease()
     {
         // Arrange
         var routingKey = new RoutingKey(Topic);
@@ -91,7 +90,7 @@ public class RocketMqNackRedeliveryTests : IDisposable
         _producer.Send(message);
 
         var received = ReceiveOurs(message.Id);
-        Assert.NotNull(received);
+        await Assert.That(received).IsNotNull();
 
         // Act
         _consumer.Nack(received!);
@@ -101,10 +100,8 @@ public class RocketMqNackRedeliveryTests : IDisposable
         var redelivered = ReceiveOurs(message.Id);
         var elapsed = sinceNack.Elapsed;
 
-        Assert.NotNull(redelivered);
-        Assert.True(elapsed < s_redeliveryBound,
-            $"Nacked message redelivered after {elapsed.TotalSeconds:F1} s; expected under " +
-            $"{s_redeliveryBound.TotalSeconds:F0} s, inside the {s_invisibilityTimeout.TotalSeconds:F0} s lease");
+        await Assert.That(redelivered).IsNotNull();
+        await Assert.That(elapsed < s_redeliveryBound).IsTrue();
 
         _consumer.Acknowledge(redelivered!);
     }

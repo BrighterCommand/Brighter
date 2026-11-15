@@ -26,11 +26,10 @@ using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
 using Paramore.Brighter.Logging;
-using Xunit;
 
 // These hosts replace the process-wide logging factory and must not overlap other tests.
-[assembly: CollectionBehavior(DisableTestParallelization = true)]
-[assembly: ResetApplicationLogging]
+[assembly: NotInParallel]
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 

@@ -25,8 +25,7 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
 
 /// <summary>
@@ -34,8 +33,8 @@ namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
 /// queue declared and bound, so a message published before the channel's first receive is not lost
 /// (bugfix 0049, #4519).
 /// </summary>
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Property("Category", "RMQ")]
+[NotInParallel("RMQ")]
 public class RmqChannelFactorySyncChannelProvisioningTests : IDisposable
 {
     private readonly RmqMessagingGatewayConnection _rmqConnection;
@@ -71,8 +70,8 @@ public class RmqChannelFactorySyncChannelProvisioningTests : IDisposable
             makeChannels: OnMissingChannel.Create);
     }
 
-    [Fact]
-    public void When_creating_a_sync_channel_with_create_should_deliver_a_message_published_before_the_first_receive()
+    [Test]
+    public async Task When_creating_a_sync_channel_with_create_should_deliver_a_message_published_before_the_first_receive()
     {
         // Arrange
         _channel = new ChannelFactory(new RmqMessageConsumerFactory(_rmqConnection))
@@ -83,8 +82,8 @@ public class RmqChannelFactorySyncChannelProvisioningTests : IDisposable
         var received = _channel.Receive(TimeSpan.FromMilliseconds(5000));
 
         // Assert
-        Assert.Equal(_message.Id, received.Id);
-        Assert.Equal(_message.Body.Value, received.Body.Value);
+        await Assert.That(received.Id).IsEqualTo(_message.Id);
+        await Assert.That(received.Body.Value).IsEqualTo(_message.Body.Value);
     }
 
     public void Dispose()

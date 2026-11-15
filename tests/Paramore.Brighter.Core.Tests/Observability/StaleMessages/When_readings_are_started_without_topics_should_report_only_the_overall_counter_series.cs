@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -27,8 +27,7 @@ using System;
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleReadingsStartedWithoutTopicsTests
@@ -36,8 +35,8 @@ public class StaleReadingsStartedWithoutTopicsTests
     private const string COUNT = "paramore.brighter.outbox.stale.count";
     private const string OUTCOME = "paramore.brighter.outbox.stale.outcome";
 
-    [Fact]
-    public void When_readings_are_started_without_topics_should_report_only_the_overall_counter_series()
+    [Test]
+    public async Task When_readings_are_started_without_topics_should_report_only_the_overall_counter_series()
     {
         //Arrange
         using var observed = new ObservedStaleMessageInstruments();
@@ -50,10 +49,11 @@ public class StaleReadingsStartedWithoutTopicsTests
 
         //Assert
         var series = measurements.Where(m => m.Instrument == ObservedStaleMessageInstruments.MEASUREMENTS).ToArray();
-        Assert.Equal(
-            ["overall/abandoned", "overall/completed", "overall/failed", "overall/skipped"],
-            series.Select(m => $"{m.Attributes[COUNT]}/{m.Attributes[OUTCOME]}").OrderBy(s => s, StringComparer.Ordinal).ToArray());
-        Assert.All(series, m => Assert.Equal(0, m.Value));
-        Assert.DoesNotContain(measurements, m => m.Instrument != ObservedStaleMessageInstruments.MEASUREMENTS);
+        await Assert.That(series.Select(m => $"{m.Attributes[COUNT]}/{m.Attributes[OUTCOME]}").OrderBy(s => s, StringComparer.Ordinal).ToArray()).IsEqualTo(["overall/abandoned", "overall/completed", "overall/failed", "overall/skipped"]);
+        foreach (var m in series)
+{
+    await Assert.That(m.Value).IsEqualTo(0);
+}
+        await Assert.That(System.Linq.Enumerable.Any(measurements, m => m.Instrument != ObservedStaleMessageInstruments.MEASUREMENTS)).IsFalse();
     }
 }

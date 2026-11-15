@@ -29,7 +29,6 @@ using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -37,13 +36,13 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// The advisory-lock key includes the schema, so provisioners of the same table in different schemas do not contend: while
 /// A holds its lock, B, with a one-second lock timeout, still completes.
 /// </summary>
-public class PostgreSqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
+public class PostgreSqlRunnerDistinctSchemaNonBlockingTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
     private readonly string _billingSchema = $"billing_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_postgres_runner_runs_two_provisioners_in_distinct_schemas_they_should_not_block_each_other()
     {
         //Arrange
@@ -77,10 +76,10 @@ public class PostgreSqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
         {
             await holdingLock.AcquireSeen.Task;
 
-            var taskBException = await Record.ExceptionAsync(() => provisionerB.ProvisionAsync());
+            var taskBException = await TestExceptionRecorder.CaptureAsync(() => provisionerB.ProvisionAsync());
 
             //Assert
-            Assert.Null(taskBException);
+            await Assert.That(taskBException).IsNull();
         }
         finally
         {
@@ -98,8 +97,10 @@ public class PostgreSqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
         await command.ExecuteNonQueryAsync();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -27,20 +27,19 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 
-[Trait("Category", "MSSQL")]
-[Collection("MSSQLMessagingGateway")]
+[Property("Category", "MSSQL")]
+[NotInParallel("MSSQLMessagingGateway")]
 public class MsSqlCompetingReceiversTests : IDisposable
 {
     private readonly RelationalDatabaseConfiguration _configuration = new MsSqlTestHelper().QueueConfiguration;
     private readonly RoutingKey _topic = new("shared.topic");
     private readonly TimeSpan _receiveTimeout = TimeSpan.FromSeconds(1);
 
-    [Fact]
-    public void When_receivers_share_a_topic_and_channel_should_deliver_each_message_to_only_one_receiver()
+    [Test]
+    public async Task When_receivers_share_a_topic_and_channel_should_deliver_each_message_to_only_one_receiver()
     {
         //Arrange
         var factory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
@@ -58,13 +57,13 @@ public class MsSqlCompetingReceiversTests : IDisposable
         var secondDelivery = second.Receive(_receiveTimeout);
 
         //Assert
-        Assert.Equal(firstMessage.Id, firstDelivery.Id);
-        Assert.Equal(secondMessage.Id, secondDelivery.Id);
-        Assert.True(first.Receive(_receiveTimeout).IsEmpty);
-        Assert.True(second.Receive(_receiveTimeout).IsEmpty);
+        await Assert.That(firstDelivery.Id).IsEqualTo(firstMessage.Id);
+        await Assert.That(secondDelivery.Id).IsEqualTo(secondMessage.Id);
+        await Assert.That(first.Receive(_receiveTimeout).IsEmpty).IsTrue();
+        await Assert.That(second.Receive(_receiveTimeout).IsEmpty).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_receivers_share_a_topic_and_channel_should_deliver_each_message_to_only_one_receiver_async()
     {
         //Arrange
@@ -83,10 +82,10 @@ public class MsSqlCompetingReceiversTests : IDisposable
         var secondDelivery = await second.ReceiveAsync(_receiveTimeout);
 
         //Assert
-        Assert.Equal(firstMessage.Id, firstDelivery.Id);
-        Assert.Equal(secondMessage.Id, secondDelivery.Id);
-        Assert.True((await first.ReceiveAsync(_receiveTimeout)).IsEmpty);
-        Assert.True((await second.ReceiveAsync(_receiveTimeout)).IsEmpty);
+        await Assert.That(firstDelivery.Id).IsEqualTo(firstMessage.Id);
+        await Assert.That(secondDelivery.Id).IsEqualTo(secondMessage.Id);
+        await Assert.That((await first.ReceiveAsync(_receiveTimeout)).IsEmpty).IsTrue();
+        await Assert.That((await second.ReceiveAsync(_receiveTimeout)).IsEmpty).IsTrue();
     }
 
     private MsSqlSubscription CreateSubscription(string name, MessagePumpType pumpType) =>

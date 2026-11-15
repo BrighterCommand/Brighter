@@ -30,15 +30,14 @@ using Paramore.Brighter.AzureServiceBus.Tests.Fakes;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class AzureServiceBusManualRetrySchedulerValidationTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_constructing_a_queue_consumer_with_an_incompatible_scheduler_should_reject_configuration(bool missing)
     {
         // Arrange
@@ -54,15 +53,15 @@ public class AzureServiceBusManualRetrySchedulerValidationTests
             subscriptionConfiguration: new AzureServiceBusSubscriptionConfiguration { UseServiceBusQueue = true });
 
         // Act
-        var error = Record.Exception(() =>
+        var error = TestExceptionRecorder.Capture(() =>
         {
             using var consumer = new AzureServiceBusQueueConsumer(subscription, scheduler!,
                 new AdministrationClientWrapper(client), new FakeServiceBusReceiverProvider(null));
         });
 
         // Assert
-        Assert.IsType<ConfigurationException>(error);
-        Assert.Empty(client.Scheduled);
-        Assert.Empty(client.Senders);
+        await Assert.That(error).IsTypeOf<ConfigurationException>();
+        await Assert.That(client.Scheduled).IsEmpty();
+        await Assert.That(client.Senders).IsEmpty();
     }
 }

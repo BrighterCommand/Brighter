@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Compression;
 
@@ -19,64 +18,53 @@ public class CompressMessageUsingMemoryTests
         _originalBody = DataGenerator.CreateString(6000);
     }
 
-    [Fact]
-    public void When_compressing_and_decompressing_should_round_trip_sync()
+    [Test]
+    public async Task When_compressing_and_decompressing_should_round_trip_sync()
     {
-        // Arrange
         var compressor = new CompressPayloadTransformer();
         compressor.InitializeWrapFromAttributeParams(CompressionMethod.GZip, CompressionLevel.Optimal, 5);
         var message = CreateMessage(_originalBody);
 
-        // Act — compress
         var compressed = compressor.Wrap(message, new Publication { Topic = _topic });
 
-        // Assert — compressed body is smaller
-        Assert.True(compressed.Body.Memory.Length < _originalBody.Length);
+        await Assert.That(compressed.Body.Memory.Length).IsLessThan(_originalBody.Length);
 
-        // Act — decompress
         var decompressor = new CompressPayloadTransformer();
         decompressor.InitializeUnwrapFromAttributeParams(CompressionMethod.GZip);
         var decompressed = decompressor.Unwrap(compressed);
 
-        // Assert — round-trip recovers original
-        Assert.Equal(_originalBody, decompressed.Body.Value);
+        await Assert.That(decompressed.Body.Value).IsEqualTo(_originalBody);
     }
 
-    [Fact]
+    [Test]
     public async Task When_compressing_async_should_produce_compressed_output()
     {
-        // Arrange
         var compressor = new CompressPayloadTransformer();
         compressor.InitializeWrapFromAttributeParams(CompressionMethod.GZip, CompressionLevel.Optimal, 5);
         var message = CreateMessage(_originalBody);
 
-        // Act
         var compressed = await compressor.WrapAsync(message, new Publication { Topic = _topic });
 
-        // Assert — compressed body is smaller and starts with gzip magic bytes
-        var span = compressed.Body.Memory.Span;
-        Assert.True(span.Length < _originalBody.Length);
-        Assert.True(span.Length >= 2);
-        Assert.Equal(0x1f, span[0]);
-        Assert.Equal(0x8b, span[1]);
+        var memory = compressed.Body.Memory;
+        await Assert.That(memory.Length).IsLessThan(_originalBody.Length);
+        await Assert.That(memory.Length).IsGreaterThanOrEqualTo(2);
+        await Assert.That(memory.Span[0]).IsEqualTo((byte)0x1f);
+        await Assert.That(memory.Span[1]).IsEqualTo((byte)0x8b);
     }
 
-    [Fact]
-    public void When_checking_is_compressed_should_detect_via_memory_span()
+    [Test]
+    public async Task When_checking_is_compressed_should_detect_via_memory_span()
     {
-        // Arrange
         var compressor = new CompressPayloadTransformer();
         compressor.InitializeWrapFromAttributeParams(CompressionMethod.GZip, CompressionLevel.Optimal, 5);
         var message = CreateMessage(_originalBody);
 
-        // Act
         var compressed = compressor.Wrap(message, new Publication { Topic = _topic });
 
-        // Assert — gzip magic bytes are accessible via Memory.Span
-        var span = compressed.Body.Memory.Span;
-        Assert.True(span.Length >= 2);
-        Assert.Equal(0x1f, span[0]);
-        Assert.Equal(0x8b, span[1]);
+        var memory = compressed.Body.Memory;
+        await Assert.That(memory.Length).IsGreaterThanOrEqualTo(2);
+        await Assert.That(memory.Span[0]).IsEqualTo((byte)0x1f);
+        await Assert.That(memory.Span[1]).IsEqualTo((byte)0x8b);
     }
 
     private Message CreateMessage(string body) =>

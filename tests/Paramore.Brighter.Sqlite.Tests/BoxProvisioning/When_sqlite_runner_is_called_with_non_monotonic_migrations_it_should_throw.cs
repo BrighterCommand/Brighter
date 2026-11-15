@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
@@ -36,20 +35,20 @@ namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 /// The runner rejects a migration list that is not contiguous and strictly ascending, naming the offending pair,
 /// before any DDL runs (ADR 0057 §3).
 /// </summary>
-public class RunnerNonMonotonicMigrationsTests : IAsyncLifetime
+public class RunnerNonMonotonicMigrationsTests
 {
     private readonly string _connectionString = Configuration.ConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public Task When_versions_contain_a_duplicate_it_should_throw() =>
         AssertMigrationListRejected(BuildList(0, 0), expectedMarker: "V1 followed by V1");
 
-    [Fact]
+    [Test]
     public Task When_versions_have_a_gap_it_should_throw() =>
         AssertMigrationListRejected(BuildList(0, 2), expectedMarker: "V1 followed by V3");
 
-    [Fact]
+    [Test]
     public Task When_versions_are_not_strictly_ascending_it_should_throw() =>
         AssertMigrationListRejected(BuildList(0, 1, 2, 1), expectedMarker: "V3 followed by V2");
 
@@ -69,12 +68,12 @@ public class RunnerNonMonotonicMigrationsTests : IAsyncLifetime
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act + Assert
-        var ex = await Assert.ThrowsAsync<ConfigurationException>(() => runner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, freshHint));
+        var ex = await Assert.That(() => runner.MigrateAsync(
+            _tableName, schemaName: null, BoxType.Outbox, freshHint)).ThrowsExactly<ConfigurationException>();
 
-        Assert.Contains(expectedMarker, ex.Message, StringComparison.Ordinal);
+        await Assert.That(ex.Message).Contains(expectedMarker);
 
-        Assert.Equal(0, await GetTableCount());
+        await Assert.That(await GetTableCount()).IsEqualTo(0);
     }
 
     private sealed class MalformedListCatalog : IAmABoxMigrationCatalog
@@ -95,7 +94,11 @@ public class RunnerNonMonotonicMigrationsTests : IAsyncLifetime
         return Convert.ToInt64(await command.ExecuteScalarAsync());
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

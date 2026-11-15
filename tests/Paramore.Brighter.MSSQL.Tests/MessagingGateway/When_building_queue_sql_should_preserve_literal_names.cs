@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -25,11 +25,11 @@ THE SOFTWARE. */
 using System;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Xunit;
+
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 
-[Trait("Category", "MSSQL")]
+[Property("Category", "MSSQL")]
 public class MsSqlQueueBuilderLiteralNamesTests : IDisposable
 {
     private readonly SqlConnection _connection;
@@ -43,15 +43,15 @@ public class MsSqlQueueBuilderLiteralNamesTests : IDisposable
         _transaction = _connection.BeginTransaction();
     }
 
-    [Theory]
-    [InlineData("queue-with-hyphens")]
-    [InlineData("customer's queue")]
-    [InlineData("queue]name")]
-    [InlineData("queue]; SELECT 99;--")]
-    [InlineData("queue]]; SELECT 99;--")]
-    [InlineData("customer's.[queue]")]
-    [InlineData("配送キュー")]
-    public void When_building_queue_sql_should_preserve_literal_names(string name)
+    [Test]
+    [Arguments("queue-with-hyphens")]
+    [Arguments("customer's queue")]
+    [Arguments("queue]name")]
+    [Arguments("queue]; SELECT 99;--")]
+    [Arguments("queue]]; SELECT 99;--")]
+    [Arguments("customer's.[queue]")]
+    [Arguments("配送キュー")]
+    public async System.Threading.Tasks.Task When_building_queue_sql_should_preserve_literal_names(string name)
     {
         //Arrange
         string table = name + Guid.NewGuid().ToString("N");
@@ -63,8 +63,8 @@ public class MsSqlQueueBuilderLiteralNamesTests : IDisposable
         object? missing = Scalar(MsSqlQueueBuilder.GetExistsQuery(table + "_missing"));
 
         //Assert
-        Assert.Equal(1, exists);
-        Assert.Equal(0, missing);
+        await Assert.That(exists).IsEqualTo(1);
+        await Assert.That(missing).IsEqualTo(0);
         using var command = new SqlCommand(
             """
             SELECT COUNT(*) FROM sys.indexes i
@@ -74,14 +74,14 @@ public class MsSqlQueueBuilderLiteralNamesTests : IDisposable
             _connection, _transaction);
         command.Parameters.AddWithValue("@table", table);
         command.Parameters.AddWithValue("@index", $"IX_{table}_Topic");
-        Assert.Equal(1, command.ExecuteScalar());
+        await Assert.That(command.ExecuteScalar()).IsEqualTo(1);
     }
 
-    [Theory]
-    [InlineData("customer's queue", "owner's schema")]
-    [InlineData("配送キュー", "配送スキーマ")]
-    [InlineData("queue' OR 1=1 --", "schema' OR 1=1 --")]
-    public void When_checking_queue_existence_should_match_the_literal_table_and_schema(string table, string schema)
+    [Test]
+    [Arguments("customer's queue", "owner's schema")]
+    [Arguments("配送キュー", "配送スキーマ")]
+    [Arguments("queue' OR 1=1 --", "schema' OR 1=1 --")]
+    public async System.Threading.Tasks.Task When_checking_queue_existence_should_match_the_literal_table_and_schema(string table, string schema)
     {
         //Arrange
         schema += Guid.NewGuid().ToString("N");
@@ -95,13 +95,13 @@ public class MsSqlQueueBuilderLiteralNamesTests : IDisposable
         object? missingSchema = Scalar(MsSqlQueueBuilder.GetExistsQuery(table, schema + "_missing"));
 
         //Assert
-        Assert.Equal(1, exists);
-        Assert.Equal(0, missingTable);
-        Assert.Equal(0, missingSchema);
+        await Assert.That(exists).IsEqualTo(1);
+        await Assert.That(missingTable).IsEqualTo(0);
+        await Assert.That(missingSchema).IsEqualTo(0);
     }
 
-    [Fact]
-    public void When_checking_queue_existence_with_a_null_schema_should_use_the_callers_default_schema()
+    [Test]
+    public async System.Threading.Tasks.Task When_checking_queue_existence_with_a_null_schema_should_use_the_callers_default_schema()
     {
         //Arrange
         string schema = "schema_" + Guid.NewGuid().ToString("N");
@@ -122,9 +122,9 @@ public class MsSqlQueueBuilderLiteralNamesTests : IDisposable
             object? explicitDbo = Scalar(MsSqlQueueBuilder.GetExistsQuery(table, "dbo"));
 
             //Assert
-            Assert.Equal(1, exists);
-            Assert.Equal(0, defaultDbo);
-            Assert.Equal(0, explicitDbo);
+            await Assert.That(exists).IsEqualTo(1);
+            await Assert.That(defaultDbo).IsEqualTo(0);
+            await Assert.That(explicitDbo).IsEqualTo(0);
         }
         finally
         {
@@ -132,12 +132,12 @@ public class MsSqlQueueBuilderLiteralNamesTests : IDisposable
         }
     }
 
-    [Fact]
-    public void When_checking_a_schema_at_the_identifier_limit_should_find_the_table()
+    [Test]
+    public async System.Threading.Tasks.Task When_checking_a_schema_at_the_identifier_limit_should_find_the_table()
     {
         //Arrange
         string schema = "schema_" + Guid.NewGuid().ToString("N") + new string('\'', 89);
-        Assert.Equal(128, schema.Length);
+        await Assert.That(schema.Length).IsEqualTo(128);
         using var builder = new SqlCommandBuilder();
         Execute($"CREATE SCHEMA {builder.QuoteIdentifier(schema)}");
         Execute($"CREATE TABLE {builder.QuoteIdentifier(schema)}.[queue] (Id int)");
@@ -146,29 +146,29 @@ public class MsSqlQueueBuilderLiteralNamesTests : IDisposable
         object? exists = Scalar(MsSqlQueueBuilder.GetExistsQuery("queue", schema));
 
         //Assert
-        Assert.Equal(1, exists);
+        await Assert.That(exists).IsEqualTo(1);
     }
 
-    [Fact]
-    public void When_building_a_table_at_the_identifier_limit_should_create_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_building_a_table_at_the_identifier_limit_should_create_it()
     {
         //Arrange
         string table = "queue_" + Guid.NewGuid().ToString("N") + new string(']', 90);
-        Assert.Equal(128, table.Length);
+        await Assert.That(table.Length).IsEqualTo(128);
 
         //Act
         Execute(MsSqlQueueBuilder.GetDDL(table));
 
         //Assert
-        Assert.Equal(1, Scalar(MsSqlQueueBuilder.GetExistsQuery(table)));
+        await Assert.That(Scalar(MsSqlQueueBuilder.GetExistsQuery(table))).IsEqualTo(1);
     }
 
-    [Fact]
-    public void When_building_an_index_at_the_identifier_limit_should_create_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_building_an_index_at_the_identifier_limit_should_create_it()
     {
         //Arrange
         string table = "queue_" + Guid.NewGuid().ToString("N") + new string(']', 81);
-        Assert.Equal(119, table.Length);
+        await Assert.That(table.Length).IsEqualTo(119);
         Execute(MsSqlQueueBuilder.GetDDL(table));
 
         //Act
@@ -178,7 +178,7 @@ public class MsSqlQueueBuilderLiteralNamesTests : IDisposable
         using var command = new SqlCommand(
             "SELECT COUNT(*) FROM sys.indexes WHERE name = @index", _connection, _transaction);
         command.Parameters.AddWithValue("@index", $"IX_{table}_Topic");
-        Assert.Equal(1, command.ExecuteScalar());
+        await Assert.That(command.ExecuteScalar()).IsEqualTo(1);
     }
 
     private void Execute(string sql)

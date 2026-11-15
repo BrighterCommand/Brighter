@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -35,11 +35,11 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
-[Collection(StaleMessageLoggingCollection.Name)]
+[NotInParallel]
+[ClassDataSource<StaleMessageLoggingFixture>(Shared = SharedType.PerTestSession)]
 public class SettingsAtTheirBoundsTests
 {
     private const long ONE_MILLISECOND = 1;
@@ -53,9 +53,9 @@ public class SettingsAtTheirBoundsTests
         _logs = fixture.Logs;
     }
 
-    [Theory]
-    [InlineData(ONE_MILLISECOND, 1, 59)]
-    [InlineData(A_YEAR_IN_MILLISECONDS, 1000, 10)]
+    [Test]
+    [Arguments(ONE_MILLISECOND, 1, 59)]
+    [Arguments(A_YEAR_IN_MILLISECONDS, 1000, 10)]
     public async Task When_settings_are_at_their_bounds_should_start_and_measure(
         long staleMessageAgeInMilliseconds, int countCeiling, int timeoutInSeconds)
     {
@@ -89,26 +89,26 @@ public class SettingsAtTheirBoundsTests
 
         //Act
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromMinutes(1));
-        WaitForCompletions(readings, 1);
-        WaitUntilTheMonitorWaits(2);
+        await WaitForCompletions(readings, 1);
+        await WaitUntilTheMonitorWaits(2);
         _clock.Advance(TimeSpan.FromSeconds(30));
 
         //Assert
-        Assert.True(readings.IsStarted);
-        Assert.Equal(1, readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed));
-        Assert.DoesNotContain(_logs.Entries, entry => entry.LogLevel >= LogLevel.Warning);
+        await Assert.That(readings.IsStarted).IsTrue();
+        await Assert.That(readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed)).IsEqualTo(1);
+        await Assert.That(System.Linq.Enumerable.Any(_logs.Entries, entry => entry.LogLevel >= LogLevel.Warning)).IsFalse();
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
         new(new InternalBus(), new Publication { Topic = new RoutingKey(topic) });
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 
-    private static void WaitForCompletions(OutboxStaleMessageReadings readings, long completions) =>
-        Assert.True(SpinWait.SpinUntil(
+    private static async Task WaitForCompletions(OutboxStaleMessageReadings readings, long completions) =>
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed) >= completions,
-            TimeSpan.FromSeconds(5)));
+            TimeSpan.FromSeconds(5))).IsTrue();
 }

@@ -26,7 +26,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -35,12 +34,12 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// <c>connection.Database</c>, so a payload-mode mismatch still throws; unsubstituted, the null binds as
 /// <c>DBNull</c>, the type query matches no rows and the mismatch passes silently (ADR 0058 §A.3).
 /// </summary>
-public class MySqlPayloadValidatorNullSchemaTests : IAsyncLifetime
+public class MySqlPayloadValidatorNullSchemaTests
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly List<string> _tablesToCleanup = [];
 
-    [Fact]
+    [Test]
     public async Task When_mysql_payload_validator_receives_null_schema_name_it_should_substitute_connection_database()
     {
         // Arrange
@@ -65,12 +64,12 @@ public class MySqlPayloadValidatorNullSchemaTests : IAsyncLifetime
             connection, textTable, schemaName: null, "Body", binaryMessagePayload: false, default);
 
         // Act + Assert
-        await Assert.ThrowsAsync<ConfigurationException>(() =>
+        await Assert.That(() =>
             validator.ValidateAsync(
-                connection, binaryTable, databaseName, "Body", binaryMessagePayload: false, default));
-        await Assert.ThrowsAsync<ConfigurationException>(() =>
+                connection, binaryTable, databaseName, "Body", binaryMessagePayload: false, default)).ThrowsExactly<ConfigurationException>();
+        await Assert.That(() =>
             validator.ValidateAsync(
-                connection, binaryTable, schemaName: null, "Body", binaryMessagePayload: false, default));
+                connection, binaryTable, schemaName: null, "Body", binaryMessagePayload: false, default)).ThrowsExactly<ConfigurationException>();
     }
 
     private async Task ExecuteDdl(string sql)
@@ -94,8 +93,10 @@ public class MySqlPayloadValidatorNullSchemaTests : IAsyncLifetime
         return builder.Database;
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

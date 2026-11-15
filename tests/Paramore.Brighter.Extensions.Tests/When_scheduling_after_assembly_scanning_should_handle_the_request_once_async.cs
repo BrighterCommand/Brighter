@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -30,15 +30,15 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ScannedSchedulerRequestTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_scheduling_after_assembly_scanning_should_handle_the_request_once_async(bool addConsumers)
     {
         //Arrange
@@ -55,14 +55,14 @@ public class ScannedSchedulerRequestTests
 
         //Act
         await processor.SendAsync(TimeSpan.FromSeconds(10), request);
-        Assert.Empty(handler.Received);
+        await Assert.That(handler.Received).IsEmpty();
         timeProvider.Advance(TimeSpan.FromSeconds(10));
 
         //Assert
-        var received = Assert.Single(handler.Received);
-        Assert.Equal(request.Id, received.Id);
-        Assert.Equal(request.Greeting, received.Greeting);
+        var received = await Assert.That(handler.Received).HasSingleItem();
+        await Assert.That(received.Id).IsEqualTo(request.Id);
+        await Assert.That(received.Greeting).IsEqualTo(request.Greeting);
         timeProvider.Advance(TimeSpan.FromSeconds(10));
-        Assert.Single(handler.Received);
+        await Assert.That(handler.Received).HasSingleItem();
     }
 }

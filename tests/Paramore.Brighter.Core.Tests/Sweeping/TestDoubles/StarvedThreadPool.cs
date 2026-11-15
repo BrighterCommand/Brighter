@@ -1,7 +1,6 @@
 using System;
 using System.Threading;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 
 /// <summary>
@@ -25,8 +24,8 @@ public sealed class StarvedThreadPool : IDisposable
         ThreadPool.GetMaxThreads(out _maxWorkers, out _maxCompletionPorts);
         try
         {
-            Assert.True(ThreadPool.SetMaxThreads(Environment.ProcessorCount, _maxCompletionPorts), "Could not cap the thread pool");
-            Assert.True(BlockEveryWorker(), "Could not block every thread-pool worker");
+            if (!ThreadPool.SetMaxThreads(Environment.ProcessorCount, _maxCompletionPorts)) throw new InvalidOperationException("Could not cap the thread pool");
+            if (!BlockEveryWorker()) throw new InvalidOperationException("Could not block every thread-pool worker");
         }
         catch
         {

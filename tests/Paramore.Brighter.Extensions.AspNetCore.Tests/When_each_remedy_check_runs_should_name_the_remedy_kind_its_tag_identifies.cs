@@ -36,19 +36,18 @@ using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Paramore.Brighter.Outbox.Hosting.HealthChecks;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
 /// <summary>
 /// Characterises that each remedy check names, in its <c>Data</c>, the remedy kind its tag identifies, whether Healthy or Degraded.
 /// </summary>
-[Collection(DispatcherHealthCheckCollection.NAME)]
+[NotInParallel]
 public class RemedyKindDataTests
 {
     private static readonly TimeSpan s_guard = TimeSpan.FromSeconds(10);
 
-    [Fact]
+    [Test]
     public async Task When_each_remedy_check_runs_should_name_the_remedy_kind_its_tag_identifies()
     {
         //Arrange
@@ -92,13 +91,19 @@ public class RemedyKindDataTests
         var degradedResults = await RunAll(degraded);
 
         //Assert
-        Assert.All(healthyResults, entry => Assert.Equal(HealthStatus.Healthy, entry.Result.Status));
-        Assert.All(degradedResults, entry => Assert.Equal(HealthStatus.Degraded, entry.Result.Status));
-        Assert.All(healthyResults.Concat(degradedResults), entry =>
-        {
-            Assert.Equal(RemedyCheckConvention.Name(entry.Kind), entry.Result.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.True(entry.Result.Data.ContainsKey(RemedyCheckConvention.ConditionsKey));
-        });
+        foreach (var entry in healthyResults)
+{
+    await Assert.That(entry.Result.Status).IsEqualTo(HealthStatus.Healthy);
+}
+        foreach (var entry in degradedResults)
+{
+    await Assert.That(entry.Result.Status).IsEqualTo(HealthStatus.Degraded);
+}
+        foreach (var entry in healthyResults.Concat(degradedResults))
+{
+    await Assert.That(entry.Result.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(entry.Kind));
+    await Assert.That(entry.Result.Data.ContainsKey(RemedyCheckConvention.ConditionsKey)).IsTrue();
+}
     }
 
     private static OutboxSweeperRestartHealthCheck SweeperRestart(IServiceProvider provider)

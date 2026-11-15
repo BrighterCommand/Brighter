@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -15,7 +14,7 @@ public class SweeperAllocationTests
     private const int WarmUpSweeps = 100;
     private const int TimerIntervalSeconds = 5;
 
-    [Fact]
+    [Test]
     public async Task When_ten_thousand_sweeps_run_should_not_grow_the_per_sweep_allocation()
     {
         //Arrange
@@ -42,11 +41,10 @@ public class SweeperAllocationTests
         sweeper.Dispose();
 
         //Assert
-        Assert.True(allSwept, $"The sweeper recorded only {meter.Sweeps} of {SweepsToRun} sweeps");
+        await Assert.That(allSwept).IsTrue().Because($"The sweeper recorded only {meter.Sweeps} of {SweepsToRun} sweeps");
         var earlierMean = MeanBytesPerSweep(meter, WarmUpSweeps);
         var lastMean = MeanBytesPerSweep(meter, SweepsToRun - WindowSize);
-        Assert.True(lastMean <= earlierMean,
-            $"Mean bytes per sweep grew from {earlierMean} (sweeps {WarmUpSweeps + 1}-{WarmUpSweeps + WindowSize}) to {lastMean} (the last {WindowSize} sweeps)");
+        await Assert.That(lastMean <= earlierMean).IsTrue().Because($"Mean bytes per sweep grew from {earlierMean} (sweeps {WarmUpSweeps + 1}-{WarmUpSweeps + WindowSize}) to {lastMean} (the last {WindowSize} sweeps)");
     }
 
     private static double MeanBytesPerSweep(AllocationReadingSweeperMeter meter, int firstSweep)

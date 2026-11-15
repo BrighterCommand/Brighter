@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Observability;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
@@ -28,8 +28,8 @@ public class AsyncTransformerFactoryInitializeFailureReleaseTests
         _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, _transformerFactory, InstrumentationOptions.All);
     }
 
-    [Fact]
-    public void When_A_Wrap_Transform_Fails_To_Initialize_It_Is_Released_Async()
+    [Test]
+    public async System.Threading.Tasks.Task When_A_Wrap_Transform_Fails_To_Initialize_It_Is_Released_Async()
     {
         //act
         //the factory creates the transform, but initialising it from the attribute params throws;
@@ -37,10 +37,10 @@ public class AsyncTransformerFactoryInitializeFailureReleaseTests
         var exception = Catch.Exception(() => _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>());
 
         //assert
-        Assert.IsType<ConfigurationException>(exception);
-        Assert.Single(_transformerFactory.Created);
+        await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        await Assert.That(_transformerFactory.Created).HasSingleItem();
         //the created-but-uninitialised transform must be released back to the factory, not leaked
-        Assert.Equal(_transformerFactory.Created, _transformerFactory.Released);
+        await Assert.That(_transformerFactory.Released).IsEquivalentTo(_transformerFactory.Created, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
     // a transform that is created successfully but throws while being initialised from its attribute params

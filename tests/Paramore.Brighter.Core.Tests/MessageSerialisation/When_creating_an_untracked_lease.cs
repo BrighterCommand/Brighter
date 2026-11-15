@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -20,12 +21,21 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
+
+
 #endregion
 
+
+
 using System;
-using Xunit;
+
+
+
+
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
+
+
 
 /// <summary>
 /// Regression for PR #4254 review finding 1. A token-less lease releases nothing — that is correct for a
@@ -38,23 +48,43 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 /// per-resolution scope must pass its release token via the constructor.
 /// </summary>
 public class UntrackedLeaseTests
+
 {
-    [Fact]
-    public void When_creating_an_untracked_lease_it_holds_the_instance_with_no_release_token()
+
+    [Test]
+
+    public async System.Threading.Tasks.Task When_creating_an_untracked_lease_it_holds_the_instance_with_no_release_token()
+
     {
+
         var instance = new object();
+
+
 
         var lease = Lease<object>.Untracked(instance);
 
-        Assert.Same(instance, lease.Instance);
-        Assert.Null(lease.ReleaseToken);
+
+
+        await Assert.That(lease.Instance).IsSameReferenceAs(instance);
+
+        await Assert.That(lease.ReleaseToken).IsNull();
+
     }
 
-    [Fact]
-    public void When_creating_an_untracked_lease_for_a_null_instance_it_throws()
+
+
+    [Test]
+
+    public async System.Threading.Tasks.Task When_creating_an_untracked_lease_for_a_null_instance_it_throws()
+
     {
-        var exception = Assert.Throws<ArgumentNullException>(() => Lease<object>.Untracked(null!));
 
-        Assert.Equal("instance", exception.ParamName);
+        var exception = await Assert.That(() => Lease<object>.Untracked(null!)).ThrowsExactly<ArgumentNullException>();
+
+
+
+        await Assert.That(exception.ParamName).IsEqualTo("instance");
+
     }
+
 }

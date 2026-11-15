@@ -28,7 +28,7 @@ using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.BoxProvisioning.Tests.Drift;
 using Paramore.Brighter.Inbox.Spanner;
 using Paramore.Brighter.Outbox.Spanner;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
@@ -37,14 +37,14 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 /// (Spanner has no catalog of its own, ADR 0057 §6), with no housekeeping columns; and it emits the
 /// <c>CausationId</c> replay index as a separate statement.
 /// </summary>
-[Trait("Category", "Spanner")]
-[Collection("Spanner")]
+[Property("Category", "Spanner")]
+[NotInParallel]
 public class SpannerOutboxBuilderDriftTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_spanner_outbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set(
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_spanner_outbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set(
         bool binaryMessagePayload)
     {
         // Arrange
@@ -65,21 +65,18 @@ public class SpannerOutboxBuilderDriftTests
             StringComparer.OrdinalIgnoreCase);
 
         // Assert
-        Assert.True(
-            builderColumns.SetEquals(migrationColumns),
-            $"Builder columns: [{string.Join(", ", builderColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-            $"V_latest LogicalColumns: [{string.Join(", ", migrationColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+        await Assert.That(builderColumns.SetEquals(migrationColumns)).IsTrue();
     }
 
-    [Fact]
-    public void When_spanner_outbox_builder_is_inspected_it_should_emit_the_causation_replay_index()
+    [Test]
+    public async System.Threading.Tasks.Task When_spanner_outbox_builder_is_inspected_it_should_emit_the_causation_replay_index()
     {
         const string tableName = "outbox_test";
         var indexDdl = SpannerOutboxBuilder.GetCausationIndexDDL(tableName);
 
-        Assert.Contains("CREATE INDEX IF NOT EXISTS", indexDdl, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains($"idx_{tableName}_CausationId", indexDdl, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("`CausationId`", indexDdl, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(indexDdl).Contains("CREATE INDEX IF NOT EXISTS");
+        await Assert.That(indexDdl).Contains($"idx_{tableName}_CausationId");
+        await Assert.That(indexDdl).Contains("`CausationId`");
     }
 }
 
@@ -87,12 +84,12 @@ public class SpannerOutboxBuilderDriftTests
 /// <c>SpannerInboxBuilder</c>'s columns equal V_latest's logical columns, taken from the MySQL catalog
 /// (Spanner has no catalog of its own, ADR 0057 §6), with no housekeeping columns.
 /// </summary>
-[Trait("Category", "Spanner")]
-[Collection("Spanner")]
+[Property("Category", "Spanner")]
+[NotInParallel("Spanner")]
 public class SpannerInboxBuilderDriftTests
 {
-    [Fact]
-    public void When_spanner_inbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set()
+    [Test]
+    public async Task When_spanner_inbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set()
     {
         // Arrange
         const string tableName = "inbox_test";
@@ -111,9 +108,6 @@ public class SpannerInboxBuilderDriftTests
             StringComparer.OrdinalIgnoreCase);
 
         // Assert
-        Assert.True(
-            builderColumns.SetEquals(migrationColumns),
-            $"Builder columns: [{string.Join(", ", builderColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-            $"V_latest LogicalColumns: [{string.Join(", ", migrationColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+        await Assert.That(builderColumns.SetEquals(migrationColumns)).IsTrue();
     }
 }

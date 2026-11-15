@@ -24,14 +24,13 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
 public class KafkaSubscriptionDeadLetterSupportTests
 {
-    [Fact]
-    public void When_creating_kafka_subscription_with_dead_letter_routing_key_should_expose_property()
+    [Test]
+    public async Task When_creating_kafka_subscription_with_dead_letter_routing_key_should_expose_property()
     {
         //Arrange
         var deadLetterRoutingKey = new RoutingKey("orders.dlq");
@@ -46,8 +45,8 @@ public class KafkaSubscriptionDeadLetterSupportTests
         );
 
         //Assert
-        Assert.IsAssignableFrom<IUseBrighterDeadLetterSupport>(subscription);
+        await Assert.That(subscription).IsAssignableTo<IUseBrighterDeadLetterSupport>();
         var dlqSupport = (IUseBrighterDeadLetterSupport)subscription;
-        Assert.Equal(deadLetterRoutingKey, dlqSupport.DeadLetterRoutingKey);
+        await Assert.That(dlqSupport.DeadLetterRoutingKey).IsEqualTo(deadLetterRoutingKey);
     }
 }

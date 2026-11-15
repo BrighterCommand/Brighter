@@ -32,13 +32,13 @@ using Paramore.Brighter.Extensions;
 using Polly.Registry;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.Confirmation;
 
 public class ConfirmationSpanEndIsolationTests
 {
-    [Fact]
+    [Test]
     public async Task When_ending_confirmation_span_throws_should_continue_draining()
     {
         // Arrange
@@ -82,7 +82,7 @@ public class ConfirmationSpanEndIsolationTests
             .Where(logEvent => logEvent.Level == LogEventLevel.Warning)
             .Where(logEvent => logEvent.MessageTemplate.Text == "Publish confirmation failed for message Id:{Id} on topic {Topic}")
             .ToList();
-        Assert.Equal(messageCount, confirmationWarnings.Count);
-        Assert.Contains(topic, circuitBreaker.TrippedTopics);
+        await Assert.That(confirmationWarnings.Count).IsEqualTo(messageCount);
+        await Assert.That(circuitBreaker.TrippedTopics).Contains(topic);
     }
 }

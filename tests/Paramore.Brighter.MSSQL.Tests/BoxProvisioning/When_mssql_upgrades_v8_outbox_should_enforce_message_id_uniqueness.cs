@@ -27,17 +27,16 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
 public class MsSqlMessageIdMigrationTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_mssql_upgrades_v8_outbox_should_enforce_message_id_uniqueness(bool binary, bool withHistory)
     {
         //Arrange
@@ -54,11 +53,11 @@ public class MsSqlMessageIdMigrationTests
         await outbox.AddAsync(MsSqlMessageIdOutboxStore.Message(original.Id, "retry"), context);
 
         //Assert
-        Assert.Equal(1, await store.RowCountAsync());
-        Assert.True(await store.MessageIdUniqueIndexesAsync() > 0);
-        Assert.Equal(9, await store.LatestVersionAsync());
-        var stored = Assert.Single(await outbox.OutstandingMessagesAsync(TimeSpan.Zero, context));
-        Assert.Equal(original.Body.ToByteArray(), stored.Body.ToByteArray());
-        Assert.Equal(2, await store.ScalarAsync($"SELECT COUNT(*) FROM [{store.Schema}].[__BrighterMigrationHistory]"));
+        await Assert.That(await store.RowCountAsync()).IsEqualTo(1);
+        await Assert.That(await store.MessageIdUniqueIndexesAsync() > 0).IsTrue();
+        await Assert.That(await store.LatestVersionAsync()).IsEqualTo(9);
+        var stored = await Assert.That(await outbox.OutstandingMessagesAsync(TimeSpan.Zero, context)).HasSingleItem();
+        await Assert.That(stored.Body.ToByteArray()).IsEqualTo(original.Body.ToByteArray());
+        await Assert.That(await store.ScalarAsync($"SELECT COUNT(*) FROM [{store.Schema}].[__BrighterMigrationHistory]")).IsEqualTo(2);
     }
 }

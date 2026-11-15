@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia
@@ -28,20 +28,19 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
-[Trait("Category", "GcpPubSubPull")]
-[Trait("Category", "GcpPubSubPurge")]
-[Collection("Pull")]
+[Property("Category", "GcpPubSubPull")]
+[Property("Category", "GcpPubSubPurge")]
+[NotInParallel("Pull")]
 public class GcpPullPurgeClockSkewTests
 {
-    [Theory]
-    [InlineData(2)]
-    [InlineData(5)]
-    [InlineData(-5)]
-    public void When_purging_with_clock_skew_should_clear_the_backlog_and_deliver_new_messages(int clientLagMinutes)
+    [Test]
+    [Arguments(2)]
+    [Arguments(5)]
+    [Arguments(-5)]
+    public async Task When_purging_with_clock_skew_should_clear_the_backlog_and_deliver_new_messages(int clientLagMinutes)
     {
         //Arrange
         var provider = new GcpPullMessageGatewayProvider();
@@ -78,13 +77,13 @@ public class GcpPullPurgeClockSkewTests
             var afterPurge = channel.Receive(TimeSpan.FromSeconds(10));
 
             //Assert
-            Assert.True(afterPurge.IsEmpty);
+            await Assert.That(afterPurge.IsEmpty).IsTrue();
 
             var newMessage = builder.SetTopic(routingKey).SetMessageId(Id.Random()).Build();
             producer.Send(newMessage);
             var afterPublish = GcpPurgeTestReceiver.Receive(channel);
 
-            Assert.Equal(newMessage.Id, afterPublish.Id);
+            await Assert.That(afterPublish.Id).IsEqualTo(newMessage.Id);
             channel.Acknowledge(afterPublish);
         }
         finally

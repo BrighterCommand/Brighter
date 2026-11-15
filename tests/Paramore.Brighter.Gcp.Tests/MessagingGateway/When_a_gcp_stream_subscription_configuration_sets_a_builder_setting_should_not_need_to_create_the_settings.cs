@@ -26,14 +26,13 @@ THE SOFTWARE. */
 using System;
 using Grpc.Core;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 
 public class GcpStreamSubscriberSettingsPresetTests
 {
-    [Fact]
-    public void When_a_gcp_stream_subscription_configuration_sets_a_builder_setting_should_not_need_to_create_the_settings()
+    [Test]
+    public async Task When_a_gcp_stream_subscription_configuration_sets_a_builder_setting_should_not_need_to_create_the_settings()
     {
         // Arrange
         var connection = new GcpMessagingGatewayConnection { ProjectId = "hook-composition-tests" };
@@ -59,10 +58,11 @@ public class GcpStreamSubscriberSettingsPresetTests
 
         // Act
         IAmAMessageConsumerSync? consumer = null;
-        var exception = Record.Exception(() => consumer = factory.Create(subscription));
+        Exception? exception = null;
+        try { consumer = factory.Create(subscription); } catch (Exception e) { exception = e; }
         consumer?.Dispose();
 
         // Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 }

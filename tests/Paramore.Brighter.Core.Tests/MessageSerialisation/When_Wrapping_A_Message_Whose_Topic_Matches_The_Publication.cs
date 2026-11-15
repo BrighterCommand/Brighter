@@ -1,5 +1,4 @@
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
@@ -11,8 +10,8 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 // pre-fix bug had, just inverted.
 public class WrapMatchingPublicationTopicTests
 {
-    [Fact]
-    public void When_The_Mapper_Topic_Matches_The_Publication_No_Producer_Topic_Bag_Entry_Is_Written()
+    [Test]
+    public async Task When_The_Mapper_Topic_Matches_The_Publication_No_Producer_Topic_Bag_Entry_Is_Written()
     {
         TransformPipelineBuilder.ClearPipelineCache();
 
@@ -37,9 +36,9 @@ public class WrapMatchingPublicationTopicTests
             .Wrap(new MyCommand(), new RequestContext(), publication);
 
         // mapper produced a topic identical to publication.Topic — fallback path
-        Assert.Equal(publicationTopic, message.Header.Topic);
+        await Assert.That(message.Header.Topic).IsEqualTo(publicationTopic);
 
         // no bag entry → producer lookup falls back to Header.Topic
-        Assert.False(message.Header.Bag.ContainsKey(Message.ProducerTopicHeaderName));
+        await Assert.That(message.Header.Bag.ContainsKey(Message.ProducerTopicHeaderName)).IsFalse();
     }
 }

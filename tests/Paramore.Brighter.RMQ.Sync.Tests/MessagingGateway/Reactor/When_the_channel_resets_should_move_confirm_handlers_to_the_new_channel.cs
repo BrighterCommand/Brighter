@@ -1,12 +1,11 @@
 using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Property("Category", "RMQ")]
+[NotInParallel("RMQ")]
 public class RmqChannelResetConfirmHandlerTests : IDisposable
 {
     private readonly RoutingKey _routingKey = new(Guid.NewGuid().ToString());
@@ -27,14 +26,14 @@ public class RmqChannelResetConfirmHandlerTests : IDisposable
             .Create(TimeSpan.FromMilliseconds(1000));
     }
 
-    [Fact]
-    public void When_the_channel_resets_should_move_confirm_handlers_to_the_new_channel()
+    [Test]
+    public async Task When_the_channel_resets_should_move_confirm_handlers_to_the_new_channel()
     {
         //Arrange — a send on the old channel, then its socket fails on the next send
         _messageProducer.Send(NewMessage());
 
         _messageProducer.Confirms.FailNextPublish();
-        Assert.Throws<ChannelFailureException>(() => _messageProducer.Send(NewMessage()));
+        await Assert.That(() => _messageProducer.Send(NewMessage())).ThrowsExactly<ChannelFailureException>();
 
         //Act — the next send opens a new channel
         _messageProducer.Send(NewMessage());
@@ -43,12 +42,12 @@ public class RmqChannelResetConfirmHandlerTests : IDisposable
         var oldChannel = _messageProducer.Channels[0];
         var newChannel = _messageProducer.Channels[1];
 
-        Assert.Equal(0, oldChannel.AckSubscriberCount);
-        Assert.Equal(0, oldChannel.NackSubscriberCount);
+        await Assert.That(oldChannel.AckSubscriberCount).IsEqualTo(0);
+        await Assert.That(oldChannel.NackSubscriberCount).IsEqualTo(0);
 
-        Assert.Equal(1, newChannel.ConfirmSelectCount);
-        Assert.Equal(1, newChannel.AckSubscriberCount);
-        Assert.Equal(1, newChannel.NackSubscriberCount);
+        await Assert.That(newChannel.ConfirmSelectCount).IsEqualTo(1);
+        await Assert.That(newChannel.AckSubscriberCount).IsEqualTo(1);
+        await Assert.That(newChannel.NackSubscriberCount).IsEqualTo(1);
     }
 
     private Message NewMessage() => new(

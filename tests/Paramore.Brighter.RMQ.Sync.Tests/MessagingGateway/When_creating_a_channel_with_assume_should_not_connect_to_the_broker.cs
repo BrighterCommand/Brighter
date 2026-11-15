@@ -25,8 +25,7 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway;
 
 /// <summary>
@@ -35,8 +34,8 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway;
 /// </summary>
 public class RmqSyncChannelFactoryAssumeTests
 {
-    [Fact]
-    public void When_creating_a_channel_with_assume_should_not_connect_to_the_broker()
+    [Test]
+    public async Task When_creating_a_channel_with_assume_should_not_connect_to_the_broker()
     {
         // Arrange - nothing listens on port 1, so any connection attempt fails
         var unreachableBroker = new RmqMessagingGatewayConnection
@@ -56,9 +55,10 @@ public class RmqSyncChannelFactoryAssumeTests
         var channelFactory = new ChannelFactory(new RmqMessageConsumerFactory(unreachableBroker));
 
         // Act
-        var exception = Record.Exception(() => channelFactory.CreateSyncChannel(subscription).Dispose());
+        Exception? exception = null;
+        try { channelFactory.CreateSyncChannel(subscription).Dispose(); } catch (Exception e) { exception = e; }
 
         // Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 }

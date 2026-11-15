@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,7 +34,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -43,7 +42,7 @@ public class MonitorAmbientStateTests
     private static readonly AsyncLocal<string?> s_ambient = new();
     private readonly TimerCountingTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Fact]
+    [Test]
     public async Task When_the_monitor_is_started_from_a_flow_with_ambient_state_should_not_carry_it_into_counts()
     {
         //Arrange
@@ -74,25 +73,25 @@ public class MonitorAmbientStateTests
             s_ambient.Value = "the starting caller's state";
             await monitor.StartAsync(CancellationToken.None);
         });
-        WaitUntilTheMonitorWaits(readings);
+        await WaitUntilTheMonitorWaits(readings);
         _clock.Advance(TimeSpan.FromMinutes(1));
-        WaitForCompletions(readings, 1);
+        await WaitForCompletions(readings, 1);
 
         //Assert
-        Assert.Null(outbox.AmbientWhenCounted.First());
+        await Assert.That(outbox.AmbientWhenCounted.First()).IsNull();
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
         new(new InternalBus(), new Publication { Topic = new RoutingKey(topic) });
 
-    private void WaitUntilTheMonitorWaits(OutboxStaleMessageReadings readings)
+    private async Task WaitUntilTheMonitorWaits(OutboxStaleMessageReadings readings)
     {
         var completed = readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed);
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= completed + 1, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= completed + 1, TimeSpan.FromSeconds(5))).IsTrue();
     }
 
-    private static void WaitForCompletions(OutboxStaleMessageReadings readings, long completions) =>
-        Assert.True(SpinWait.SpinUntil(
+    private static async Task WaitForCompletions(OutboxStaleMessageReadings readings, long completions) =>
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed) >= completions,
-            TimeSpan.FromSeconds(5)));
+            TimeSpan.FromSeconds(5))).IsTrue();
 }

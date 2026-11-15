@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -27,23 +27,23 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleMessageMonitorNullBuilderTests
 {
-    [Fact]
-    public void When_the_builder_is_null_should_throw_argument_null()
+    [Test]
+    public async Task When_the_builder_is_null_should_throw_argument_null()
     {
         //Arrange
         IBrighterBuilder brighterBuilder = null!;
 
         //Act
-        var exception = Record.Exception(() => brighterBuilder.UseOutboxStaleMessageMonitor(TimeSpan.FromMinutes(5)));
+        Exception? exception = null;
+        try { brighterBuilder.UseOutboxStaleMessageMonitor(TimeSpan.FromMinutes(5)); } catch (Exception e) { exception = e; }
 
         //Assert
-        var argumentNull = Assert.IsType<ArgumentNullException>(exception);
-        Assert.Equal("brighterBuilder", argumentNull.ParamName);
+        var argumentNull = await Assert.That(exception).IsTypeOf<ArgumentNullException>();
+        await Assert.That(argumentNull.ParamName).IsEqualTo("brighterBuilder");
     }
 }

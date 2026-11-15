@@ -34,16 +34,15 @@ using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection(DispatcherHealthCheckCollection.NAME)]
+[NotInParallel]
 public class ConsumerRestartDispatcherNotRunningTests
 {
     private static readonly TimeSpan s_guard = TimeSpan.FromSeconds(10);
 
-    [Fact]
+    [Test]
     public async Task When_the_dispatcher_is_awaiting_should_report_healthy_and_say_it_is_not_running()
     {
         //Arrange
@@ -54,10 +53,10 @@ public class ConsumerRestartDispatcherNotRunningTests
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         //Assert
-        AssertHealthyNotRunning(result);
+        await AssertHealthyNotRunning(result);
     }
 
-    [Fact]
+    [Test]
     public async Task When_end_has_been_called_should_report_healthy_while_stopping_and_once_stopped()
     {
         //Arrange
@@ -74,11 +73,11 @@ public class ConsumerRestartDispatcherNotRunningTests
         var whenStopped = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         //Assert
-        AssertHealthyNotRunning(whileStopping);
-        AssertHealthyNotRunning(whenStopped);
+        await AssertHealthyNotRunning(whileStopping);
+        await AssertHealthyNotRunning(whenStopped);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_dispatcher_is_restarted_with_a_missing_consumer_should_report_degraded()
     {
         //Arrange
@@ -99,13 +98,13 @@ public class ConsumerRestartDispatcherNotRunningTests
         var restarted = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         //Assert
-        AssertHealthyNotRunning(whileEnded);
-        Assert.Equal(HealthStatus.Degraded, restarted.Status);
-        Assert.Contains("orders has 1 of 2 expected consumers", restarted.Description);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), restarted.Data["remedy_kind"]);
+        await AssertHealthyNotRunning(whileEnded);
+        await Assert.That(restarted.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(restarted.Description).Contains("orders has 1 of 2 expected consumers");
+        await Assert.That(restarted.Data["remedy_kind"]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_dispatcher_stopped_by_itself_and_end_is_then_called_should_report_healthy()
     {
         //Arrange
@@ -123,18 +122,18 @@ public class ConsumerRestartDispatcherNotRunningTests
         var afterEnd = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         //Assert
-        Assert.Equal(DispatcherState.DS_STOPPED, ((Dispatcher)host.Dispatcher).State);
-        Assert.Equal(HealthStatus.Unhealthy, stoppedByItself.Status);
-        Assert.Contains("orders has 0 of 2 expected consumers", stoppedByItself.Description);
-        AssertHealthyNotRunning(afterEnd);
+        await Assert.That(((Dispatcher)host.Dispatcher).State).IsEqualTo(DispatcherState.DS_STOPPED);
+        await Assert.That(stoppedByItself.Status).IsEqualTo(HealthStatus.Unhealthy);
+        await Assert.That(stoppedByItself.Description).Contains("orders has 0 of 2 expected consumers");
+        await AssertHealthyNotRunning(afterEnd);
     }
 
-    private static void AssertHealthyNotRunning(HealthCheckResult result)
+    private static async Task AssertHealthyNotRunning(HealthCheckResult result)
     {
-        Assert.Equal(HealthStatus.Healthy, result.Status);
-        Assert.Contains("not running", result.Description);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), result.Data["remedy_kind"]);
-        Assert.Empty(Assert.IsAssignableFrom<IEnumerable<string>>(result.Data["conditions"]));
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(result.Description).Contains("not running");
+        await Assert.That(result.Data["remedy_kind"]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+        await Assert.That((((IEnumerable<string>)(((IEnumerable<string>)(await Assert.That(result.Data["conditions"]).IsAssignableTo<IEnumerable<string>>())))))).IsEmpty();
     }
 
     private static void RecoverAll(MultiSubscriptionReceiveHealthTestHost host)

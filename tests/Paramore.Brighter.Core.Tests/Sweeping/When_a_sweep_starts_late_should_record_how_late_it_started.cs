@@ -6,13 +6,12 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class SweeperTickLagMetricsTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_sweep_starts_late_should_record_how_late_it_started()
     {
         //Arrange
@@ -36,10 +35,10 @@ public class SweeperTickLagMetricsTests
         sweeper.Dispose();
 
         //Assert
-        Assert.True(firstSweep, "The sweeper did not record the lag of its first sweep");
-        Assert.True(secondSweep, "The sweeper did not record the lag of its second sweep");
+        await Assert.That(firstSweep).IsTrue().Because("The sweeper did not record the lag of its first sweep");
+        await Assert.That(secondSweep).IsTrue().Because("The sweeper did not record the lag of its second sweep");
         var lags = measurements.Of(RecordedSweeperMeasurements.TickLag);
-        Assert.Equal(0, lags[0].Value);
-        Assert.Equal(2, lags[1].Value);
+        await Assert.That(lags[0].Value).IsEqualTo(0);
+        await Assert.That(lags[1].Value).IsEqualTo(2);
     }
 }

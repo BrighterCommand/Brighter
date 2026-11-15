@@ -33,21 +33,20 @@ using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.MessageDispatch;
 
 public class MessagePumpRequeueFailureTests
 {
-    [Theory]
-    [InlineData(false, false, false)]
-    [InlineData(false, true, false)]
-    [InlineData(true, false, false)]
-    [InlineData(true, true, false)]
-    [InlineData(false, false, true)]
-    [InlineData(false, true, true)]
-    [InlineData(true, false, true)]
-    [InlineData(true, true, true)]
+    [Test]
+    [Arguments(false, false, false)]
+    [Arguments(false, true, false)]
+    [Arguments(true, false, false)]
+    [Arguments(true, true, false)]
+    [Arguments(false, false, true)]
+    [Arguments(false, true, true)]
+    [Arguments(true, false, true)]
+    [Arguments(true, true, true)]
     public void When_requeue_fails_should_log_leave_message_unacknowledged_and_continue(bool useProactor, bool isEvent, bool failNack)
     {
         if (isEvent)
@@ -56,7 +55,7 @@ public class MessagePumpRequeueFailureTests
             VerifyRequeueFailure<RequeueFailureCommand>(useProactor, failNack);
     }
 
-    private static void VerifyRequeueFailure<TRequest>(bool useProactor, bool failNack) where TRequest : class, IRequest, new()
+    private static async Task VerifyRequeueFailure<TRequest>(bool useProactor, bool failNack) where TRequest : class, IRequest, new()
     {
         //Arrange
         using var logs = TestCorrelator.CreateContext();
@@ -104,27 +103,27 @@ public class MessagePumpRequeueFailureTests
                 new Channel(channelName, topic, consumer)) { RequeueCount = -1, DontAckDelay = TimeSpan.Zero };
 
         //Act
-        var exception = Record.Exception(pump.Run);
+        var exception = TestExceptionRecorder.Capture(pump.Run);
 
         //Assert
-        Assert.Null(exception);
-        Assert.Equal(MessagePumpStatus.MP_STOPPED, pump.Status);
-        Assert.Equal(new[] { deferred.Id, subsequent.Id }, handled);
-        Assert.Equal(deferred.Id, Assert.Single(consumer.RequeueAttempts));
-        Assert.Equal(subsequent.Id, Assert.Single(consumer.Acknowledged));
-        Assert.Empty(consumer.Rejected);
-        Assert.Equal(deferred.Id, Assert.Single(consumer.NegativelyAcknowledged));
-        Assert.Contains(TestCorrelator.GetLogEventsFromCurrentContext(), entry =>
+        await Assert.That(exception).IsNull();
+        await Assert.That(pump.Status).IsEqualTo(MessagePumpStatus.MP_STOPPED);
+        await Assert.That(handled).IsEqualTo(new[] { deferred.Id, subsequent.Id });
+        await Assert.That((await Assert.That(consumer.RequeueAttempts).HasSingleItem())).IsEqualTo(deferred.Id);
+        await Assert.That((await Assert.That(consumer.Acknowledged).HasSingleItem())).IsEqualTo(subsequent.Id);
+        await Assert.That(consumer.Rejected).IsEmpty();
+        await Assert.That((await Assert.That(consumer.NegativelyAcknowledged).HasSingleItem())).IsEqualTo(deferred.Id);
+        await Assert.That(System.Linq.Enumerable.Any(TestCorrelator.GetLogEventsFromCurrentContext(), entry =>
             entry.Level == LogEventLevel.Error
             && ReferenceEquals(entry.Exception, consumer.RequeueFailure)
             && entry.RenderMessage().Contains(deferred.Id.Value)
-            && entry.RenderMessage().Contains(topic.Value));
+            && entry.RenderMessage().Contains(topic.Value))).IsTrue();
         if (failNack)
         {
-            Assert.Contains(TestCorrelator.GetLogEventsFromCurrentContext(), entry =>
+            await Assert.That(System.Linq.Enumerable.Any(TestCorrelator.GetLogEventsFromCurrentContext(), entry =>
                 entry.Level == LogEventLevel.Error
                 && ReferenceEquals(entry.Exception, consumer.NackFailure)
-                && entry.RenderMessage().Contains(deferred.Id.Value));
+                && entry.RenderMessage().Contains(deferred.Id.Value))).IsTrue();
         }
     }
 }

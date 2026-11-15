@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel <guilhermeaappel@gmail.com>
 
@@ -24,35 +24,29 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using Paramore.Brighter.Outbox.Sqlite;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Sqlite.Tests.Outbox;
 
 public class OutboxOutOfRangeOutstandingCountTimeoutTests
 {
-    public static TheoryData<TimeSpan> OutOfRangeTimeouts => new()
+    public static List<TimeSpan> OutOfRangeTimeouts => new()
     {
-        TimeSpan.Zero,
-        TimeSpan.FromSeconds(-1),
-        Timeout.InfiniteTimeSpan,
-        TimeSpan.FromSeconds(int.MaxValue / 1000 + 0.5),
-        TimeSpan.FromSeconds(int.MaxValue / 1000 + 1),
-        TimeSpan.MaxValue
+        TimeSpan.Zero,        TimeSpan.FromSeconds(-1),        Timeout.InfiniteTimeSpan,        TimeSpan.FromSeconds(int.MaxValue / 1000 + 0.5),        TimeSpan.FromSeconds(int.MaxValue / 1000 + 1),        TimeSpan.MaxValue
     };
 
-    [Theory]
-    [MemberData(nameof(OutOfRangeTimeouts))]
-    public void When_the_outbox_configuration_has_an_out_of_range_outstanding_count_timeout_should_throw(TimeSpan outstandingCountTimeout)
+    [Test]
+    [MethodDataSource(nameof(OutOfRangeTimeouts))]
+    public async Task When_the_outbox_configuration_has_an_out_of_range_outstanding_count_timeout_should_throw(TimeSpan outstandingCountTimeout)
     {
         //Arrange
         var configuration = new StubRelationalDatabaseConfiguration(outstandingCountTimeout);
         var connectionProvider = new SqliteConnectionProvider(configuration);
 
         //Act
-        var exception = Record.Exception(() => new SqliteOutbox(configuration, connectionProvider));
+        var exception = TestExceptionRecorder.Capture(() => new SqliteOutbox(configuration, connectionProvider));
 
         //Assert
-        var outOfRange = Assert.IsType<ArgumentOutOfRangeException>(exception);
-        Assert.Equal("configuration", outOfRange.ParamName);
+        var outOfRange = await Assert.That(exception).IsTypeOf<ArgumentOutOfRangeException>();
+        await Assert.That(outOfRange.ParamName).IsEqualTo("configuration");
     }
 }

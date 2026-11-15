@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia <irakli.gabisonia94@gmail.com>
@@ -27,29 +27,28 @@ THE SOFTWARE. */
 
 using System;
 using Newtonsoft.Json;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
 public class InvalidContentTypeParameterSerializationTests
 {
-    [Theory]
-    [InlineData("""[{}]""")]
-    [InlineData("""[{"Key":null,"Value":"orders"}]""")]
-    [InlineData("""[{"Key":"profile","Value":null}]""")]
-    public void When_reading_invalid_content_type_parameters_through_newtonsoft_should_report_serialization_error(string parameters)
+    [Test]
+    [Arguments("""[{}]""")]
+    [Arguments("""[{"Key":null,"Value":"orders"}]""")]
+    [Arguments("""[{"Key":"profile","Value":null}]""")]
+    public async Task When_reading_invalid_content_type_parameters_through_newtonsoft_should_report_serialization_error(string parameters)
     {
         // Arrange
         var json = "{\"ContentType\":{\"MediaType\":\"application/json\",\"Parameters\":" + parameters + "}}";
 
         // Act
-        Exception exception = Record.Exception(() =>
+        Exception exception = TestExceptionRecorder.Capture(() =>
         {
             MessageHeader? header = JsonConvert.DeserializeObject<MessageHeader>(json);
             _ = header!.ContentType.ToString();
         });
 
         // Assert
-        Assert.IsType<JsonSerializationException>(exception);
+        await Assert.That(exception).IsTypeOf<JsonSerializationException>();
     }
 }

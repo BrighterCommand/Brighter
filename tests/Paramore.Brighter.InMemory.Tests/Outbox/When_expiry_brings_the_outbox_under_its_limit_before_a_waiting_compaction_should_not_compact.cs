@@ -28,14 +28,13 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.Builders;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Outbox
 {
-    [Trait("Category", "InMemory")]
+    [Property("Category", "InMemory")]
     public class OutboxCompactionCurrentCountTests
     {
-        [Fact]
+        [Test]
         public async Task When_expiry_brings_the_outbox_under_its_limit_before_a_waiting_compaction_should_not_compact()
         {
             //Arrange
@@ -79,7 +78,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
                 //A read is due an expiry scan, which takes the cleanup lock
                 timeProvider.Advance(TimeSpan.FromMilliseconds(100));
                 outbox.Get(liveIds[0], context);
-                Assert.True(outbox.ExpiryEntered.Wait(TimeSpan.FromSeconds(5)), "Expiry scan should have taken the cleanup lock");
+                await Assert.That(outbox.ExpiryEntered.Wait(TimeSpan.FromSeconds(5))).IsTrue().Because("Expiry scan should have taken the cleanup lock");
 
                 //Act - this add takes us to the limit, so is due a compaction, which must wait for the expiry scan
                 outbox.Add(new MessageTestDataBuilder(), context);
@@ -103,10 +102,10 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             await Task.Delay(500);
 
             //Assert - expiry left 3 entries, under the limit, so compaction should not remove the live messages
-            Assert.Equal(3, outbox.EntryCount);
+            await Assert.That(outbox.EntryCount).IsEqualTo(3);
             foreach (var liveId in liveIds)
             {
-                Assert.False((await outbox.GetAsync(liveId, context)).IsEmpty, "Live dispatched message should not be compacted");
+                await Assert.That((await outbox.GetAsync(liveId, context)).IsEmpty).IsFalse().Because("Live dispatched message should not be compacted");
             }
         }
     }

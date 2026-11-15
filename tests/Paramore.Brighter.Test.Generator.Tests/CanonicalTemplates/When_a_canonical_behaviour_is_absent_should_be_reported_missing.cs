@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -31,8 +31,8 @@ public class CanonicalBehaviourPresenceCanaryTests
     private const string PLAIN_REQUEUE =
         "When_requeuing_a_failed_message_should_be_redelivered";
 
-    [Fact]
-    public void When_the_requeue_too_many_times_file_is_absent_should_be_reported_missing()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_requeue_too_many_times_file_is_absent_should_be_reported_missing()
     {
         // Arrange — a generated directory holding every canonical file but that one
         using var generated = new GeneratedDirectoryOmitting(REQUEUE_TOO_MANY_TIMES);
@@ -42,12 +42,12 @@ public class CanonicalBehaviourPresenceCanaryTests
             .FindMissingCanonicalFiles([generated.Path], "Reactor");
 
         // Assert — the gate must notice the behaviour it was never told to look for
-        Assert.Single(missing);
-        Assert.Contains(REQUEUE_TOO_MANY_TIMES, missing[0]);
+        await Assert.That(missing).HasSingleItem();
+        await Assert.That(missing[0]).Contains(REQUEUE_TOO_MANY_TIMES);
     }
 
-    [Fact]
-    public void When_the_plain_requeue_file_is_absent_should_be_reported_missing()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_plain_requeue_file_is_absent_should_be_reported_missing()
     {
         // Arrange — the control: a behaviour the gate has always checked
         using var generated = new GeneratedDirectoryOmitting(PLAIN_REQUEUE);
@@ -57,12 +57,12 @@ public class CanonicalBehaviourPresenceCanaryTests
             .FindMissingCanonicalFiles([generated.Path], "Reactor");
 
         // Assert
-        Assert.Single(missing);
-        Assert.Contains(PLAIN_REQUEUE, missing[0]);
+        await Assert.That(missing).HasSingleItem();
+        await Assert.That(missing[0]).Contains(PLAIN_REQUEUE);
     }
 
-    [Fact]
-    public void When_every_canonical_file_is_present_should_report_nothing_missing()
+    [Test]
+    public async System.Threading.Tasks.Task When_every_canonical_file_is_present_should_report_nothing_missing()
     {
         // Arrange — omit nothing
         using var generated = new GeneratedDirectoryOmitting(omitted: null);
@@ -73,7 +73,7 @@ public class CanonicalBehaviourPresenceCanaryTests
 
         // Assert — a check that reports a complete directory as incomplete would make the other
         // two facts pass for the wrong reason
-        Assert.Empty(missing);
+        await Assert.That(missing).IsEmpty();
     }
 
     /// <summary>

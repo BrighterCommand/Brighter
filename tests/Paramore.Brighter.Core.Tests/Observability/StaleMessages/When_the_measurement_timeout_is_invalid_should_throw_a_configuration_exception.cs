@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -29,22 +29,19 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleMessageMonitorInvalidMeasurementTimeoutTests
 {
-    public static TheoryData<TimeSpan> InvalidMeasurementTimeouts => new()
+    public static List<TimeSpan> InvalidMeasurementTimeouts => new()
     {
-        TimeSpan.Zero,
-        TimeSpan.FromMinutes(1),
-        TimeSpan.FromMinutes(2)
+        TimeSpan.Zero,        TimeSpan.FromMinutes(1),        TimeSpan.FromMinutes(2)
     };
 
-    [Theory]
-    [MemberData(nameof(InvalidMeasurementTimeouts))]
-    public void When_the_measurement_timeout_is_invalid_should_throw_a_configuration_exception(TimeSpan measurementTimeout)
+    [Test]
+    [MethodDataSource(nameof(InvalidMeasurementTimeouts))]
+    public async Task When_the_measurement_timeout_is_invalid_should_throw_a_configuration_exception(TimeSpan measurementTimeout)
     {
         //Arrange
         var services = new ServiceCollection();
@@ -55,18 +52,18 @@ public class StaleMessageMonitorInvalidMeasurementTimeoutTests
         var registrationsBefore = services.ToList();
 
         //Act
-        var exception = Assert.Throws<ConfigurationException>(() =>
+        var exception = (await Assert.That(() =>
             builder.UseOutboxStaleMessageMonitor(
                 TimeSpan.FromMinutes(5),
                 options =>
                 {
                     options.MeasurementInterval = TimeSpan.FromMinutes(1);
                     options.MeasurementTimeout = measurementTimeout;
-                }));
+                })).ThrowsExactly<ConfigurationException>());
 
         //Assert
-        Assert.Contains(nameof(TimedOutboxStaleMessageMonitorOptions.MeasurementTimeout), exception.Message);
-        Assert.Contains(measurementTimeout.ToString(), exception.Message);
-        Assert.Equal(registrationsBefore, services);
+        await Assert.That(exception.Message).Contains(nameof(TimedOutboxStaleMessageMonitorOptions.MeasurementTimeout));
+        await Assert.That(exception.Message).Contains(measurementTimeout.ToString());
+        await Assert.That(services).IsEqualTo(registrationsBefore);
     }
 }

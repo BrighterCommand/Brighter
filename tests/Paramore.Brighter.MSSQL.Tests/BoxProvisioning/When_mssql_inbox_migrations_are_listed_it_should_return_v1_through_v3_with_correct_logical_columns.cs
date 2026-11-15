@@ -25,7 +25,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -42,8 +42,8 @@ public class MsSqlInboxMigrationsTests
 
     private static readonly string[] s_v3Added = ["CausationId"];
 
-    [Fact]
-    public void When_mssql_inbox_migrations_are_listed_it_should_return_v1_through_v3_with_correct_logical_columns()
+    [Test]
+    public async System.Threading.Tasks.Task When_mssql_inbox_migrations_are_listed_it_should_return_v1_through_v3_with_correct_logical_columns()
     {
         //Arrange
         var config = new RelationalDatabaseConfiguration(
@@ -55,30 +55,22 @@ public class MsSqlInboxMigrationsTests
         var migrations = new MsSqlInboxMigrationCatalog().All(config);
 
         //Assert
-        Assert.Equal(3, migrations.Count);
+        await Assert.That(migrations.Count).IsEqualTo(3);
         for (var i = 0; i < migrations.Count; i++)
         {
-            Assert.Equal(i + 1, migrations[i].Version.Value);
+            await Assert.That(migrations[i].Version.Value).IsEqualTo(i + 1);
         }
 
         for (var v = 1; v <= 3; v++)
         {
             var migration = migrations[v - 1];
             var expected = expectedPerVersion[v];
-            Assert.True(
-                expected.SetEquals(migration.LogicalColumns),
-                $"V{v} LogicalColumns mismatch — " +
-                $"expected: [{string.Join(", ", expected.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-                $"got: [{string.Join(", ", migration.LogicalColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+            await Assert.That(expected.SetEquals(migration.LogicalColumns)).IsTrue();
         }
 
-        Assert.Null(migrations[0].SourceReference);
-        Assert.False(
-            string.IsNullOrWhiteSpace(migrations[1].SourceReference),
-            "V2 must have a non-empty SourceReference (archaeology pointer for ContextKey addition)");
-        Assert.False(
-            string.IsNullOrWhiteSpace(migrations[2].SourceReference),
-            "V3 must have a non-empty SourceReference (issue pointer for CausationId addition)");
+        await Assert.That(migrations[0].SourceReference).IsNull();
+        await Assert.That(string.IsNullOrWhiteSpace(migrations[1].SourceReference)).IsFalse().Because("V2 must have a non-empty SourceReference (archaeology pointer for ContextKey addition)");
+        await Assert.That(string.IsNullOrWhiteSpace(migrations[2].SourceReference)).IsFalse().Because("V3 must have a non-empty SourceReference (issue pointer for CausationId addition)");
     }
 
     private static Dictionary<int, HashSet<string>> BuildExpectedColumnsByVersion()

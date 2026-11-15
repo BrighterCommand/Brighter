@@ -25,8 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 
 /// <summary>
@@ -34,12 +33,12 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 /// scale to zero and back. Once the last channel on a subscription is disposed its streaming client is
 /// stopped, so the reopened channel must get a working client, not the stopped one.
 /// </summary>
-[Trait("Category", "GcpPubSubStream")]
-[Collection("Stream")]
+[Property("Category", "GcpPubSubStream")]
+[NotInParallel("Stream")]
 public class GcpStreamReopenOnSameSubscriptionTests
 {
-    [Fact]
-    public void When_a_gcp_stream_channel_is_reopened_on_the_same_subscription_should_receive_messages()
+    [Test]
+    public async Task When_a_gcp_stream_channel_is_reopened_on_the_same_subscription_should_receive_messages()
     {
         var provider = new GcpStreamMessageGatewayProvider();
         var builder = new DefaultMessageBuilder();
@@ -67,7 +66,7 @@ public class GcpStreamReopenOnSameSubscriptionTests
             var received = reopenedChannel.Receive(TimeSpan.FromSeconds(20));
 
             // Assert
-            Assert.Equal(sent.Id, received.Id);
+            await Assert.That(received.Id).IsEqualTo(sent.Id);
             reopenedChannel.Acknowledge(received);
         }
         finally

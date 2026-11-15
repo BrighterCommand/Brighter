@@ -2,14 +2,14 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class TransientHandlerCapturedProviderTests
 {
-    [Fact]
-    public void When_a_transient_handler_captures_the_service_provider_should_resolve_after_create()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_transient_handler_captures_the_service_provider_should_resolve_after_create()
     {
         //arrange
         var collection = new ServiceCollection();
@@ -29,7 +29,7 @@ public class TransientHandlerCapturedProviderTests
             ((IAmAHandlerFactorySync)factory).Create(typeof(HandlerCapturingServiceProvider), lifetime)!;
 
         //assert
-        Assert.NotNull(handler.ResolveDependency());
+        await Assert.That(handler.ResolveDependency()).IsNotNull();
     }
 
     private sealed class TestCommand : Command

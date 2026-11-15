@@ -40,7 +40,6 @@ using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -48,7 +47,7 @@ public class SweeperRegisteredByUseOutboxSweeperTests
 {
     private const string RunningTime = "paramore.brighter.outbox_sweeper.sweep.running_time";
 
-    [Fact]
+    [Test]
     public async Task When_the_sweeper_is_registered_with_use_outbox_sweeper_should_report_its_hung_sweep()
     {
         //Arrange
@@ -86,15 +85,15 @@ public class SweeperRegisteredByUseOutboxSweeperTests
             var report = await provider.GetRequiredService<HealthCheckService>().CheckHealthAsync(CancellationToken.None);
 
             //Assert
-            Assert.True(reachedLock, "The sweep did not reach the lock");
+            await Assert.That(reachedLock).IsTrue().Because("The sweep did not reach the lock");
             var restart = report.Entries["brighter-outbox-sweeper-restart"];
-            Assert.Equal(HealthStatus.Degraded, restart.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, restart.Status);
-            Assert.DoesNotContain("no outbox sweeper is registered", restart.Description, StringComparison.OrdinalIgnoreCase);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), restart.Data[RemedyCheckConvention.RemedyKindKey]);
-            var conditions = Assert.IsType<string[]>(restart.Data[RemedyCheckConvention.ConditionsKey]);
-            Assert.Equal(new[] { "hung_sweep" }, conditions);
-            Assert.Equal([31.0], runningTimes);
+            await Assert.That(restart.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That(restart.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(restart.Description).DoesNotContain("no outbox sweeper is registered");
+            await Assert.That(restart.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+            var conditions = await Assert.That(restart.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>();
+            await Assert.That(conditions).IsEqualTo(new[] { "hung_sweep" });
+            await Assert.That(runningTimes).IsEqualTo([31.0]);
         }
         finally
         {

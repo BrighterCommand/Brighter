@@ -27,19 +27,18 @@ using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "AzureServiceBus")]
-[Collection("AzureServiceBus")]
+[Property("Category", "AzureServiceBus")]
+[NotInParallel("AzureServiceBus")]
 public class AzureServiceBusForwardingPurgeTests
 {
-    [Theory]
-    [InlineData(OnMissingChannel.Validate, false)]
-    [InlineData(OnMissingChannel.Validate, true)]
-    [InlineData(OnMissingChannel.Assume, false)]
-    [InlineData(OnMissingChannel.Assume, true)]
+    [Test]
+    [Arguments(OnMissingChannel.Validate, false)]
+    [Arguments(OnMissingChannel.Validate, true)]
+    [Arguments(OnMissingChannel.Assume, false)]
+    [Arguments(OnMissingChannel.Assume, true)]
     public async Task When_purging_an_externally_managed_forwarding_queue_should_reject_before_deleting(
         OnMissingChannel makeChannels, bool synchronous)
     {
@@ -75,17 +74,17 @@ public class AzureServiceBusForwardingPurgeTests
             var received = synchronous
                 ? syncChannel!.Receive(TimeSpan.FromSeconds(10))
                 : await asyncChannel!.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.Equal(original.MessageId, received.Id.Value);
+            await Assert.That(received.Id.Value).IsEqualTo(original.MessageId);
 
             // Act
             var exception = synchronous
-                ? Assert.Throws<NotSupportedException>(() => syncChannel!.Purge())
-                : await Assert.ThrowsAsync<NotSupportedException>(() => asyncChannel!.PurgeAsync());
+                ? (await Assert.That(() => syncChannel!.Purge()).ThrowsExactly<NotSupportedException>())
+                : await Assert.That(() => asyncChannel!.PurgeAsync()).ThrowsExactly<NotSupportedException>();
 
             // Assert
-            Assert.Contains("Create", exception.Message);
-            Assert.True((await administration.QueueExistsAsync(queueName)).Value);
-            Assert.EndsWith(queueName, (await administration.GetSubscriptionAsync(topicName, "a")).Value.ForwardTo);
+            await Assert.That(exception.Message).Contains("Create");
+            await Assert.That((await administration.QueueExistsAsync(queueName)).Value).IsTrue();
+            await Assert.That((await administration.GetSubscriptionAsync(topicName, "a")).Value.ForwardTo).EndsWith(queueName);
             if (synchronous)
                 syncChannel!.Acknowledge(received);
             else

@@ -26,21 +26,20 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CloudEvents;
 
 public class CloudEventsJsonStringRoundTripTests
 {
-    [Theory]
-    [InlineData("application/json", "null", false, false)]
-    [InlineData("application/json", "123", true, true)]
-    [InlineData("application/json", "quoted \"hello\"\nbackslash \\ café", false, true)]
-    [InlineData("application/json", "", true, false)]
-    [InlineData("application/vnd.example+json; charset=utf-8", "null", false, false)]
-    [InlineData("application/vnd.example+json; charset=utf-8", "123", true, true)]
-    [InlineData("application/vnd.example+json; charset=utf-8", "quoted \"hello\"\nbackslash \\ café", false, true)]
-    [InlineData("application/vnd.example+json; charset=utf-8", "", true, false)]
+    [Test]
+    [Arguments("application/json", "null", false, false)]
+    [Arguments("application/json", "123", true, true)]
+    [Arguments("application/json", "quoted \"hello\"\nbackslash \\ café", false, true)]
+    [Arguments("application/json", "", true, false)]
+    [Arguments("application/vnd.example+json; charset=utf-8", "null", false, false)]
+    [Arguments("application/vnd.example+json; charset=utf-8", "123", true, true)]
+    [Arguments("application/vnd.example+json; charset=utf-8", "quoted \"hello\"\nbackslash \\ café", false, true)]
+    [Arguments("application/vnd.example+json; charset=utf-8", "", true, false)]
     public async Task When_round_tripping_json_string_data_should_preserve_the_string_value(
         string contentType, string value, bool wrapAsync, bool unwrapAsync)
     {
@@ -64,10 +63,10 @@ public class CloudEventsJsonStringRoundTripTests
             : transformer.Unwrap(wrapped);
 
         //Assert
-        Assert.Equal(payload, unwrapped.Body.Value);
+        await Assert.That(unwrapped.Body.Value).IsEqualTo(payload);
         using var json = JsonDocument.Parse(unwrapped.Body.Memory);
-        Assert.Equal(JsonValueKind.String, json.RootElement.ValueKind);
-        Assert.Equal(value, json.RootElement.GetString());
-        Assert.Equal(new ContentType(contentType), unwrapped.Header.ContentType);
+        await Assert.That(json.RootElement.ValueKind).IsEqualTo(JsonValueKind.String);
+        await Assert.That(json.RootElement.GetString()).IsEqualTo(value);
+        await Assert.That(unwrapped.Header.ContentType).IsEqualTo(new ContentType(contentType));
     }
 }

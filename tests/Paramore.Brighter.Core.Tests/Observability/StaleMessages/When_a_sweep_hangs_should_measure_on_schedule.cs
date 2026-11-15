@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -33,7 +33,6 @@ using Microsoft.Extensions.Hosting;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -41,7 +40,7 @@ public class HungSweepTests
 {
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
 
-    [Fact]
+    [Test]
     public async Task When_a_sweep_hangs_should_measure_on_schedule()
     {
         //Arrange
@@ -51,16 +50,17 @@ public class HungSweepTests
         var enabled = await RunBesideAHungSweep(withTheFeature: true);
 
         //Assert
-        Assert.True(disabled.SweepHung);
-        Assert.True(enabled.SweepHung);
-        Assert.All(enabled.Calls, call => Assert.False(call.Synchronous));
-        Assert.Equal(
-            Enumerable.Range(1, 5).Select(minutes => (DateTimeOffset?)s_start.AddMinutes(minutes)),
-            enabled.Calls.Select(call => call.CalledAt));
-        Assert.Equal(disabled.LockCalls, enabled.LockCalls);
-        Assert.All(enabled.MeasuredInTime, Assert.True);
-        Assert.Null(disabled.Stopping);
-        Assert.Null(enabled.Stopping);
+        await Assert.That(disabled.SweepHung).IsTrue();
+        await Assert.That(enabled.SweepHung).IsTrue();
+        foreach (var call in enabled.Calls)
+{
+    await Assert.That(call.Synchronous).IsFalse();
+}
+        await Assert.That(enabled.Calls.Select(call => call.CalledAt)).IsEqualTo(Enumerable.Range(1, 5).Select(minutes => (DateTimeOffset?)s_start.AddMinutes(minutes)));
+        await Assert.That(enabled.LockCalls).IsEqualTo(disabled.LockCalls);
+        foreach (var item in enabled.MeasuredInTime) { await Assert.That(item).IsTrue(); }
+        await Assert.That(disabled.Stopping).IsNull();
+        await Assert.That(enabled.Stopping).IsNull();
     }
 
     private static async Task<HungSweepRun> RunBesideAHungSweep(bool withTheFeature)
@@ -125,7 +125,7 @@ public class HungSweepTests
             outbox.ReleaseOutstandingMessages();
         }
 
-        var stopping = await Record.ExceptionAsync(() => sweeper.StopAsync(default).WaitAsync(TimeSpan.FromSeconds(5)));
+        var stopping = await TestExceptionRecorder.CaptureAsync(() => sweeper.StopAsync(default).WaitAsync(TimeSpan.FromSeconds(5)));
         return new HungSweepRun(sweepHung, calls, lockCalls, measuredInTime, stopping);
     }
 

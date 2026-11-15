@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -28,14 +28,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleMessageMonitorHostedServiceRegistrationTests
 {
-    [Fact]
-    public void When_the_monitor_is_added_twice_should_register_one_hosted_service()
+    [Test]
+    public async Task When_the_monitor_is_added_twice_should_register_one_hosted_service()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -49,8 +48,8 @@ public class StaleMessageMonitorHostedServiceRegistrationTests
         builder.UseOutboxStaleMessageMonitor(TimeSpan.FromMinutes(5));
 
         //Assert
-        Assert.Single(services, descriptor =>
+        await Assert.That(System.Linq.Enumerable.Where(services, descriptor =>
             descriptor.ServiceType == typeof(IHostedService)
-            && descriptor.ImplementationType == typeof(TimedOutboxStaleMessageMonitor));
+            && descriptor.ImplementationType == typeof(TimedOutboxStaleMessageMonitor))).HasSingleItem();
     }
 }

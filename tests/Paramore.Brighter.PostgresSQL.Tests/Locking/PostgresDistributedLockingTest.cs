@@ -1,7 +1,8 @@
-﻿using Paramore.Brighter.Base.Test.Locking;
+using Paramore.Brighter.Base.Test.Locking;
 using Paramore.Brighter.Locking.PostgresSql;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Locking;
+[TUnit.Core.InheritsTests]
 
 public class PostgresDistributedLockingTest : RelationalDatabaseDistributedLockingAsyncTest
 {

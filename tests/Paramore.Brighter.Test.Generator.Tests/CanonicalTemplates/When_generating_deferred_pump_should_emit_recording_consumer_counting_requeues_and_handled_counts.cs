@@ -22,7 +22,6 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -119,7 +118,7 @@ public class WhenGeneratingDeferredPumpShouldEmitRecordingConsumerCountingRequeu
     ///   <item>Factory helpers CreateRecordingChannel / CreateRecordingChannelAsync exist</item>
     /// </list>
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_generating_deferred_pump_should_emit_recording_consumer_counting_requeues_and_handled_counts()
     {
         // Arrange
@@ -132,58 +131,56 @@ public class WhenGeneratingDeferredPumpShouldEmitRecordingConsumerCountingRequeu
 
         // Assert — sync decorator implements IAmAMessageConsumerSync
         var pump = await File.ReadAllTextAsync(PumpPath());
-        Assert.Contains(SYNC_DECORATOR_CLASS, pump);
-        Assert.Contains(SYNC_IMPLEMENTS, pump);
+        await Assert.That(pump).Contains(SYNC_DECORATOR_CLASS);
+        await Assert.That(pump).Contains(SYNC_IMPLEMENTS);
 
         // Assert — async decorator implements IAmAMessageConsumerAsync
-        Assert.Contains(ASYNC_DECORATOR_CLASS, pump);
-        Assert.Contains(ASYNC_IMPLEMENTS, pump);
+        await Assert.That(pump).Contains(ASYNC_DECORATOR_CLASS);
+        await Assert.That(pump).Contains(ASYNC_IMPLEMENTS);
 
         // Assert — sync decorator forwards every interface member (forwarding is not a counter —
         // C-10 forbids a mock standing in for the real transport)
-        Assert.Contains(SYNC_FORWARD_ACKNOWLEDGE, pump);
-        Assert.Contains(SYNC_FORWARD_REJECT, pump);
-        Assert.Contains(SYNC_FORWARD_PURGE, pump);
-        Assert.Contains(SYNC_FORWARD_RECEIVE, pump);
-        Assert.Contains(SYNC_FORWARD_NACK, pump);
-        Assert.Contains(SYNC_FORWARD_REQUEUE, pump);
-        Assert.Contains(SYNC_FORWARD_DISPOSE, pump);
+        await Assert.That(pump).Contains(SYNC_FORWARD_ACKNOWLEDGE);
+        await Assert.That(pump).Contains(SYNC_FORWARD_REJECT);
+        await Assert.That(pump).Contains(SYNC_FORWARD_PURGE);
+        await Assert.That(pump).Contains(SYNC_FORWARD_RECEIVE);
+        await Assert.That(pump).Contains(SYNC_FORWARD_NACK);
+        await Assert.That(pump).Contains(SYNC_FORWARD_REQUEUE);
+        await Assert.That(pump).Contains(SYNC_FORWARD_DISPOSE);
 
         // Assert — async decorator forwards every interface member
-        Assert.Contains(ASYNC_FORWARD_ACKNOWLEDGE, pump);
-        Assert.Contains(ASYNC_FORWARD_REJECT, pump);
-        Assert.Contains(ASYNC_FORWARD_PURGE, pump);
-        Assert.Contains(ASYNC_FORWARD_RECEIVE, pump);
-        Assert.Contains(ASYNC_FORWARD_NACK, pump);
-        Assert.Contains(ASYNC_FORWARD_REQUEUE, pump);
-        Assert.Contains(ASYNC_FORWARD_DISPOSE, pump);
+        await Assert.That(pump).Contains(ASYNC_FORWARD_ACKNOWLEDGE);
+        await Assert.That(pump).Contains(ASYNC_FORWARD_REJECT);
+        await Assert.That(pump).Contains(ASYNC_FORWARD_PURGE);
+        await Assert.That(pump).Contains(ASYNC_FORWARD_RECEIVE);
+        await Assert.That(pump).Contains(ASYNC_FORWARD_NACK);
+        await Assert.That(pump).Contains(ASYNC_FORWARD_REQUEUE);
+        await Assert.That(pump).Contains(ASYNC_FORWARD_DISPOSE);
 
         // Assert — requeue count: static field exists, GetRequeueCount read entry point exists
-        Assert.Contains(REQUEUE_COUNT_FIELD, pump);
-        Assert.Contains(GET_REQUEUE_COUNT, pump);
+        await Assert.That(pump).Contains(REQUEUE_COUNT_FIELD);
+        await Assert.That(pump).Contains(GET_REQUEUE_COUNT);
 
         // Assert — HandledCount log: static field exists, GetHandledCountLog read entry point exists
-        Assert.Contains(HANDLED_COUNT_LOG_FIELD, pump);
-        Assert.Contains(GET_HANDLED_COUNT_LOG, pump);
+        await Assert.That(pump).Contains(HANDLED_COUNT_LOG_FIELD);
+        await Assert.That(pump).Contains(GET_HANDLED_COUNT_LOG);
 
         // Assert — HandledCount is accessed from messages returned by Receive (value copy before pump sees it)
         var syncReceiveIndex = pump.IndexOf(SYNC_FORWARD_RECEIVE, StringComparison.Ordinal);
-        Assert.True(syncReceiveIndex >= 0, $"Expected '{SYNC_FORWARD_RECEIVE}' in the pump");
+        await Assert.That(syncReceiveIndex >= 0).IsTrue().Because($"Expected '{SYNC_FORWARD_RECEIVE}' in the pump");
         var handledCountAfterSyncReceive = pump.IndexOf(
             HANDLED_COUNT_PROPERTY,
             syncReceiveIndex,
             StringComparison.Ordinal);
-        Assert.True(handledCountAfterSyncReceive > syncReceiveIndex,
-            $"Expected '{HANDLED_COUNT_PROPERTY}' to be read after '{SYNC_FORWARD_RECEIVE}' " +
-            $"(HandledCount must be copied as an integer from each received message before the pump sees it)");
+        await Assert.That(handledCountAfterSyncReceive > syncReceiveIndex).IsTrue();
 
         // Assert — ResetDispatchCount clears requeue count and handled count log
-        Assert.Contains(RESET_CLEARS_REQUEUE, pump);
-        Assert.Contains(RESET_CLEARS_HANDLED_COUNT, pump);
+        await Assert.That(pump).Contains(RESET_CLEARS_REQUEUE);
+        await Assert.That(pump).Contains(RESET_CLEARS_HANDLED_COUNT);
 
         // Assert — factory helpers build Channel/ChannelAsync over the recording decorator
-        Assert.Contains(CREATE_RECORDING_CHANNEL, pump);
-        Assert.Contains(CREATE_RECORDING_CHANNEL_ASYNC, pump);
+        await Assert.That(pump).Contains(CREATE_RECORDING_CHANNEL);
+        await Assert.That(pump).Contains(CREATE_RECORDING_CHANNEL_ASYNC);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

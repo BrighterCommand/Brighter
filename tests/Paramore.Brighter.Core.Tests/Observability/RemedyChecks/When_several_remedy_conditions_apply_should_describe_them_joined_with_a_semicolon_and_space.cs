@@ -25,14 +25,13 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.RemedyChecks;
 
 public class RemedyCheckConventionDescriptionTests
 {
-    [Fact]
-    public void When_several_remedy_conditions_apply_should_describe_them_joined_with_a_semicolon_and_space()
+    [Test]
+    public async Task When_several_remedy_conditions_apply_should_describe_them_joined_with_a_semicolon_and_space()
     {
         //Arrange
         var values = new Dictionary<string, object>();
@@ -46,6 +45,6 @@ public class RemedyCheckConventionDescriptionTests
         var description = RemedyCheckConvention.Describe(conditions);
 
         //Assert
-        Assert.Equal("the first condition; the second condition", description);
+        await Assert.That(description).IsEqualTo("the first condition; the second condition");
     }
 }

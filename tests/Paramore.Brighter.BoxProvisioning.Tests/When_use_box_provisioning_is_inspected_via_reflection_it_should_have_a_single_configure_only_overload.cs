@@ -24,7 +24,7 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -34,8 +34,8 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// </summary>
 public class UseBoxProvisioningPublicApiTests
 {
-    [Fact]
-    public void When_use_box_provisioning_is_inspected_it_should_have_exactly_one_overload()
+    [Test]
+    public async System.Threading.Tasks.Task When_use_box_provisioning_is_inspected_it_should_have_exactly_one_overload()
     {
         //Arrange + Act
         var overloads = typeof(BrighterBuilderBoxProvisioningExtensions)
@@ -44,11 +44,11 @@ public class UseBoxProvisioningPublicApiTests
             .ToArray();
 
         //Assert
-        Assert.Single(overloads);
+        await Assert.That(overloads).HasSingleItem();
     }
 
-    [Fact]
-    public void When_use_box_provisioning_parameters_are_inspected_they_should_be_builder_and_configure_only()
+    [Test]
+    public async Task When_use_box_provisioning_parameters_are_inspected_they_should_be_builder_and_configure_only()
     {
         //Arrange + Act
         var method = typeof(BrighterBuilderBoxProvisioningExtensions)
@@ -59,13 +59,13 @@ public class UseBoxProvisioningPublicApiTests
             .ToArray();
 
         //Assert
-        Assert.Equal(
+        await Assert.That(parameterTypes).IsEquivalentTo(
             new[] { typeof(IBrighterBuilder), typeof(Action<BoxProvisioningOptions>) },
-            parameterTypes);
+            TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
-    [Fact]
-    public void When_use_box_provisioning_parameters_are_inspected_none_should_be_named_migration_lock_timeout()
+    [Test]
+    public async Task When_use_box_provisioning_parameters_are_inspected_none_should_be_named_migration_lock_timeout()
     {
         //Arrange + Act
         var method = typeof(BrighterBuilderBoxProvisioningExtensions)
@@ -76,6 +76,6 @@ public class UseBoxProvisioningPublicApiTests
             .ToArray();
 
         //Assert
-        Assert.DoesNotContain("migrationLockTimeout", parameterNames);
+        await Assert.That(parameterNames).DoesNotContain("migrationLockTimeout");
     }
 }

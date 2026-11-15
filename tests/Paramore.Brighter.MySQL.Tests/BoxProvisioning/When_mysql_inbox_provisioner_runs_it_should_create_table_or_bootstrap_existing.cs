@@ -3,11 +3,10 @@ using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.Inbox.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class InboxProvisionerTests : IAsyncLifetime
+public class InboxProvisionerTests
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _freshTableName;
@@ -19,7 +18,7 @@ public class InboxProvisionerTests : IAsyncLifetime
         _existingTableName = $"test_inbox_{Guid.NewGuid():N}";
     }
 
-    [Fact]
+    [Test]
     public async Task When_inbox_provisioner_runs_on_fresh_database_it_should_create_inbox_table()
     {
         // Arrange
@@ -41,12 +40,12 @@ public class InboxProvisionerTests : IAsyncLifetime
         using var connection = new MySqlConnection(_connectionString);
         await connection.OpenAsync();
 
-        Assert.True(await TableExistsAsync(connection, _freshTableName));
+        await Assert.That(await TableExistsAsync(connection, _freshTableName)).IsTrue();
 
-        Assert.Equal(1, await CountHistoryRowsAtLatestVersionAsync(connection, _freshTableName));
+        await Assert.That(await CountHistoryRowsAtLatestVersionAsync(connection, _freshTableName)).IsEqualTo(1);
     }
 
-    [Fact]
+    [Test]
     public async Task When_inbox_provisioner_runs_against_existing_table_without_history_it_should_bootstrap_existing()
     {
         // Arrange
@@ -76,7 +75,7 @@ public class InboxProvisionerTests : IAsyncLifetime
         using var connection = new MySqlConnection(_connectionString);
         await connection.OpenAsync();
 
-        Assert.Equal(1, await CountHistoryRowsAtLatestVersionAsync(connection, _existingTableName));
+        await Assert.That(await CountHistoryRowsAtLatestVersionAsync(connection, _existingTableName)).IsEqualTo(1);
     }
 
     private static async Task<bool> TableExistsAsync(MySqlConnection connection, string tableName)
@@ -100,8 +99,10 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion";
         return (long)(await historyCheck.ExecuteScalarAsync())!;
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

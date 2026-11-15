@@ -4,30 +4,11 @@
         <TargetFrameworks>$(BrighterTestTargetFrameworks)</TargetFrameworks>
         <ImplicitUsings>enable</ImplicitUsings>
         <IsPackable>false</IsPackable>
+        <OutputType>Exe</OutputType>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Azure.Identity" />
-        <PackageReference Include="GitHubActionsTestLogger">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-        <PackageReference Include="Microsoft.NET.Test.Sdk" />
-        <PackageReference Include="xunit" />
-        <PackageReference Include="xunit.runner.visualstudio">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-        <PackageReference Include="NUnit" />
-        <PackageReference Include="NUnit3TestAdapter" />
-        <PackageReference Include="NUnit.Analyzers">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-        <PackageReference Include="coverlet.collector">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
     </ItemGroup>
 
   <ItemGroup>
@@ -36,5 +17,5 @@
     <ProjectReference Include="..\..\src\Paramore.Brighter.Transformers.Azure\Paramore.Brighter.Transformers.Azure.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessageScheduler.Azure\Paramore.Brighter.MessageScheduler.Azure.csproj" />
   </ItemGroup>
-
+  <ItemGroup><PackageReference Include="TUnit" /></ItemGroup>
 </Project>

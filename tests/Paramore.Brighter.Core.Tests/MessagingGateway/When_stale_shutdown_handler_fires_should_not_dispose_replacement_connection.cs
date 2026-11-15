@@ -2,10 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway;
-
 /// <summary>
 /// Regression test for issue #4024 — connection pool race condition.
 ///
@@ -21,25 +19,21 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway;
 /// </summary>
 public class ConnectionPoolReferenceEqualityGuardTests
 {
-    [Fact]
-    public void When_Stale_Handler_Fires_Should_Not_Dispose_Replacement_Connection()
+    [Test]
+    public async Task When_Stale_Handler_Fires_Should_Not_Dispose_Replacement_Connection()
     {
         // Arrange — simulate the pool with two connections sharing the same key
         var pool = new Dictionary<string, FakePooledConnection>();
         const string connectionId = "guest.guest.localhost.5672./";
-
         var oldConnection = new FakeConnection("old");
         var newConnection = new FakeConnection("new");
-
         // First connection is added, then replaced
         pool[connectionId] = new FakePooledConnection(oldConnection);
         pool[connectionId] = new FakePooledConnection(newConnection);
-
         // Act — simulate the old connection's shutdown handler firing
         // This is the exact pattern from RmqMessageGatewayConnectionPool.ShutdownHandler
         object sender = oldConnection; // the shutdown event sender is the OLD connection
-        if (pool.TryGetValue(connectionId, out var pooled)
-            && ReferenceEquals(pooled.Connection, sender))
+        if (pool.TryGetValue(connectionId, out var pooled) && ReferenceEquals(pooled.Connection, sender))
         {
             // This block should NOT execute because sender is the old connection
             pooled.Connection.SimulateDispose();
@@ -47,57 +41,49 @@ public class ConnectionPoolReferenceEqualityGuardTests
         }
 
         // Assert — the new connection should still be in the pool and not disposed
-        Assert.True(pool.ContainsKey(connectionId), "New connection should still be in the pool");
-        Assert.False(newConnection.IsDisposed, "New connection should not have been disposed by stale handler");
-        Assert.False(oldConnection.IsDisposed, "Old connection should not have been disposed (guard prevented it)");
+        await Assert.That(pool.ContainsKey(connectionId)).IsTrue();
+        await Assert.That(newConnection.IsDisposed).IsFalse();
+        await Assert.That(oldConnection.IsDisposed).IsFalse();
     }
 
-    [Fact]
-    public void When_Current_Connection_Shuts_Down_Should_Remove_From_Pool()
+    [Test]
+    public async Task When_Current_Connection_Shuts_Down_Should_Remove_From_Pool()
     {
         // Arrange — the handler fires for the connection that IS currently in the pool
         var pool = new Dictionary<string, FakePooledConnection>();
         const string connectionId = "guest.guest.localhost.5672./";
-
         var currentConnection = new FakeConnection("current");
         pool[connectionId] = new FakePooledConnection(currentConnection);
-
         // Act — shutdown handler fires for the current connection
         object sender = currentConnection;
-        if (pool.TryGetValue(connectionId, out var pooled)
-            && ReferenceEquals(pooled.Connection, sender))
+        if (pool.TryGetValue(connectionId, out var pooled) && ReferenceEquals(pooled.Connection, sender))
         {
             pooled.Connection.SimulateDispose();
             pool.Remove(connectionId);
         }
 
         // Assert — the connection should be removed and disposed
-        Assert.False(pool.ContainsKey(connectionId), "Connection should be removed from pool");
-        Assert.True(currentConnection.IsDisposed, "Current connection should be disposed");
+        await Assert.That(pool.ContainsKey(connectionId)).IsFalse();
+        await Assert.That(currentConnection.IsDisposed).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_Stale_Async_Handler_Fires_Should_Not_Dispose_Replacement_Connection()
     {
         // Arrange — same pattern but with SemaphoreSlim (matching the async pool)
         var pool = new Dictionary<string, FakePooledConnection>();
         var semaphore = new SemaphoreSlim(1, 1);
         const string connectionId = "guest.guest.localhost.5672./";
-
         var oldConnection = new FakeConnection("old");
         var newConnection = new FakeConnection("new");
-
         pool[connectionId] = new FakePooledConnection(oldConnection);
         pool[connectionId] = new FakePooledConnection(newConnection);
-
         // Act — simulate the async shutdown handler
         object sender = oldConnection;
-
         await semaphore.WaitAsync(CancellationToken.None);
         try
         {
-            if (pool.TryGetValue(connectionId, out var pooled)
-                && ReferenceEquals(pooled.Connection, sender))
+            if (pool.TryGetValue(connectionId, out var pooled) && ReferenceEquals(pooled.Connection, sender))
             {
                 pooled.Connection.SimulateDispose();
                 pool.Remove(connectionId);
@@ -109,8 +95,8 @@ public class ConnectionPoolReferenceEqualityGuardTests
         }
 
         // Assert
-        Assert.True(pool.ContainsKey(connectionId));
-        Assert.False(newConnection.IsDisposed);
+        await Assert.That(pool.ContainsKey(connectionId)).IsTrue();
+        await Assert.That(newConnection.IsDisposed).IsFalse();
     }
 
     private sealed class FakeConnection(string name)
@@ -119,7 +105,6 @@ public class ConnectionPoolReferenceEqualityGuardTests
         public bool IsDisposed { get; private set; }
 
         public void SimulateDispose() => IsDisposed = true;
-
         public override string ToString() => $"FakeConnection({Name})";
     }
 

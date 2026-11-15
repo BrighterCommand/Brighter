@@ -26,7 +26,6 @@ using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.Outbox.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -35,10 +34,11 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// runner still creates and writes the history table in <c>public</c>, because it schema-qualifies its history SQL.
 /// The test drops the shared public history table, so it must not run in parallel with other BoxProvisioning tests.
 /// </summary>
-public class PostgreSqlHistoryTableNonPublicSchemaTests : IAsyncLifetime
+public class PostgreSqlHistoryTableNonPublicSchemaTests
 {
     private const string CollidingSchema = "stage_for_history_clash_test";
-    private readonly string _setupConnectionString = PostgreSqlSettings.TestsBrighterConnectionString;
+    private readonly string _databaseName = $"brighter_history_clash_{Guid.NewGuid():N}";
+    private readonly string _setupConnectionString;
     private readonly string _runnerConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
     private readonly PostgreSqlOutboxProvisioner _provisioner;
@@ -56,35 +56,28 @@ public class PostgreSqlHistoryTableNonPublicSchemaTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_history_table_exists_in_a_non_public_schema_runner_should_still_create_it_in_public()
     {
         //Arrange
-        new PostgresSqlTestHelper().SetupDatabase();
-        await DropPublicHistoryTable();
-        await DropCollidingArtefacts();
+        await CreateIsolatedDatabase();
         await CreateCollidingSchemaAndHistoryTable();
 
         //Act
         var act = async () => await _provisioner.ProvisionAsync();
-        var ex = await Record.ExceptionAsync(act);
+        var ex = await TestExceptionRecorder.CaptureAsync(act);
 
         //Assert
-        Assert.Null(ex);
-        Assert.True(await PublicHistoryTableExists(), @"""public"".""__BrighterMigrationHistory"" must be created");
-        Assert.Equal(1L, await GetPublicHistoryRowCountForBox());
-        Assert.Equal(0L, await GetCollidingHistoryRowCount());
+        await Assert.That(ex).IsNull();
+        await Assert.That(await PublicHistoryTableExists()).IsTrue().Because(@"""public"".""__BrighterMigrationHistory"" must be created");
+        await Assert.That(await GetPublicHistoryRowCountForBox()).IsEqualTo(1L);
+        await Assert.That(await GetCollidingHistoryRowCount()).IsEqualTo(0L);
     }
 
-    private Task DropPublicHistoryTable() =>
-        ExecuteNonQuery(_setupConnectionString,
-            @"DROP TABLE IF EXISTS ""public"".""__BrighterMigrationHistory""");
-
-    private async Task DropCollidingArtefacts()
-    {
-        await ExecuteNonQuery(_setupConnectionString,
-            $@"DROP SCHEMA IF EXISTS ""{CollidingSchema}"" CASCADE");
-    }
+    private Task CreateIsolatedDatabase() =>
+        ExecuteNonQuery(
+            PostgreSqlSettings.TestsMasterConnectionString,
+            $@"CREATE DATABASE ""{_databaseName}""");
 
     private async Task CreateCollidingSchemaAndHistoryTable()
     {
@@ -136,14 +129,19 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = 'public'";
         await command.ExecuteNonQueryAsync();
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {
         try
         {
-            await ExecuteNonQuery(_setupConnectionString, $@"DROP TABLE IF EXISTS ""public"".""{_tableName}""");
-            await DropCollidingArtefacts();
+            await ExecuteNonQuery(
+                PostgreSqlSettings.TestsMasterConnectionString,
+                $@"DROP DATABASE IF EXISTS ""{_databaseName}"" WITH (FORCE)");
         }
         catch
         {

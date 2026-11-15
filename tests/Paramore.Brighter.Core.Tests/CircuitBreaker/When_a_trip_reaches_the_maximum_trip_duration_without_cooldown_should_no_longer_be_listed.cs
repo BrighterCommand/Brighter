@@ -1,14 +1,13 @@
 using System;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.CircuitBreaker;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker;
 
 public class InMemoryTripExpiryWithoutCooldownTests
 {
-    [Fact]
-    public void When_a_trip_reaches_the_maximum_trip_duration_without_cooldown_should_no_longer_be_listed()
+    [Test]
+    public async Task When_a_trip_reaches_the_maximum_trip_duration_without_cooldown_should_no_longer_be_listed()
     {
         // Arrange
         var orders = new RoutingKey("orders");
@@ -20,12 +19,12 @@ public class InMemoryTripExpiryWithoutCooldownTests
 
         // Act & Assert
         clock.Advance(TimeSpan.FromMinutes(5) - TimeSpan.FromMilliseconds(1));
-        Assert.Contains(orders, breaker.TrippedTopics);
+        await Assert.That(breaker.TrippedTopics).Contains(orders);
 
         clock.Advance(TimeSpan.FromMilliseconds(1));
-        Assert.DoesNotContain(orders, breaker.TrippedTopics);
+        await Assert.That(breaker.TrippedTopics).DoesNotContain(orders);
 
         clock.Advance(TimeSpan.FromMinutes(5));
-        Assert.Empty(breaker.TrippedTopics);
+        await Assert.That(breaker.TrippedTopics).IsEmpty();
     }
 }

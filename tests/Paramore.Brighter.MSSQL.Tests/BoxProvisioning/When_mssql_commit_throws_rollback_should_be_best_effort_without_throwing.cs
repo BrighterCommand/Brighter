@@ -31,7 +31,6 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -40,12 +39,12 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 /// <c>RollbackAsync</c>, which logs a Warning instead of throwing, and the caller sees the original
 /// commit exception (ADR 0058 §B.3).
 /// </summary>
-public class MsSqlCommitThrowsBestEffortRollbackTests : IAsyncLifetime
+public class MsSqlCommitThrowsBestEffortRollbackTests
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_mssql_commit_throws_rollback_should_be_best_effort_without_throwing()
     {
         //Arrange
@@ -63,24 +62,22 @@ public class MsSqlCommitThrowsBestEffortRollbackTests : IAsyncLifetime
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act
-        var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() => commitThrowingRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, freshHint));
+        var thrown = await Assert.That(() => commitThrowingRunner.MigrateAsync(
+            _tableName, schemaName: null, BoxType.Outbox, freshHint)).ThrowsExactly<InvalidOperationException>();
 
         //Assert
-        Assert.Same(commitFailure, thrown);
+        await Assert.That(thrown).IsSameReferenceAs(commitFailure);
 
         var spy = commitThrowingRunner.LastUnitOfWork;
-        Assert.NotNull(spy);
-        Assert.True(spy!.RollbackInvoked,
-            "The runner's catch-path MUST call RollbackAsync after CommitAsync throws (per ADR §B.3 best-effort unwind).");
+        await Assert.That(spy).IsNotNull();
+        await Assert.That(spy!.RollbackInvoked).IsTrue().Because("The runner's catch-path MUST call RollbackAsync after CommitAsync throws (per ADR §B.3 best-effort unwind).");
 
-        Assert.Contains(capturingLogger.Entries, entry =>
+        await Assert.That(System.Linq.Enumerable.Any(capturingLogger.Entries, entry =>
             entry.Level == LogLevel.Warning
             && entry.Exception is InvalidOperationException
-            && !ReferenceEquals(entry.Exception, commitFailure));
+            && !ReferenceEquals(entry.Exception, commitFailure))).IsTrue();
 
-        Assert.True(TableExists(),
-            "The spy must commit the inner transaction before throwing — otherwise the SqlTransaction is not in the finalised state and the contract being tested is not actually exercised.");
+        await Assert.That(TableExists()).IsTrue().Because("The spy must commit the inner transaction before throwing — otherwise the SqlTransaction is not in the finalised state and the contract being tested is not actually exercised.");
     }
 
     private bool TableExists()
@@ -94,7 +91,11 @@ public class MsSqlCommitThrowsBestEffortRollbackTests : IAsyncLifetime
         return (int)command.ExecuteScalar()! > 0;
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

@@ -19,22 +19,18 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class ValidatePipelinesWithoutDescribeTests
 {
-    [Fact]
+    [Test]
     public async Task When_validate_pipelines_called_without_describe_should_build_and_start()
     {
         // Arrange — register ValidatePipelines but NOT DescribePipelines
@@ -44,16 +40,12 @@ public class ValidatePipelinesWithoutDescribeTests
         services.AddSingleton(subscriberRegistry);
         var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services);
         var builder = new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
-
         builder.ValidatePipelines();
-
         // Act — building the service provider and resolving the hosted service should not throw
         var provider = services.BuildServiceProvider();
         var hostedServices = provider.GetServices<IHostedService>();
         var validationService = hostedServices.FirstOrDefault(s => s.GetType().Name == "BrighterValidationHostedService");
-
-        Assert.NotNull(validationService);
-
+        await Assert.That(validationService).IsNotNull();
         // StartAsync should complete without throwing (no diagnostic writer, no errors)
         await validationService.StartAsync(CancellationToken.None);
     }

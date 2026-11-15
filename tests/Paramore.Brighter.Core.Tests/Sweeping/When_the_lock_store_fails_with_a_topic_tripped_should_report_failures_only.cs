@@ -41,7 +41,6 @@ using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -50,7 +49,7 @@ public class FailingLockStoreWithTrippedTopicTests
     private const string InvestigateCheck = "brighter-outbox-sweeper-investigate";
     private const string TrippedTopicsGauge = "paramore.brighter.outbox_sweeper.tripped_topics";
 
-    [Fact]
+    [Test]
     public async Task When_the_lock_store_fails_with_a_topic_tripped_should_report_failures_only()
     {
         //Arrange
@@ -87,16 +86,16 @@ public class FailingLockStoreWithTrippedTopicTests
                 .Entries[InvestigateCheck];
 
             //Assert
-            Assert.True(firstFailed && secondFailed && thirdFailed, "The sweeps did not all fail");
-            Assert.False(snapshot.IsActive);
-            Assert.Equal(3, snapshot.ConsecutiveFailedSweeps);
-            Assert.Equal(HealthStatus.Degraded, report.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, report.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), report.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Equal(new[] { "consecutive_failed_sweeps" }, Assert.IsType<string[]>(report.Data[RemedyCheckConvention.ConditionsKey]));
-            Assert.Contains("3", report.Description);
-            Assert.DoesNotContain("orders", report.Description);
-            Assert.Equal([0L], trippedTopics.Values);
+            await Assert.That(firstFailed && secondFailed && thirdFailed).IsTrue().Because("The sweeps did not all fail");
+            await Assert.That(snapshot.IsActive).IsFalse();
+            await Assert.That(snapshot.ConsecutiveFailedSweeps).IsEqualTo(3);
+            await Assert.That(report.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That(report.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(report.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+            await Assert.That((await Assert.That(report.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "consecutive_failed_sweeps" });
+            await Assert.That(report.Description).Contains("3");
+            await Assert.That(report.Description).DoesNotContain("orders");
+            await Assert.That(trippedTopics.Values).IsEqualTo([0L]);
         }
         finally
         {

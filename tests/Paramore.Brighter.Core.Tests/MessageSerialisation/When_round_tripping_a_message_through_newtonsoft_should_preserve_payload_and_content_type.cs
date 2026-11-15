@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia <irakli.gabisonia94@gmail.com>
@@ -28,18 +28,17 @@ THE SOFTWARE. */
 using System.Collections;
 using System.Net.Mime;
 using Newtonsoft.Json;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
 public class MessageNewtonsoftPayloadRoundTripTests
 {
-    [Theory]
-    [InlineData(CharacterEncoding.UTF8)]
-    [InlineData(CharacterEncoding.ASCII)]
-    [InlineData(CharacterEncoding.Base64)]
-    [InlineData(CharacterEncoding.Raw)]
-    public void When_round_tripping_a_message_through_newtonsoft_should_preserve_payload_and_content_type(CharacterEncoding encoding)
+    [Test]
+    [Arguments(CharacterEncoding.UTF8)]
+    [Arguments(CharacterEncoding.ASCII)]
+    [Arguments(CharacterEncoding.Base64)]
+    [Arguments(CharacterEncoding.Raw)]
+    public async Task When_round_tripping_a_message_through_newtonsoft_should_preserve_payload_and_content_type(CharacterEncoding encoding)
     {
         // Arrange
         byte[] payload = [0, 1, 65, 127, 128, 255];
@@ -56,29 +55,29 @@ public class MessageNewtonsoftPayloadRoundTripTests
         Message? roundTripped = JsonConvert.DeserializeObject<Message>(json);
 
         // Assert
-        Assert.NotNull(roundTripped);
-        Assert.Equal(payload, roundTripped.Body.Memory.ToArray());
-        Assert.Equal(encoding, roundTripped.Body.CharacterEncoding);
-        Assert.Equal(body.Value, roundTripped.Body.Value);
-        Assert.Equal(header.MessageId, roundTripped.Header.MessageId);
-        Assert.Equal(header.Topic, roundTripped.Header.Topic);
-        AssertContentType(header.ContentType, roundTripped.Header.ContentType);
-        Assert.NotNull(roundTripped.Body.ContentType);
-        AssertContentType(body.ContentType!, roundTripped.Body.ContentType);
-        Assert.Equal("orders", roundTripped.Header.ContentType.Parameters["profile"]);
-        Assert.Equal("orders", roundTripped.Body.ContentType.Parameters["profile"]);
+        await Assert.That(roundTripped).IsNotNull();
+        await Assert.That(roundTripped.Body.Memory.ToArray()).IsEqualTo(payload);
+        await Assert.That(roundTripped.Body.CharacterEncoding).IsEqualTo(encoding);
+        await Assert.That(roundTripped.Body.Value).IsEqualTo(body.Value);
+        await Assert.That(roundTripped.Header.MessageId).IsEqualTo(header.MessageId);
+        await Assert.That(roundTripped.Header.Topic).IsEqualTo(header.Topic);
+        await AssertContentType(header.ContentType, roundTripped.Header.ContentType);
+        await Assert.That(roundTripped.Body.ContentType).IsNotNull();
+        await AssertContentType(body.ContentType!, roundTripped.Body.ContentType);
+        await Assert.That(roundTripped.Header.ContentType.Parameters["profile"]).IsEqualTo("orders");
+        await Assert.That(roundTripped.Body.ContentType.Parameters["profile"]).IsEqualTo("orders");
     }
 
-    private static void AssertContentType(ContentType expected, ContentType actual)
+    private static async Task AssertContentType(ContentType expected, ContentType actual)
     {
-        Assert.Equal(expected.MediaType, actual.MediaType);
-        Assert.Equal(expected.CharSet, actual.CharSet);
-        Assert.Equal(expected.Boundary, actual.Boundary);
-        Assert.Equal(expected.Name, actual.Name);
-        Assert.Equal(expected.Parameters.Count, actual.Parameters.Count);
+        await Assert.That(actual.MediaType).IsEqualTo(expected.MediaType);
+        await Assert.That(actual.CharSet).IsEqualTo(expected.CharSet);
+        await Assert.That(actual.Boundary).IsEqualTo(expected.Boundary);
+        await Assert.That(actual.Name).IsEqualTo(expected.Name);
+        await Assert.That(actual.Parameters.Count).IsEqualTo(expected.Parameters.Count);
         foreach (DictionaryEntry parameter in expected.Parameters)
         {
-            Assert.Equal(parameter.Value, actual.Parameters[(string)parameter.Key]);
+            await Assert.That(actual.Parameters[(string)parameter.Key]).IsEqualTo(parameter.Value);
         }
     }
 }

@@ -1,9 +1,8 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post;
 
@@ -17,7 +16,7 @@ public class OutstandingCountIntervalTests
     private static readonly TimeSpan s_interval = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan s_deadline = TimeSpan.FromSeconds(10);
 
-    [Fact]
+    [Test]
     public async Task When_posts_come_within_the_interval_should_queue_no_check_until_it_has_passed()
     {
         //Arrange
@@ -27,7 +26,7 @@ public class OutstandingCountIntervalTests
 
         timeProvider.Advance(TimeSpan.FromSeconds(2));
         commandProcessor.Post(new MyCommand { Value = "Queue the first check" });
-        Assert.True(await outbox.WaitForOutstandingCountCallsAsync(1, s_deadline), "The first check never ran");
+        await Assert.That(await outbox.WaitForOutstandingCountCallsAsync(1, s_deadline)).IsTrue().Because("The first check never ran");
 
         //Act
         timeProvider.Advance(TimeSpan.FromMilliseconds(900));
@@ -38,8 +37,8 @@ public class OutstandingCountIntervalTests
         var secondCheckRan = await PostUntilTheSecondCheckRunsAsync(commandProcessor, outbox);
 
         //Assert
-        Assert.Equal(1, checksWithinTheInterval);
-        Assert.True(secondCheckRan, "No second check ran once the interval had passed");
+        await Assert.That(checksWithinTheInterval).IsEqualTo(1);
+        await Assert.That(secondCheckRan).IsTrue().Because("No second check ran once the interval had passed");
     }
 
     //These helpers post more than once, so a post that comes while the first check is still finishing does not decide

@@ -24,8 +24,7 @@ THE SOFTWARE. */
 #nullable enable
 
 using System;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
 /// <summary>
@@ -36,15 +35,15 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// explicitly published <c>googclient_deliveryattempt</c> attribute (5.5c(ii) measurement), so this
 /// publishes it explicitly rather than relying on delivery to inject one.
 /// </summary>
-[Trait("Category", "GcpPubSubPull")]
-[Collection("Pull")]
-[Trait("Requires", "PubSubEmulator")]
+[Property("Category", "GcpPubSubPull")]
+[NotInParallel("Pull")]
+[Property("Requires", "PubSubEmulator")]
 public class GcpPullDeliveryAttemptAttributeTests
 {
     private const string DeliveryAttemptAttrKey = "googclient_deliveryattempt";
 
-    [Fact]
-    public void When_a_gcp_pull_message_carries_delivery_attempt_attribute_should_not_copy_it_into_bag()
+    [Test]
+    public async Task When_a_gcp_pull_message_carries_delivery_attempt_attribute_should_not_copy_it_into_bag()
     {
         var provider = new GcpPullMessageGatewayProvider();
         var builder = new DefaultMessageBuilder();
@@ -71,11 +70,10 @@ public class GcpPullDeliveryAttemptAttributeTests
             // Act
             producer.Send(message);
             var received = channel.Receive(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             // Assert
-            Assert.False(received.Header.Bag.ContainsKey(DeliveryAttemptAttrKey),
-                "Header.Bag must not admit googclient_deliveryattempt");
+            await Assert.That(received.Header.Bag.ContainsKey(DeliveryAttemptAttrKey)).IsFalse().Because("Header.Bag must not admit googclient_deliveryattempt");
         }
         finally
         {

@@ -1,15 +1,14 @@
-﻿using System;
+using System;
 using System.Linq;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Producer;
 
 public class InMemoryMessageProducerTests
 {
-    [Fact]
-    public void When_adding_messages_to_the_producer()
+    [Test]
+    public async Task When_adding_messages_to_the_producer()
     {
         // arrange
         const string topic = "test_topic";
@@ -18,11 +17,11 @@ public class InMemoryMessageProducerTests
         var producer = new InMemoryMessageProducer(bus, instrumentationOptions:InstrumentationOptions.All);
 
         // act
-        producer.Send(message);
+        await producer.SendAsync(message);
 
         // assert
         var messages = bus.Stream(new RoutingKey(topic));
-        Assert.Single(messages);
-        Assert.Equal(message.Id, messages.First().Id);
+        await Assert.That(messages).HasSingleItem();
+        await Assert.That(messages.First().Id).IsEqualTo(message.Id);
     }
 }

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,7 +34,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -45,7 +44,7 @@ public class FixedGaugeAttributesTests
     private static readonly string[] s_topics = { "orders", "payments", "refunds" };
     private readonly TimerCountingTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Fact]
+    [Test]
     public async Task When_measurements_complete_should_tag_the_gauges_with_fixed_attributes()
     {
         //Arrange
@@ -82,34 +81,32 @@ public class FixedGaugeAttributesTests
         await monitor.StartAsync(default);
         for (var dueTime = 1; dueTime <= 10; dueTime++)
         {
-            WaitUntilTheMonitorWaits(readings);
+            await WaitUntilTheMonitorWaits(readings);
             _clock.Advance(TimeSpan.FromMinutes(1));
-            WaitForCompletions(readings, StaleMessageCount.Overall, dueTime);
-            WaitForCompletions(readings, StaleMessageCount.PerTopic, dueTime);
+            await WaitForCompletions(readings, StaleMessageCount.Overall, dueTime);
+            await WaitForCompletions(readings, StaleMessageCount.PerTopic, dueTime);
             observations.Add(metrics.Observe());
         }
 
         //Assert
-        Assert.All(observations, observed =>
-        {
-            var overall = Assert.Single(observed, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES);
-            Assert.Equal(new[] { IMPLEMENTATION }, overall.Attributes.Keys);
-            Assert.DoesNotContain(overall.Attributes.Values, value => forbiddenValues.Contains(value?.ToString() ?? ""));
-            Assert.All(
-                observed.Where(m => m.Instrument == ObservedStaleMessageInstruments.MEASUREMENTS),
-                counter =>
-                {
-                    Assert.DoesNotContain(DESTINATION, counter.Attributes.Keys);
-                    Assert.DoesNotContain(counter.Attributes.Values, value => forbiddenValues.Contains(value?.ToString() ?? ""));
-                });
-        });
+        foreach (var observed in observations)
+{
+    var overall = (await Assert.That(System.Linq.Enumerable.Where(observed, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)).HasSingleItem());
+    await Assert.That(overall.Attributes.Keys).IsEqualTo(new[] { IMPLEMENTATION });
+    await Assert.That(System.Linq.Enumerable.Any(overall.Attributes.Values, value => forbiddenValues.Contains(value?.ToString() ?? ""))).IsFalse();
+    foreach (var counter in observed.Where(m => m.Instrument == ObservedStaleMessageInstruments.MEASUREMENTS))
+    {
+        await Assert.That(counter.Attributes.Keys).DoesNotContain(DESTINATION);
+        await Assert.That(System.Linq.Enumerable.Any(counter.Attributes.Values, value => forbiddenValues.Contains(value?.ToString() ?? ""))).IsFalse();
+    }
+}
         var topics = observations.Last().Where(m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES).ToList();
-        Assert.Equal(3, topics.Count);
-        Assert.All(topics, topic =>
-        {
-            Assert.Equal(new[] { DESTINATION, IMPLEMENTATION }, topic.Attributes.Keys.OrderBy(key => key, StringComparer.Ordinal));
-            Assert.DoesNotContain(topic.Attributes.Values, value => perMessageValues.Contains(value?.ToString() ?? ""));
-        });
+        await Assert.That(topics.Count).IsEqualTo(3);
+        foreach (var topic in topics)
+{
+    await Assert.That(topic.Attributes.Keys.OrderBy(key => key, StringComparer.Ordinal)).IsEqualTo(new[] { DESTINATION, IMPLEMENTATION });
+    await Assert.That(System.Linq.Enumerable.Any(topic.Attributes.Values, value => perMessageValues.Contains(value?.ToString() ?? ""))).IsFalse();
+}
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
@@ -120,14 +117,14 @@ public class FixedGaugeAttributesTests
             new MessageHeader(Id.Random(), new RoutingKey(topic), MessageType.MT_EVENT, correlationId: Id.Random()),
             new MessageBody("{}"));
 
-    private void WaitUntilTheMonitorWaits(OutboxStaleMessageReadings readings)
+    private async Task WaitUntilTheMonitorWaits(OutboxStaleMessageReadings readings)
     {
         var completed = readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed);
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= completed + 1, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= completed + 1, TimeSpan.FromSeconds(5))).IsTrue();
     }
 
-    private static void WaitForCompletions(OutboxStaleMessageReadings readings, StaleMessageCount count, long completions) =>
-        Assert.True(SpinWait.SpinUntil(
+    private static async Task WaitForCompletions(OutboxStaleMessageReadings readings, StaleMessageCount count, long completions) =>
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(count, StaleMeasurementOutcome.Completed) >= completions,
-            TimeSpan.FromSeconds(5)));
+            TimeSpan.FromSeconds(5))).IsTrue();
 }

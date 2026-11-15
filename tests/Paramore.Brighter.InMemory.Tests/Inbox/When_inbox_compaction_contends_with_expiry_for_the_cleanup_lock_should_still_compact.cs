@@ -27,14 +27,13 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.Data;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Inbox
 {
-    [Trait("Category", "InMemory")]
+    [Property("Category", "InMemory")]
     public class InboxCompactionLockContentionTests
     {
-        [Fact]
+        [Test]
         public async Task When_inbox_compaction_contends_with_expiry_for_the_cleanup_lock_should_still_compact()
         {
             //Arrange
@@ -66,7 +65,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             {
                 //A read is due an expiry scan, which takes the cleanup lock
                 inbox.Exists<SimpleCommand>(firstCommand.Id, contextKey, null);
-                Assert.True(inbox.ExpiryEntered.Wait(TimeSpan.FromSeconds(5)), "Expiry scan should have taken the cleanup lock");
+                await Assert.That(inbox.ExpiryEntered.Wait(TimeSpan.FromSeconds(5))).IsTrue().Because("Expiry scan should have taken the cleanup lock");
 
                 //Act - this add takes us over the limit, so is due a compaction
                 inbox.Add(new SimpleCommand(), contextKey, null);
@@ -88,7 +87,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             }
 
             //Assert - 6 entries, compacted by 5 - (5 * 0.5) = 3 once the lock is free
-            Assert.Equal(3, inbox.EntryCount);
+            await Assert.That(inbox.EntryCount).IsEqualTo(3);
         }
     }
 }

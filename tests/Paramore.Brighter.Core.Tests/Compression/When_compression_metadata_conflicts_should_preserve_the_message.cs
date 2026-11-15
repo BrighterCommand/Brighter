@@ -26,19 +26,18 @@ using System.IO.Compression;
 using System.Net.Mime;
 using System.Threading.Tasks;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Compression;
 
 public class CompressionMetadataConflictTests
 {
-    [Theory]
-    [InlineData(CompressionMethod.GZip, false)]
-    [InlineData(CompressionMethod.GZip, true)]
-    [InlineData(CompressionMethod.Zlib, false)]
-    [InlineData(CompressionMethod.Zlib, true)]
-    [InlineData(CompressionMethod.Brotli, false)]
-    [InlineData(CompressionMethod.Brotli, true)]
+    [Test]
+    [Arguments(CompressionMethod.GZip, false)]
+    [Arguments(CompressionMethod.GZip, true)]
+    [Arguments(CompressionMethod.Zlib, false)]
+    [Arguments(CompressionMethod.Zlib, true)]
+    [Arguments(CompressionMethod.Brotli, false)]
+    [Arguments(CompressionMethod.Brotli, true)]
     public async Task When_compression_metadata_conflicts_should_preserve_the_message(
         CompressionMethod compressionMethod, bool useAsync)
     {
@@ -60,20 +59,20 @@ public class CompressionMetadataConflictTests
         //Act
         if (useAsync)
         {
-            await Assert.ThrowsAsync<ArgumentException>(() => transformer.WrapAsync(message, publication));
+            await Assert.That(() => transformer.WrapAsync(message, publication)).ThrowsExactly<ArgumentException>();
         }
         else
         {
-            Assert.Throws<ArgumentException>(() => transformer.Wrap(message, publication));
+            await Assert.That(() => transformer.Wrap(message, publication)).ThrowsExactly<ArgumentException>();
         }
 
         //Assert
-        Assert.Same(originalBody, message.Body);
-        Assert.Equal(payload, message.Body.Value);
-        Assert.Equal(originalContentType, message.Header.ContentType);
-        Assert.Equal(originalContentType, message.Body.ContentType);
-        Assert.Equal("application/xml", message.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER]);
-        Assert.Equal("preserved", message.Header.Bag["custom-header"]);
-        Assert.Equal(2, message.Header.Bag.Count);
+        await Assert.That(message.Body).IsSameReferenceAs(originalBody);
+        await Assert.That(message.Body.Value).IsEqualTo(payload);
+        await Assert.That(message.Header.ContentType).IsEqualTo(originalContentType);
+        await Assert.That(message.Body.ContentType).IsEqualTo(originalContentType);
+        await Assert.That(message.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER]).IsEqualTo("application/xml");
+        await Assert.That(message.Header.Bag["custom-header"]).IsEqualTo("preserved");
+        await Assert.That(message.Header.Bag.Count).IsEqualTo(2);
     }
 }

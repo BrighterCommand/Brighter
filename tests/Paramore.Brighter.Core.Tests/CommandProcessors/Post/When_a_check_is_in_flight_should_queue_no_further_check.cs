@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post;
 
@@ -15,7 +14,7 @@ public class OutstandingCountInFlightTests
     private const int POST_COUNT = 50;
     private static readonly TimeSpan s_deadline = TimeSpan.FromSeconds(10);
 
-    [Fact]
+    [Test]
     public async Task When_a_check_is_in_flight_should_queue_no_further_check()
     {
         //Arrange
@@ -27,7 +26,7 @@ public class OutstandingCountInFlightTests
         try
         {
             commandProcessor.Post(new MyCommand { Value = "Start the first check" });
-            Assert.True(await outbox.WaitForCountToStartAsync(s_deadline), "The first check never started");
+            await Assert.That(await outbox.WaitForCountToStartAsync(s_deadline)).IsTrue().Because("The first check never started");
 
             //Act
             for (var i = 0; i < POST_COUNT; i++)
@@ -43,6 +42,6 @@ public class OutstandingCountInFlightTests
         //Assert
         //give any further check that was queued time to run before we count
         await Task.Delay(TimeSpan.FromMilliseconds(500));
-        Assert.Equal(1, outbox.OutstandingCountCalls);
+        await Assert.That(outbox.OutstandingCountCalls).IsEqualTo(1);
     }
 }

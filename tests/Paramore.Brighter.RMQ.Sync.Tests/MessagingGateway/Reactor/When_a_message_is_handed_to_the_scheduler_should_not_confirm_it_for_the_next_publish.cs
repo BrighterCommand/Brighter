@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Property("Category", "RMQ")]
+[NotInParallel("RMQ")]
 public class RmqScheduledMessageConfirmationTests : IDisposable
 {
     private readonly RoutingKey _routingKey = new(Guid.NewGuid().ToString());
@@ -29,8 +28,8 @@ public class RmqScheduledMessageConfirmationTests : IDisposable
             .Create(TimeSpan.FromMilliseconds(1000));
     }
 
-    [Fact]
-    public void When_a_message_is_handed_to_the_scheduler_should_not_confirm_it_for_the_next_publish()
+    [Test]
+    public async Task When_a_message_is_handed_to_the_scheduler_should_not_confirm_it_for_the_next_publish()
     {
         //Arrange
         var confirmations = new List<PublishConfirmationResult>();
@@ -38,7 +37,7 @@ public class RmqScheduledMessageConfirmationTests : IDisposable
 
         var scheduled = NewMessage();
         _messageProducer.SendWithDelay(scheduled, TimeSpan.FromSeconds(5));
-        Assert.Equal([scheduled.Id], _scheduler.Scheduled.Select(m => m.Id));
+        await Assert.That(_scheduler.Scheduled.Select(m => m.Id)).IsEqualTo([scheduled.Id]);
 
         var published = NewMessage();
         _messageProducer.Send(published);
@@ -47,7 +46,7 @@ public class RmqScheduledMessageConfirmationTests : IDisposable
         _messageProducer.Confirms.RaiseAck(deliveryTag: 1, multiple: false);
 
         //Assert
-        Assert.Equal([published.Id], confirmations.Select(c => c.MessageId));
+        await Assert.That(confirmations.Select(c => c.MessageId)).IsEqualTo([published.Id]);
     }
 
     private Message NewMessage() => new(

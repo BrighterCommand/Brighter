@@ -31,7 +31,6 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -39,17 +38,21 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// When pg_advisory_unlock returns false after the transaction has committed, CommitAsync logs one Warning naming the lock
 /// resource and does not throw (ADR 0057 §5b).
 /// </summary>
-public class PostgreSqlProvisioningUnitOfWorkCommitReleaseFalseTests : IAsyncLifetime
+public class PostgreSqlProvisioningUnitOfWorkCommitReleaseFalseTests
 {
     private readonly NpgsqlConnection _connection = new(PostgreSqlSettings.TestsBrighterConnectionString);
     private readonly FakePostgreSqlAdvisoryLock _advisoryLock = new(releaseResult: false);
     private readonly CapturingLogger _logger = new();
 
+    [Before(HookType.Test)]
+
     public async Task InitializeAsync() => await _connection.OpenAsync();
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_postgres_provisioning_uow_commit_release_returns_false_it_should_log_warning()
     {
         // Arrange
@@ -61,14 +64,14 @@ public class PostgreSqlProvisioningUnitOfWorkCommitReleaseFalseTests : IAsyncLif
             cancellationToken: CancellationToken.None);
 
         // Act
-        var thrown = await Record.ExceptionAsync(() => uow.CommitAsync(CancellationToken.None));
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => uow.CommitAsync(CancellationToken.None));
 
         // Assert
-        Assert.Null(thrown);
-        Assert.Equal("test_lock_resource", _advisoryLock.ReleasedKey);
+        await Assert.That(thrown).IsNull();
+        await Assert.That(_advisoryLock.ReleasedKey).IsEqualTo("test_lock_resource");
         var warnings = _logger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        Assert.Single(warnings);
-        Assert.Contains("test_lock_resource", warnings[0].Message, StringComparison.Ordinal);
-        Assert.Null(warnings[0].Exception);
+        await Assert.That(warnings).HasSingleItem();
+        await Assert.That(warnings[0].Message).Contains("test_lock_resource");
+        await Assert.That(warnings[0].Exception).IsNull();
     }
 }

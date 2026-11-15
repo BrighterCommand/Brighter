@@ -1,4 +1,5 @@
-﻿#region Licence
+#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -29,16 +30,15 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.Handlers;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline;
 
 public class GlobalInboxScopeUnclassifiedRequestAsyncTests
 {
-    [Theory]
-    [InlineData(InboxScope.Commands)]
-    [InlineData(InboxScope.Events)]
-    [InlineData(InboxScope.All)]
+    [Test]
+    [Arguments(InboxScope.Commands)]
+    [Arguments(InboxScope.Events)]
+    [Arguments(InboxScope.All)]
     public async Task When_handling_unclassified_requests_should_preserve_the_global_inbox_async(InboxScope scope)
     {
         // Arrange
@@ -58,8 +58,8 @@ public class GlobalInboxScopeUnclassifiedRequestAsyncTests
         await pipeline.HandleAsync(request);
 
         // Assert
-        Assert.True(await inbox.ExistsAsync<MyBareRequest>(
-            request.Id, typeof(MyValidationHandlerAsync<MyBareRequest>).FullName!, null));
-        await Assert.ThrowsAsync<OnceOnlyException>(() => pipeline.HandleAsync(request));
+        await Assert.That(await inbox.ExistsAsync<MyBareRequest>(
+            request.Id, typeof(MyValidationHandlerAsync<MyBareRequest>).FullName!, null)).IsTrue();
+        await Assert.That(() => pipeline.HandleAsync(request)).ThrowsExactly<OnceOnlyException>();
     }
 }

@@ -29,8 +29,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using Paramore.Brighter.Extensions.Diagnostics;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
 public class InstrumentationWithoutSweeperGaugesTests
@@ -38,8 +37,8 @@ public class InstrumentationWithoutSweeperGaugesTests
     private const string RunningTime = "paramore.brighter.outbox_sweeper.sweep.running_time";
     private const string TrippedTopics = "paramore.brighter.outbox_sweeper.tripped_topics";
 
-    [Fact]
-    public void When_instrumentation_is_added_without_an_outbox_sweeper_should_publish_both_gauges_at_zero()
+    [Test]
+    public async Task When_instrumentation_is_added_without_an_outbox_sweeper_should_publish_both_gauges_at_zero()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -66,10 +65,10 @@ public class InstrumentationWithoutSweeperGaugesTests
         listener.RecordObservableInstruments();
 
         //Assert
-        Assert.Contains(RunningTime, published);
-        Assert.Contains(TrippedTopics, published);
-        Assert.Equal([0.0], recorded[RunningTime]);
-        Assert.Equal([0.0], recorded[TrippedTopics]);
+        await Assert.That(published).Contains(RunningTime);
+        await Assert.That(published).Contains(TrippedTopics);
+        await Assert.That(recorded[RunningTime]).IsEqualTo([0.0]);
+        await Assert.That(recorded[TrippedTopics]).IsEqualTo([0.0]);
     }
 
     private static void Record(Dictionary<string, List<double>> recorded, Instrument instrument, double value)

@@ -26,7 +26,6 @@ using System.Threading.Tasks;
 using Google.Api.Gax;
 using Google.Cloud.Spanner.Data;
 using Paramore.Brighter.BoxProvisioning.Spanner;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
@@ -34,10 +33,10 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 /// A fresh Spanner install creates the outbox and stamps one history row at V_latest with the fresh-install
 /// description; a second run is a no-op that inserts no duplicate history row.
 /// </summary>
-[Trait("Category", "Spanner")]
-[Collection("Spanner")]
-[Trait("Category", "Spanner")]
-public class SpannerOutboxFreshInstallTests : IAsyncLifetime
+[Property("Category", "Spanner")]
+[NotInParallel]
+[Property("Category", "Spanner")]
+public class SpannerOutboxFreshInstallTests
 {
     private readonly string _tableName;
     private readonly string _connectionString;
@@ -59,7 +58,7 @@ public class SpannerOutboxFreshInstallTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_stamp_v_latest_with_fresh_install_description_and_skip_duplicate_on_rerun()
     {
         // Act
@@ -70,17 +69,17 @@ public class SpannerOutboxFreshInstallTests : IAsyncLifetime
         await connection.OpenAsync();
 
         var (firstCount, firstDescription) = await ReadHistoryAsync(connection, _tableName);
-        Assert.Equal(1, firstCount);
-        Assert.NotNull(firstDescription);
-        Assert.StartsWith("fresh install", firstDescription, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(firstCount).IsEqualTo(1);
+        await Assert.That(firstDescription).IsNotNull();
+        await Assert.That(firstDescription).StartsWith("fresh install");
 
         // Act
         await _provisioner.ProvisionAsync();
 
         // Assert
         var (secondCount, secondDescription) = await ReadHistoryAsync(connection, _tableName);
-        Assert.Equal(1, secondCount);
-        Assert.Equal(firstDescription, secondDescription);
+        await Assert.That(secondCount).IsEqualTo(1);
+        await Assert.That(secondDescription).IsEqualTo(firstDescription);
     }
 
     private static async Task<(long Count, string? Description)> ReadHistoryAsync(
@@ -109,7 +108,11 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion",
         return (count, description);
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {
@@ -138,10 +141,10 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion",
 /// A fresh Spanner install creates the inbox and stamps one history row at V_latest with the fresh-install
 /// description; a second run is a no-op that inserts no duplicate history row.
 /// </summary>
-[Trait("Category", "Spanner")]
-[Collection("Spanner")]
-[Trait("Category", "Spanner")]
-public class SpannerInboxFreshInstallTests : IAsyncLifetime
+[Property("Category", "Spanner")]
+[NotInParallel("Spanner")]
+[Property("Category", "Spanner")]
+public class SpannerInboxFreshInstallTests
 {
     private readonly string _tableName;
     private readonly string _connectionString;
@@ -163,7 +166,7 @@ public class SpannerInboxFreshInstallTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_stamp_v_latest_with_fresh_install_description_and_skip_duplicate_on_rerun()
     {
         // Act
@@ -174,17 +177,17 @@ public class SpannerInboxFreshInstallTests : IAsyncLifetime
         await connection.OpenAsync();
 
         var (firstCount, firstDescription) = await ReadHistoryAsync(connection, _tableName);
-        Assert.Equal(1, firstCount);
-        Assert.NotNull(firstDescription);
-        Assert.StartsWith("fresh install", firstDescription, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(firstCount).IsEqualTo(1);
+        await Assert.That(firstDescription).IsNotNull();
+        await Assert.That(firstDescription).StartsWith("fresh install");
 
         // Act
         await _provisioner.ProvisionAsync();
 
         // Assert
         var (secondCount, secondDescription) = await ReadHistoryAsync(connection, _tableName);
-        Assert.Equal(1, secondCount);
-        Assert.Equal(firstDescription, secondDescription);
+        await Assert.That(secondCount).IsEqualTo(1);
+        await Assert.That(secondDescription).IsEqualTo(firstDescription);
     }
 
     private static async Task<(long Count, string? Description)> ReadHistoryAsync(
@@ -213,7 +216,11 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion",
         return (count, description);
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

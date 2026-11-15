@@ -33,7 +33,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -42,7 +41,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// session holds the lock, advancing a <c>FakeTimeProvider</c> past the timeout makes AcquireAsync throw
 /// <see cref="TimeoutException"/> long before the timeout passes in real time (ADR 0057 §5b).
 /// </summary>
-public class PostgreSqlAdvisoryLockDeadlineTimeProviderTests : IAsyncLifetime
+public class PostgreSqlAdvisoryLockDeadlineTimeProviderTests
 {
     private const int LOCK_NAMESPACE = 74726;
 
@@ -56,7 +55,7 @@ public class PostgreSqlAdvisoryLockDeadlineTimeProviderTests : IAsyncLifetime
     private NpgsqlConnection? _holderConnection;
     private NpgsqlConnection? _contenderConnection;
 
-    [Fact]
+    [Test]
     public async Task When_postgres_advisory_lock_deadline_is_evaluated_against_the_injected_time_provider_it_should_be_independent_of_wall_clock()
     {
         // Arrange
@@ -88,13 +87,12 @@ public class PostgreSqlAdvisoryLockDeadlineTimeProviderTests : IAsyncLifetime
 
         fakeTimeProvider.Advance(timeout + TimeSpan.FromSeconds(1));
 
-        var thrown = await Assert.ThrowsAsync<TimeoutException>(() => acquireTask);
+        var thrown = await Assert.That(() => acquireTask).ThrowsExactly<TimeoutException>();
         stopwatch.Stop();
 
         // Assert
-        Assert.Contains(_lockKey, thrown.Message, StringComparison.Ordinal);
-        Assert.True(stopwatch.Elapsed < s_wallClockCeiling,
-            $"Wall-clock elapsed {stopwatch.Elapsed.TotalSeconds:F2}s — deadline should have fired against the fake provider, not the wall clock.");
+        await Assert.That(thrown.Message).Contains(_lockKey);
+        await Assert.That(stopwatch.Elapsed < s_wallClockCeiling).IsTrue().Because($"Wall-clock elapsed {stopwatch.Elapsed.TotalSeconds:F2}s — deadline should have fired against the fake provider, not the wall clock.");
     }
 
     // Replicates the private PostgreSqlAdvisoryLock.DeriveLockKey (ADR 0062), so the holder session contends on the same key.
@@ -105,7 +103,11 @@ public class PostgreSqlAdvisoryLockDeadlineTimeProviderTests : IAsyncLifetime
         return BinaryPrimitives.ReadInt64BigEndian(hash);
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

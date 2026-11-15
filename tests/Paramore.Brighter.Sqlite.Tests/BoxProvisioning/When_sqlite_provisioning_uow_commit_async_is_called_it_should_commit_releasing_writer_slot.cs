@@ -30,7 +30,6 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
@@ -38,7 +37,7 @@ namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 /// CommitAsync commits the BEGIN IMMEDIATE transaction, which is what releases SQLite's writer slot
 /// (ADR 0058 §B.1); a completed transaction throws when committed again.
 /// </summary>
-public class ProvisioningUnitOfWorkCommitTests : IAsyncLifetime
+public class ProvisioningUnitOfWorkCommitTests
 {
     private readonly string _dbPath = Path.Combine(
         Path.GetTempPath(), $"brighter_sqlite_uow_commit_{Guid.NewGuid():N}.db");
@@ -52,7 +51,11 @@ public class ProvisioningUnitOfWorkCommitTests : IAsyncLifetime
         _connection = new SqliteConnection(_connectionString);
     }
 
+    [Before(HookType.Test)]
+
     public async Task InitializeAsync() => await _connection.OpenAsync();
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {
@@ -68,7 +71,7 @@ public class ProvisioningUnitOfWorkCommitTests : IAsyncLifetime
         }
     }
 
-    [Fact]
+    [Test]
     public async Task When_sqlite_provisioning_uow_commit_async_is_called_it_should_commit_releasing_writer_slot()
     {
         // Arrange
@@ -83,6 +86,6 @@ public class ProvisioningUnitOfWorkCommitTests : IAsyncLifetime
         await uow.CommitAsync(CancellationToken.None);
 
         // Assert
-        Assert.Throws<InvalidOperationException>(() => transaction.Commit());
+        await Assert.That(() => transaction.Commit()).ThrowsExactly<InvalidOperationException>();
     }
 }

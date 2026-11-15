@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 
@@ -22,20 +22,18 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 /// </remarks>
 public class RealTreePumpCoverageTests
 {
-    [Fact]
-    public void When_the_tree_loses_a_pump_behaviour_the_ledger_depends_on_should_fail_audit()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_tree_loses_a_pump_behaviour_the_ledger_depends_on_should_fail_audit()
     {
         // Arrange — the real repository, located the way the other tree-walking tests locate it
         var repoRoot = FindRepoRoot(AppContext.BaseDirectory);
-        Assert.True(repoRoot is not null,
-            "Could not locate the repository root; the audit cannot guard a tree it cannot find.");
+        await Assert.That(repoRoot is not null).IsTrue().Because("Could not locate the repository root; the audit cannot guard a tree it cannot find.");
 
         // Act
         var result = PumpCoverageAudit.CheckCoverage(repoRoot!);
 
         // Assert — every pump behaviour the ledger's "division of labour" cites is still covered
-        Assert.True(result.Violations.Count == 0,
-            "The conformance ledger's validity is compositional: its gateway suite proves the "
+        await Assert.That(result.Violations.Count == 0).IsTrue().Because("The conformance ledger's validity is compositional: its gateway suite proves the "
             + "transport, and Core.Tests/MessageDispatch proves the pump. A behaviour below has "
             + "lost its covering test, so ledger cells now assert more than the tree proves. "
             + "Restore the test, or amend both PumpCoverageAudit.RequiredBehaviours and the "

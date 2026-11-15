@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -30,7 +31,6 @@ using Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Inbox.Handlers;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
@@ -63,7 +63,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
                 new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
         }
 
-        [Fact]
+        [Test]
         public async Task When_handling_new_command_async_should_set_causation_id_in_context_bag()
         {
             //Arrange
@@ -73,13 +73,13 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             await _commandProcessor.SendAsync(_command, requestContext);
 
             //Assert — the causation id defaults to the command's id and is shared via the context bag
-            Assert.True(requestContext.Bag.ContainsKey(RequestContextBagNames.CausationId));
-            Assert.Equal(_command.Id.Value, requestContext.Bag[RequestContextBagNames.CausationId]);
+            await Assert.That(requestContext.Bag.ContainsKey(RequestContextBagNames.CausationId)).IsTrue();
+            await Assert.That(requestContext.Bag[RequestContextBagNames.CausationId]).IsEqualTo(_command.Id.Value);
 
             //Assert — the inbox entry carries the same causation id
             var storedCausationId = await ((IAmACausationTrackingInbox)_inbox)
                 .GetCausationIdAsync(_command.Id, _contextKey, requestContext);
-            Assert.Equal(_command.Id.Value, storedCausationId);
+            await Assert.That(storedCausationId).IsEqualTo(_command.Id.Value);
         }
     }
 }

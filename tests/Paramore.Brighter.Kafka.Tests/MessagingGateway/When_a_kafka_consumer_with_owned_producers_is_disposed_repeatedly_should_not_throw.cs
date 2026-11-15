@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia <irakli.gabisonia94@gmail.com>
 
@@ -25,31 +25,30 @@ THE SOFTWARE. */
 
 using System.Threading.Tasks;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
+[Property("Category", "Kafka")]
+[NotInParallel("Kafka")]
 public class KafkaConsumerRepeatedDisposalTests
 {
-    [Theory]
-    [InlineData("requeue", false, false)]
-    [InlineData("requeue", true, true)]
-    [InlineData("requeue", false, true)]
-    [InlineData("requeue", true, false)]
-    [InlineData("dead-letter", false, false)]
-    [InlineData("dead-letter", true, true)]
-    [InlineData("dead-letter", false, true)]
-    [InlineData("dead-letter", true, false)]
-    [InlineData("invalid", false, false)]
-    [InlineData("invalid", true, true)]
-    [InlineData("invalid", false, true)]
-    [InlineData("invalid", true, false)]
-    [InlineData("all", false, false)]
-    [InlineData("all", true, true)]
-    [InlineData("all", false, true)]
-    [InlineData("all", true, false)]
+    [Test]
+    [Arguments("requeue", false, false)]
+    [Arguments("requeue", true, true)]
+    [Arguments("requeue", false, true)]
+    [Arguments("requeue", true, false)]
+    [Arguments("dead-letter", false, false)]
+    [Arguments("dead-letter", true, true)]
+    [Arguments("dead-letter", false, true)]
+    [Arguments("dead-letter", true, false)]
+    [Arguments("invalid", false, false)]
+    [Arguments("invalid", true, true)]
+    [Arguments("invalid", false, true)]
+    [Arguments("invalid", true, false)]
+    [Arguments("all", false, false)]
+    [Arguments("all", true, true)]
+    [Arguments("all", false, true)]
+    [Arguments("all", true, false)]
     public async Task When_a_kafka_consumer_with_owned_producers_is_disposed_repeatedly_should_not_throw(
         string ownedProducers, bool firstDisposeAsync, bool subsequentDisposeAsync)
     {
@@ -58,21 +57,21 @@ public class KafkaConsumerRepeatedDisposalTests
         if (ownedProducers is "requeue" or "all")
         {
             var message = await host.ReceiveMessageAsync();
-            Assert.True(await host.Consumer.RequeueAsync(message));
+            await Assert.That(await host.Consumer.RequeueAsync(message)).IsTrue();
         }
 
         if (ownedProducers is "dead-letter" or "all")
         {
             var message = await host.ReceiveMessageAsync();
-            Assert.True(await host.Consumer.RejectAsync(message,
-                new MessageRejectionReason(RejectionReason.DeliveryError)));
+            await Assert.That(await host.Consumer.RejectAsync(message,
+                new MessageRejectionReason(RejectionReason.DeliveryError))).IsTrue();
         }
 
         if (ownedProducers is "invalid" or "all")
         {
             var message = await host.ReceiveMessageAsync();
-            Assert.True(await host.Consumer.RejectAsync(message,
-                new MessageRejectionReason(RejectionReason.Unacceptable)));
+            await Assert.That(await host.Consumer.RejectAsync(message,
+                new MessageRejectionReason(RejectionReason.Unacceptable))).IsTrue();
         }
 
         if (firstDisposeAsync)
@@ -81,7 +80,7 @@ public class KafkaConsumerRepeatedDisposalTests
             host.Dispose();
 
         // Act
-        var exception = await Record.ExceptionAsync(async () =>
+        var exception = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             for (var attempt = 0; attempt < 3; attempt++)
             {
@@ -93,6 +92,6 @@ public class KafkaConsumerRepeatedDisposalTests
         });
 
         // Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 }

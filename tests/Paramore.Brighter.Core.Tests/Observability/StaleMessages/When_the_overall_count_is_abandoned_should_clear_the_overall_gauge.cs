@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -28,8 +28,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleOverallCountAbandonedTests
@@ -38,8 +37,8 @@ public class StaleOverallCountAbandonedTests
     private const string COUNT = "paramore.brighter.outbox.stale.count";
     private const string OUTCOME = "paramore.brighter.outbox.stale.outcome";
 
-    [Fact]
-    public void When_the_overall_count_is_abandoned_should_clear_the_overall_gauge()
+    [Test]
+    public async Task When_the_overall_count_is_abandoned_should_clear_the_overall_gauge()
     {
         //Arrange
         using var observed = new ObservedStaleMessageInstruments();
@@ -54,20 +53,18 @@ public class StaleOverallCountAbandonedTests
         var measurements = observed.Observe();
 
         //Assert
-        Assert.DoesNotContain(measurements, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES);
+        await Assert.That(System.Linq.Enumerable.Any(measurements, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)).IsFalse();
 
-        var topic = Assert.Single(measurements, m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES);
-        Assert.Equal("orders=2", $"{topic.Attributes[DESTINATION]}={topic.Value}");
+        var topic = await Assert.That(System.Linq.Enumerable.Where(measurements, m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES)).HasSingleItem();
+        await Assert.That($"{topic.Attributes[DESTINATION]}={topic.Value}").IsEqualTo("orders=2");
 
-        Assert.Equal(
-            [
-                "overall/abandoned=1", "overall/completed=1", "overall/failed=0", "overall/skipped=0",
-                "per_topic/abandoned=0", "per_topic/completed=1", "per_topic/failed=0", "per_topic/skipped=0"
-            ],
-            measurements
+        await Assert.That(measurements
                 .Where(m => m.Instrument == ObservedStaleMessageInstruments.MEASUREMENTS)
                 .Select(m => $"{m.Attributes[COUNT]}/{m.Attributes[OUTCOME]}={m.Value}")
                 .OrderBy(s => s, StringComparer.Ordinal)
-                .ToArray());
+                .ToArray()).IsEqualTo([
+                "overall/abandoned=1", "overall/completed=1", "overall/failed=0", "overall/skipped=0",
+                "per_topic/abandoned=0", "per_topic/completed=1", "per_topic/failed=0", "per_topic/skipped=0"
+            ]);
     }
 }

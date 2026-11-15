@@ -29,7 +29,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -40,7 +39,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// </summary>
 public class SqlBoxMigrationRunnerRedetectStateOverrideTests
 {
-    [Fact]
+    [Test]
     public async Task When_redetect_state_is_overridden_migrate_should_use_the_override_and_bypass_the_default()
     {
         //Arrange
@@ -59,10 +58,10 @@ public class SqlBoxMigrationRunnerRedetectStateOverrideTests
             tableState: new BoxTableState(false, false, 0));
 
         //Assert
-        Assert.Equal(1, runner.RedetectOverrideCallCount);
-        Assert.Equal("RunNormalPath", runner.PathInvoked);
-        Assert.Equal(0, detectionHelper.DoesTableExistCallCount);
-        Assert.Equal(0, detectionHelper.DoesHistoryExistCallCount);
+        await Assert.That(runner.RedetectOverrideCallCount).IsEqualTo(1);
+        await Assert.That(runner.PathInvoked).IsEqualTo("RunNormalPath");
+        await Assert.That(detectionHelper.DoesTableExistCallCount).IsEqualTo(0);
+        await Assert.That(detectionHelper.DoesHistoryExistCallCount).IsEqualTo(0);
     }
 
     private sealed class OverrideTestRunner : SqlBoxMigrationRunner<FakeDbConnection, FakeDbTransaction>

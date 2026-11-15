@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -28,11 +28,10 @@ using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Outbox;
 
-[Trait("Category", "InMemory")]
+[Property("Category", "InMemory")]
 public class InMemoryOutstandingCountOutboxTests : OutstandingCountOutboxBaseTests<CommittableTransaction>
 {
     private readonly FakeTimeProvider _timeProvider;
@@ -59,19 +58,19 @@ public class InMemoryOutstandingCountOutboxTests : OutstandingCountOutboxBaseTes
         _timeProvider.SetUtcNow(_countAt);
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_outstanding_messages_older_than_the_age_should_count_only_stale_ones()
     {
         await AssertAgeAsync();
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_outstanding_messages_with_a_ceiling_of_three_should_return_three()
     {
         await AssertCeilingOfThreeAsync();
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_outstanding_messages_with_a_ceiling_of_five_should_return_five()
     {
         await AssertCeilingOfFiveAsync();

@@ -28,11 +28,10 @@ using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RMQ")]
+[Property("Category", "RMQ")]
 public class RmqCollidingDeliveryTagAsyncTests : IAsyncDisposable
 {
     private readonly RoutingKey _routingKey = new(Guid.NewGuid().ToString());
@@ -57,7 +56,7 @@ public class RmqCollidingDeliveryTagAsyncTests : IAsyncDisposable
             .GetResult();
     }
 
-    [Fact]
+    [Test]
     public async Task When_sends_collide_on_a_delivery_tag_should_not_confirm_either_message()
     {
         //Arrange
@@ -69,7 +68,7 @@ public class RmqCollidingDeliveryTagAsyncTests : IAsyncDisposable
 
         //Assert — a tag that two messages claim cannot say which was acked, so neither is confirmed
         //and the sweeper resends both; the client raises a confirmation before its publish returns
-        Assert.Empty(_confirmed);
+        await Assert.That(_confirmed).IsEmpty();
     }
 
     private Message NewMessage() => new(

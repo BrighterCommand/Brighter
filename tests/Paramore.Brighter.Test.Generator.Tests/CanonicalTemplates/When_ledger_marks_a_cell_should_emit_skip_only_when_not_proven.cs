@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -58,7 +58,7 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
             ? File.ReadAllText(_canonicalTemplatePath)
             : null;
         File.WriteAllText(_canonicalTemplatePath,
-            "[Fact{%- if Skip != empty -%}(Skip = \"{{ Skip }}\"){%- endif -%}]\n" +
+            "[Test]\n{% if Skip != empty %}[Skip(\"{{ Skip }}\")]{% endif %}\n" +
             $"public void {CANONICAL_TEMPLATE_NAME}() {{ }}\n");
 
         // Non-canonical placeholder template (not in the FR-column map) — verifies that
@@ -66,11 +66,11 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
         _nonCanonicalTemplatePath = Path.Combine(
             reactorTemplatesDir, $"{NON_CANONICAL_TEMPLATE_NAME}.cs.liquid");
         File.WriteAllText(_nonCanonicalTemplatePath,
-            "[Fact{%- if Skip != empty -%}(Skip = \"{{ Skip }}\"){%- endif -%}]\n" +
+            "[Test]\n{% if Skip != empty %}[Skip(\"{{ Skip }}\")]{% endif %}\n" +
             $"public void {NON_CANONICAL_TEMPLATE_NAME}() {{ }}\n");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_cell_is_pass_should_not_emit_skip()
     {
         // Arrange — the conformance ledger records the plain-requeue behaviour (its FR-22
@@ -89,10 +89,10 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
 
         // Assert — the generated canonical test carries NO Skip attribute argument.
         var generatedContent = await ReadGeneratedCanonicalFile(configuration);
-        Assert.DoesNotContain("Skip", generatedContent);
+        await Assert.That(generatedContent).DoesNotContain("Skip");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_cell_is_fixed_should_not_emit_skip()
     {
         // Arrange — ledger says Fixed (#PR42): test should run without Skip.
@@ -110,10 +110,10 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
 
         // Assert
         var generatedContent = await ReadGeneratedCanonicalFile(configuration);
-        Assert.DoesNotContain("Skip", generatedContent);
+        await Assert.That(generatedContent).DoesNotContain("Skip");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_cell_is_unknown_should_emit_skip_with_placeholder_number()
     {
         // Arrange — ledger cell is Unknown (transient fix-phase state): Skip uses #NNNN.
@@ -131,11 +131,11 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
 
         // Assert — the generated test carries Skip = "Deferred: #NNNN — … (maintainer sign-off)".
         var generatedContent = await ReadGeneratedCanonicalFile(configuration);
-        Assert.Contains("Skip = \"Deferred: #NNNN", generatedContent);
-        Assert.Contains("(maintainer sign-off)", generatedContent);
+        await Assert.That(generatedContent).Contains("Skip(\"Deferred: #NNNN");
+        await Assert.That(generatedContent).Contains("(maintainer sign-off)");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_cell_is_deferred_should_emit_skip_with_real_issue_number()
     {
         // Arrange — ledger cell carries a real issue number: Skip uses #1234, not #NNNN.
@@ -154,11 +154,11 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
 
         // Assert — the real issue number appears in the Skip, not the placeholder #NNNN.
         var generatedContent = await ReadGeneratedCanonicalFile(configuration);
-        Assert.Contains($"Skip = \"Deferred: #{REAL_ISSUE_NUMBER}", generatedContent);
-        Assert.DoesNotContain("#NNNN", generatedContent);
+        await Assert.That(generatedContent).Contains($"Skip(\"Deferred: #{REAL_ISSUE_NUMBER}");
+        await Assert.That(generatedContent).DoesNotContain("#NNNN");
     }
 
-    [Fact]
+    [Test]
     public async Task When_template_is_not_canonical_should_not_emit_skip_regardless_of_ledger()
     {
         // Arrange — the conformance ledger defers the plain-requeue behaviour (its FR-22
@@ -180,13 +180,12 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
         var nonCanonicalOutput = Path.Combine(
             _testDirectory, "MessagingGateway", "Test", "Generated", "Reactor",
             $"{NON_CANONICAL_TEMPLATE_NAME}.cs");
-        Assert.True(File.Exists(nonCanonicalOutput),
-            "Non-canonical template must still be generated");
+        await Assert.That(File.Exists(nonCanonicalOutput)).IsTrue().Because("Non-canonical template must still be generated");
         var nonCanonicalContent = await File.ReadAllTextAsync(nonCanonicalOutput);
-        Assert.DoesNotContain("Skip", nonCanonicalContent);
+        await Assert.That(nonCanonicalContent).DoesNotContain("Skip");
     }
 
-    [Fact]
+    [Test]
     public async Task When_no_ledger_key_is_set_should_not_emit_skip()
     {
         // Arrange — configuration has no LedgerKey; mechanism must treat it as untracked.
@@ -205,10 +204,10 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
 
         // Assert — no Skip emitted when LedgerKey is absent.
         var generatedContent = await ReadGeneratedCanonicalFile(configuration);
-        Assert.DoesNotContain("Skip", generatedContent);
+        await Assert.That(generatedContent).DoesNotContain("Skip");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_is_loaded_from_repo_root_it_matches_an_independently_parsed_ledger()
     {
         // Arrange — no injected ledger; the generator must locate the real conformance-status.md
@@ -220,7 +219,7 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
         const string FR22_BEHAVIOUR = "canonical plain requeue"; // generator's label for FR-22
 
         var ledgerPath = ConformanceLedger.FindLedgerPath(AppContext.BaseDirectory);
-        Assert.NotNull(ledgerPath);
+        await Assert.That(ledgerPath).IsNotNull();
         var expectedSkip = new ConformanceLedger(ledgerPath!)
             .GetSkip(REAL_LEDGER_ROW, FR_COLUMN, FR22_BEHAVIOUR);
 
@@ -234,9 +233,9 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
         // a proven (Pass/Fixed) cell emits no Skip; an Unknown/Deferred cell emits the exact Skip.
         var generatedContent = await ReadGeneratedCanonicalFile(configuration);
         if (expectedSkip.Length == 0)
-            Assert.DoesNotContain("Skip = \"Deferred:", generatedContent);
+            await Assert.That(generatedContent).DoesNotContain("Skip(\"Deferred:");
         else
-            Assert.Contains(expectedSkip, generatedContent);
+            await Assert.That(generatedContent).Contains(expectedSkip);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -264,8 +263,7 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
         var outputPath = Path.Combine(
             _testDirectory, "MessagingGateway", "Test", "Generated", "Reactor",
             $"{CANONICAL_TEMPLATE_NAME}.cs");
-        Assert.True(File.Exists(outputPath),
-            $"Generated file not found at {outputPath}");
+        await Assert.That(File.Exists(outputPath)).IsTrue().Because($"Generated file not found at {outputPath}");
         return await File.ReadAllTextAsync(outputPath);
     }
 

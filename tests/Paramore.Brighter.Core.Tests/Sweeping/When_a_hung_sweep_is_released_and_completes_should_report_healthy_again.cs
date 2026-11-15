@@ -37,7 +37,6 @@ using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -45,7 +44,7 @@ public class HungSweepReleasedTests
 {
     private const string RestartCheck = "brighter-outbox-sweeper-restart";
 
-    [Fact]
+    [Test]
     public async Task When_a_hung_sweep_is_released_and_completes_should_report_healthy_again()
     {
         //Arrange
@@ -77,15 +76,15 @@ public class HungSweepReleasedTests
             var releasedReport = await healthChecks.CheckHealthAsync(CancellationToken.None);
 
             //Assert
-            Assert.True(reachedLock, "The sweep did not reach the lock");
+            await Assert.That(reachedLock).IsTrue().Because("The sweep did not reach the lock");
             var hung = hungReport.Entries[RestartCheck];
-            Assert.Equal(HealthStatus.Degraded, hung.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), hung.Data[RemedyCheckConvention.RemedyKindKey]);
+            await Assert.That(hung.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That(hung.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
             var restart = releasedReport.Entries[RestartCheck];
-            Assert.Equal(HealthStatus.Healthy, restart.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, restart.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), restart.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Empty(Assert.IsType<string[]>(restart.Data[RemedyCheckConvention.ConditionsKey]));
+            await Assert.That(restart.Status).IsEqualTo(HealthStatus.Healthy);
+            await Assert.That(restart.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(restart.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+            await Assert.That((await Assert.That(restart.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEmpty();
         }
         finally
         {

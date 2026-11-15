@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 
@@ -43,8 +42,8 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 /// The failure is the client's own: once the consumer is disposed, the RocketMQ <c>SimpleConsumer</c>
 /// refuses the call because it is not running.
 /// </remarks>
-[Trait("Category", "RocketMQ")]
-public class RocketMqBrokerCallFailureTestsAsync : IAsyncLifetime
+[Property("Category", "RocketMQ")]
+public class RocketMqBrokerCallFailureTestsAsync
 {
     private const string Topic = "rmq_broker_call_fails_p";
     private static readonly TimeSpan s_invisibilityTimeout = TimeSpan.FromSeconds(10);
@@ -55,7 +54,7 @@ public class RocketMqBrokerCallFailureTestsAsync : IAsyncLifetime
     private IAmAMessageConsumerAsync? _consumer;
     private bool _consumerDisposed;
 
-    public async Task InitializeAsync()
+    [Before(HookType.Test)]public async Task InitializeAsync()
     {
         var connection = GatewayFactory.CreateConnection();
         var routingKey = new RoutingKey(Topic);
@@ -80,7 +79,7 @@ public class RocketMqBrokerCallFailureTestsAsync : IAsyncLifetime
         _consumer = new RocketMessageConsumerFactory(connection).CreateAsync(subscription);
     }
 
-    public async Task DisposeAsync()
+    [After(HookType.Test)]public async Task DisposeAsync()
     {
         await DisposeConsumerAsync();
 
@@ -88,7 +87,7 @@ public class RocketMqBrokerCallFailureTestsAsync : IAsyncLifetime
             await _producer.DisposeAsync();
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_rocketmq_broker_call_behind_requeue_fails_should_return_true_and_leave_the_lease_async()
     {
         // Arrange - a received message, then a consumer that can no longer reach the broker
@@ -97,14 +96,14 @@ public class RocketMqBrokerCallFailureTestsAsync : IAsyncLifetime
 
         // Act
         var requeued = false;
-        var exception = await Record.ExceptionAsync(async () => requeued = await _consumer!.RequeueAsync(received, TimeSpan.Zero));
+        var exception = await TestExceptionRecorder.CaptureAsync(async () => requeued = await _consumer!.RequeueAsync(received, TimeSpan.Zero));
 
         // Assert
-        Assert.Null(exception);
-        Assert.True(requeued);
+        await Assert.That(exception).IsNull();
+        await Assert.That(requeued).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_rocketmq_broker_call_behind_nack_fails_should_not_throw_async()
     {
         // Arrange - a received message, then a consumer that can no longer reach the broker
@@ -112,10 +111,10 @@ public class RocketMqBrokerCallFailureTestsAsync : IAsyncLifetime
         await DisposeConsumerAsync();
 
         // Act
-        var exception = await Record.ExceptionAsync(() => _consumer!.NackAsync(received));
+        var exception = await TestExceptionRecorder.CaptureAsync(() => _consumer!.NackAsync(received));
 
         // Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 
     private async Task<Message> SendAndReceiveAsync()
@@ -127,7 +126,7 @@ public class RocketMqBrokerCallFailureTestsAsync : IAsyncLifetime
         await _producer!.SendAsync(message);
 
         var received = await ReceiveOursAsync(message.Id);
-        Assert.NotNull(received);
+        await Assert.That(received).IsNotNull();
         return received!;
     }
 

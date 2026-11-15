@@ -31,7 +31,6 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
@@ -40,7 +39,7 @@ namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 /// slot, which is the lock (ADR 0058 §B.1). The two-argument constructor pins that the SQLite unit of
 /// work has no advisory-lock collaborator.
 /// </summary>
-public class ProvisioningUnitOfWorkBeginTests : IAsyncLifetime
+public class ProvisioningUnitOfWorkBeginTests
 {
     private const int SqliteBusy = 5;
 
@@ -59,7 +58,11 @@ public class ProvisioningUnitOfWorkBeginTests : IAsyncLifetime
         _connection = new SqliteConnection(_connectionString);
     }
 
+    [Before(HookType.Test)]
+
     public async Task InitializeAsync() => await _connection.OpenAsync();
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {
@@ -75,7 +78,7 @@ public class ProvisioningUnitOfWorkBeginTests : IAsyncLifetime
         }
     }
 
-    [Fact]
+    [Test]
     public async Task When_sqlite_provisioning_uow_begin_async_is_called_it_should_begin_immediate_as_writer_slot_lock()
     {
         // Arrange
@@ -88,15 +91,15 @@ public class ProvisioningUnitOfWorkBeginTests : IAsyncLifetime
             cancellationToken: CancellationToken.None);
 
         // Assert
-        Assert.NotNull(uow.Transaction);
+        await Assert.That(uow.Transaction).IsNotNull();
 
         await using var sibling = new SqliteConnection(_connectionString);
         sibling.DefaultTimeout = SmallestBusyTimeoutSeconds;
         await sibling.OpenAsync();
 
-        var siblingException = Record.Exception(
+        var siblingException = TestExceptionRecorder.Capture(
             () => sibling.BeginTransaction(IsolationLevel.Serializable, deferred: false));
-        var sqliteException = Assert.IsType<SqliteException>(siblingException);
-        Assert.Equal(SqliteBusy, sqliteException.SqliteErrorCode);
+        var sqliteException = await Assert.That(siblingException).IsTypeOf<SqliteException>();
+        await Assert.That(sqliteException.SqliteErrorCode).IsEqualTo(SqliteBusy);
     }
 }

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Avtandil Ushikishvili
 
@@ -24,18 +24,18 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.MessagingGateway.MQTT;
 using Paramore.Brighter.Observability;
-using Xunit;
+
 
 namespace Paramore.Brighter.MQTT.Tests;
 
-[Trait("Category", "MQTT")]
+[Property("Category", "MQTT")]
 public class MqttConsumerInstrumentationSelectionTests
 {
-    [Theory]
-    [InlineData(InstrumentationOptions.All)]
-    [InlineData(InstrumentationOptions.All & ~InstrumentationOptions.RequestBody)]
-    [InlineData(InstrumentationOptions.None)]
-    public void When_configuring_mqtt_consumer_instrumentation_should_preserve_selected_options(
+    [Test]
+    [Arguments(InstrumentationOptions.All)]
+    [Arguments(InstrumentationOptions.All & ~InstrumentationOptions.RequestBody)]
+    [Arguments(InstrumentationOptions.None)]
+    public async System.Threading.Tasks.Task When_configuring_mqtt_consumer_instrumentation_should_preserve_selected_options(
         InstrumentationOptions instrumentationOptions)
     {
         //Arrange
@@ -45,6 +45,6 @@ public class MqttConsumerInstrumentationSelectionTests
         configuration.InstrumentationOptions = instrumentationOptions;
 
         //Assert
-        Assert.Equal(instrumentationOptions, configuration.InstrumentationOptions);
+        await Assert.That(configuration.InstrumentationOptions).IsEqualTo(instrumentationOptions);
     }
 }

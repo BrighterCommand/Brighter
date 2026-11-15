@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,7 +26,6 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
@@ -43,29 +43,29 @@ public class MessageMapperRegistryNullReleaseTests
         new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()),
         new SimpleMessageMapperFactoryAsync(_ => new MyTransformableCommandMessageMapperAsync()));
 
-    [Fact]
-    public void When_releasing_a_null_sync_mapper_lease_it_should_not_throw()
+    [Test]
+    public async System.Threading.Tasks.Task When_releasing_a_null_sync_mapper_lease_it_should_not_throw()
     {
         //act
         var exception = Catch.Exception(() =>
             _registry.Release((Lease<IAmAMessageMapper<MyTransformableCommand>>?)null));
 
         //assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 
-    [Fact]
-    public void When_releasing_a_null_async_mapper_lease_it_should_not_throw()
+    [Test]
+    public async System.Threading.Tasks.Task When_releasing_a_null_async_mapper_lease_it_should_not_throw()
     {
         //act
         var exception = Catch.Exception(() =>
             _registry.Release((Lease<IAmAMessageMapperAsync<MyTransformableCommand>>?)null));
 
         //assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 
-    [Fact]
+    [Test]
     public async Task When_release_async_of_a_null_mapper_lease_it_should_not_throw()
     {
         //act
@@ -73,6 +73,6 @@ public class MessageMapperRegistryNullReleaseTests
             await _registry.ReleaseAsync((Lease<IAmAMessageMapperAsync<MyTransformableCommand>>?)null));
 
         //assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 }

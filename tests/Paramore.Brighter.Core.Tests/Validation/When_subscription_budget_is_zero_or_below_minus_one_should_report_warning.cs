@@ -26,8 +26,7 @@ using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
 using Paramore.Brighter.Validation;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 /// <summary>
@@ -37,8 +36,8 @@ namespace Paramore.Brighter.Core.Tests.Validation;
 /// </summary>
 public class SubscriptionBudgetZeroOrBelowMinusOneValidationTests
 {
-    [Fact]
-    public void When_subscription_budget_is_zero_should_report_one_warning_naming_value_and_likely_intents()
+    [Test]
+    public async Task When_subscription_budget_is_zero_should_report_one_warning_naming_value_and_likely_intents()
     {
         // Arrange — requeueCount: 0 is a zero-budget that fires on the first deferral
         var subscription = new Subscription(
@@ -58,16 +57,16 @@ public class SubscriptionBudgetZeroOrBelowMinusOneValidationTests
         var results = spec.Accept(collector).ToList();
 
         // Assert — exactly one Warning naming the value 0 and both likely intents -1 and 1
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Warning, results[0].Error!.Severity);
-        Assert.Contains("0", results[0].Error!.Message);
-        Assert.Contains("-1", results[0].Error!.Message);
-        Assert.Contains("1", results[0].Error!.Message);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Error!.Severity).IsEqualTo(ValidationSeverity.Warning);
+        await Assert.That(results[0].Error!.Message).Contains("0");
+        await Assert.That(results[0].Error!.Message).Contains("-1");
+        await Assert.That(results[0].Error!.Message).Contains("1");
     }
 
-    [Fact]
-    public void When_subscription_budget_is_below_minus_one_should_report_one_warning_naming_value_and_likely_intents()
+    [Test]
+    public async Task When_subscription_budget_is_below_minus_one_should_report_one_warning_naming_value_and_likely_intents()
     {
         // Arrange — requeueCount: -3 is below -1, another zero-budget variant
         var subscription = new Subscription(
@@ -87,18 +86,18 @@ public class SubscriptionBudgetZeroOrBelowMinusOneValidationTests
         var results = spec.Accept(collector).ToList();
 
         // Assert — exactly one Warning naming the value -3 and both likely intents -1 and 1
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Warning, results[0].Error!.Severity);
-        Assert.Contains("-3", results[0].Error!.Message);
-        Assert.Contains("-1", results[0].Error!.Message);
-        Assert.Contains("1", results[0].Error!.Message);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Error!.Severity).IsEqualTo(ValidationSeverity.Warning);
+        await Assert.That(results[0].Error!.Message).Contains("-3");
+        await Assert.That(results[0].Error!.Message).Contains("-1");
+        await Assert.That(results[0].Error!.Message).Contains("1");
     }
 
-    [Theory]
-    [InlineData(3)]
-    [InlineData(-1)]
-    public void When_subscription_budget_is_valid_should_not_report_zero_budget_warning(int requeueCount)
+    [Test]
+    [Arguments(3)]
+    [Arguments(-1)]
+    public async Task When_subscription_budget_is_valid_should_not_report_zero_budget_warning(int requeueCount)
     {
         // Arrange — 3 is a normal budget; -1 is "requeue for ever" (never consulted by pump)
         var subscription = new Subscription(
@@ -116,6 +115,6 @@ public class SubscriptionBudgetZeroOrBelowMinusOneValidationTests
         var satisfied = spec.IsSatisfiedBy(subscription);
 
         // Assert — no zero-budget finding for valid values
-        Assert.True(satisfied);
+        await Assert.That(satisfied).IsTrue();
     }
 }

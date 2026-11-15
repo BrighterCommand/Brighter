@@ -34,13 +34,12 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
 public class SweeperRunningTimeGaugeTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_sweep_blocks_in_the_outbox_should_report_the_running_time_gauge()
     {
         //Arrange
@@ -71,10 +70,10 @@ public class SweeperRunningTimeGaugeTests
             await Task.Run(recorded.Observe).WaitAsync(TimeSpan.FromSeconds(1));
 
             //Assert
-            Assert.True(reachedMediator, "The sweep did not reach the mediator");
-            Assert.Equal([25.0], recorded.Values);
-            Assert.Equal("s", recorded.Unit);
-            Assert.Equal(0, recorded.TagCount);
+            await Assert.That(reachedMediator).IsTrue().Because("The sweep did not reach the mediator");
+            await Assert.That(recorded.Values).IsEqualTo([25.0]);
+            await Assert.That(recorded.Unit).IsEqualTo("s");
+            await Assert.That(recorded.TagCount).IsEqualTo(0);
         }
         finally
         {
@@ -85,8 +84,8 @@ public class SweeperRunningTimeGaugeTests
         }
     }
 
-    [Fact]
-    public void When_a_meter_has_no_sweeper_state_should_report_a_running_time_of_zero()
+    [Test]
+    public async Task When_a_meter_has_no_sweeper_state_should_report_a_running_time_of_zero()
     {
         //Arrange
         using var metrics = new ServiceCollection().AddMetrics().BuildServiceProvider();
@@ -98,6 +97,6 @@ public class SweeperRunningTimeGaugeTests
         recorded.Observe();
 
         //Assert
-        Assert.Equal([0.0], recorded.Values);
+        await Assert.That(recorded.Values).IsEqualTo([0.0]);
     }
 }

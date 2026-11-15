@@ -27,30 +27,29 @@ using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.Inbox.Sqlite;
 using Paramore.Brighter.Sqlite.Tests.TestHelpers;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.Inbox;
 
-[Trait("Category", "Sqlite")]
+[Property("Category", "Sqlite")]
 public class SqliteInboxNonUniqueConstraintTests
 {
-    [Theory]
-    [InlineData("CHECK", 275, false, false)]
-    [InlineData("CHECK", 275, false, true)]
-    [InlineData("CHECK", 275, true, false)]
-    [InlineData("CHECK", 275, true, true)]
-    [InlineData("NOT NULL", 1299, false, false)]
-    [InlineData("NOT NULL", 1299, false, true)]
-    [InlineData("NOT NULL", 1299, true, false)]
-    [InlineData("NOT NULL", 1299, true, true)]
-    [InlineData("FOREIGN KEY", 787, false, false)]
-    [InlineData("FOREIGN KEY", 787, false, true)]
-    [InlineData("FOREIGN KEY", 787, true, false)]
-    [InlineData("FOREIGN KEY", 787, true, true)]
-    [InlineData("TRIGGER", 1811, false, false)]
-    [InlineData("TRIGGER", 1811, false, true)]
-    [InlineData("TRIGGER", 1811, true, false)]
-    [InlineData("TRIGGER", 1811, true, true)]
+    [Test]
+    [Arguments("CHECK", 275, false, false)]
+    [Arguments("CHECK", 275, false, true)]
+    [Arguments("CHECK", 275, true, false)]
+    [Arguments("CHECK", 275, true, true)]
+    [Arguments("NOT NULL", 1299, false, false)]
+    [Arguments("NOT NULL", 1299, false, true)]
+    [Arguments("NOT NULL", 1299, true, false)]
+    [Arguments("NOT NULL", 1299, true, true)]
+    [Arguments("FOREIGN KEY", 787, false, false)]
+    [Arguments("FOREIGN KEY", 787, false, true)]
+    [Arguments("FOREIGN KEY", 787, true, false)]
+    [Arguments("FOREIGN KEY", 787, true, true)]
+    [Arguments("TRIGGER", 1811, false, false)]
+    [Arguments("TRIGGER", 1811, false, true)]
+    [Arguments("TRIGGER", 1811, true, false)]
+    [Arguments("TRIGGER", 1811, true, true)]
     public async Task When_sqlite_inbox_violates_a_non_unique_constraint_should_propagate_the_error(
         string constraint, int expectedExtendedCode, bool binary, bool useAsync)
     {
@@ -61,7 +60,7 @@ public class SqliteInboxNonUniqueConstraintTests
         var context = new RequestContext();
 
         //Act
-        var exception = await Record.ExceptionAsync(async () =>
+        var exception = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             if (useAsync)
                 await inbox.AddAsync(command, "test-context", context, -1, CancellationToken.None);
@@ -70,9 +69,9 @@ public class SqliteInboxNonUniqueConstraintTests
         });
 
         //Assert
-        var sqliteException = Assert.IsType<SqliteException>(exception);
-        Assert.Equal(19, sqliteException.SqliteErrorCode);
-        Assert.Equal(expectedExtendedCode, sqliteException.SqliteExtendedErrorCode);
-        Assert.Equal(0L, database.RowCount());
+        var sqliteException = await Assert.That(exception).IsTypeOf<SqliteException>();
+        await Assert.That(sqliteException.SqliteErrorCode).IsEqualTo(19);
+        await Assert.That(sqliteException.SqliteExtendedErrorCode).IsEqualTo(expectedExtendedCode);
+        await Assert.That(database.RowCount()).IsEqualTo(0L);
     }
 }

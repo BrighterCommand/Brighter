@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia <irakli.gabisonia94@gmail.com>
 
@@ -28,33 +28,32 @@ using System.Threading.Tasks;
 using Confluent.Kafka;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
+[Property("Category", "Kafka")]
+[NotInParallel("Kafka")]
 public class KafkaConsumerCleanupFailureTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, true)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(true, true)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
     public async Task When_kafka_cleanup_fails_should_commit_pending_offsets(
         bool firstDisposeAsync, bool subsequentDisposeAsync)
     {
         // Arrange
         var timeProvider = new InMemoryFaultingTimerTimeProvider();
         await using var host = new KafkaDisposalTestHost(timeProvider);
-        Assert.True(await host.Consumer.RequeueAsync(await host.ReceiveMessageAsync()));
-        Assert.True(await host.Consumer.RejectAsync(await host.ReceiveMessageAsync(),
-            new MessageRejectionReason(RejectionReason.DeliveryError)));
+        await Assert.That(await host.Consumer.RequeueAsync(await host.ReceiveMessageAsync())).IsTrue();
+        await Assert.That(await host.Consumer.RejectAsync(await host.ReceiveMessageAsync(),
+            new MessageRejectionReason(RejectionReason.DeliveryError))).IsTrue();
         var invalidMessage = await host.ReceiveMessageAsync();
-        var pendingOffset = Assert.IsType<TopicPartitionOffset>(invalidMessage.Header.Bag[HeaderNames.PARTITION_OFFSET]);
-        Assert.True(await host.Consumer.RejectAsync(invalidMessage,
-            new MessageRejectionReason(RejectionReason.Unacceptable)));
-        var timer = Assert.IsType<InMemoryFaultingDisposalTimer>(timeProvider.Timer);
+        var pendingOffset = await Assert.That(invalidMessage.Header.Bag[HeaderNames.PARTITION_OFFSET]).IsTypeOf<TopicPartitionOffset>();
+        await Assert.That(await host.Consumer.RejectAsync(invalidMessage,
+            new MessageRejectionReason(RejectionReason.Unacceptable))).IsTrue();
+        var timer = await Assert.That(timeProvider.Timer).IsTypeOf<InMemoryFaultingDisposalTimer>();
         using var observer = new ConsumerBuilder<string, byte[]>(new ConsumerConfig
         {
             BootstrapServers = "localhost:9092",
@@ -62,12 +61,12 @@ public class KafkaConsumerCleanupFailureTests
             EnableAutoCommit = false,
             EnableAutoOffsetStore = false
         }).Build();
-        var before = Assert.Single(observer.Committed([pendingOffset.TopicPartition], TimeSpan.FromSeconds(5)));
-        Assert.Equal(Offset.Unset, before.Offset);
+        var before = await Assert.That(observer.Committed([pendingOffset.TopicPartition], TimeSpan.FromSeconds(5))).HasSingleItem();
+        await Assert.That(before.Offset).IsEqualTo(Offset.Unset);
         timer.FailOnDispose = true;
 
         // Act
-        var exception = await Record.ExceptionAsync(async () =>
+        var exception = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             if (firstDisposeAsync)
                 await host.DisposeAsync();
@@ -76,18 +75,18 @@ public class KafkaConsumerCleanupFailureTests
         });
 
         // Assert
-        Assert.Same(timer.Failure, exception);
-        var repeatedDisposal = await Record.ExceptionAsync(async () =>
+        await Assert.That(exception).IsSameReferenceAs(timer.Failure);
+        var repeatedDisposal = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             if (subsequentDisposeAsync)
                 await host.Consumer.DisposeAsync();
             else
                 host.Consumer.Dispose();
         });
-        Assert.Null(repeatedDisposal);
-        Assert.Equal(1, timer.DisposeCalls);
+        await Assert.That(repeatedDisposal).IsNull();
+        await Assert.That(timer.DisposeCalls).IsEqualTo(1);
 
-        var committed = Assert.Single(observer.Committed([pendingOffset.TopicPartition], TimeSpan.FromSeconds(5)));
-        Assert.Equal(pendingOffset.Offset + 1, committed.Offset);
+        var committed = await Assert.That(observer.Committed([pendingOffset.TopicPartition], TimeSpan.FromSeconds(5))).HasSingleItem();
+        await Assert.That(committed.Offset).IsEqualTo(pendingOffset.Offset + 1);
     }
 }

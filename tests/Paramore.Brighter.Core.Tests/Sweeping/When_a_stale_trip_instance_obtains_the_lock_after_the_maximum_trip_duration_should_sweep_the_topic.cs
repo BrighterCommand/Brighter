@@ -7,7 +7,6 @@ using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -15,7 +14,7 @@ public class SweeperStaleTripTests
 {
     private static readonly TimeSpan s_timeout = TimeSpan.FromSeconds(5);
 
-    [Fact]
+    [Test]
     public async Task When_a_stale_trip_instance_obtains_the_lock_after_the_maximum_trip_duration_should_sweep_the_topic()
     {
         //Arrange
@@ -54,8 +53,8 @@ public class SweeperStaleTripTests
         sweeper.Dispose();
 
         //Assert
-        Assert.True(withheldAtStart && withheldAfterD && sweptWithLock, "The sweeps did not all complete");
-        Assert.False(publishedWhileWithheld);
-        Assert.True(publishedAfterLock, "The topic was still excluded from the sweep that obtained the lock");
+        await Assert.That(withheldAtStart && withheldAfterD && sweptWithLock).IsTrue().Because("The sweeps did not all complete");
+        await Assert.That(publishedWhileWithheld).IsFalse();
+        await Assert.That(publishedAfterLock).IsTrue().Because("The topic was still excluded from the sweep that obtained the lock");
     }
 }

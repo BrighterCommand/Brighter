@@ -21,7 +21,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -29,5 +28,4 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// Serialises the observability test classes: each builds a <c>TracerProvider</c> on the same
 /// source, so run in parallel they would export each other's activities.
 /// </summary>
-[CollectionDefinition("BoxProvisioningObservability", DisableParallelization = true)]
 public class BoxProvisioningObservabilityCollection;

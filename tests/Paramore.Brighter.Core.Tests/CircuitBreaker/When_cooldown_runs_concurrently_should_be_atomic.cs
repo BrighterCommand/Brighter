@@ -27,13 +27,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter;
 using Paramore.Brighter.CircuitBreaker;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker
 {
     public class CircuitBreakerCoolDownConcurrencyTests
     {
-        [Fact]
+        [Test]
         public async Task When_cooldown_races_concurrent_trips_should_remain_consistent()
         {
             // Arrange: many tripped topics with CooldownCount 0, so a single CoolDown evicts each topic.
@@ -58,14 +57,14 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker
                         breaker.TripTopic(topic);
             }));
 
-            var race = Record.ExceptionAsync(() => Task.WhenAll(cooldowns.Concat(trips)));
+            var race = TestExceptionRecorder.CaptureAsync(() => Task.WhenAll(cooldowns.Concat(trips)));
 
             // Assert: the concurrent cool-downs never fault.
-            Assert.Null(await race);
+            await Assert.That(await race).IsNull();
 
             // Assert: state is not corrupted — once tripping stops, cooling down drains every topic.
             breaker.CoolDown();
-            Assert.Empty(breaker.TrippedTopics);
+            await Assert.That(breaker.TrippedTopics).IsEmpty();
         }
     }
 }

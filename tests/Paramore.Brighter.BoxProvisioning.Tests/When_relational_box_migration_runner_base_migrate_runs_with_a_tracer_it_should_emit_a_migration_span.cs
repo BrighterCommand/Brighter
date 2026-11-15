@@ -33,7 +33,6 @@ using OpenTelemetry;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -42,7 +41,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// backend, table, box type and chosen path, and carrying one event per step taken, so the trace alone
 /// says what the migration did.
 /// </summary>
-[Collection("BoxProvisioningObservability")]
+[NotInParallel]
 public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
 {
     // Exported by the same TracerProvider, so the parent span does not race a separate ActivityListener.
@@ -67,7 +66,7 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
         _tracer.Dispose();
     }
 
-    [Fact]
+    [Test]
     public async Task When_migrate_async_runs_on_the_fresh_path_it_should_emit_a_span_with_ensure_history_and_fresh_install_events()
     {
         //Arrange
@@ -83,31 +82,29 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
             tableName: "Orders",
             schemaName: "dbo",
             boxType: BoxType.Outbox,
-            tableState:new BoxTableState(false, false, 0));
+            tableState: new BoxTableState(false, false, 0));
 
         _tracerProvider.ForceFlush();
 
         //Assert
-        var span = Assert.Single(_exportedActivities);
-        Assert.Equal($"{BrighterSemanticConventions.BoxMigration} Orders", span.DisplayName);
+        var span = await Assert.That(_exportedActivities).HasSingleItem();
+        await Assert.That(span.DisplayName).IsEqualTo($"{BrighterSemanticConventions.BoxMigration} Orders");
 
-        Assert.Contains(span.TagObjects, t => t.Key == BrighterSemanticConventions.DbSystem && (string?)t.Value == DbSystem.OtherSql.ToDbName());
-        Assert.Contains(span.TagObjects, t => t.Key == BrighterSemanticConventions.DbTable && (string?)t.Value == "Orders");
-        Assert.Contains(span.TagObjects, t => t.Key == BrighterSemanticConventions.DbNamespace && (string?)t.Value == "dbo");
-        Assert.Contains(span.TagObjects, t => t.Key == BrighterSemanticConventions.BoxType && (string?)t.Value == BoxType.Outbox.ToString());
-        Assert.Contains(span.TagObjects, t => t.Key == BrighterSemanticConventions.BoxMigrationPath && (string?)t.Value == "fresh");
+        await Assert.That(System.Linq.Enumerable.Any(span.TagObjects, t => t.Key == BrighterSemanticConventions.DbSystem && (string?)t.Value == DbSystem.OtherSql.ToDbName())).IsTrue();
+        await Assert.That(System.Linq.Enumerable.Any(span.TagObjects, t => t.Key == BrighterSemanticConventions.DbTable && (string?)t.Value == "Orders")).IsTrue();
+        await Assert.That(System.Linq.Enumerable.Any(span.TagObjects, t => t.Key == BrighterSemanticConventions.DbNamespace && (string?)t.Value == "dbo")).IsTrue();
+        await Assert.That(System.Linq.Enumerable.Any(span.TagObjects, t => t.Key == BrighterSemanticConventions.BoxType && (string?)t.Value == BoxType.Outbox.ToString())).IsTrue();
+        await Assert.That(System.Linq.Enumerable.Any(span.TagObjects, t => t.Key == BrighterSemanticConventions.BoxMigrationPath && (string?)t.Value == "fresh")).IsTrue();
 
         var eventNames = span.Events.Select(e => e.Name).ToArray();
-        Assert.Equal(
-            new[]
+        await Assert.That(eventNames).IsEquivalentTo(new[]
             {
                 BrighterSemanticConventions.BoxMigrationEventEnsureHistory,
                 BrighterSemanticConventions.BoxMigrationEventFreshInstall
-            },
-            eventNames);
+            }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
-    [Fact]
+    [Test]
     public async Task When_migrate_async_runs_on_the_bootstrap_path_it_should_emit_a_span_with_ensure_history_and_bootstrap_events()
     {
         //Arrange
@@ -123,27 +120,25 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
             tableName: "Orders",
             schemaName: null,
             boxType: BoxType.Inbox,
-            tableState:new BoxTableState(true, false, 0));
+            tableState: new BoxTableState(true, false, 0));
 
         _tracerProvider.ForceFlush();
 
         //Assert
-        var span = Assert.Single(_exportedActivities);
-        Assert.Contains(span.TagObjects, t => t.Key == BrighterSemanticConventions.BoxMigrationPath && (string?)t.Value == "bootstrap");
-        Assert.Contains(span.TagObjects, t => t.Key == BrighterSemanticConventions.BoxType && (string?)t.Value == BoxType.Inbox.ToString());
-        Assert.DoesNotContain(span.TagObjects, t => t.Key == BrighterSemanticConventions.DbNamespace);
+        var span = await Assert.That(_exportedActivities).HasSingleItem();
+        await Assert.That(System.Linq.Enumerable.Any(span.TagObjects, t => t.Key == BrighterSemanticConventions.BoxMigrationPath && (string?)t.Value == "bootstrap")).IsTrue();
+        await Assert.That(System.Linq.Enumerable.Any(span.TagObjects, t => t.Key == BrighterSemanticConventions.BoxType && (string?)t.Value == BoxType.Inbox.ToString())).IsTrue();
+        await Assert.That(System.Linq.Enumerable.Any(span.TagObjects, t => t.Key == BrighterSemanticConventions.DbNamespace)).IsFalse();
 
         var eventNames = span.Events.Select(e => e.Name).ToArray();
-        Assert.Equal(
-            new[]
+        await Assert.That(eventNames).IsEquivalentTo(new[]
             {
                 BrighterSemanticConventions.BoxMigrationEventEnsureHistory,
                 BrighterSemanticConventions.BoxMigrationEventBootstrap
-            },
-            eventNames);
+            }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
-    [Fact]
+    [Test]
     public async Task When_migrate_async_runs_on_the_normal_path_it_should_emit_a_span_with_ensure_history_and_normal_update_events()
     {
         //Arrange
@@ -159,25 +154,23 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
             tableName: "Orders",
             schemaName: "dbo",
             boxType: BoxType.Outbox,
-            tableState:new BoxTableState(true, true, 7));
+            tableState: new BoxTableState(true, true, 7));
 
         _tracerProvider.ForceFlush();
 
         //Assert
-        var span = Assert.Single(_exportedActivities);
-        Assert.Contains(span.TagObjects, t => t.Key == BrighterSemanticConventions.BoxMigrationPath && (string?)t.Value == "normal");
+        var span = await Assert.That(_exportedActivities).HasSingleItem();
+        await Assert.That((span.TagObjects).Any(t => t.Key == BrighterSemanticConventions.BoxMigrationPath && (string?)t.Value == "normal")).IsTrue();
 
         var eventNames = span.Events.Select(e => e.Name).ToArray();
-        Assert.Equal(
-            new[]
+        await Assert.That(eventNames).IsEquivalentTo(new[]
             {
                 BrighterSemanticConventions.BoxMigrationEventEnsureHistory,
                 BrighterSemanticConventions.BoxMigrationEventNormalUpdate
-            },
-            eventNames);
+            }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
-    [Fact]
+    [Test]
     public async Task When_migrate_async_runs_under_a_parent_activity_it_should_emit_a_child_span()
     {
         //Arrange
@@ -196,17 +189,16 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
             tableName: "Orders",
             schemaName: null,
             boxType: BoxType.Outbox,
-            tableState:new BoxTableState(false, false, 0));
+            tableState: new BoxTableState(false, false, 0));
 
         _tracerProvider.ForceFlush();
 
         //Assert
-        var migrationSpan = Assert.Single(_exportedActivities,
-            a => a.DisplayName == $"{BrighterSemanticConventions.BoxMigration} Orders");
-        Assert.Equal(parentActivity.SpanId.ToString(), migrationSpan.ParentSpanId.ToString());
+        var migrationSpan = await Assert.That(System.Linq.Enumerable.Where(_exportedActivities, a => a.DisplayName == $"{BrighterSemanticConventions.BoxMigration} Orders")).HasSingleItem();
+        await Assert.That(migrationSpan.ParentSpanId.ToString()).IsEqualTo(parentActivity.SpanId.ToString());
     }
 
-    [Fact]
+    [Test]
     public async Task When_no_tracer_is_supplied_migrate_async_should_complete_without_emitting_a_span()
     {
         //Arrange
@@ -222,12 +214,12 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
             tableName: "Orders",
             schemaName: null,
             boxType: BoxType.Outbox,
-            tableState:new BoxTableState(false, false, 0));
+            tableState: new BoxTableState(false, false, 0));
 
         _tracerProvider.ForceFlush();
 
         //Assert
-        Assert.Empty(_exportedActivities);
+        await Assert.That(_exportedActivities).IsEmpty();
     }
 
     private sealed class ObservabilityTestRunner : SqlBoxMigrationRunner<FakeDbConnection, FakeDbTransaction>

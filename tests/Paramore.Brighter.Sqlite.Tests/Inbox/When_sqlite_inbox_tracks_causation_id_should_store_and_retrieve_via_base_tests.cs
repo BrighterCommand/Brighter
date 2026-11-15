@@ -1,10 +1,11 @@
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.Sqlite;
-using Xunit;
+
 
 namespace Paramore.Brighter.Sqlite.Tests.Inbox;
 
-[Trait("Category", "Sqlite")]
+[Property("Category", "Sqlite")]
+[TUnit.Core.InheritsTests]
 public class SqliteCausationTrackingInboxTest : CausationTrackingInboxBaseTests
 {
     private RelationalDatabaseConfiguration _configuration = null!;

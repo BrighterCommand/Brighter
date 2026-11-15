@@ -30,7 +30,6 @@ using System.Threading.Tasks;
 using Confluent.Kafka;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
@@ -56,8 +55,8 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 /// regression on a loaded one. See bugfixes/0040-kafka-topic-propagation-race/bugfix.md for the
 /// full diagnosis and the throttled-run evidence.
 /// </remarks>
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
+[Property("Category", "Kafka")]
+[NotInParallel("Kafka")]
 public class KafkaTopicPropagationRaceTests : IDisposable
 {
     private const int Attempts = 60;
@@ -73,8 +72,8 @@ public class KafkaTopicPropagationRaceTests : IDisposable
     private readonly ConcurrentBag<IAmAChannelSync> _channels = [];
     private readonly ConcurrentBag<string> _topics = [];
 
-    [Fact]
-    public void When_a_consumer_subscribes_right_after_the_producer_creates_the_topic_should_not_throw_subscribed_topic_not_available()
+    [Test]
+    public async Task When_a_consumer_subscribes_right_after_the_producer_creates_the_topic_should_not_throw_subscribed_topic_not_available()
     {
         // Arrange / Act - repeat, concurrently and many times, the sequence the generated gateway
         // tests use (producer creates the topic under OnMissingChannel.Create, consumer subscribes
@@ -82,7 +81,7 @@ public class KafkaTopicPropagationRaceTests : IDisposable
         // by RetryableChannelSync the way it is in the generated conformance tests.
         var failures = new ConcurrentBag<ChannelFailureException>();
 
-        Parallel.For(0, Attempts, new ParallelOptions { MaxDegreeOfParallelism = MaxConcurrency }, _ =>
+        await Parallel.ForEachAsync(Enumerable.Range(0, Attempts), new ParallelOptions { MaxDegreeOfParallelism = MaxConcurrency }, async (_, _) =>
         {
             var topic = new RoutingKey($"gen.race.test.{Uuid.New():N}");
             _topics.Add(topic.Value);
@@ -99,7 +98,7 @@ public class KafkaTopicPropagationRaceTests : IDisposable
             try
             {
                 var received = channel.Receive(TimeSpan.FromMilliseconds(5000));
-                Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+                await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
             }
             catch (ChannelFailureException exception)
             {
@@ -109,8 +108,7 @@ public class KafkaTopicPropagationRaceTests : IDisposable
 
         // Assert - none of the raw receives should have hit the create-then-subscribe race
         var first = failures.FirstOrDefault();
-        Assert.True(
-            failures.Count == 0,
+        await Assert.That(failures.Count).IsEqualTo(0).Because(
             $"{failures.Count}/{Attempts} attempts raced a just-created topic: {first?.Message} "
                 + $"| inner: {first?.InnerException?.GetType().Name}: {first?.InnerException?.Message}");
     }

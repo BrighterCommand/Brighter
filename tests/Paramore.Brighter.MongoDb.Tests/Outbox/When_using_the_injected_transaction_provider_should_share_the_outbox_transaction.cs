@@ -30,17 +30,16 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MongoDb.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.MongoDb;
-using Xunit;
 
 namespace Paramore.Brighter.MongoDb.Tests.Outbox;
 
 public class MongoDbInjectedTransactionTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_using_the_injected_transaction_provider_should_share_the_outbox_transaction(
         bool useAsync, bool commit)
     {
@@ -80,9 +79,9 @@ public class MongoDbInjectedTransactionTests
             var documents = database.GetCollection<BsonDocument>("documents");
 
             //Act
-            var session = Assert.IsAssignableFrom<IClientSessionHandle>(useAsync
+            var session = ((IClientSessionHandle)(((IClientSessionHandle)(await Assert.That(useAsync
                 ? await transactionProvider.GetTransactionAsync()
-                : transactionProvider.GetTransaction());
+                : transactionProvider.GetTransaction()).IsAssignableTo<IClientSessionHandle>()))));
             var document = new BsonDocument("_id", command.Id.Value);
             Id messageId;
             if (useAsync)
@@ -97,13 +96,13 @@ public class MongoDbInjectedTransactionTests
             }
 
             //Assert
-            Assert.True(transactionProvider.HasOpenTransaction);
-            Assert.Equal(1L, await documents.CountDocumentsAsync(session, FilterDefinition<BsonDocument>.Empty));
+            await Assert.That(transactionProvider.HasOpenTransaction).IsTrue();
+            await Assert.That(await documents.CountDocumentsAsync(session, FilterDefinition<BsonDocument>.Empty)).IsEqualTo(1L);
             var outboxDocuments = database.GetCollection<BsonDocument>("outbox");
-            Assert.Equal(1L, await outboxDocuments.CountDocumentsAsync(session, FilterDefinition<BsonDocument>.Empty));
-            Assert.Equal(0L, await documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty));
-            Assert.Empty(await outbox.GetAsync());
-            Assert.Empty(bus.Stream(topic));
+            await Assert.That(await outboxDocuments.CountDocumentsAsync(session, FilterDefinition<BsonDocument>.Empty)).IsEqualTo(1L);
+            await Assert.That(await documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(0L);
+            await Assert.That(await outbox.GetAsync()).IsEmpty();
+            await Assert.That(bus.Stream(topic)).IsEmpty();
 
             if (useAsync)
             {
@@ -120,22 +119,22 @@ public class MongoDbInjectedTransactionTests
                     transactionProvider.Rollback();
             }
 
-            Assert.False(transactionProvider.HasOpenTransaction);
-            Assert.Equal(commit ? 1L : 0L, await documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty));
+            await Assert.That(transactionProvider.HasOpenTransaction).IsFalse();
+            await Assert.That(await documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(commit ? 1L : 0L);
             var messages = await outbox.GetAsync();
             if (commit)
             {
-                Assert.Equal(messageId, Assert.Single(messages).Id);
+                await Assert.That((await Assert.That(messages).HasSingleItem()).Id).IsEqualTo(messageId);
                 if (useAsync)
                     await processor.ClearOutboxAsync([messageId]);
                 else
                     processor.ClearOutbox([messageId]);
-                Assert.Equal(messageId, Assert.Single(bus.Stream(topic)).Id);
+                await Assert.That((await Assert.That(bus.Stream(topic)).HasSingleItem()).Id).IsEqualTo(messageId);
             }
             else
             {
-                Assert.Empty(messages);
-                Assert.Empty(bus.Stream(topic));
+                await Assert.That(messages).IsEmpty();
+                await Assert.That(bus.Stream(topic)).IsEmpty();
             }
         }
         finally

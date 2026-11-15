@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,7 +34,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -43,7 +42,7 @@ public class SettingsReadAtCreationTests
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
     private readonly TimerCountingTimeProvider _clock = new(s_start);
 
-    [Fact]
+    [Test]
     public async Task When_the_settings_change_after_the_monitor_is_created_should_keep_the_settings_it_was_created_with()
     {
         //Arrange
@@ -88,13 +87,14 @@ public class SettingsReadAtCreationTests
         WaitForOverallCompletions(readings, 3);
 
         //Assert
-        Assert.Equal(new[] { 50L }, OverallValues(metrics));
+        await Assert.That(OverallValues(metrics)).IsEqualTo(new[] { 50L });
         var calls = outbox.CountCalls.ToArray();
-        Assert.Equal(
-            new DateTimeOffset?[] { s_start.AddMinutes(1), s_start.AddMinutes(2), s_start.AddMinutes(3) },
-            calls.Select(call => call.CalledAt));
-        Assert.All(calls, call => Assert.Equal(100, call.MaxCount));
-        Assert.Equal(3, readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed));
+        await Assert.That(calls.Select(call => call.CalledAt)).IsEqualTo(new DateTimeOffset?[] { s_start.AddMinutes(1), s_start.AddMinutes(2), s_start.AddMinutes(3) });
+        foreach (var call in calls)
+{
+    await Assert.That(call.MaxCount).IsEqualTo(100);
+}
+        await Assert.That(readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed)).IsEqualTo(3);
     }
 
     private static void WaitForOverallCompletions(OutboxStaleMessageReadings readings, long completions) =>

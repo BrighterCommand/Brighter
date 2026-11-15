@@ -1,11 +1,9 @@
-using Xunit;
-
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
 public class MessageHeaderLocalHeadersTests
 {
-    [Fact]
-    public void When_BagWithoutLocalHeaders_Removes_Local_Entries_And_Other_Entries_Survive()
+    [Test]
+    public async Task When_BagWithoutLocalHeaders_Removes_Local_Entries_And_Other_Entries_Survive()
     {
         var header = new MessageHeader(
             messageId: "id-1",
@@ -16,14 +14,14 @@ public class MessageHeaderLocalHeadersTests
 
         var wireBag = header.BagWithoutLocalHeaders();
 
-        Assert.False(wireBag.ContainsKey(Message.ProducerTopicHeaderName));
-        Assert.True(wireBag.ContainsKey("user.key"));
+        await Assert.That(wireBag.ContainsKey(Message.ProducerTopicHeaderName)).IsFalse();
+        await Assert.That(wireBag.ContainsKey("user.key")).IsTrue();
         // original is untouched — InMemoryOutbox-by-reference keeps the local entry for retries
-        Assert.True(header.Bag.ContainsKey(Message.ProducerTopicHeaderName));
+        await Assert.That(header.Bag.ContainsKey(Message.ProducerTopicHeaderName)).IsTrue();
     }
 
-    [Fact]
-    public void When_BagWithoutLocalHeaders_With_No_Local_Entries_Returns_Equivalent_Copy()
+    [Test]
+    public async Task When_BagWithoutLocalHeaders_With_No_Local_Entries_Returns_Equivalent_Copy()
     {
         var header = new MessageHeader(
             messageId: "id-2",
@@ -33,25 +31,25 @@ public class MessageHeaderLocalHeadersTests
 
         var wireBag = header.BagWithoutLocalHeaders();
 
-        Assert.Single(wireBag);
-        Assert.Equal("user.value", wireBag["user.key"]);
+        await Assert.That(wireBag).HasSingleItem();
+        await Assert.That(wireBag["user.key"]).IsEqualTo("user.value");
     }
 
-    [Fact]
-    public void When_The_Producer_Topic_Header_Name_Is_A_Local_Header()
+    [Test]
+    public async Task When_The_Producer_Topic_Header_Name_Is_A_Local_Header()
     {
-        Assert.True(MessageHeader.IsLocalHeader(Message.ProducerTopicHeaderName));
+        await Assert.That(MessageHeader.IsLocalHeader(Message.ProducerTopicHeaderName)).IsTrue();
     }
 
-    [Fact]
-    public void When_RegisterLocalHeader_Adds_A_Custom_Key_It_Is_Recognised_And_Is_Idempotent()
+    [Test]
+    public async Task When_RegisterLocalHeader_Adds_A_Custom_Key_It_Is_Recognised_And_Is_Idempotent()
     {
         const string customKey = "custom.local.header." + nameof(MessageHeaderLocalHeadersTests);
 
         MessageHeader.RegisterLocalHeader(customKey);
         MessageHeader.RegisterLocalHeader(customKey); // idempotent
 
-        Assert.True(MessageHeader.IsLocalHeader(customKey));
+        await Assert.That(MessageHeader.IsLocalHeader(customKey)).IsTrue();
 
         var header = new MessageHeader(
             messageId: "id-3",
@@ -62,7 +60,7 @@ public class MessageHeaderLocalHeadersTests
 
         var wireBag = header.BagWithoutLocalHeaders();
 
-        Assert.False(wireBag.ContainsKey(customKey));
-        Assert.True(wireBag.ContainsKey("user.key"));
+        await Assert.That(wireBag.ContainsKey(customKey)).IsFalse();
+        await Assert.That(wireBag.ContainsKey("user.key")).IsTrue();
     }
 }

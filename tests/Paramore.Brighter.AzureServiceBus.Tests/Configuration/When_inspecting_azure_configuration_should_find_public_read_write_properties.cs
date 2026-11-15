@@ -31,21 +31,20 @@ using System.Reflection;
 using Paramore.Brighter.Locking.Azure;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.Storage.Azure;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.Configuration;
 
 public class AzureConfigurationPropertyDiscoveryTests
 {
-    [Theory]
-    [InlineData(typeof(AzureServiceBusSubscriptionConfiguration), nameof(AzureServiceBusSubscriptionConfiguration.SqlFilter), typeof(string))]
-    [InlineData(typeof(AzureServiceBusSubscriptionConfiguration), nameof(AzureServiceBusSubscriptionConfiguration.UseServiceBusQueue), typeof(bool))]
-    [InlineData(typeof(AzureServiceBusPublication), nameof(AzureServiceBusPublication.UseServiceBusQueue), typeof(bool))]
-    [InlineData(typeof(AzureServiceBusPublication<Command>), nameof(AzureServiceBusPublication.UseServiceBusQueue), typeof(bool))]
-    [InlineData(typeof(AzureBlobLockingProviderOptions), nameof(AzureBlobLockingProviderOptions.StorageLocationFunc), typeof(Func<string, string>))]
-    [InlineData(typeof(AzureBlobArchiveProviderOptions), nameof(AzureBlobArchiveProviderOptions.StorageLocationFunc), typeof(Func<Message, string>))]
-    [InlineData(typeof(AzureBlobArchiveProviderOptions), nameof(AzureBlobArchiveProviderOptions.TagsFunc), typeof(Func<Message, Dictionary<string, string>>))]
-    public void When_inspecting_azure_configuration_should_find_public_read_write_properties(
+    [Test]
+    [Arguments(typeof(AzureServiceBusSubscriptionConfiguration), nameof(AzureServiceBusSubscriptionConfiguration.SqlFilter), typeof(string))]
+    [Arguments(typeof(AzureServiceBusSubscriptionConfiguration), nameof(AzureServiceBusSubscriptionConfiguration.UseServiceBusQueue), typeof(bool))]
+    [Arguments(typeof(AzureServiceBusPublication), nameof(AzureServiceBusPublication.UseServiceBusQueue), typeof(bool))]
+    [Arguments(typeof(AzureServiceBusPublication<Command>), nameof(AzureServiceBusPublication.UseServiceBusQueue), typeof(bool))]
+    [Arguments(typeof(AzureBlobLockingProviderOptions), nameof(AzureBlobLockingProviderOptions.StorageLocationFunc), typeof(Func<string, string>))]
+    [Arguments(typeof(AzureBlobArchiveProviderOptions), nameof(AzureBlobArchiveProviderOptions.StorageLocationFunc), typeof(Func<Message, string>))]
+    [Arguments(typeof(AzureBlobArchiveProviderOptions), nameof(AzureBlobArchiveProviderOptions.TagsFunc), typeof(Func<Message, Dictionary<string, string>>))]
+    public async Task When_inspecting_azure_configuration_should_find_public_read_write_properties(
         Type optionsType, string memberName, Type memberType)
     {
         //Arrange
@@ -55,12 +54,12 @@ public class AzureConfigurationPropertyDiscoveryTests
         var property = optionsType.GetProperty(memberName, flags);
 
         //Assert
-        Assert.NotNull(property);
-        Assert.Equal(memberType, property.PropertyType);
-        Assert.NotNull(property.GetMethod);
-        Assert.True(property.GetMethod.IsPublic);
-        Assert.NotNull(property.SetMethod);
-        Assert.True(property.SetMethod.IsPublic);
-        Assert.Null(optionsType.GetField(memberName, flags));
+        await Assert.That(property).IsNotNull();
+        await Assert.That(property.PropertyType).IsEqualTo(memberType);
+        await Assert.That(property.GetMethod).IsNotNull();
+        await Assert.That(property.GetMethod.IsPublic).IsTrue();
+        await Assert.That(property.SetMethod).IsNotNull();
+        await Assert.That(property.SetMethod.IsPublic).IsTrue();
+        await Assert.That(optionsType.GetField(memberName, flags)).IsNull();
     }
 }

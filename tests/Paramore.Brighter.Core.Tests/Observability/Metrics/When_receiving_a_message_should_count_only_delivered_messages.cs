@@ -28,14 +28,13 @@ THE SOFTWARE. */
 using System.Diagnostics;
 using Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
 public class ConsumedMessageMetricsTests
 {
-    [Fact]
-    public void When_receiving_a_message_should_count_only_delivered_messages()
+    [Test]
+    public async Task When_receiving_a_message_should_count_only_delivered_messages()
     {
         //Arrange
         using var telemetry = new InMemoryMetricsFromTraces();
@@ -52,7 +51,7 @@ public class ConsumedMessageMetricsTests
         foreach (var message in receiveResults)
         {
             var span = telemetry.Tracer.CreateReceiveSpan(topic, MessagingSystem.InternalBus);
-            Assert.NotNull(span);
+            await Assert.That(span).IsNotNull();
             if (message is null)
                 span.SetStatus(ActivityStatusCode.Error, "Channel receive failed");
             else
@@ -60,11 +59,11 @@ public class ConsumedMessageMetricsTests
             telemetry.Tracer.EndSpan(span);
         }
 
-        Assert.True(telemetry.Flush());
+        await Assert.That(telemetry.Flush()).IsTrue();
 
         //Assert
-        Assert.Equal(4, telemetry.Spans.Count);
-        Assert.Equal(1, telemetry.CounterTotal("messaging.client.consumed.messages"));
-        Assert.Equal(4, telemetry.HistogramCount("messaging.client.operation.duration"));
+        await Assert.That(telemetry.Spans.Count).IsEqualTo(4);
+        await Assert.That(telemetry.CounterTotal("messaging.client.consumed.messages")).IsEqualTo(1);
+        await Assert.That(telemetry.HistogramCount("messaging.client.operation.duration")).IsEqualTo(4);
     }
 }

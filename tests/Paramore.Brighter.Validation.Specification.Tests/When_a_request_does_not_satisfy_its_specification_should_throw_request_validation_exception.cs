@@ -25,14 +25,14 @@ THE SOFTWARE. */
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.RequestValidation;
 using Paramore.Brighter.Validation.Specification.Tests.TestDoubles;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Validation.Specification.Tests;
 
 public class InvalidSpecificationValidationTests
 {
-    [Fact]
-    public void When_a_request_does_not_satisfy_its_specification_should_throw_request_validation_exception()
+    [Test]
+    public async Task When_a_request_does_not_satisfy_its_specification_should_throw_request_validation_exception()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -42,9 +42,9 @@ public class InvalidSpecificationValidationTests
         var invalidRequest = new PlaceOrder { Sku = "SKU-1", Quantity = 0 };
 
         //Act
-        var exception = Assert.Throws<RequestValidationException>(() => handler.Handle(invalidRequest));
+        var exception = await Assert.That(() => handler.Handle(invalidRequest)).ThrowsExactly<RequestValidationException>();
 
         //Assert
-        Assert.Contains(exception.Errors, error => error.PropertyName == nameof(PlaceOrder.Quantity));
+        await Assert.That((exception.Errors).Any(error => error.PropertyName == nameof(PlaceOrder.Quantity))).IsTrue();
     }
 }

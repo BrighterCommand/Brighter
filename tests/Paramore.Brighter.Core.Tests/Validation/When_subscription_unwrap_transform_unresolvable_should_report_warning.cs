@@ -1,17 +1,14 @@
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Miguel Ramirez <xbizzybone@gmail.com>
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
-
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
-
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -29,7 +26,7 @@ using Paramore.Brighter.MessageMappers;
 using Paramore.Brighter.ServiceActivator.Validation;
 using Paramore.Brighter.Transforms.Transformers;
 using Paramore.Brighter.Validation;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
@@ -53,8 +50,8 @@ public class UnwrapTransformResolvableTests
             requestType: typeof(TRequest),
             messagePumpType: MessagePumpType.Reactor);
 
-    [Fact]
-    public void When_subscription_unwrap_transform_unresolvable_should_report_warning()
+    [Test]
+    public async Task When_subscription_unwrap_transform_unresolvable_should_report_warning()
     {
         // Arrange — mapper declares an unwrap transform (MyDescribableTransform) the probe cannot resolve
         var registry = RegistryWith<MyDescribableCommandMessageMapper>();
@@ -66,18 +63,18 @@ public class UnwrapTransformResolvableTests
         var results = spec.Accept(new ValidationResultCollector<Subscription>()).ToList();
 
         // Assert — a single Warning naming the request type, transformer type, subscription Name, and AutoFromAssemblies
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Warning, results[0].Error!.Severity);
-        Assert.Contains("greeting-subscription", results[0].Error!.Source);
-        Assert.Contains(nameof(MyDescribableCommand), results[0].Error!.Message);
-        Assert.Contains(nameof(MyDescribableTransform), results[0].Error!.Message);
-        Assert.Contains("greeting-subscription", results[0].Error!.Message);
-        Assert.Contains("AutoFromAssemblies", results[0].Error!.Message);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Error!.Severity).IsEqualTo(ValidationSeverity.Warning);
+        await Assert.That(results[0].Error!.Source).Contains("greeting-subscription");
+        await Assert.That(results[0].Error!.Message).Contains(nameof(MyDescribableCommand));
+        await Assert.That(results[0].Error!.Message).Contains(nameof(MyDescribableTransform));
+        await Assert.That(results[0].Error!.Message).Contains("greeting-subscription");
+        await Assert.That(results[0].Error!.Message).Contains("AutoFromAssemblies");
     }
 
-    [Fact]
-    public void When_subscription_unwrap_transforms_all_resolvable_should_report_no_warning()
+    [Test]
+    public async Task When_subscription_unwrap_transforms_all_resolvable_should_report_no_warning()
     {
         // Arrange — same mapper, but the probe resolves every transformer
         var registry = RegistryWith<MyDescribableCommandMessageMapper>();
@@ -89,12 +86,12 @@ public class UnwrapTransformResolvableTests
         var results = spec.Accept(new ValidationResultCollector<Subscription>()).ToList();
 
         // Assert
-        Assert.True(satisfied);
-        Assert.Empty(results);
+        await Assert.That(satisfied).IsTrue();
+        await Assert.That(results).IsEmpty();
     }
 
-    [Fact]
-    public void When_subscription_mapper_declares_no_transforms_should_report_no_warning()
+    [Test]
+    public async Task When_subscription_mapper_declares_no_transforms_should_report_no_warning()
     {
         // Arrange — vanilla mapper declares no unwrap transforms
         var registry = RegistryWith<MyVanillaDescribableCommandMessageMapper>();
@@ -106,12 +103,12 @@ public class UnwrapTransformResolvableTests
         var results = spec.Accept(new ValidationResultCollector<Subscription>()).ToList();
 
         // Assert
-        Assert.True(satisfied);
-        Assert.Empty(results);
+        await Assert.That(satisfied).IsTrue();
+        await Assert.That(results).IsEmpty();
     }
 
-    [Fact]
-    public void When_subscription_request_type_is_null_should_be_skipped()
+    [Test]
+    public async Task When_subscription_request_type_is_null_should_be_skipped()
     {
         // Arrange — a datatype-channel subscription has a null RequestType and cannot be inspected, so it is skipped
         var registry = RegistryWith<MyDescribableCommandMessageMapper>();
@@ -128,12 +125,12 @@ public class UnwrapTransformResolvableTests
         var results = spec.Accept(new ValidationResultCollector<Subscription>()).ToList();
 
         // Assert
-        Assert.True(satisfied);
-        Assert.Empty(results);
+        await Assert.That(satisfied).IsTrue();
+        await Assert.That(results).IsEmpty();
     }
 
-    [Fact]
-    public void When_subscription_request_type_has_no_mapper_should_report_no_warning()
+    [Test]
+    public async Task When_subscription_request_type_has_no_mapper_should_report_no_warning()
     {
         // Arrange — no mapper (and no default) resolves for the request type, so there is nothing to inspect
         var registry = new MessageMapperRegistry(
@@ -148,12 +145,12 @@ public class UnwrapTransformResolvableTests
         var results = spec.Accept(new ValidationResultCollector<Subscription>()).ToList();
 
         // Assert
-        Assert.True(satisfied);
-        Assert.Empty(results);
+        await Assert.That(satisfied).IsTrue();
+        await Assert.That(results).IsEmpty();
     }
 
-    [Fact]
-    public void When_subscription_has_resolvable_and_unresolvable_unwrap_transforms_should_report_one_warning()
+    [Test]
+    public async Task When_subscription_has_resolvable_and_unresolvable_unwrap_transforms_should_report_one_warning()
     {
         // Arrange — mapper declares two unwrap transforms; the probe resolves one (MyDescribableTransform)
         // but not the other (CompressPayloadTransformer)
@@ -167,14 +164,14 @@ public class UnwrapTransformResolvableTests
         var results = spec.Accept(new ValidationResultCollector<Subscription>()).ToList();
 
         // Assert — exactly one Warning, for the unresolvable transform only (resolvable one is not reported)
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.Contains(nameof(CompressPayloadTransformer), results[0].Error!.Message);
-        Assert.DoesNotContain(nameof(MyDescribableTransform), results[0].Error!.Message);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Error!.Message).Contains(nameof(CompressPayloadTransformer));
+        await Assert.That(results[0].Error!.Message).DoesNotContain(nameof(MyDescribableTransform));
     }
 
-    [Fact]
-    public void When_subscription_resolves_to_default_mapper_should_report_no_warning()
+    [Test]
+    public async Task When_subscription_resolves_to_default_mapper_should_report_no_warning()
     {
         // Arrange — no custom mapper, so the request type resolves to the default JsonMessageMapper, which
         // declares no unwrap transform — so a subscription on the default mapper produces no warning.
@@ -192,12 +189,12 @@ public class UnwrapTransformResolvableTests
         var results = spec.Accept(new ValidationResultCollector<Subscription>()).ToList();
 
         // Assert
-        Assert.True(satisfied);
-        Assert.Empty(results);
+        await Assert.That(satisfied).IsTrue();
+        await Assert.That(results).IsEmpty();
     }
 
-    [Fact]
-    public void When_subscription_has_only_an_async_custom_mapper_with_a_default_present_should_still_report_warning()
+    [Test]
+    public async Task When_subscription_has_only_an_async_custom_mapper_with_a_default_present_should_still_report_warning()
     {
         // Arrange — a default mapper IS configured (as AddBrighter does), but the request type has only a
         // custom async mapper declaring an unresolvable unwrap transform. The sync side falls back to the
@@ -218,13 +215,13 @@ public class UnwrapTransformResolvableTests
         var results = spec.Accept(new ValidationResultCollector<Subscription>()).ToList();
 
         // Assert — the custom async mapper's unwrap transform is still reported
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.Contains(nameof(MyDescribableTransform), results[0].Error!.Message);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Error!.Message).Contains(nameof(MyDescribableTransform));
     }
 
-    [Fact]
-    public void When_the_specification_is_disposed_it_disposes_the_registry_it_owns()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_specification_is_disposed_it_disposes_the_registry_it_owns()
     {
         // Arrange — PR #4254 review finding 3. The DI registration hands this rule a MessageMapperRegistry
         // created solely for it, and registers the returned specification as a container-owned singleton.
@@ -240,11 +237,11 @@ public class UnwrapTransformResolvableTests
             () => registry, StubTransformerResolvabilityProbe.ResolvesNothing);
 
         // Act — stand in for the container disposing the singleton specification at shutdown
-        var disposable = Assert.IsAssignableFrom<IDisposable>(spec);
-        disposable.Dispose();
+        await Assert.That(spec).IsAssignableTo<IDisposable>();
+        ((IDisposable)spec).Dispose();
 
         // Assert — the owned registry was disposed, cascading into its factory
-        Assert.True(factory.Disposed, "the specification did not dispose the registry it was given to own");
+        await Assert.That(factory.Disposed).IsTrue().Because("the specification did not dispose the registry it was given to own");
     }
 
     private sealed class DisposeTrackingMapperFactory : IAmAMessageMapperFactory, IDisposable

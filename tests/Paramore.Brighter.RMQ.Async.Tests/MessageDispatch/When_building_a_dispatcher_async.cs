@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,11 +10,10 @@ using Paramore.Brighter.ServiceActivator;
 using Polly;
 using Polly.Registry;
 using RabbitMQ.Client;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessageDispatch;
 
-public class DispatchBuilderTestsAsync : IAsyncLifetime
+public class DispatchBuilderTestsAsync
 {
     private static readonly Uri s_brokerUri = new("amqp://guest:guest@localhost:5672/%2f");
     private readonly ChannelName _firstQueue = new($"rmq-async-dispatcher-{Guid.NewGuid():N}");
@@ -82,17 +81,17 @@ public class DispatchBuilderTestsAsync : IAsyncLifetime
             ])
             .ConfigureInstrumentation(tracer, instrumentationOptions);
     }
-                
-    [Fact(Skip = "Breaks due to fault in Task Scheduler running after context has closed")]
-    //[Fact]
+
+    [Test, Skip("Breaks due to fault in Task Scheduler running after context has closed")]
+    //[Test]
     public async Task When_Building_A_Dispatcher_With_Async()
     {
         _dispatcher = _builder.Build();
 
-        Assert.NotNull(_dispatcher);
-        Assert.NotNull(GetConnection("foo"));
-        Assert.NotNull(GetConnection("bar"));
-        Assert.Equal(DispatcherState.DS_AWAITING, _dispatcher.State);
+        await Assert.That(_dispatcher).IsNotNull();
+        await Assert.That(GetConnection("foo")).IsNotNull();
+        await Assert.That(GetConnection("bar")).IsNotNull();
+        await Assert.That(_dispatcher.State).IsEqualTo(DispatcherState.DS_AWAITING);
 
         await Task.Delay(1000);
 
@@ -100,13 +99,14 @@ public class DispatchBuilderTestsAsync : IAsyncLifetime
 
         await Task.Delay(1000);
 
-        Assert.Equal(DispatcherState.DS_RUNNING, _dispatcher.State);
+        await Assert.That(_dispatcher.State).IsEqualTo(DispatcherState.DS_RUNNING);
 
         await _dispatcher.End();
     }
 
-    public Task InitializeAsync() => Task.CompletedTask;
+    [Before(HookType.Test)] public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         if (_dispatcher is null)

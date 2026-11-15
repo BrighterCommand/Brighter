@@ -29,20 +29,19 @@ using System.Threading.Tasks;
 using Google.Cloud.PubSub.V1;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 
 /// <summary>
 /// Forces the real subscriber client's shutdown deadline to expire after an ordered delivery.
 /// </summary>
-[Trait("Category", "GcpPubSubStreamOrdering")]
-[Collection("StreamOrdering")]
+[Property("Category", "GcpPubSubStreamOrdering")]
+[NotInParallel("StreamOrdering")]
 public class GcpStreamOrderingShutdownCancellationAsyncTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_disposing_an_ordered_stream_after_shutdown_cancellation_should_complete_async(
         bool acknowledgeBeforeDisposing)
     {
@@ -78,17 +77,17 @@ public class GcpStreamOrderingShutdownCancellationAsyncTests
                 .Build();
             await producer.SendAsync(message);
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(20));
-            Assert.False(received.IsEmpty);
-            Assert.Equal(message.Id, received.Id);
+            await Assert.That(received.IsEmpty).IsFalse();
+            await Assert.That(received.Id).IsEqualTo(message.Id);
             if (acknowledgeBeforeDisposing)
                 await channel.AcknowledgeAsync(received);
 
             // Act
-            var error = await Record.ExceptionAsync(() =>
+            var error = await TestExceptionRecorder.CaptureAsync(() =>
                 channel.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(60)));
 
             // Assert
-            Assert.Null(error);
+            await Assert.That(error).IsNull();
             await channel.DisposeAsync();
         }
         finally

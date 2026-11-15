@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post;
 
@@ -13,7 +12,7 @@ public class OutstandingCountWithLimitTests
 {
     private static readonly TimeSpan s_deadline = TimeSpan.FromSeconds(5);
 
-    [Fact]
+    [Test]
     public async Task When_an_outstanding_limit_is_set_should_count_outstanding_messages()
     {
         //Arrange
@@ -28,12 +27,10 @@ public class OutstandingCountWithLimitTests
 
         //Assert
         //the count runs on a background thread, so wait for it
-        Assert.True(
-            await outbox.WaitForOutstandingCountCallsAsync(1, s_deadline),
-            "The outbox was never asked for the outstanding message count");
+        await Assert.That(await outbox.WaitForOutstandingCountCallsAsync(1, s_deadline)).IsTrue().Because("The outbox was never asked for the outstanding message count");
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_outstanding_limit_is_zero_should_count_outstanding_messages()
     {
         //Arrange
@@ -49,8 +46,6 @@ public class OutstandingCountWithLimitTests
 
         //Assert
         //the count runs on a background thread, so wait for it
-        Assert.True(
-            await outbox.WaitForOutstandingCountCallsAsync(1, s_deadline),
-            "The outbox was never asked for the outstanding message count");
+        await Assert.That(await outbox.WaitForOutstandingCountCallsAsync(1, s_deadline)).IsTrue().Because("The outbox was never asked for the outstanding message count");
     }
 }

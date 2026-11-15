@@ -26,30 +26,29 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "ASB")]
+[Property("Category", "ASB")]
 public class AzureServiceBusLockRenewalTests
 {
-    [Theory]
-    [InlineData(false, false, 1)]
-    [InlineData(false, true, 1)]
-    [InlineData(true, false, 1)]
-    [InlineData(true, true, 1)]
-    [InlineData(false, false, 4)]
-    [InlineData(false, true, 4)]
-    [InlineData(true, false, 4)]
-    [InlineData(true, true, 4)]
-    [InlineData(false, false, 1, true)]
-    [InlineData(false, true, 1, true)]
-    [InlineData(true, false, 1, true)]
-    [InlineData(true, true, 1, true)]
-    [InlineData(false, false, 4, true)]
-    [InlineData(false, true, 4, true)]
-    [InlineData(true, false, 4, true)]
-    [InlineData(true, true, 4, true)]
+    [Test]
+    [Arguments(false, false, 1)]
+    [Arguments(false, true, 1)]
+    [Arguments(true, false, 1)]
+    [Arguments(true, true, 1)]
+    [Arguments(false, false, 4)]
+    [Arguments(false, true, 4)]
+    [Arguments(true, false, 4)]
+    [Arguments(true, true, 4)]
+    [Arguments(false, false, 1, true)]
+    [Arguments(false, true, 1, true)]
+    [Arguments(true, false, 1, true)]
+    [Arguments(true, true, 1, true)]
+    [Arguments(false, false, 4, true)]
+    [Arguments(false, true, 4, true)]
+    [Arguments(true, false, 4, true)]
+    [Arguments(true, true, 4, true)]
     public async Task When_processing_past_the_original_lock_should_complete_each_message(
         bool useQueue, bool useAsync, int bufferSize, bool useSession = false)
     {
@@ -81,8 +80,8 @@ public class AzureServiceBusLockRenewalTests
             for (var i = 0; i < bufferSize; i++)
             {
                 var message = await channel.ReceiveAsync(TimeSpan.FromSeconds(1));
-                Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
-                Assert.True(receivedIds.Add(message.Id), "Each message must be dispatched only once.");
+                await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+                await Assert.That(receivedIds.Add(message.Id)).IsTrue().Because("Each message must be dispatched only once.");
                 await Task.Delay(handlingDuration);
                 await channel.AcknowledgeAsync(message);
             }
@@ -93,15 +92,15 @@ public class AzureServiceBusLockRenewalTests
             for (var i = 0; i < bufferSize; i++)
             {
                 var message = channel.Receive(TimeSpan.FromSeconds(1));
-                Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
-                Assert.True(receivedIds.Add(message.Id), "Each message must be dispatched only once.");
+                await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+                await Assert.That(receivedIds.Add(message.Id)).IsTrue().Because("Each message must be dispatched only once.");
                 await Task.Delay(handlingDuration);
                 channel.Acknowledge(message);
             }
         }
 
         // Assert
-        Assert.Equal(bufferSize, receiver.CompletedCount);
-        Assert.True((useSession ? sessionReceiver.RenewalCount : receiver.RenewalCount) > 0, "Completion beyond the original lock requires renewal.");
+        await Assert.That(receiver.CompletedCount).IsEqualTo(bufferSize);
+        await Assert.That((useSession ? sessionReceiver.RenewalCount : receiver.RenewalCount) > 0).IsTrue().Because("Completion beyond the original lock requires renewal.");
     }
 }

@@ -26,7 +26,6 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
@@ -35,7 +34,7 @@ namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 /// have its queue declared and bound, so a message published before the channel's first receive is not lost
 /// (bugfix 0049, #4519).
 /// </summary>
-[Trait("Category", "RMQ")]
+[Property("Category", "RMQ")]
 public class RmqChannelFactoryAsyncChannelAsyncProvisioningTests : IAsyncDisposable
 {
     private readonly RmqMessagingGatewayConnection _rmqConnection;
@@ -71,7 +70,7 @@ public class RmqChannelFactoryAsyncChannelAsyncProvisioningTests : IAsyncDisposa
             makeChannels: OnMissingChannel.Create);
     }
 
-    [Fact]
+    [Test]
     public async Task When_creating_an_async_channel_asynchronously_with_create_should_deliver_a_message_published_before_the_first_receive()
     {
         // Arrange
@@ -83,8 +82,8 @@ public class RmqChannelFactoryAsyncChannelAsyncProvisioningTests : IAsyncDisposa
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
         // Assert
-        Assert.Equal(_message.Id, received.Id);
-        Assert.Equal(_message.Body.Value, received.Body.Value);
+        await Assert.That(received.Id).IsEqualTo(_message.Id);
+        await Assert.That(received.Body.Value).IsEqualTo(_message.Body.Value);
     }
 
     public async ValueTask DisposeAsync()

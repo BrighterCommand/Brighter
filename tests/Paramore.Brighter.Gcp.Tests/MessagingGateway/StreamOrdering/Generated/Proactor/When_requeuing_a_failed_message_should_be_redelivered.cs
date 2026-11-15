@@ -6,13 +6,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Assertions;
+using TUnit.Core;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.StreamOrdering.Proactor;
 
-[Trait("Category", "GcpPubSubStreamOrdering")]
-[Collection("StreamOrdering")]
-public class WhenRequeuingAFailedMessageShouldBeRedeliveredAsync : IAsyncLifetime
+[Property("Category", "GcpPubSubStreamOrdering")]
+[NotInParallel("StreamOrdering")]
+public class WhenRequeuingAFailedMessageShouldBeRedeliveredAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -33,17 +34,20 @@ public class WhenRequeuingAFailedMessageShouldBeRedeliveredAsync : IAsyncLifetim
         _messageAssertion = new DefaultMessageAssertion();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #4240 — canonical plain requeue not yet conformant for GCP / StreamOrdering (maintainer sign-off)")]
+    [Test]
+    [Skip("Deferred: #4240 — canonical plain requeue not yet conformant for GCP / StreamOrdering (maintainer sign-off)")]
     public async Task When_requeuing_a_failed_message_should_be_redelivered_async()
     {
         // Arrange
@@ -62,10 +66,10 @@ public class WhenRequeuingAFailedMessageShouldBeRedeliveredAsync : IAsyncLifetim
 
         // Act
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(15000));
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         var requeued = await _channel.RequeueAsync(received);
-        Assert.True(requeued);
+        await Assert.That(requeued).IsTrue();
 
         // Assert — the requeued message is redelivered: poll every 500 ms, give up after 30 s
         var redelivered = new Message();
@@ -79,12 +83,10 @@ public class WhenRequeuingAFailedMessageShouldBeRedeliveredAsync : IAsyncLifetim
             }
         }
 
-        Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
+        await Assert.That(redelivered.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
         // R-1 vs R-23 (ADR 0077): the redelivered count must be >= the sent count; normalise
         // it back so the transport's equality assertion can still compare the rest of the header.
-        Assert.True(redelivered.Header.HandledCount >= message.Header.HandledCount,
-            $"Redelivered HandledCount {redelivered.Header.HandledCount} must be >= sent {message.Header.HandledCount} (R-1)");
+        await Assert.That(redelivered.Header.HandledCount >= message.Header.HandledCount).IsTrue().Because($"Redelivered HandledCount {redelivered.Header.HandledCount} must be >= sent {message.Header.HandledCount} (R-1)");
         redelivered.Header.HandledCount = message.Header.HandledCount;
-        _messageAssertion.Assert(message, redelivered);
-    }
-}
+        await _messageAssertion.AssertAsync(message, redelivered);
+    }}

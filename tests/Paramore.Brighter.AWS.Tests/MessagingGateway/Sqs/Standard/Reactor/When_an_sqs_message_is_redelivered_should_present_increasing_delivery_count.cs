@@ -31,7 +31,6 @@ using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.MessagingGateway.SqsStandard;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Reactor;
 
@@ -41,8 +40,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Reactor;
 /// <paramref name="rawMessageDelivery"/> theory parameter:
 /// <c>true</c> → <c>SqsMessageCreator</c>; <c>false</c> → <c>SqsInlineMessageCreator</c>.
 /// </summary>
-[Trait("Category", "AWS")]
-[Collection("SqsStandard")]
+[Property("Category", "AWS")]
+[NotInParallel("SqsStandard")]
 public class SqsRedeliveryDeliveryCountTests : IDisposable, IAsyncDisposable
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
@@ -59,9 +58,9 @@ public class SqsRedeliveryDeliveryCountTests : IDisposable, IAsyncDisposable
     /// A pump running over a deferring handler with <c>requeueCount: -1</c> presents a strictly
     /// increasing <c>HandledCount</c> on each redelivery, and the first delivery presents <c>0</c>.
     /// </summary>
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
+    [Test]
+    [Arguments(true)]
+    [Arguments(false)]
     public async Task When_an_sqs_message_is_redelivered_should_present_increasing_delivery_count(bool rawMessageDelivery)
     {
         // Arrange
@@ -122,18 +121,15 @@ public class SqsRedeliveryDeliveryCountTests : IDisposable, IAsyncDisposable
 
         // Assert — read HandledCount sequence after pump quit-and-await (R-27(c) observation window)
         var counts = ConformanceDeferredPump.GetHandledCountLog(key);
-        Assert.True(counts.Count >= 3,
-            $"expected at least 3 deliveries but recorded {counts.Count}");
+        await Assert.That(counts.Count >= 3).IsTrue().Because($"expected at least 3 deliveries but recorded {counts.Count}");
 
         // R-2 / AC-2: the first delivery presents 0
-        Assert.Equal(0, counts[0]);
+        await Assert.That(counts[0]).IsEqualTo(0);
 
         // R-1 / AC-1: every subsequent delivery presents a strictly greater count
         for (var i = 1; i < counts.Count; i++)
         {
-            Assert.True(counts[i] > counts[i - 1],
-                $"R-1: delivery {i + 1} count {counts[i]} must be strictly greater than "
-                + $"delivery {i} count {counts[i - 1]}");
+            await Assert.That(counts[i] > counts[i - 1]).IsTrue();
         }
     }
 

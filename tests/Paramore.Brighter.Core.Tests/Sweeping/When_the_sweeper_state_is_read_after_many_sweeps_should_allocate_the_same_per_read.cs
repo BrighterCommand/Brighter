@@ -33,8 +33,7 @@ using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Paramore.Brighter.Outbox.Hosting.HealthChecks;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class ReadCostAfterManySweepsTests
@@ -44,8 +43,8 @@ public class ReadCostAfterManySweepsTests
     private const int Reads = 10_000;
     private const int WarmUpReads = 1_000;
 
-    [Fact]
-    public void When_the_sweeper_state_is_read_after_many_sweeps_should_allocate_the_same_per_read()
+    [Test]
+    public async Task When_the_sweeper_state_is_read_after_many_sweeps_should_allocate_the_same_per_read()
     {
         //Arrange
         var afterFew = StateAfter(FewSweeps);
@@ -63,9 +62,9 @@ public class ReadCostAfterManySweepsTests
         var checkBytesAfterMany = BytesPerRead(() => RunCheck(checkAfterMany));
 
         //Assert
-        Assert.True(gaugeAfterFew.Observed > 0 && gaugeAfterMany.Observed > 0, "The gauges reported nothing");
-        Assert.Equal(gaugeBytesAfterFew, gaugeBytesAfterMany);
-        Assert.Equal(checkBytesAfterFew, checkBytesAfterMany);
+        await Assert.That(gaugeAfterFew.Observed > 0 && gaugeAfterMany.Observed > 0).IsTrue().Because("The gauges reported nothing");
+        await Assert.That(gaugeBytesAfterMany).IsEqualTo(gaugeBytesAfterFew);
+        await Assert.That(checkBytesAfterMany).IsEqualTo(checkBytesAfterFew);
     }
 
     private static OutboxSweeperState StateAfter(int sweeps)

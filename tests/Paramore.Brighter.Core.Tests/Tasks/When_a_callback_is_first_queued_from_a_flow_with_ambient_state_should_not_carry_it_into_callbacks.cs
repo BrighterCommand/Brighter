@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Tasks;
 
@@ -12,7 +11,7 @@ public class BatchedCallbackQueueAmbientStateTests
     private const int Callbacks = 2;
     private static readonly AsyncLocal<string?> s_ambient = new();
 
-    [Fact]
+    [Test]
     public async Task When_a_callback_is_first_queued_from_a_flow_with_ambient_state_should_not_carry_it_into_callbacks()
     {
         //Arrange
@@ -37,8 +36,8 @@ public class BatchedCallbackQueueAmbientStateTests
             queue.Enqueue(recordAmbient); // a later confirmation, from a flow with no ambient state
 
             //Assert
-            Assert.True(allRan.Wait(TimeSpan.FromSeconds(3)), "The callbacks did not run");
-            Assert.All(seen, Assert.Null);
+            await Assert.That(allRan.Wait(TimeSpan.FromSeconds(3))).IsTrue().Because("The callbacks did not run");
+            foreach (var item in seen) { await Assert.That(item).IsNull(); }
         }
         finally
         {

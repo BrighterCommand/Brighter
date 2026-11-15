@@ -30,17 +30,16 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch;
 
 public class ReactorSubscriptionChannelFailureDelayTests
 {
-    [Theory]
-    [InlineData(null, false)]
-    [InlineData(1500, false)]
-    [InlineData(null, true)]
-    [InlineData(1500, true)]
+    [Test]
+    [Arguments(null, false)]
+    [Arguments(1500, false)]
+    [Arguments(null, true)]
+    [Arguments(1500, true)]
     public async Task When_a_reactor_subscription_channel_fails_should_wait_before_retrying(
         int? delayMilliseconds, bool brokenCircuit)
     {
@@ -66,10 +65,10 @@ public class ReactorSubscriptionChannelFailureDelayTests
         await dispatcher.End().WaitAsync(TimeSpan.FromSeconds(10));
 
         //Assert
-        Assert.Equal(2, retryDelays.Length);
-        Assert.All(retryDelays, actualDelay =>
-            Assert.True(actualDelay >= subscription.ChannelFailureDelay - TimeSpan.FromMilliseconds(20),
-                $"Expected at least {subscription.ChannelFailureDelay.TotalMilliseconds} ms between attempts, " +
-                $"allowing 20 ms timer tolerance, but observed {actualDelay.TotalMilliseconds} ms."));
+        await Assert.That(retryDelays.Length).IsEqualTo(2);
+        foreach (var actualDelay in retryDelays)
+{
+    await Assert.That(actualDelay >= subscription.ChannelFailureDelay - TimeSpan.FromMilliseconds(20)).IsTrue().Because($"Expected at least {subscription.ChannelFailureDelay.TotalMilliseconds} ms between attempts, " + $"allowing 20 ms timer tolerance, but observed {actualDelay.TotalMilliseconds} ms.");
+}
     }
 }

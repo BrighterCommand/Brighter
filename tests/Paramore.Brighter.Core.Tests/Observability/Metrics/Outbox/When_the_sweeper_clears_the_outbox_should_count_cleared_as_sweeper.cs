@@ -30,7 +30,6 @@ using Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics.Outbox;
 
@@ -60,7 +59,7 @@ public class When_the_sweeper_clears_the_outbox_should_count_cleared_as_sweeper
             outboxMeter: _meter);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_sweeper_clears_the_outbox_should_count_cleared_as_sweeper_()
     {
         var ctx = new RequestContext();
@@ -76,14 +75,17 @@ public class When_the_sweeper_clears_the_outbox_should_count_cleared_as_sweeper
             System.TimeSpan.Zero, _mediator, new InMemoryRequestContextFactory());
         await sweeper.SweepAsync();
 
-        Assert.Equal(5, _meter.Cleared.Count);
-        Assert.All(_meter.Cleared, c =>
-        {
-            Assert.Equal(_topic, c.Destination);
-            Assert.Equal(OutboxClearSource.Sweeper, c.Source);
-        });
-        Assert.False(_meter.Cleared.Any(c => c.Source == OutboxClearSource.Explicit));
-        Assert.Equal(5, _meter.Durations.Count);
-        Assert.All(_meter.Durations, d => Assert.Equal(OutboxClearSource.Sweeper, d.Source));
+        await Assert.That(_meter.Cleared.Count).IsEqualTo(5);
+        foreach (var c in _meter.Cleared)
+{
+    await Assert.That(c.Destination).IsEqualTo(_topic);
+    await Assert.That(c.Source).IsEqualTo(OutboxClearSource.Sweeper);
+}
+        await Assert.That(_meter.Cleared.Any(c => c.Source == OutboxClearSource.Explicit)).IsFalse();
+        await Assert.That(_meter.Durations.Count).IsEqualTo(5);
+        foreach (var d in _meter.Durations)
+{
+    await Assert.That(d.Source).IsEqualTo(OutboxClearSource.Sweeper);
+}
     }
 }

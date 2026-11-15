@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,13 +26,12 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class AzureServiceBusAsyncChannelAsyncProvisioningTests
 {
-    [Fact]
+    [Test]
     public async Task When_creating_an_async_channel_asynchronously_with_create_should_create_the_topic_subscription()
     {
         // Arrange
@@ -52,6 +51,6 @@ public class AzureServiceBusAsyncChannelAsyncProvisioningTests
         using var channel = await factory.CreateAsyncChannelAsync(subscription);
 
         // Assert
-        Assert.Contains(("orders", "orders-channel"), administrationClient.CreatedSubscriptions);
+        await Assert.That(administrationClient.CreatedSubscriptions).Contains(("orders", "orders-channel"));
     }
 }

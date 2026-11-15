@@ -25,14 +25,14 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.MessagingGateway.Postgres;
 using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway;
 
 public class PostgresSubscriptionChannelFactoryTypeTests
 {
-    [Fact]
-    public void When_reading_the_channel_factory_type_of_a_postgres_subscription_should_be_the_postgres_channel_factory()
+    [Test]
+    public async System.Threading.Tasks.Task When_reading_the_channel_factory_type_of_a_postgres_subscription_should_be_the_postgres_channel_factory()
     {
         // Arrange — the three positional arguments and the explicit pump type are both required:
         // PostgresSubscription<T> defaults messagePumpType to Unknown, which Subscription rejects
@@ -46,6 +46,6 @@ public class PostgresSubscriptionChannelFactoryTypeTests
         var channelFactoryType = subscription.ChannelFactoryType;
 
         // Assert
-        Assert.Equal(typeof(PostgresChannelFactory), channelFactoryType);
+        await Assert.That(channelFactoryType).IsEqualTo(typeof(PostgresChannelFactory));
     }
 }

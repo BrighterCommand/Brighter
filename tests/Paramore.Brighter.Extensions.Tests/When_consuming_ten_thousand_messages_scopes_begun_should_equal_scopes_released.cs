@@ -27,7 +27,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -39,8 +39,8 @@ public class ScopeGrowthOverSustainedConsumptionTests
 {
     private const int MessageCount = 10_000;
 
-    [Fact]
-    public void When_consuming_ten_thousand_messages_scopes_begun_should_equal_scopes_released()
+    [Test]
+    public async System.Threading.Tasks.Task When_consuming_ten_thousand_messages_scopes_begun_should_equal_scopes_released()
     {
         // Arrange — one ScopeTracker shared by the mapper factory (wrap pipeline, per message) and the
         // handler factory (handler pipeline, per Send); each pipeline resolves two Scoped artefacts —
@@ -74,9 +74,9 @@ public class ScopeGrowthOverSustainedConsumptionTests
         }
 
         // Assert — one scope begun and one released per pipeline (two pipelines per message), zero live
-        Assert.Equal(2 * MessageCount, scopeTracker.CreatedCount);
-        Assert.Equal(scopeTracker.CreatedCount, scopeTracker.DisposedCount);
-        Assert.Equal(0, scopeTracker.OutstandingCount);
+        await Assert.That(scopeTracker.CreatedCount).IsEqualTo(2 * MessageCount);
+        await Assert.That(scopeTracker.DisposedCount).IsEqualTo(scopeTracker.CreatedCount);
+        await Assert.That(scopeTracker.OutstandingCount).IsEqualTo(0);
     }
 
     private static ScopeTracker BuildScopeTracker(out IServiceProvider trackingProvider)

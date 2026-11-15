@@ -6,14 +6,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class LifetimeScopeDisposalThrowDrainTests
 {
-    [Fact]
-    public void When_disposing_and_a_scope_disposal_throws_should_still_dispose_remaining_scopes()
+    [Test]
+    public async System.Threading.Tasks.Task When_disposing_and_a_scope_disposal_throws_should_still_dispose_remaining_scopes()
     {
         // Arrange — three transient mappers, each resolved through its own scope whose disposal throws (as
         // MS DI's scope Dispose does for an IAsyncDisposable-only service, and as a user Dispose may). Each
@@ -42,8 +42,8 @@ public class LifetimeScopeDisposalThrowDrainTests
         // did not propagate the throw, and the tracking set was drained. Before the fix the drain
         // loop's DisposeScope was unguarded: the first throw unwound Dispose, leaving the other two scopes
         // undisposed and the set un-cleared.
-        Assert.Equal(3, disposalAttempts.Value);
-        Assert.Empty(OutstandingScopes(factory));
+        await Assert.That(disposalAttempts.Value).IsEqualTo(3);
+        await Assert.That(OutstandingScopes(factory).Count).IsEqualTo(0);
     }
 
     private static IDictionary OutstandingScopes(ServiceProviderMapperFactory factory)

@@ -30,7 +30,6 @@ using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 
@@ -49,11 +48,11 @@ public class GcpIamCallToleranceTests
     /// When an RpcException carries a status code outside the tolerated set, it is rethrown as the
     /// same exception instance and no Warning is logged.
     /// </summary>
-    [Theory]
-    [InlineData(StatusCode.NotFound)]
-    [InlineData(StatusCode.InvalidArgument)]
-    [InlineData(StatusCode.DeadlineExceeded)]
-    [InlineData(StatusCode.ResourceExhausted)]
+    [Test]
+    [Arguments(StatusCode.NotFound)]
+    [Arguments(StatusCode.InvalidArgument)]
+    [Arguments(StatusCode.DeadlineExceeded)]
+    [Arguments(StatusCode.ResourceExhausted)]
     public async Task When_rpc_exception_has_non_tolerated_status_code_should_rethrow_unchanged(StatusCode code)
     {
         // Arrange
@@ -62,12 +61,11 @@ public class GcpIamCallToleranceTests
         var original = new RpcException(new Status(code, "Test failure"));
 
         // Act
-        var thrown = await Assert.ThrowsAsync<RpcException>(
-            () => sut.TryCallAsync<string>(s_step, () => Task.FromException<string>(original)));
+        var thrown = await Assert.That(() => sut.TryCallAsync<string>(s_step, () => Task.FromException<string>(original))).ThrowsExactly<RpcException>();
 
         // Assert
-        Assert.Same(original, thrown);
-        Assert.DoesNotContain(logger.Entries, e => e.Level == LogLevel.Warning);
+        await Assert.That(thrown).IsSameReferenceAs(original);
+        await Assert.That(System.Linq.Enumerable.Any(logger.Entries, e => e.Level == LogLevel.Warning)).IsFalse();
     }
 
     // ── Tolerated cases ───────────────────────────────────────────────────────
@@ -76,10 +74,10 @@ public class GcpIamCallToleranceTests
     /// When an RpcException carries a tolerated status code, TryCallAsync returns (false, default)
     /// and logs exactly one Warning carrying all five elements.
     /// </summary>
-    [Theory]
-    [InlineData(StatusCode.Unimplemented)]
-    [InlineData(StatusCode.PermissionDenied)]
-    [InlineData(StatusCode.Unauthenticated)]
+    [Test]
+    [Arguments(StatusCode.Unimplemented)]
+    [Arguments(StatusCode.PermissionDenied)]
+    [Arguments(StatusCode.Unauthenticated)]
     public async Task When_rpc_exception_has_tolerated_status_code_should_return_false_and_log_one_warning(StatusCode code)
     {
         // Arrange
@@ -91,19 +89,19 @@ public class GcpIamCallToleranceTests
         var (completed, result) = await sut.TryCallAsync<string>(s_step, () => Task.FromException<string>(exc));
 
         // Assert
-        Assert.False(completed);
-        Assert.Null(result);
+        await Assert.That(completed).IsFalse();
+        await Assert.That(result).IsNull();
 
         var warnings = logger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        Assert.Single(warnings);
+        await Assert.That(warnings).HasSingleItem();
 
         var message = warnings[0].Message;
         // Five elements: Helper, Rpc, Resource, Status, consequence
-        Assert.Contains(s_step.Helper, message);
-        Assert.Contains(s_step.Rpc, message);
-        Assert.Contains(s_step.Resource, message);
-        Assert.Contains(code.ToString(), message);
-        Assert.Contains("native dead-lettering may be inactive", message);
+        await Assert.That(message).Contains(s_step.Helper);
+        await Assert.That(message).Contains(s_step.Rpc);
+        await Assert.That(message).Contains(s_step.Resource);
+        await Assert.That(message).Contains(code.ToString());
+        await Assert.That(message).Contains("native dead-lettering may be inactive");
     }
 
     // ── Client-construction case ──────────────────────────────────────────────
@@ -113,7 +111,7 @@ public class GcpIamCallToleranceTests
     /// the method returns null and logs exactly one Warning. The Warning names "construct ProjectsClient"
     /// as the Rpc element and "InvalidOperationException" as the Status element.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_projects_client_factory_throws_invalid_operation_exception_should_return_null_and_log_warning()
     {
         // Arrange
@@ -128,25 +126,25 @@ public class GcpIamCallToleranceTests
             () => Task.FromException<Google.Cloud.ResourceManager.V3.ProjectsClient>(exc));
 
         // Assert
-        Assert.Null(result);
+        await Assert.That(result).IsNull();
 
         var warnings = logger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        Assert.Single(warnings);
+        await Assert.That(warnings).HasSingleItem();
 
         var message = warnings[0].Message;
         // Five elements: Helper, Rpc="construct ProjectsClient", Resource, Status="InvalidOperationException", consequence
-        Assert.Contains(constructionStep.Helper, message);
-        Assert.Contains("construct ProjectsClient", message);
-        Assert.Contains(constructionStep.Resource, message);
-        Assert.Contains("InvalidOperationException", message);
-        Assert.Contains("native dead-lettering may be inactive", message);
+        await Assert.That(message).Contains(constructionStep.Helper);
+        await Assert.That(message).Contains("construct ProjectsClient");
+        await Assert.That(message).Contains(constructionStep.Resource);
+        await Assert.That(message).Contains("InvalidOperationException");
+        await Assert.That(message).Contains("native dead-lettering may be inactive");
     }
 
     /// <summary>
     /// When the factory supplied to TryCreateProjectsClientAsync throws any type other than
     /// InvalidOperationException, the exception propagates unchanged.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_projects_client_factory_throws_other_exception_type_should_propagate_unchanged()
     {
         // Arrange
@@ -156,12 +154,11 @@ public class GcpIamCallToleranceTests
         var original = new ArgumentException("Unexpected construction failure");
 
         // Act
-        var thrown = await Assert.ThrowsAsync<ArgumentException>(
-            () => sut.TryCreateProjectsClientAsync(
+        var thrown = await Assert.That(() => sut.TryCreateProjectsClientAsync(
                 constructionStep,
-                () => Task.FromException<Google.Cloud.ResourceManager.V3.ProjectsClient>(original)));
+                () => Task.FromException<Google.Cloud.ResourceManager.V3.ProjectsClient>(original))).ThrowsExactly<ArgumentException>();
 
         // Assert
-        Assert.Same(original, thrown);
+        await Assert.That(thrown).IsSameReferenceAs(original);
     }
 }

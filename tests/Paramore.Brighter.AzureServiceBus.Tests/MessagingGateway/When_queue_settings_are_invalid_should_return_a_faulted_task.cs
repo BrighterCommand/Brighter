@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -28,20 +28,19 @@ using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class AzureServiceBusQueueValidationTests
 {
-    [Theory]
-    [InlineData(false, "name")]
-    [InlineData(false, "idle")]
-    [InlineData(true, "name")]
-    [InlineData(true, "idle")]
-    [InlineData(true, "delivery-count")]
-    [InlineData(true, "lock")]
-    [InlineData(true, "lifetime")]
+    [Test]
+    [Arguments(false, "name")]
+    [Arguments(false, "idle")]
+    [Arguments(true, "name")]
+    [Arguments(true, "idle")]
+    [Arguments(true, "delivery-count")]
+    [Arguments(true, "lock")]
+    [Arguments(true, "lifetime")]
     public async Task When_queue_settings_are_invalid_should_return_a_faulted_task(bool useConfiguration, string invalidSetting)
     {
         // Arrange
@@ -60,16 +59,18 @@ public class AzureServiceBusQueueValidationTests
         Task creation = Task.CompletedTask;
 
         // Act
-        var synchronousException = Record.Exception(() =>
+        Exception? synchronousException = null;
+        try
         {
             creation = useConfiguration
                 ? wrapper.CreateQueueAsync(queueName, configuration)
                 : wrapper.CreateQueueAsync(queueName, idleTimeout, 1024);
-        });
+        }
+        catch (Exception e) { synchronousException = e; }
 
         // Assert
-        Assert.Null(synchronousException);
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => creation);
-        Assert.Empty(administration.Queues);
+        await Assert.That(synchronousException).IsNull();
+        await Assert.That(() => creation).Throws<ArgumentException>();
+        await Assert.That(administration.Queues).IsEmpty();
     }
 }

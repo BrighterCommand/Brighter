@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Property("Category", "RMQ")]
+[NotInParallel("RMQ")]
 public class RmqCoalescedNackConfirmationTests : IDisposable
 {
     private readonly RoutingKey _routingKey = new(Guid.NewGuid().ToString());
@@ -29,8 +28,8 @@ public class RmqCoalescedNackConfirmationTests : IDisposable
             .Create(TimeSpan.FromMilliseconds(1000));
     }
 
-    [Fact]
-    public void When_the_broker_coalesces_nacks_should_fail_every_message_the_nack_covers()
+    [Test]
+    public async Task When_the_broker_coalesces_nacks_should_fail_every_message_the_nack_covers()
     {
         //Arrange
         var confirmations = new List<PublishConfirmationResult>();
@@ -49,8 +48,11 @@ public class RmqCoalescedNackConfirmationTests : IDisposable
         _messageProducer.Confirms.RaiseNack(deliveryTag: 3, multiple: true);
 
         //Assert — each covered message is reported as failed once, in send order
-        Assert.Equal(sent.Select(m => m.Id), confirmations.Select(c => c.MessageId));
-        Assert.All(confirmations, c => Assert.False(c.Success));
+        await Assert.That(confirmations.Select(c => c.MessageId)).IsEqualTo(sent.Select(m => m.Id));
+        foreach (var c in confirmations)
+        {
+            await Assert.That(c.Success).IsFalse();
+        }
     }
 
     public void Dispose() => _messageProducer.Dispose();

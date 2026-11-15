@@ -37,7 +37,6 @@ using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -45,12 +44,12 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 /// Characterises that consumer conditions route to the readiness endpoint (channel failures at the threshold) or the liveness endpoint
 /// (missing consumers), and never to both.
 /// </summary>
-[Collection(DispatcherHealthCheckCollection.NAME)]
+[NotInParallel]
 public class ConsumerConditionRoutingTests
 {
     private static readonly TimeSpan s_guard = TimeSpan.FromSeconds(10);
 
-    [Fact]
+    [Test]
     public async Task When_a_consumer_is_at_the_failure_threshold_should_fail_readiness_and_pass_liveness()
     {
         //Arrange
@@ -65,11 +64,11 @@ public class ConsumerConditionRoutingTests
         var ready = await client.GetAsync(BrighterHealthEndpoints.ReadyPath);
 
         //Assert
-        Assert.Equal(HttpStatusCode.OK, live.StatusCode);
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, ready.StatusCode);
+        await Assert.That(live.StatusCode).IsEqualTo(HttpStatusCode.OK);
+        await Assert.That(ready.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
     }
 
-    [Fact]
+    [Test]
     public async Task When_one_of_two_consumers_is_missing_should_fail_liveness_and_pass_readiness()
     {
         //Arrange
@@ -86,11 +85,11 @@ public class ConsumerConditionRoutingTests
         var ready = await client.GetAsync(BrighterHealthEndpoints.ReadyPath);
 
         //Assert
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, live.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
+        await Assert.That(live.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
+        await Assert.That(ready.StatusCode).IsEqualTo(HttpStatusCode.OK);
     }
 
-    [Fact]
+    [Test]
     public async Task When_no_consumer_is_running_while_the_dispatcher_runs_should_fail_liveness_and_pass_readiness()
     {
         //Arrange
@@ -108,11 +107,11 @@ public class ConsumerConditionRoutingTests
         var ready = await client.GetAsync(BrighterHealthEndpoints.ReadyPath);
 
         //Assert
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, live.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
+        await Assert.That(live.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
+        await Assert.That(ready.StatusCode).IsEqualTo(HttpStatusCode.OK);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_dispatcher_has_not_started_should_pass_liveness_and_readiness()
     {
         //Arrange
@@ -125,11 +124,11 @@ public class ConsumerConditionRoutingTests
         var ready = await client.GetAsync(BrighterHealthEndpoints.ReadyPath);
 
         //Assert
-        Assert.Equal(HttpStatusCode.OK, live.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
+        await Assert.That(live.StatusCode).IsEqualTo(HttpStatusCode.OK);
+        await Assert.That(ready.StatusCode).IsEqualTo(HttpStatusCode.OK);
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_consumer_is_missing_should_select_only_the_restart_check_for_liveness()
     {
         //Arrange
@@ -146,16 +145,15 @@ public class ConsumerConditionRoutingTests
         var ready = await service.CheckHealthAsync(registration => registration.Tags.Contains(RemedyCheckConvention.TakeOutOfServiceTag));
 
         //Assert
-        Assert.Equal(["brighter-consumer-restart"], live.Entries.Keys);
-        Assert.Equal(["brighter-consumer-take-out-of-service"], ready.Entries.Keys);
-        Assert.Equal(HealthStatus.Degraded, live.Status);
-        Assert.Equal(HealthStatus.Healthy, ready.Status);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), live.Entries["brighter-consumer-restart"].Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.TakeOutOfService),
-            ready.Entries["brighter-consumer-take-out-of-service"].Data[RemedyCheckConvention.RemedyKindKey]);
+        await Assert.That(live.Entries.Keys).IsEqualTo(["brighter-consumer-restart"]);
+        await Assert.That(ready.Entries.Keys).IsEqualTo(["brighter-consumer-take-out-of-service"]);
+        await Assert.That(live.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(ready.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(live.Entries["brighter-consumer-restart"].Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+        await Assert.That(ready.Entries["brighter-consumer-take-out-of-service"].Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.TakeOutOfService));
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_consumer_is_at_the_failure_threshold_should_select_only_the_take_out_of_service_check_for_readiness()
     {
         //Arrange
@@ -170,13 +168,12 @@ public class ConsumerConditionRoutingTests
         var ready = await service.CheckHealthAsync(registration => registration.Tags.Contains(RemedyCheckConvention.TakeOutOfServiceTag));
 
         //Assert
-        Assert.Equal(["brighter-consumer-restart"], live.Entries.Keys);
-        Assert.Equal(["brighter-consumer-take-out-of-service"], ready.Entries.Keys);
-        Assert.Equal(HealthStatus.Healthy, live.Status);
-        Assert.Equal(HealthStatus.Degraded, ready.Status);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), live.Entries["brighter-consumer-restart"].Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.TakeOutOfService),
-            ready.Entries["brighter-consumer-take-out-of-service"].Data[RemedyCheckConvention.RemedyKindKey]);
+        await Assert.That(live.Entries.Keys).IsEqualTo(["brighter-consumer-restart"]);
+        await Assert.That(ready.Entries.Keys).IsEqualTo(["brighter-consumer-take-out-of-service"]);
+        await Assert.That(live.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(ready.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(live.Entries["brighter-consumer-restart"].Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+        await Assert.That(ready.Entries["brighter-consumer-take-out-of-service"].Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.TakeOutOfService));
     }
 
     private static Task<WebApplication> StartAsync(MultiSubscriptionReceiveHealthTestHost host)

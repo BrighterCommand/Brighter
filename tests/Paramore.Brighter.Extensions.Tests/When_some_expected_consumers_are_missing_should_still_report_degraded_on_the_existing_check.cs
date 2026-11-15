@@ -34,20 +34,19 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 /// <summary>
 /// Characterises the existing consumer health check when only some expected consumers are running.
 /// </summary>
-[Collection(DispatcherHealthCheckCollection.NAME)]
+[NotInParallel]
 public class ExistingConsumerCheckSomeMissingTests
 {
     private const string CheckName = "brighter-consumers";
     private static readonly TimeSpan s_guard = TimeSpan.FromSeconds(10);
 
-    [Fact]
+    [Test]
     public async Task When_some_expected_consumers_are_missing_should_still_report_degraded_on_the_existing_check()
     {
         //Arrange
@@ -67,9 +66,9 @@ public class ExistingConsumerCheckSomeMissingTests
         var report = await healthCheckService.CheckHealthAsync();
 
         //Assert
-        Assert.True(report.Entries.TryGetValue(CheckName, out var entry));
-        Assert.Equal(HealthStatus.Degraded, entry.Status);
-        Assert.Equal("orders has 1 of 2 expected consumers", entry.Description);
+        await Assert.That(report.Entries.TryGetValue(CheckName, out var entry)).IsTrue();
+        await Assert.That(entry.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(entry.Description).IsEqualTo("orders has 1 of 2 expected consumers");
     }
 
     private static async Task ConsumersRunning(MultiSubscriptionReceiveHealthTestHost host, int expected)

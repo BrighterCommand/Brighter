@@ -1,11 +1,9 @@
-﻿using System;
+using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
 public class RmqBrokerNotPreCreatedTests : IDisposable
 {
     private Message _message;
@@ -14,8 +12,8 @@ public class RmqBrokerNotPreCreatedTests : IDisposable
     public RmqBrokerNotPreCreatedTests()
     {
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), 
-                MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()),
+                MessageType.MT_COMMAND),
             new MessageBody("test content"));
 
         var rmqConnection = new RmqMessagingGatewayConnection
@@ -27,11 +25,11 @@ public class RmqBrokerNotPreCreatedTests : IDisposable
         _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Validate});
 
     }
-        
-    [Fact]
-    public void When_posting_a_message_but_no_broker_created()
+
+    [Test]
+    public async Task When_posting_a_message_but_no_broker_created()
     {
-        Assert.Throws<ChannelFailureException>(() => _messageProducer.Send(_message));
+        await Assert.That(() => _messageProducer.Send(_message)).ThrowsExactly<ChannelFailureException>();
     }
 
     public void Dispose()

@@ -34,7 +34,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
@@ -43,7 +42,7 @@ public class UninstrumentedSweeperGaugeTests
     private const string RunningTime = "paramore.brighter.outbox_sweeper.sweep.running_time";
     private const string TrippedTopics = "paramore.brighter.outbox_sweeper.tripped_topics";
 
-    [Fact]
+    [Test]
     public async Task When_brighter_instrumentation_is_not_added_should_publish_no_sweeper_gauges()
     {
         //Arrange
@@ -73,8 +72,8 @@ public class UninstrumentedSweeperGaugeTests
             listener.RecordObservableInstruments();
 
             //Assert
-            Assert.True(swept, "No sweep completed");
-            Assert.Empty(published);
+            await Assert.That(swept).IsTrue().Because("No sweep completed");
+            await Assert.That(published).IsEmpty();
         }
         finally
         {

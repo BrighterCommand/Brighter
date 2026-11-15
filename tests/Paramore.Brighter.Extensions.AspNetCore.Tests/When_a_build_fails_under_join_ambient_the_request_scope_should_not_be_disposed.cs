@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // owned scope was ever created to release in the first place.
 public class FailedBuildScopeDisposalTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_build_fails_under_join_ambient_the_request_scope_should_not_be_disposed()
     {
         // Arrange
@@ -52,18 +52,24 @@ public class FailedBuildScopeDisposalTests
         // Assert - every attempt failed exactly as expected, and none produced a surprising outcome
         response.EnsureSuccessStatusCode();
         var recorder = factory.Services.GetRequiredService<FailedBuildRecorder>();
-        Assert.Equal(100, recorder.ExpectedFailureCount);
-        Assert.Equal(0, recorder.UnexpectedOutcomeCount);
+        await Assert.That(recorder.ExpectedFailureCount).IsEqualTo(100);
+        await Assert.That(recorder.UnexpectedOutcomeCount).IsEqualTo(0);
 
         // Assert - the request scope's own IOrderDbContext was still usable and undisposed immediately
         // after the 100 failures, proving none of them disposed anything the request scope owns
-        Assert.True(recorder.RequestScopeUsableAfterFailures);
-        Assert.Equal(0, recorder.OrderDbContextDisposeCountAfterFailures);
+        await Assert.That(recorder.RequestScopeUsableAfterFailures).IsTrue();
+        await Assert.That(recorder.OrderDbContextDisposeCountAfterFailures).IsEqualTo(0);
 
         // Assert - every one of the 100 failed builds genuinely asked to adopt the ambient, so the
         // "because under adoption none was created" premise of the criterion actually held here
         var scopeProvider = (DelegatingScopeProviderRecorder)factory.Services.GetRequiredService<IAmAScopeProvider>();
-        Assert.Equal(100, scopeProvider.Decisions.Count);
-        Assert.All(scopeProvider.Decisions, decision => Assert.Equal(ScopeAffinity.JoinAmbient, decision));
+        await Assert.That(scopeProvider.Decisions.Count).IsEqualTo(100);
+        using (Assert.Multiple())
+        {
+            foreach (var decision in scopeProvider.Decisions)
+            {
+                await Assert.That(decision).IsEqualTo(ScopeAffinity.JoinAmbient);
+            }
+        }
     }
 }

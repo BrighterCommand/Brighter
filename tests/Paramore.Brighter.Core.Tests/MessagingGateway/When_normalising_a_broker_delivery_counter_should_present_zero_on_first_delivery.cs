@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 #region Licence
 
 /* The MIT License (MIT)
@@ -23,17 +24,16 @@ THE SOFTWARE. */
 
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway
 {
     public class DeliveryCountNormalisationTests
     {
-        [Theory]
-        [InlineData(1, 0)]   // first broker delivery (origin 1) → presented count 0 (R-2)
-        [InlineData(2, 1)]   // second delivery → 1
-        [InlineData(3, 2)]   // third delivery → 2
-        public void When_normalising_a_broker_delivery_counter_should_present_zero_on_first_delivery(
+        [Test]
+        [Arguments(1, 0)]   // first broker delivery (origin 1) → presented count 0 (R-2)
+        [Arguments(2, 1)]   // second delivery → 1
+        [Arguments(3, 2)]   // third delivery → 2
+        public async Task When_normalising_a_broker_delivery_counter_should_present_zero_on_first_delivery(
             int? brokerCount, int expectedCount)
         {
             //Arrange
@@ -43,15 +43,15 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             var result = DeliveryCount.Normalise(brokerCount);
 
             //Assert
-            Assert.Equal(expectedCount, result);
+            await Assert.That(result).IsEqualTo(expectedCount);
         }
 
-        [Theory]
-        [InlineData(null)]  // absent counter (Pub/Sub without DeadLetterPolicy, A-1)
-        [InlineData(0)]     // unset counter
-        [InlineData(-1)]    // negative input
-        [InlineData(-5)]    // negative input
-        public void When_normalising_a_broker_delivery_counter_absent_or_non_positive_should_present_zero(
+        [Test]
+        [Arguments(null)]  // absent counter (Pub/Sub without DeadLetterPolicy, A-1)
+        [Arguments(0)]     // unset counter
+        [Arguments(-1)]    // negative input
+        [Arguments(-5)]    // negative input
+        public async Task When_normalising_a_broker_delivery_counter_absent_or_non_positive_should_present_zero(
             int? brokerCount)
         {
             //Arrange
@@ -61,17 +61,17 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             var result = DeliveryCount.Normalise(brokerCount);
 
             //Assert
-            Assert.Equal(0, result);
+            await Assert.That(result).IsEqualTo(0);
         }
 
-        [Theory]
-        [InlineData(1)]
-        [InlineData(2)]
-        [InlineData(3)]
-        [InlineData(null)]
-        [InlineData(0)]
-        [InlineData(-1)]
-        public void When_normalising_any_broker_delivery_counter_result_is_never_negative(int? brokerCount)
+        [Test]
+        [Arguments(1)]
+        [Arguments(2)]
+        [Arguments(3)]
+        [Arguments(null)]
+        [Arguments(0)]
+        [Arguments(-1)]
+        public async Task When_normalising_any_broker_delivery_counter_result_is_never_negative(int? brokerCount)
         {
             //Arrange
             // brokerCount supplied by [InlineData]
@@ -80,7 +80,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             var result = DeliveryCount.Normalise(brokerCount);
 
             //Assert
-            Assert.True(result >= 0, $"Expected non-negative result for brokerCount={brokerCount}, got {result}");
+            await Assert.That(result >= 0).IsTrue().Because($"Expected non-negative result for brokerCount={brokerCount}, got {result}");
         }
     }
 }

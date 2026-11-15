@@ -41,17 +41,17 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
     private int _thresholdInBytes;
     private const ushort GZIP_LEAD_BYTES = 0x8b1f;
     private const byte ZLIB_LEAD_BYTE = 0x78;
-        
+
     /// <summary>Compression method GZip</summary>
     public const string GZIP = "application/gzip";
     /// <summary> Compression method Deflate</summary>
     public const string DEFLATE = "application/deflate";
     /// <summary> Compression method Brotli</summary>
     public const string BROTLI = "application/br";
-        
+
     /// <summary> Original content type header name</summary>
     public const string ORIGINAL_CONTENTTYPE_HEADER = "originalContentType";
-        
+
     /// <summary>
     /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
     /// </summary>
@@ -78,7 +78,7 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
 
     /// <summary>
     /// Initializes from the <see cref="TransformAttribute"/> unwrap attribute parameters.
-    /// Used to pass the decompression algorithm to the transformer 
+    /// Used to pass the decompression algorithm to the transformer
     /// </summary>
     /// <param name="initializerList"></param>
     public void InitializeUnwrapFromAttributeParams(params object?[] initializerList)
@@ -110,7 +110,7 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
 
         using var input = new ReadOnlyMemoryStream(memory);
         using var output = new MemoryStream();
-            
+
         (Stream compressionStream, string mimeType) = CreateCompressionStream(output);
 #if NETSTANDARD
             await input.CopyToAsync(compressionStream);
@@ -147,7 +147,7 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
         {
             return message;
         }
-            
+
         using var input = new ReadOnlyMemoryStream(message.Body.Memory);
         using var output = new MemoryStream();
 
@@ -177,7 +177,7 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
     /// Compress the message given the supplied compression algorithm
     /// </summary>
     /// <param name="message">The message to compress</param>
-    /// <param name="publication">The publication for the channel that the message is being published to; useful for metadata</param>       
+    /// <param name="publication">The publication for the channel that the message is being published to; useful for metadata</param>
     /// <returns>A message with a compressed body</returns>
     public Message Wrap(Message message, Publication publication)
     {
@@ -212,7 +212,7 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
         return message;
     }
 
-        
+
     /// <summary>
     /// Decompress a message given the supplied compression algorithm
     /// </summary>
@@ -224,7 +224,7 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
         {
             return message;
         }
-            
+
         using var input = new ReadOnlyMemoryStream(message.Body.Memory);
         using var output = new MemoryStream();
 
@@ -245,7 +245,22 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
 
         return message;
     }
-       
+
+    private static Message SetCompressedBody(Message message, MemoryStream output, string mimeType)
+    {
+        var originalContentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
+        var contentType = new ContentType(mimeType);
+        message.Header.ContentType = contentType;
+        message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, originalContentType.ToString());
+
+        if (output.TryGetBuffer(out var buffer))
+            message.Body = new MessageBody(buffer.AsMemory(), contentType, CharacterEncoding.Raw);
+        else
+            message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.Raw);
+
+        return message;
+    }
+
     private (Stream , string) CreateCompressionStream(MemoryStream uncompressed)
     {
         switch (_compressionMethod)
@@ -259,15 +274,15 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
                     throw new ArgumentException("Brotli is not supported in nestandard20");
 #else
             case CompressionMethod.Zlib:
-                return (new ZLibStream(uncompressed, _compressionLevel), DEFLATE);  
+                return (new ZLibStream(uncompressed, _compressionLevel), DEFLATE);
             case CompressionMethod.Brotli:
-                return (new BrotliStream(uncompressed, _compressionLevel), BROTLI);              
+                return (new BrotliStream(uncompressed, _compressionLevel), BROTLI);
 #endif
             default:
                 return (uncompressed, "application/json");
         }
     }
-        
+
     private Stream CreateDecompressionStream(Stream compressed)
     {
         switch (_compressionMethod)
@@ -282,9 +297,9 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
                     throw new ArgumentException("Brotli is not supported in nestandard20");
 #else
             case CompressionMethod.Zlib:
-                return new ZLibStream(compressed, CompressionMode.Decompress); 
+                return new ZLibStream(compressed, CompressionMode.Decompress);
             case CompressionMethod.Brotli:
-                return new BrotliStream(compressed, CompressionMode.Decompress);              
+                return new BrotliStream(compressed, CompressionMode.Decompress);
 #endif
             default:
                 return compressed;

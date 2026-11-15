@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia <irakli.gabisonia94@gmail.com>
@@ -32,25 +32,24 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch;
 
 public class DispatcherConcurrentShutdownTests
 {
-    [Theory]
-    [InlineData(MessagePumpType.Reactor, "receive", false)]
-    [InlineData(MessagePumpType.Proactor, "receive", false)]
-    [InlineData(MessagePumpType.Reactor, "open", false)]
-    [InlineData(MessagePumpType.Proactor, "open", false)]
-    [InlineData(MessagePumpType.Reactor, "scale", false)]
-    [InlineData(MessagePumpType.Proactor, "scale", false)]
-    [InlineData(MessagePumpType.Reactor, "receive", true)]
-    [InlineData(MessagePumpType.Proactor, "receive", true)]
-    [InlineData(MessagePumpType.Reactor, "open", true)]
-    [InlineData(MessagePumpType.Proactor, "open", true)]
-    [InlineData(MessagePumpType.Reactor, "scale", true)]
-    [InlineData(MessagePumpType.Proactor, "scale", true)]
+    [Test]
+    [Arguments(MessagePumpType.Reactor, "receive", false)]
+    [Arguments(MessagePumpType.Proactor, "receive", false)]
+    [Arguments(MessagePumpType.Reactor, "open", false)]
+    [Arguments(MessagePumpType.Proactor, "open", false)]
+    [Arguments(MessagePumpType.Reactor, "scale", false)]
+    [Arguments(MessagePumpType.Proactor, "scale", false)]
+    [Arguments(MessagePumpType.Reactor, "receive", true)]
+    [Arguments(MessagePumpType.Proactor, "receive", true)]
+    [Arguments(MessagePumpType.Reactor, "open", true)]
+    [Arguments(MessagePumpType.Proactor, "open", true)]
+    [Arguments(MessagePumpType.Reactor, "scale", true)]
+    [Arguments(MessagePumpType.Proactor, "scale", true)]
     public async Task When_shutdown_races_with_consumer_creation_should_drain_and_allow_restart(
         MessagePumpType pumpType, string operation, bool throwOnDispose)
     {
@@ -77,17 +76,23 @@ public class DispatcherConcurrentShutdownTests
             await shutdown.WaitAsync(TimeSpan.FromSeconds(10));
 
             // Assert
-            Assert.False(completedEarly, "Shutdown completed while an accepted consumer was still being created.");
-            Assert.Equal(0, pausedTransport.ReceiveCount);
-            AssertStoppedAndDisposed(dispatcher, factory);
-            Assert.All(initialJobs, job => Assert.Throws<ObjectDisposedException>(() => ((IAsyncResult)job).AsyncWaitHandle));
+            await Assert.That(completedEarly).IsFalse().Because("Shutdown completed while an accepted consumer was still being created.");
+            await Assert.That(pausedTransport.ReceiveCount).IsEqualTo(0);
+            await AssertStoppedAndDisposed(dispatcher, factory);
+            foreach (var job in initialJobs)
+            {
+                await Assert.That(() => ((IAsyncResult)job).AsyncWaitHandle).ThrowsExactly<ObjectDisposedException>();
+            }
 
             ApplyOperation(dispatcher, factory, pumpType, operation);
-            Assert.Equal(DispatcherState.DS_RUNNING, dispatcher.State);
-            Assert.NotEmpty(dispatcher.Consumers);
-            Assert.All(dispatcher.Consumers, consumer => Assert.NotNull(consumer.Job));
+            await Assert.That(dispatcher.State).IsEqualTo(DispatcherState.DS_RUNNING);
+            await Assert.That(dispatcher.Consumers).IsNotEmpty();
+            foreach (var consumer in dispatcher.Consumers)
+            {
+                await Assert.That(consumer.Job).IsNotNull();
+            }
             await dispatcher.End().WaitAsync(TimeSpan.FromSeconds(10));
-            AssertStoppedAndDisposed(dispatcher, factory);
+            await AssertStoppedAndDisposed(dispatcher, factory);
         }
         finally
         {
@@ -101,13 +106,13 @@ public class DispatcherConcurrentShutdownTests
         }
     }
 
-    [Theory]
-    [InlineData(MessagePumpType.Reactor, "receive")]
-    [InlineData(MessagePumpType.Proactor, "receive")]
-    [InlineData(MessagePumpType.Reactor, "open")]
-    [InlineData(MessagePumpType.Proactor, "open")]
-    [InlineData(MessagePumpType.Reactor, "scale")]
-    [InlineData(MessagePumpType.Proactor, "scale")]
+    [Test]
+    [Arguments(MessagePumpType.Reactor, "receive")]
+    [Arguments(MessagePumpType.Proactor, "receive")]
+    [Arguments(MessagePumpType.Reactor, "open")]
+    [Arguments(MessagePumpType.Proactor, "open")]
+    [Arguments(MessagePumpType.Reactor, "scale")]
+    [Arguments(MessagePumpType.Proactor, "scale")]
     public async Task When_shutdown_is_in_progress_should_reject_new_consumer_operations(
         MessagePumpType pumpType, string operation)
     {
@@ -126,17 +131,18 @@ public class DispatcherConcurrentShutdownTests
             var performersBefore = subscription.NoOfPerformers;
 
             // Act
-            var error = Record.Exception(() => ApplyOperation(dispatcher, factory, pumpType, operation));
+            Exception? error = null;
+            try { ApplyOperation(dispatcher, factory, pumpType, operation); } catch (Exception e) { error = e; }
 
             // Assert
-            Assert.IsType<InvalidOperationException>(error);
-            Assert.Equal(transportsBefore, factory.Transports.Count);
-            Assert.Equal(performersBefore, subscription.NoOfPerformers);
-            Assert.DoesNotContain(dispatcher.Subscriptions, item => item.Name == "additional");
+            await Assert.That(error).IsTypeOf<InvalidOperationException>();
+            await Assert.That(factory.Transports.Count).IsEqualTo(transportsBefore);
+            await Assert.That(subscription.NoOfPerformers).IsEqualTo(performersBefore);
+            await Assert.That(System.Linq.Enumerable.Any(dispatcher.Subscriptions, item => item.Name == "additional")).IsFalse();
             factory.ResumeCreation();
             await opening.WaitAsync(TimeSpan.FromSeconds(10));
             await shutdown.WaitAsync(TimeSpan.FromSeconds(10));
-            AssertStoppedAndDisposed(dispatcher, factory);
+            await AssertStoppedAndDisposed(dispatcher, factory);
         }
         finally
         {
@@ -148,11 +154,11 @@ public class DispatcherConcurrentShutdownTests
         }
     }
 
-    [Theory]
-    [InlineData(MessagePumpType.Reactor, false)]
-    [InlineData(MessagePumpType.Proactor, false)]
-    [InlineData(MessagePumpType.Reactor, true)]
-    [InlineData(MessagePumpType.Proactor, true)]
+    [Test]
+    [Arguments(MessagePumpType.Reactor, false)]
+    [Arguments(MessagePumpType.Proactor, false)]
+    [Arguments(MessagePumpType.Reactor, true)]
+    [Arguments(MessagePumpType.Proactor, true)]
     public async Task When_channel_creation_fails_should_release_created_consumers_and_allow_restart(
         MessagePumpType pumpType, bool throwOnDispose)
     {
@@ -163,27 +169,27 @@ public class DispatcherConcurrentShutdownTests
         using var dispatcher = CreateDispatcher(subscription);
 
         // Act
-        var error = Assert.Throws<InvalidOperationException>(() => dispatcher.Receive());
+        var error = (await Assert.That(() => dispatcher.Receive()).ThrowsExactly<InvalidOperationException>());
         await dispatcher.End().WaitAsync(TimeSpan.FromSeconds(10));
 
         // Assert
-        Assert.Equal("Channel creation failed.", error.Message);
-        Assert.Single(factory.Transports);
-        AssertStoppedAndDisposed(dispatcher, factory);
+        await Assert.That(error.Message).IsEqualTo("Channel creation failed.");
+        await Assert.That(factory.Transports).HasSingleItem();
+        await AssertStoppedAndDisposed(dispatcher, factory);
         factory.FailOnCreationNumber = null;
         dispatcher.Receive();
-        Assert.Equal(3, dispatcher.Consumers.Count());
+        await Assert.That(dispatcher.Consumers.Count()).IsEqualTo(3);
         await dispatcher.End().WaitAsync(TimeSpan.FromSeconds(10));
-        AssertStoppedAndDisposed(dispatcher, factory);
+        await AssertStoppedAndDisposed(dispatcher, factory);
     }
 
-    [Theory]
-    [InlineData("receive", false)]
-    [InlineData("open", false)]
-    [InlineData("scale", false)]
-    [InlineData("receive", true)]
-    [InlineData("open", true)]
-    [InlineData("scale", true)]
+    [Test]
+    [Arguments("receive", false)]
+    [Arguments("open", false)]
+    [Arguments("scale", false)]
+    [Arguments("receive", true)]
+    [Arguments("open", true)]
+    [Arguments("scale", true)]
     public async Task When_dispatcher_is_disposed_should_reject_new_consumer_operations(string operation, bool asyncDispose)
     {
         // Arrange
@@ -198,14 +204,15 @@ public class DispatcherConcurrentShutdownTests
         var transportsBefore = factory.Transports.Count;
 
         // Act
-        var error = Record.Exception(() => ApplyOperation(dispatcher, factory, pumpType, operation));
+        Exception? error = null;
+        try { ApplyOperation(dispatcher, factory, pumpType, operation); } catch (Exception e) { error = e; }
 
         // Assert
         try
         {
-            Assert.IsType<ObjectDisposedException>(error);
-            Assert.Equal(transportsBefore, factory.Transports.Count);
-            AssertStoppedAndDisposed(dispatcher, factory);
+            await Assert.That(error).IsTypeOf<ObjectDisposedException>();
+            await Assert.That(factory.Transports.Count).IsEqualTo(transportsBefore);
+            await AssertStoppedAndDisposed(dispatcher, factory);
         }
         finally
         {
@@ -250,10 +257,13 @@ public class DispatcherConcurrentShutdownTests
         return new Dispatcher(new SpyCommandProcessor(), [subscription], registry, registry);
     }
 
-    private static void AssertStoppedAndDisposed(Dispatcher dispatcher, InMemoryUnopenedConsumerChannelFactory factory)
+    private static async Task AssertStoppedAndDisposed(Dispatcher dispatcher, InMemoryUnopenedConsumerChannelFactory factory)
     {
-        Assert.Equal(DispatcherState.DS_STOPPED, dispatcher.State);
-        Assert.Empty(dispatcher.Consumers);
-        Assert.All(factory.Transports, transport => Assert.Equal(1, transport.DisposeCount));
+        await Assert.That(dispatcher.State).IsEqualTo(DispatcherState.DS_STOPPED);
+        await Assert.That(dispatcher.Consumers).IsEmpty();
+        foreach (var transport in factory.Transports)
+        {
+            await Assert.That(transport.DisposeCount).IsEqualTo(1);
+        }
     }
 }

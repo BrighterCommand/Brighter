@@ -1,4 +1,4 @@
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 
@@ -12,8 +12,8 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 /// </summary>
 public class LedgerSignOffHandleTests
 {
-    [Fact]
-    public void When_a_sign_off_is_a_placeholder_handle_should_fail_audit()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_sign_off_is_a_placeholder_handle_should_fail_audit()
     {
         // Arrange — a well-formed cell whose sign-off names nobody
         const string cell = "Deferred -> #4240 (sign-off: @maintainer)";
@@ -22,12 +22,11 @@ public class LedgerSignOffHandleTests
         var isValid = LedgerSkipCrossCheckAudit.IsValidDeferredCell(cell);
 
         // Assert
-        Assert.False(isValid,
-            $"Expected '{cell}' to fail validation: '@maintainer' is a placeholder, not a maintainer.");
+        await Assert.That(isValid).IsFalse().Because($"Expected '{cell}' to fail validation: '@maintainer' is a placeholder, not a maintainer.");
     }
 
-    [Fact]
-    public void When_a_sign_off_is_an_abbreviated_handle_should_fail_audit()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_sign_off_is_an_abbreviated_handle_should_fail_audit()
     {
         // Arrange — '@m' is the abbreviation the generator's own fixtures used
         const string cell = "Deferred -> #4240 (sign-off: @m)";
@@ -36,12 +35,11 @@ public class LedgerSignOffHandleTests
         var isValid = LedgerSkipCrossCheckAudit.IsValidDeferredCell(cell);
 
         // Assert
-        Assert.False(isValid,
-            $"Expected '{cell}' to fail validation: '@m' is too short to identify a maintainer.");
+        await Assert.That(isValid).IsFalse().Because($"Expected '{cell}' to fail validation: '@m' is too short to identify a maintainer.");
     }
 
-    [Fact]
-    public void When_a_sign_off_is_a_real_handle_should_pass_audit()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_sign_off_is_a_real_handle_should_pass_audit()
     {
         // Arrange — the handle every Deferred cell in the live ledger actually carries
         const string cell = "Deferred -> #4240 (sign-off: @iancooper)";
@@ -50,7 +48,6 @@ public class LedgerSignOffHandleTests
         var isValid = LedgerSkipCrossCheckAudit.IsValidDeferredCell(cell);
 
         // Assert
-        Assert.True(isValid,
-            $"Expected '{cell}' to pass validation: '@iancooper' is a real handle.");
+        await Assert.That(isValid).IsTrue().Because($"Expected '{cell}' to pass validation: '@iancooper' is a real handle.");
     }
 }

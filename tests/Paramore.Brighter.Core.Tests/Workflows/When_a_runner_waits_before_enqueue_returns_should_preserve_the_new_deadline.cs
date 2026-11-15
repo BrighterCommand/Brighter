@@ -30,17 +30,16 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
 public class SchedulerWaitDeadlineHandoffTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_a_runner_waits_before_enqueue_returns_should_preserve_the_new_deadline(
         bool alreadyScheduled, bool useBatch)
     {
@@ -86,21 +85,21 @@ public class SchedulerWaitDeadlineHandoffTests
                 await scheduler.ScheduleAsync(job, timeout.Token);
 
             //Assert
-            Assert.Equal(clock.GetUtcNow() + delay, job.DueTime);
-            Assert.True(job.IsScheduled);
-            Assert.Equal(JobState.Waiting, job.State);
-            Assert.Same(completion, job.CurrentStep());
-            Assert.Equal(job.DueTime, (await store.GetJobAsync(job.Id))!.DueTime);
-            Assert.Null(channel.DueTimeAtHandoff);
+            await Assert.That(job.DueTime).IsEqualTo(clock.GetUtcNow() + delay);
+            await Assert.That(job.IsScheduled).IsTrue();
+            await Assert.That(job.State).IsEqualTo(JobState.Waiting);
+            await Assert.That(job.CurrentStep()).IsSameReferenceAs(completion);
+            await Assert.That((await store.GetJobAsync(job.Id))!.DueTime).IsEqualTo(job.DueTime);
+            await Assert.That(channel.DueTimeAtHandoff).IsNull();
 
             //Act
             clock.Advance(delay);
             await scheduler.ScheduleAsync(job, timeout.Token);
 
             //Assert
-            Assert.Equal(JobState.Done, job.State);
-            Assert.Equal(true, job.Data.Bag["completed"]);
-            Assert.False(job.IsScheduled);
+            await Assert.That(job.State).IsEqualTo(JobState.Done);
+            await Assert.That(job.Data.Bag["completed"]).IsEqualTo(true);
+            await Assert.That(job.IsScheduled).IsFalse();
         }
         finally
         {

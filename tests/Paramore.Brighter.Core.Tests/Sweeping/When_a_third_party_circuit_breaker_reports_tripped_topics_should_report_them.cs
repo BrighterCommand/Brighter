@@ -7,13 +7,12 @@ using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Paramore.Brighter.Outbox.Hosting.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class When_a_third_party_circuit_breaker_reports_tripped_topics_should_report_them_tests
 {
-    [Fact]
+    [Test]
     public async Task When_a_third_party_circuit_breaker_reports_tripped_topics_should_report_them()
     {
         //Arrange
@@ -28,11 +27,11 @@ public class When_a_third_party_circuit_breaker_reports_tripped_topics_should_re
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
 
         //Assert
-        Assert.True(state.Read().IsActive);
-        Assert.Equal(HealthStatus.Degraded, result.Status);
-        var tripped = Assert.IsAssignableFrom<IDictionary<string, object>>(result.Data["tripped_topics"]);
-        Assert.Equal(new[] { "orders", "payments" }, Assert.IsType<string[]>(tripped["topics"]));
-        Assert.Equal(2, tripped["count"]);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), result.Data[RemedyCheckConvention.RemedyKindKey]);
+        await Assert.That(state.Read().IsActive).IsTrue();
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Degraded);
+        var tripped = ((IDictionary<string, object>)(((IDictionary<string, object>)(await Assert.That(result.Data["tripped_topics"]).IsAssignableTo<IDictionary<string, object>>()))));
+        await Assert.That((await Assert.That(tripped["topics"]).IsTypeOf<string[]>())).IsEqualTo(new[] { "orders", "payments" });
+        await Assert.That(tripped["count"]).IsEqualTo(2);
+        await Assert.That(result.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
     }
 }

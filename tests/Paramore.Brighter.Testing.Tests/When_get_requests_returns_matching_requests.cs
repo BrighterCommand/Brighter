@@ -23,8 +23,6 @@ THE SOFTWARE. */
 
 using System.Linq;
 using Paramore.Brighter.Testing;
-using Shouldly;
-using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
@@ -35,8 +33,8 @@ public class SpyCommandProcessorGetRequestsTests
     private readonly MyCommand _command2 = new() { Value = "second" };
     private readonly MyEvent _event1 = new() { Data = "event" };
 
-    [Fact]
-    public void Should_return_all_requests_of_type()
+    [Test]
+    public async Task Should_return_all_requests_of_type()
     {
         // Arrange
         _spy.Send(_command1);
@@ -47,14 +45,14 @@ public class SpyCommandProcessorGetRequestsTests
         var commands = _spy.GetRequests<MyCommand>();
 
         // Assert
-        commands.ShouldNotBeNull();
-        commands.Count().ShouldBe(2);
-        commands.ShouldContain(_command1);
-        commands.ShouldContain(_command2);
+        await Assert.That(commands).IsNotNull();
+        await Assert.That(commands.Count()).IsEqualTo(2);
+        await Assert.That(commands).Contains(_command1);
+        await Assert.That(commands).Contains(_command2);
     }
 
-    [Fact]
-    public void Should_be_non_destructive()
+    [Test]
+    public async Task Should_be_non_destructive()
     {
         // Arrange
         _spy.Send(_command1);
@@ -65,13 +63,13 @@ public class SpyCommandProcessorGetRequestsTests
         var secondCall = _spy.GetRequests<MyCommand>().ToList();
 
         // Assert - both calls return the same results
-        firstCall.Count.ShouldBe(2);
-        secondCall.Count.ShouldBe(2);
-        firstCall.ShouldBe(secondCall);
+        await Assert.That(firstCall.Count).IsEqualTo(2);
+        await Assert.That(secondCall.Count).IsEqualTo(2);
+        await Assert.That(firstCall).IsEquivalentTo(secondCall);
     }
 
-    [Fact]
-    public void Should_return_empty_when_no_matching_requests()
+    [Test]
+    public async Task Should_return_empty_when_no_matching_requests()
     {
         // Arrange - send only events, no commands
         _spy.Publish(_event1);
@@ -80,11 +78,11 @@ public class SpyCommandProcessorGetRequestsTests
         var commands = _spy.GetRequests<MyCommand>();
 
         // Assert
-        commands.ShouldBeEmpty();
+        await Assert.That(commands).IsEmpty();
     }
 
-    [Fact]
-    public void Should_filter_to_specific_type_only()
+    [Test]
+    public async Task Should_filter_to_specific_type_only()
     {
         // Arrange
         _spy.Send(_command1);
@@ -94,8 +92,8 @@ public class SpyCommandProcessorGetRequestsTests
         var events = _spy.GetRequests<MyEvent>();
 
         // Assert
-        events.Count().ShouldBe(1);
-        events.Single().ShouldBe(_event1);
+        await Assert.That(events.Count()).IsEqualTo(1);
+        await Assert.That(events.Single()).IsEqualTo(_event1);
     }
 
     private sealed class MyCommand : Command

@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 
@@ -35,14 +34,14 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 /// settled (neither acknowledged, rejected nor requeued) keeps its <c>SubscriberClient</c> callback
 /// parked; disposing the channel must not wait on it, and the message must stay redeliverable.
 /// </summary>
-[Trait("Category", "GcpPubSubStream")]
-[Collection("Stream")]
+[Property("Category", "GcpPubSubStream")]
+[NotInParallel("Stream")]
 public class GcpStreamDisposeWithUnsettledMessageTests
 {
     private static readonly TimeSpan s_disposeBound = TimeSpan.FromSeconds(10);
 
-    [Fact]
-    public void When_a_gcp_stream_channel_is_disposed_holding_an_unsettled_message_should_return_promptly()
+    [Test]
+    public async Task When_a_gcp_stream_channel_is_disposed_holding_an_unsettled_message_should_return_promptly()
     {
         var provider = new GcpStreamMessageGatewayProvider();
         var builder = new DefaultMessageBuilder();
@@ -66,20 +65,20 @@ public class GcpStreamDisposeWithUnsettledMessageTests
 
             producer.Send(builder.SetTopic(routingKey).Build());
             var first = channel.Receive(TimeSpan.FromSeconds(20));
-            Assert.NotEqual(MessageType.MT_NONE, first.Header.MessageType);
+            await Assert.That(first.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             // Act
             disposeAttempted = true;
             var disposed = Task.Run(channel.Dispose).Wait(s_disposeBound);
 
             // Assert — dispose returns promptly, and the unsettled message is still redeliverable
-            Assert.True(disposed, $"Disposing the stream channel did not return within {s_disposeBound}");
+            await Assert.That(disposed).IsTrue().Because($"Disposing the stream channel did not return within {s_disposeBound}");
 
             // a fresh subscription instance, so the factory builds a new stream consumer
             redeliveryChannel = provider.CreateChannel(
                 provider.CreateSubscription(routingKey, channelName, OnMissingChannel.Assume));
             var redelivered = redeliveryChannel.Receive(TimeSpan.FromSeconds(20));
-            Assert.Equal(first.Id, redelivered.Id);
+            await Assert.That(redelivered.Id).IsEqualTo(first.Id);
             redeliveryChannel.Acknowledge(redelivered);
         }
         finally

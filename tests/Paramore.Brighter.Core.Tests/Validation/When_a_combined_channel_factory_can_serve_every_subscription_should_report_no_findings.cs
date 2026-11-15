@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class CombinedChannelFactoryServesEveryConfiguredSubscriptionValidationTests
 {
-    [Fact]
-    public void When_a_combined_channel_factory_can_serve_every_subscription_should_report_no_findings()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_combined_channel_factory_can_serve_every_subscription_should_report_no_findings()
     {
         // Arrange — a combined channel factory whose inner factories match every subscription's
         // declared type
@@ -52,9 +52,9 @@ public class CombinedChannelFactoryServesEveryConfiguredSubscriptionValidationTe
         var resultsB = spec.Accept(collectorB).ToList();
 
         // Assert — no findings for either subscription
-        Assert.True(satisfiedA);
-        Assert.Empty(resultsA);
-        Assert.True(satisfiedB);
-        Assert.Empty(resultsB);
+        await Assert.That(satisfiedA).IsTrue();
+        await Assert.That(resultsA).IsEmpty();
+        await Assert.That(satisfiedB).IsTrue();
+        await Assert.That(resultsB).IsEmpty();
     }
 }

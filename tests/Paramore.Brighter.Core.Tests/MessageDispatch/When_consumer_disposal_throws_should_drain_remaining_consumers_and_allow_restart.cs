@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -34,31 +34,30 @@ using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Testing;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch;
 
 public class DispatcherConsumerDisposalFailureTests
 {
-    [Theory]
-    [InlineData(MessagePumpType.Reactor, typeof(InvalidOperationException), 1, true)]
-    [InlineData(MessagePumpType.Reactor, typeof(ObjectDisposedException), 1, true)]
-    [InlineData(MessagePumpType.Reactor, typeof(AggregateException), 1, true)]
-    [InlineData(MessagePumpType.Reactor, typeof(TaskCanceledException), 1, true)]
-    [InlineData(MessagePumpType.Reactor, typeof(InvalidOperationException), 2, true)]
-    [InlineData(MessagePumpType.Proactor, typeof(InvalidOperationException), 1, true)]
-    [InlineData(MessagePumpType.Proactor, typeof(ObjectDisposedException), 1, true)]
-    [InlineData(MessagePumpType.Proactor, typeof(AggregateException), 1, true)]
-    [InlineData(MessagePumpType.Proactor, typeof(TaskCanceledException), 1, true)]
-    [InlineData(MessagePumpType.Proactor, typeof(InvalidOperationException), 2, true)]
-    [InlineData(MessagePumpType.Reactor, typeof(InvalidOperationException), 1, false)]
-    [InlineData(MessagePumpType.Reactor, typeof(ObjectDisposedException), 1, false)]
-    [InlineData(MessagePumpType.Reactor, typeof(AggregateException), 1, false)]
-    [InlineData(MessagePumpType.Reactor, typeof(TaskCanceledException), 1, false)]
-    [InlineData(MessagePumpType.Proactor, typeof(InvalidOperationException), 1, false)]
-    [InlineData(MessagePumpType.Proactor, typeof(ObjectDisposedException), 1, false)]
-    [InlineData(MessagePumpType.Proactor, typeof(AggregateException), 1, false)]
-    [InlineData(MessagePumpType.Proactor, typeof(TaskCanceledException), 1, false)]
+    [Test]
+    [Arguments(MessagePumpType.Reactor, typeof(InvalidOperationException), 1, true)]
+    [Arguments(MessagePumpType.Reactor, typeof(ObjectDisposedException), 1, true)]
+    [Arguments(MessagePumpType.Reactor, typeof(AggregateException), 1, true)]
+    [Arguments(MessagePumpType.Reactor, typeof(TaskCanceledException), 1, true)]
+    [Arguments(MessagePumpType.Reactor, typeof(InvalidOperationException), 2, true)]
+    [Arguments(MessagePumpType.Proactor, typeof(InvalidOperationException), 1, true)]
+    [Arguments(MessagePumpType.Proactor, typeof(ObjectDisposedException), 1, true)]
+    [Arguments(MessagePumpType.Proactor, typeof(AggregateException), 1, true)]
+    [Arguments(MessagePumpType.Proactor, typeof(TaskCanceledException), 1, true)]
+    [Arguments(MessagePumpType.Proactor, typeof(InvalidOperationException), 2, true)]
+    [Arguments(MessagePumpType.Reactor, typeof(InvalidOperationException), 1, false)]
+    [Arguments(MessagePumpType.Reactor, typeof(ObjectDisposedException), 1, false)]
+    [Arguments(MessagePumpType.Reactor, typeof(AggregateException), 1, false)]
+    [Arguments(MessagePumpType.Reactor, typeof(TaskCanceledException), 1, false)]
+    [Arguments(MessagePumpType.Proactor, typeof(InvalidOperationException), 1, false)]
+    [Arguments(MessagePumpType.Proactor, typeof(ObjectDisposedException), 1, false)]
+    [Arguments(MessagePumpType.Proactor, typeof(AggregateException), 1, false)]
+    [Arguments(MessagePumpType.Proactor, typeof(TaskCanceledException), 1, false)]
     public async Task When_consumer_disposal_throws_should_drain_remaining_consumers_and_allow_restart(
         MessagePumpType pumpType, Type exceptionType, int failingConsumerCount, bool failAcknowledgment)
     {
@@ -98,37 +97,49 @@ public class DispatcherConsumerDisposalFailureTests
 
             await Task.WhenAll(factory.Consumers.Take(failingConsumerCount).Select(consumer => consumer.DisposalAttempted))
                 .WaitAsync(timeout);
-            var exception = await Record.ExceptionAsync(async () => await dispatcher.End().WaitAsync(timeout));
+            var exception = await TestExceptionRecorder.CaptureAsync(async () => await dispatcher.End().WaitAsync(timeout));
 
             //Assert
-            Assert.Null(exception);
-            Assert.Equal(DispatcherState.DS_STOPPED, dispatcher.State);
-            Assert.Empty(dispatcher.Consumers);
-            Assert.Equal(subscriptions.Length, factory.Consumers.Count);
-            Assert.All(factory.Consumers, consumer => Assert.Equal(1, consumer.DisposeCount));
-            Assert.All(jobs, job => Assert.Throws<ObjectDisposedException>(() => ((IAsyncResult)job).AsyncWaitHandle));
+            await Assert.That(exception).IsNull();
+            await Assert.That(dispatcher.State).IsEqualTo(DispatcherState.DS_STOPPED);
+            await Assert.That(dispatcher.Consumers).IsEmpty();
+            await Assert.That(factory.Consumers.Count).IsEqualTo(subscriptions.Length);
+            foreach (var consumer in factory.Consumers)
+{
+    await Assert.That(consumer.DisposeCount).IsEqualTo(1);
+}
+            foreach (var job in jobs)
+{
+    await Assert.That(() => ((IAsyncResult)job).AsyncWaitHandle).ThrowsExactly<ObjectDisposedException>();
+}
             var loggedFailure = failure is AggregateException aggregate ? aggregate.InnerException : failure;
-            Assert.Equal(failingConsumerCount, TestCorrelator.GetLogEventsFromCurrentContext().Count(entry =>
-                entry.Level == LogEventLevel.Error && ReferenceEquals(entry.Exception, loggedFailure)));
+            await Assert.That(TestCorrelator.GetLogEventsFromCurrentContext().Count(entry =>
+                entry.Level == LogEventLevel.Error && ReferenceEquals(entry.Exception, loggedFailure))).IsEqualTo(failingConsumerCount);
 
             //Act
             dispatcher.Receive();
             jobs.AddRange(dispatcher.Consumers.Select(consumer => consumer.Job!));
 
             //Assert
-            Assert.Equal(DispatcherState.DS_RUNNING, dispatcher.State);
-            Assert.Equal(subscriptions.Length, dispatcher.Consumers.Count());
+            await Assert.That(dispatcher.State).IsEqualTo(DispatcherState.DS_RUNNING);
+            await Assert.That(dispatcher.Consumers.Count()).IsEqualTo(subscriptions.Length);
             await dispatcher.End().WaitAsync(timeout);
-            Assert.Equal(DispatcherState.DS_STOPPED, dispatcher.State);
-            Assert.Empty(dispatcher.Consumers);
-            Assert.Equal(subscriptions.Length * 2, factory.Consumers.Count);
-            Assert.All(factory.Consumers, consumer => Assert.Equal(1, consumer.DisposeCount));
-            Assert.All(jobs, job => Assert.Throws<ObjectDisposedException>(() => ((IAsyncResult)job).AsyncWaitHandle));
+            await Assert.That(dispatcher.State).IsEqualTo(DispatcherState.DS_STOPPED);
+            await Assert.That(dispatcher.Consumers).IsEmpty();
+            await Assert.That(factory.Consumers.Count).IsEqualTo(subscriptions.Length * 2);
+            foreach (var consumer in factory.Consumers)
+{
+    await Assert.That(consumer.DisposeCount).IsEqualTo(1);
+}
+            foreach (var job in jobs)
+{
+    await Assert.That(() => ((IAsyncResult)job).AsyncWaitHandle).ThrowsExactly<ObjectDisposedException>();
+}
         }
         finally
         {
-            await Record.ExceptionAsync(async () => await dispatcher.End().WaitAsync(timeout));
-            await Record.ExceptionAsync(async () => await Task.WhenAll(jobs).WaitAsync(timeout));
+            await TestExceptionRecorder.CaptureAsync(async () => await dispatcher.End().WaitAsync(timeout));
+            await TestExceptionRecorder.CaptureAsync(async () => await Task.WhenAll(jobs).WaitAsync(timeout));
             foreach (var consumer in factory.Consumers)
                 consumer.ReleaseResources();
         }

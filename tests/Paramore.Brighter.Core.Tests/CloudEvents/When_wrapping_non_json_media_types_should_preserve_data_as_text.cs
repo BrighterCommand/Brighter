@@ -26,20 +26,19 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CloudEvents;
 
 public class CloudEventsNonJsonMediaTypeTests
 {
-    [Theory]
-    [InlineData("text/plain", "plain text with \"quotes\"\nand a newline", false)]
-    [InlineData("text/plain", "{\"status\":400}", true)]
-    [InlineData("application/jsonp", "{\"status\":400}", false)]
-    [InlineData("text/json-seq", "{\"status\":400}", false)]
-    [InlineData("application/problem+json-seq", "{\"status\":400}", false)]
-    [InlineData("text/plain; profile=\"application/json\"", "{\"status\":400}", false)]
-    [InlineData("text/plain; profile=\"application/problem+json\"", "{\"status\":400}", true)]
+    [Test]
+    [Arguments("text/plain", "plain text with \"quotes\"\nand a newline", false)]
+    [Arguments("text/plain", "{\"status\":400}", true)]
+    [Arguments("application/jsonp", "{\"status\":400}", false)]
+    [Arguments("text/json-seq", "{\"status\":400}", false)]
+    [Arguments("application/problem+json-seq", "{\"status\":400}", false)]
+    [Arguments("text/plain; profile=\"application/json\"", "{\"status\":400}", false)]
+    [Arguments("text/plain; profile=\"application/problem+json\"", "{\"status\":400}", true)]
     public async Task When_wrapping_non_json_media_types_should_preserve_data_as_text(
         string contentType, string payload, bool useAsync)
     {
@@ -61,9 +60,9 @@ public class CloudEventsNonJsonMediaTypeTests
         //Assert
         using var envelope = JsonDocument.Parse(wrapped.Body.Memory);
         var data = envelope.RootElement.GetProperty("data");
-        Assert.Equal(JsonValueKind.String, data.ValueKind);
-        Assert.Equal(payload, data.GetString());
-        Assert.Equal(dataContentType.ToString(), envelope.RootElement.GetProperty("datacontenttype").GetString());
-        Assert.Equal("application/cloudevents+json", wrapped.Header.ContentType.MediaType);
+        await Assert.That(data.ValueKind).IsEqualTo(JsonValueKind.String);
+        await Assert.That(data.GetString()).IsEqualTo(payload);
+        await Assert.That(envelope.RootElement.GetProperty("datacontenttype").GetString()).IsEqualTo(dataContentType.ToString());
+        await Assert.That(wrapped.Header.ContentType.MediaType).IsEqualTo("application/cloudevents+json");
     }
 }

@@ -26,17 +26,16 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus.Administration;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "AzureServiceBus")]
-[Collection("AzureServiceBus")]
+[Property("Category", "AzureServiceBus")]
+[NotInParallel("AzureServiceBus")]
 public class AzureServiceBusForwardingMigrationTests
 {
-    [Theory]
-    [InlineData(OnMissingChannel.Create)]
-    [InlineData(OnMissingChannel.Validate)]
+    [Test]
+    [Arguments(OnMissingChannel.Create)]
+    [Arguments(OnMissingChannel.Validate)]
     public async Task When_an_existing_subscription_does_not_forward_should_require_explicit_migration(
         OnMissingChannel makeChannels)
     {
@@ -68,12 +67,11 @@ public class AzureServiceBusForwardingMigrationTests
                 subscriptionConfiguration: new AzureServiceBusSubscriptionConfiguration { ForwardTo = queueName });
 
             // Act
-            var exception = await Assert.ThrowsAsync<ChannelFailureException>(
-                () => factory.CreateAsyncChannelAsync(subscription));
+            var exception = await Assert.That(() => factory.CreateAsyncChannelAsync(subscription)).ThrowsExactly<ChannelFailureException>();
 
             // Assert
-            Assert.Contains(queueName, exception.Message);
-            Assert.True(string.IsNullOrEmpty((await administration.GetSubscriptionAsync(topicName, "a")).Value.ForwardTo));
+            await Assert.That(exception.Message).Contains(queueName);
+            await Assert.That(string.IsNullOrEmpty((await administration.GetSubscriptionAsync(topicName, "a")).Value.ForwardTo)).IsTrue();
         }
         finally
         {

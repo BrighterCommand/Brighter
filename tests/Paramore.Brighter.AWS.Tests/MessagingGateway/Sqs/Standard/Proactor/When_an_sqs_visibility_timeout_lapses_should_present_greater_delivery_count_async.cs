@@ -32,7 +32,6 @@ using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor;
 
@@ -43,7 +42,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor;
 /// Covers both message creators via the <paramref name="rawMessageDelivery"/> theory parameter:
 /// <c>true</c> → <c>SqsMessageCreator</c>; <c>false</c> → <c>SqsInlineMessageCreator</c>.
 /// </summary>
-[Trait("Category", "AWS")]
+[Property("Category", "AWS")]
 public class SqsVisibilityTimeoutLapseDeliveryCountTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
@@ -61,9 +60,9 @@ public class SqsVisibilityTimeoutLapseDeliveryCountTestsAsync : IDisposable, IAs
     /// The consumer receives once via <c>ReceiveAsync</c>, does not ack, reject or requeue, waits
     /// past the timeout, then receives the redelivery via <c>ReceiveAsync</c>.
     /// </summary>
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
+    [Test]
+    [Arguments(true)]
+    [Arguments(false)]
     public async Task When_an_sqs_visibility_timeout_lapses_should_present_greater_delivery_count_async(bool rawMessageDelivery)
     {
         // Arrange
@@ -109,7 +108,7 @@ public class SqsVisibilityTimeoutLapseDeliveryCountTestsAsync : IDisposable, IAs
         var m1 = (await consumer.ReceiveAsync(TimeSpan.FromSeconds(10)))
             .FirstOrDefault(m => !m.IsEmpty);
 
-        Assert.NotNull(m1);
+        await Assert.That(m1).IsNotNull();
 
         // Wait past the 5-second visibility timeout so SQS makes the message visible again
         await Task.Delay(TimeSpan.FromSeconds(10));
@@ -131,10 +130,8 @@ public class SqsVisibilityTimeoutLapseDeliveryCountTestsAsync : IDisposable, IAs
         }
 
         // Assert — AC-42: the expiry redelivery presents a count strictly greater than the first delivery
-        Assert.NotNull(m2);
-        Assert.True(m2.Header.HandledCount > m1.Header.HandledCount,
-            $"AC-42: visibility-timeout redelivery m2.HandledCount ({m2.Header.HandledCount}) "
-            + $"must be strictly greater than m1.HandledCount ({m1.Header.HandledCount})");
+        await Assert.That(m2).IsNotNull();
+        await Assert.That(m2.Header.HandledCount > m1.Header.HandledCount).IsTrue();
 
         await consumer.AcknowledgeAsync(m2);
     }

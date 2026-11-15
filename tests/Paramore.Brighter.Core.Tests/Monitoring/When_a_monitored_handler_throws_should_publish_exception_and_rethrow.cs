@@ -39,16 +39,15 @@ using Paramore.Brighter.Monitoring.Handlers;
 using Paramore.Brighter.Monitoring.Mappers;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Monitoring;
 
-[Trait("Category", "Monitoring")]
+[Property("Category", "Monitoring")]
 public class MonitorControlBusExceptionTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_a_monitored_handler_throws_should_publish_exception_and_rethrow(bool isAsync)
     {
         //Arrange
@@ -62,8 +61,10 @@ public class MonitorControlBusExceptionTests
         });
         var sender = new ControlBusSenderFactory().Create<Message, CommittableTransaction>(
             new InMemoryOutbox(TimeProvider.System), producers, new BrighterTracer());
-        using var senderLifetime = Assert.IsAssignableFrom<IDisposable>(sender);
-        var asyncSender = Assert.IsAssignableFrom<IAmAControlBusSenderAsync>(sender);
+        await Assert.That(sender).IsAssignableTo<IDisposable>();
+        using var senderLifetime = (IDisposable)sender;
+        await Assert.That(sender).IsAssignableTo<IAmAControlBusSenderAsync>();
+        var asyncSender = (IAmAControlBusSenderAsync)sender;
 
         var subscribers = new SubscriberRegistry();
         if (isAsync)
@@ -89,37 +90,41 @@ public class MonitorControlBusExceptionTests
 
         //Act
         var exception = isAsync
-            ? await Record.ExceptionAsync(() => processor.SendAsync(command))
-            : Record.Exception(() => processor.Send(command));
+            ? await TestExceptionRecorder.CaptureAsync(() => processor.SendAsync(command))
+            : TestExceptionRecorder.Capture(() => processor.Send(command));
 
         //Assert
-        Assert.IsType<Exception>(exception);
-        Assert.Equal("I am an exception in a monitored pipeline", exception.Message);
-        Assert.Contains(isAsync ? nameof(MyMonitoredHandlerThatThrowsAsync) : nameof(MyMonitoredHandlerThatThrows),
-            exception.StackTrace);
+        await Assert.That(exception).IsTypeOf<Exception>();
+        await Assert.That(exception.Message).IsEqualTo("I am an exception in a monitored pipeline");
+        await Assert.That(exception.StackTrace).Contains(
+            isAsync ? nameof(MyMonitoredHandlerThatThrowsAsync) : nameof(MyMonitoredHandlerThatThrows));
         var messages = bus.Stream(topic).ToArray();
         var mapper = new MonitorEventMessageMapper();
         var events = messages.Select(mapper.MapToRequest).ToArray();
-        Assert.Equal(new[] { MonitorEventType.EnterHandler, MonitorEventType.ExceptionThrown },
-            events.Select(e => e.EventType));
-        Assert.All(messages, message => Assert.Equal(topic, message.Header.Topic));
-        Assert.All(events, monitorEvent =>
+        await Assert.That(events.Select(e => e.EventType))
+            .IsEquivalentTo(new[] { MonitorEventType.EnterHandler, MonitorEventType.ExceptionThrown },
+                TUnit.Assertions.Enums.CollectionOrdering.Matching);
+        foreach (var message in messages)
         {
-            Assert.Equal("UnitTests", monitorEvent.InstanceName);
-            Assert.Equal(handlerType.FullName, monitorEvent.HandlerName);
-            Assert.Equal(handlerType.AssemblyQualifiedName, monitorEvent.HandlerFullAssemblyName);
-            Assert.Equal(requestBody, monitorEvent.RequestBody);
-        });
-        Assert.Null(events[0].Exception);
-        Assert.NotNull(events[1].Exception);
-        Assert.Equal(exception.Message, events[1].Exception.Message);
+            await Assert.That(message.Header.Topic).IsEqualTo(topic);
+        }
+        foreach (var monitorEvent in events)
+        {
+            await Assert.That(monitorEvent.InstanceName).IsEqualTo("UnitTests");
+            await Assert.That(monitorEvent.HandlerName).IsEqualTo(handlerType.FullName);
+            await Assert.That(monitorEvent.HandlerFullAssemblyName).IsEqualTo(handlerType.AssemblyQualifiedName);
+            await Assert.That(monitorEvent.RequestBody).IsEqualTo(requestBody);
+        }
+        await Assert.That(events[0].Exception).IsNull();
+        await Assert.That(events[1].Exception).IsNotNull();
+        await Assert.That(events[1].Exception.Message).IsEqualTo(exception.Message);
         using var body = JsonDocument.Parse(messages[1].Body.Value);
         var details = body.RootElement.GetProperty("exception");
-        Assert.Equal(exception.GetType().FullName, details.GetProperty("type").GetString());
-        Assert.Equal(exception.Message, details.GetProperty("message").GetString());
+        await Assert.That(details.GetProperty("type").GetString()).IsEqualTo(exception.GetType().FullName);
+        await Assert.That(details.GetProperty("message").GetString()).IsEqualTo(exception.Message);
         // The event captures the stack before the exception is rethrown to the caller.
         var recordedStackTrace = details.GetProperty("stackTrace").GetString();
-        Assert.False(string.IsNullOrEmpty(recordedStackTrace));
-        Assert.StartsWith(recordedStackTrace, exception.StackTrace);
+        await Assert.That(string.IsNullOrEmpty(recordedStackTrace)).IsFalse();
+        await Assert.That(exception.StackTrace).StartsWith(recordedStackTrace);
     }
 }

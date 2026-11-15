@@ -32,7 +32,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -41,7 +40,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// </summary>
 public class ConsumerChecksNoDispatcherTests
 {
-    [Fact]
+    [Test]
     public async Task When_no_dispatcher_is_registered_should_report_both_consumer_checks_healthy()
     {
         //Arrange
@@ -53,20 +52,20 @@ public class ConsumerChecksNoDispatcherTests
 
         //Act
         HealthReport? report = null;
-        var exception = await Record.ExceptionAsync(async () => report = await healthCheckService.CheckHealthAsync());
+        var exception = await TestExceptionRecorder.CaptureAsync(async () => report = await healthCheckService.CheckHealthAsync());
 
         //Assert
-        Assert.Null(exception);
-        Assert.NotNull(report);
-        AssertHealthyWithNoDispatcher(report.Entries["brighter-consumer-take-out-of-service"], RemedyKind.TakeOutOfService);
-        AssertHealthyWithNoDispatcher(report.Entries["brighter-consumer-restart"], RemedyKind.Restart);
+        await Assert.That(exception).IsNull();
+        await Assert.That(report).IsNotNull();
+        await AssertHealthyWithNoDispatcher(report.Entries["brighter-consumer-take-out-of-service"], RemedyKind.TakeOutOfService);
+        await AssertHealthyWithNoDispatcher(report.Entries["brighter-consumer-restart"], RemedyKind.Restart);
     }
 
-    private static void AssertHealthyWithNoDispatcher(HealthReportEntry entry, RemedyKind kind)
+    private static async Task AssertHealthyWithNoDispatcher(HealthReportEntry entry, RemedyKind kind)
     {
-        Assert.Equal(HealthStatus.Healthy, entry.Status);
-        Assert.Contains("No dispatcher is registered", entry.Description);
-        Assert.Equal(RemedyCheckConvention.Name(kind), entry.Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Empty(Assert.IsAssignableFrom<IEnumerable<string>>(entry.Data["conditions"]));
+        await Assert.That(entry.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(entry.Description).Contains("No dispatcher is registered");
+        await Assert.That(entry.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(kind));
+        await Assert.That((((IEnumerable<string>)(((IEnumerable<string>)(await Assert.That(entry.Data["conditions"]).IsAssignableTo<IEnumerable<string>>())))))).IsEmpty();
     }
 }

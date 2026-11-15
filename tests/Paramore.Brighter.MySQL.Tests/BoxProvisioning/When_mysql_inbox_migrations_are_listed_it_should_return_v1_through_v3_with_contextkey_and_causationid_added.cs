@@ -25,7 +25,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -43,8 +43,8 @@ public class MySqlInboxMigrationsTests
 
     private static readonly string[] s_v3Added = ["CausationId"];
 
-    [Fact]
-    public void When_mysql_inbox_migrations_are_listed_it_should_return_v1_through_v3_with_contextkey_and_causationid_added()
+    [Test]
+    public async System.Threading.Tasks.Task When_mysql_inbox_migrations_are_listed_it_should_return_v1_through_v3_with_contextkey_and_causationid_added()
     {
         //Arrange
         var config = new RelationalDatabaseConfiguration(
@@ -56,42 +56,34 @@ public class MySqlInboxMigrationsTests
         var migrations = new MySqlInboxMigrationCatalog().All(config);
 
         //Assert
-        Assert.Equal(ExpectedMigrationVersions.InboxLatest, migrations.Count);
+        await Assert.That(migrations.Count).IsEqualTo(ExpectedMigrationVersions.InboxLatest);
         for (var i = 0; i < migrations.Count; i++)
         {
-            Assert.Equal(i + 1, migrations[i].Version.Value);
+            await Assert.That(migrations[i].Version.Value).IsEqualTo(i + 1);
         }
 
         for (var v = 1; v <= ExpectedMigrationVersions.InboxLatest; v++)
         {
             var migration = migrations[v - 1];
             var expected = expectedPerVersion[v];
-            Assert.True(
-                expected.SetEquals(migration.LogicalColumns),
-                $"V{v} LogicalColumns mismatch — " +
-                $"expected: [{string.Join(", ", expected.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-                $"got: [{string.Join(", ", migration.LogicalColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+            await Assert.That(expected.SetEquals(migration.LogicalColumns)).IsTrue();
         }
 
         var v2Script = migrations[1].UpScript;
-        Assert.Contains("information_schema.columns", v2Script, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("PREPARE stmt FROM @q", v2Script, StringComparison.OrdinalIgnoreCase);
+        await Assert.That((v2Script).Value).Contains("information_schema.columns");
+        await Assert.That((v2Script).Value).Contains("PREPARE stmt FROM @q");
 
-        var v3Script = migrations[2].UpScript;
-        Assert.Contains("information_schema.columns", v3Script, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("PREPARE stmt FROM @q", v3Script, StringComparison.OrdinalIgnoreCase);
+        var v3Script = migrations[2].UpScript.Value;
+        await Assert.That(v3Script).Contains("information_schema.columns");
+        await Assert.That(v3Script).Contains("PREPARE stmt FROM @q");
 
-        Assert.Null(migrations[0].SourceReference);
-        Assert.False(
-            string.IsNullOrWhiteSpace(migrations[1].SourceReference),
-            "V2 must have a non-empty SourceReference (archaeology pointer for ContextKey addition)");
-        Assert.False(
-            string.IsNullOrWhiteSpace(migrations[2].SourceReference),
-            "V3 must have a non-empty SourceReference (issue pointer for CausationId addition)");
+        await Assert.That(migrations[0].SourceReference).IsNull();
+        await Assert.That(string.IsNullOrWhiteSpace(migrations[1].SourceReference)).IsFalse().Because("V2 must have a non-empty SourceReference (archaeology pointer for ContextKey addition)");
+        await Assert.That(string.IsNullOrWhiteSpace(migrations[2].SourceReference)).IsFalse().Because("V3 must have a non-empty SourceReference (issue pointer for CausationId addition)");
 
-        Assert.Null(migrations[0].IdempotencyCheckSql);
-        Assert.Null(migrations[1].IdempotencyCheckSql);
-        Assert.Null(migrations[2].IdempotencyCheckSql);
+        await Assert.That(migrations[0].IdempotencyCheckSql).IsNull();
+        await Assert.That(migrations[1].IdempotencyCheckSql).IsNull();
+        await Assert.That(migrations[2].IdempotencyCheckSql).IsNull();
     }
 
     private static Dictionary<int, HashSet<string>> BuildExpectedColumnsByVersion()

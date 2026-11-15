@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration;
 
 public class ChannelFactoryDeclarationSweepUnsatisfiableGenericConstraintTests
 {
-    [Fact]
-    public void When_a_generic_subscription_cannot_be_closed_should_report_a_reason_rather_than_skip()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_generic_subscription_cannot_be_closed_should_report_a_reason_rather_than_skip()
     {
         // Arrange
         // Evident Data: an open generic subscription constrained `where T : IEvent`, which the
@@ -46,12 +46,12 @@ public class ChannelFactoryDeclarationSweepUnsatisfiableGenericConstraintTests
         // Assert
         // The subject is present - not silently skipped - and carries a non-null reason
         var entry = result.Single(e => e.Subject == openDefinition);
-        Assert.NotNull(entry.Reason);
+        await Assert.That(entry.Reason).IsNotNull();
 
         // The reason identifies the closing failure specifically: the representative argument that
         // could not satisfy the constraint, and the ArgumentException MakeGenericType raised for it -
         // distinct from a getter-throws reason (task 47), which never names the closing argument
-        Assert.Contains(typeof(Command).FullName!, entry.Reason);
-        Assert.Contains(typeof(ArgumentException).FullName!, entry.Reason);
+        await Assert.That(entry.Reason).Contains(typeof(Command).FullName!);
+        await Assert.That(entry.Reason).Contains(typeof(ArgumentException).FullName!);
     }
 }

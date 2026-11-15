@@ -24,15 +24,15 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.MessagingGateway.MQTT;
 using Paramore.Brighter.MQTT.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway;
 
-[Trait("Category", "MQTT")]
+[Property("Category", "MQTT")]
 public class MqttDeclaredChannelFactoryIsRealTests
 {
-    [Fact]
-    public void When_checking_the_mqtt_declared_channel_factory_should_be_a_real_channel_factory()
+    [Test]
+    public async System.Threading.Tasks.Task When_checking_the_mqtt_declared_channel_factory_should_be_a_real_channel_factory()
     {
         // Arrange
         var subscription = new MqttSubscription<MyCommand>(
@@ -44,7 +44,7 @@ public class MqttDeclaredChannelFactoryIsRealTests
         var channelFactoryType = subscription.ChannelFactoryType;
 
         // Assert — a genuine channel factory, not the in-memory default a mismatch would fall back to
-        Assert.True(typeof(IAmAChannelFactory).IsAssignableFrom(channelFactoryType));
-        Assert.NotEqual(typeof(InMemoryChannelFactory), channelFactoryType);
+        await Assert.That(typeof(IAmAChannelFactory).IsAssignableFrom(channelFactoryType)).IsTrue();
+        await Assert.That(channelFactoryType).IsNotEqualTo(typeof(InMemoryChannelFactory));
     }
 }

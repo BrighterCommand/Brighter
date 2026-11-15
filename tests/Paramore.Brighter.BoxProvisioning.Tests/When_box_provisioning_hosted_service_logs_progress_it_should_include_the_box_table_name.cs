@@ -28,7 +28,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -39,7 +38,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// </summary>
 public class BoxProvisioningHostedServiceLoggingTests
 {
-    [Fact]
+    [Test]
     public async Task When_provisioning_succeeds_start_and_success_log_entries_should_include_the_box_table_name()
     {
         //Arrange
@@ -51,16 +50,14 @@ public class BoxProvisioningHostedServiceLoggingTests
         await service.StartAsync(default);
 
         //Assert
-        Assert.Contains(
-            logger.Entries,
-            e => e.Level == LogLevel.Information && e.Message.Contains("OrdersOutbox"));
+        await Assert.That((logger.Entries).Any(e => e.Level == LogLevel.Information && e.Message.Contains("OrdersOutbox"))).IsTrue();
 
         var informationalMentions = logger.Entries
             .Count(e => e.Level == LogLevel.Information && e.Message.Contains("OrdersOutbox"));
-        Assert.Equal(2, informationalMentions);
+        await Assert.That(informationalMentions).IsEqualTo(2);
     }
 
-    [Fact]
+    [Test]
     public async Task When_provisioning_fails_error_log_entry_should_include_the_box_table_name()
     {
         //Arrange
@@ -70,17 +67,15 @@ public class BoxProvisioningHostedServiceLoggingTests
         var service = new BoxProvisioningHostedService(new[] { provisioner }, logger);
 
         //Act
-        await Assert.ThrowsAsync<ConfigurationException>(() => service.StartAsync(default));
+        await Assert.That(() => service.StartAsync(default)).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.Contains(
-            logger.Entries,
-            e => e.Level == LogLevel.Error
+        await Assert.That(logger.Entries.Any(e => e.Level == LogLevel.Error
                  && e.Message.Contains("PaymentsInbox")
-                 && e.Exception == underlying);
+                 && e.Exception == underlying)).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_provisioning_fails_configuration_exception_message_should_include_the_box_table_name()
     {
         //Arrange
@@ -90,10 +85,10 @@ public class BoxProvisioningHostedServiceLoggingTests
         var service = new BoxProvisioningHostedService(new[] { provisioner }, logger);
 
         //Act
-        var ex = await Assert.ThrowsAsync<ConfigurationException>(() => service.StartAsync(default));
+        var ex = await Assert.That(() => service.StartAsync(default)).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.Contains("PaymentsInbox", ex.Message);
-        Assert.Same(underlying, ex.InnerException);
+        await Assert.That(ex.Message).Contains("PaymentsInbox");
+        await Assert.That(ex.InnerException).IsSameReferenceAs(underlying);
     }
 }

@@ -19,12 +19,9 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System;
 using Microsoft.Extensions.Time.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway
 {
@@ -34,29 +31,21 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         private readonly RoutingKey _routingKey = new("myTopic");
         private const string ChannelName = "myChannel";
         private readonly InternalBus _bus = new();
-
         public ChannelRequeueWithoutDelayTest()
         {
-            var consumer = new InMemoryMessageConsumer(new RoutingKey(_routingKey), _bus, new FakeTimeProvider(), ackTimeout: TimeSpan.FromMilliseconds(1000)); 
-
-            _channel = new Channel(new(ChannelName),new (_routingKey), consumer);
-
-            var sentMessage = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
-                new MessageBody("a test body"));
-            
+            var consumer = new InMemoryMessageConsumer(new RoutingKey(_routingKey), _bus, new FakeTimeProvider(), ackTimeout: TimeSpan.FromMilliseconds(1000));
+            _channel = new Channel(new(ChannelName), new(_routingKey), consumer);
+            var sentMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT), new MessageBody("a test body"));
             _bus.Enqueue(sentMessage);
         }
 
-
-        [Fact]
-        public void When_Requeuing_A_Message_With_No_Delay()
+        [Test]
+        public async Task When_Requeuing_A_Message_With_No_Delay()
         {
             var requeueMessage = _channel.Receive(TimeSpan.FromMilliseconds(1000));
             _channel.Requeue(requeueMessage);
-
-            Assert.Single(_bus.Stream(new RoutingKey(_routingKey)) ?? []);
-            Assert.Contains(requeueMessage, _bus.Stream(new RoutingKey(_routingKey)));
+            await Assert.That(_bus.Stream(new RoutingKey(_routingKey)) ?? []).HasSingleItem();
+            await Assert.That(_bus.Stream(new RoutingKey(_routingKey))).Contains(requeueMessage);
         }
     }
 }

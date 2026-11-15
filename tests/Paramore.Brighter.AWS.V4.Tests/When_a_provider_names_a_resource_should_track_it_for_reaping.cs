@@ -3,7 +3,7 @@ using System.Linq;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.MessagingGateway;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
+
 
 namespace Paramore.Brighter.AWS.V4.Tests;
 
@@ -17,15 +17,15 @@ namespace Paramore.Brighter.AWS.V4.Tests;
 /// for each would cost minutes. This covers all four and needs no credentials: naming a resource
 /// and creating one are separate steps, and only the naming is under test.
 /// </remarks>
-[Trait("Category", "AWS")]
+[Property("Category", "AWS")]
 public class ProviderResourceTrackingTests
 {
-    public static TheoryData<string> Providers =>
-        new() { "SnsStandard", "SnsFifo", "SqsStandard", "SqsFifo" };
+    public static IEnumerable<string> Providers =>
+        new[] { "SnsStandard", "SnsFifo", "SqsStandard", "SqsFifo" };
 
-    [Theory]
-    [MemberData(nameof(Providers))]
-    public void When_a_provider_names_a_resource_should_track_it_for_reaping(string provider)
+    [Test]
+    [MethodDataSource(nameof(Providers))]
+    public async System.Threading.Tasks.Task When_a_provider_names_a_resource_should_track_it_for_reaping(string provider)
     {
         //arrange
         var (reaper, subscription) = CreateSubscriptionWithRejectionChannels(provider);
@@ -42,17 +42,17 @@ public class ProviderResourceTrackingTests
         // intended rather than forgotten. It also catches a provider that adapts a canonical
         // routing key to the transport's alphabet and then tracks the name it was handed rather
         // than the adapted one AWS will actually see.
-        Assert.Contains(subscription.RoutingKey.Value, tracked);
-        Assert.Contains(subscription.ChannelName.Value, tracked);
+        await Assert.That(tracked).Contains(subscription.RoutingKey.Value);
+        await Assert.That(tracked).Contains(subscription.ChannelName.Value);
 
-        Assert.NotNull(subscription.DeadLetterRoutingKey);
-        Assert.Contains(subscription.DeadLetterRoutingKey!.Value, tracked);
+        await Assert.That(subscription.DeadLetterRoutingKey).IsNotNull();
+        await Assert.That(tracked).Contains(subscription.DeadLetterRoutingKey!.Value);
 
         // The invalid-message queue is the resource the conformance suite adds, and the one the
         // reaper could not have known about: it is created lazily on the first rejection, so no
         // channel or producer this fixture holds is a handle on it.
-        Assert.NotNull(subscription.InvalidMessageRoutingKey);
-        Assert.Contains(subscription.InvalidMessageRoutingKey!.Value, tracked);
+        await Assert.That(subscription.InvalidMessageRoutingKey).IsNotNull();
+        await Assert.That(tracked).Contains(subscription.InvalidMessageRoutingKey!.Value);
     }
 
     private static (AwsTestResourceReaper Reaper, SqsSubscription Subscription)

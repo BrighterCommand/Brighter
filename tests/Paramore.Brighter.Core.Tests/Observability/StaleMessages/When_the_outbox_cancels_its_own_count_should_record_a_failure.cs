@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -35,11 +35,11 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
-[Collection(StaleMessageLoggingCollection.Name)]
+[NotInParallel]
+[ClassDataSource<StaleMessageLoggingFixture>(Shared = SharedType.PerTestSession)]
 public class OutboxOwnCancellationTests
 {
     private const string COUNT = "paramore.brighter.outbox.stale.count";
@@ -53,7 +53,7 @@ public class OutboxOwnCancellationTests
         _logs = fixture.Logs;
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_outbox_cancels_its_own_count_should_record_a_failure()
     {
         //Arrange
@@ -82,7 +82,7 @@ public class OutboxOwnCancellationTests
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         var readings = metrics.Services.GetRequiredService<OutboxStaleMessageReadings>();
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromSeconds(59));
 
         var dueTime = s_start.AddMinutes(1);
@@ -117,13 +117,13 @@ public class OutboxOwnCancellationTests
         }
 
         //Assert
-        Assert.Null(heldAt);
-        Assert.Equal(1, Measured(afterTheDeadline, "failed"));
-        Assert.Equal(0, Measured(afterTheDeadline, "abandoned"));
+        await Assert.That(heldAt).IsNull();
+        await Assert.That(Measured(afterTheDeadline, "failed")).IsEqualTo(1);
+        await Assert.That(Measured(afterTheDeadline, "abandoned")).IsEqualTo(0);
 
-        var warning = Assert.Single(_logs.Entries, entry => entry.LogLevel == LogLevel.Warning);
-        Assert.Same(ownTimeout, warning.Exception);
-        Assert.Contains("Overall", warning.Message);
+        var warning = await Assert.That(System.Linq.Enumerable.Where(_logs.Entries, entry => entry.LogLevel == LogLevel.Warning)).HasSingleItem();
+        await Assert.That(warning.Exception).IsSameReferenceAs(ownTimeout);
+        await Assert.That(warning.Message).Contains("Overall");
     }
 
     private static long Measured(IEnumerable<StaleMeasurement> measurements, string outcome) =>
@@ -142,6 +142,6 @@ public class OutboxOwnCancellationTests
         return SpinWait.SpinUntil(() => advance.IsCompleted, TimeSpan.FromSeconds(5));
     }
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

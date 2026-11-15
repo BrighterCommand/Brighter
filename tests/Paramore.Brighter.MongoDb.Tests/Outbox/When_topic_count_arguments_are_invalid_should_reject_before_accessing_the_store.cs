@@ -32,7 +32,6 @@ using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
 using Paramore.Brighter.MongoDb;
 using Paramore.Brighter.Outbox.MongoDb;
-using Xunit;
 
 namespace Paramore.Brighter.MongoDb.Tests.Outbox;
 
@@ -58,14 +57,14 @@ public class MongoDbTopicCountValidationTests : IDisposable
         });
     }
 
-    [Theory]
-    [InlineData("null-map", typeof(ArgumentNullException), "dispatchedSinceByTopic")]
-    [InlineData("empty-topic", typeof(ArgumentException), "dispatchedSinceByTopic")]
-    [InlineData("zero-age", typeof(ArgumentException), "dispatchedSinceByTopic")]
-    [InlineData("negative-age", typeof(ArgumentException), "dispatchedSinceByTopic")]
-    [InlineData("too-old", typeof(ArgumentException), "dispatchedSinceByTopic")]
-    [InlineData("zero-ceiling", typeof(ArgumentOutOfRangeException), "maxCountPerTopic")]
-    [InlineData("negative-ceiling", typeof(ArgumentOutOfRangeException), "maxCountPerTopic")]
+    [Test]
+    [Arguments("null-map", typeof(ArgumentNullException), "dispatchedSinceByTopic")]
+    [Arguments("empty-topic", typeof(ArgumentException), "dispatchedSinceByTopic")]
+    [Arguments("zero-age", typeof(ArgumentException), "dispatchedSinceByTopic")]
+    [Arguments("negative-age", typeof(ArgumentException), "dispatchedSinceByTopic")]
+    [Arguments("too-old", typeof(ArgumentException), "dispatchedSinceByTopic")]
+    [Arguments("zero-ceiling", typeof(ArgumentOutOfRangeException), "maxCountPerTopic")]
+    [Arguments("negative-ceiling", typeof(ArgumentOutOfRangeException), "maxCountPerTopic")]
     public async Task When_topic_count_arguments_are_invalid_should_reject_before_accessing_the_store(
         string invalidArgument, Type exceptionType, string parameterName)
     {
@@ -83,15 +82,17 @@ public class MongoDbTopicCountValidationTests : IDisposable
         }
 
         //Act
-        var exception = await Assert.ThrowsAsync(exceptionType, () => _outbox.GetOutstandingMessageCountsByTopicAsync(
+        var exception = await TestExceptionRecorder.CaptureAsync(() => _outbox.GetOutstandingMessageCountsByTopicAsync(
             invalidArgument == "null-map" ? null! : request, null, maxCount));
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!.GetType()).IsEqualTo(exceptionType);
 
         //Assert
-        Assert.Equal(parameterName, ((ArgumentException)exception).ParamName);
-        Assert.Empty(_commands);
+        await Assert.That(((ArgumentException)exception).ParamName).IsEqualTo(parameterName);
+        await Assert.That(_commands).IsEmpty();
     }
 
-    [Fact]
+    [Test]
     public async Task When_no_topics_are_requested_should_not_access_the_store()
     {
         //Arrange
@@ -101,13 +102,13 @@ public class MongoDbTopicCountValidationTests : IDisposable
         var counts = await _outbox.GetOutstandingMessageCountsByTopicAsync(request, null, 100);
 
         //Assert
-        Assert.Empty(counts);
-        Assert.Empty(_commands);
+        await Assert.That(counts).IsEmpty();
+        await Assert.That(_commands).IsEmpty();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_a_topic_count_is_already_cancelled_should_not_access_the_store(bool emptyRequest)
     {
         //Arrange
@@ -118,11 +119,11 @@ public class MongoDbTopicCountValidationTests : IDisposable
         cancellation.Cancel();
 
         //Act
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => _outbox.GetOutstandingMessageCountsByTopicAsync(
-            request, null, 100, cancellationToken: cancellation.Token));
+        await Assert.That(() => _outbox.GetOutstandingMessageCountsByTopicAsync(
+            request, null, 100, cancellationToken: cancellation.Token)).Throws<OperationCanceledException>();
 
         //Assert
-        Assert.Empty(_commands);
+        await Assert.That(_commands).IsEmpty();
     }
 
     public void Dispose() => _client.Dispose();

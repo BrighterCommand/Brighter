@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -29,7 +29,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MSSQL.Tests.MessagingGateway.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 
@@ -38,9 +37,9 @@ public class MsSqlSubscriberRetryTests
     private readonly RelationalDatabaseConfiguration _configuration = new("Server=127.0.0.1,1;Database=unused;User Id=unused;Password=unused;Connect Timeout=1;Encrypt=false", queueStoreTable: "queue");
     private readonly TimeSpan _delay = TimeSpan.FromSeconds(3);
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_delaying_a_subscriber_retry_should_target_its_physical_queue(bool async)
     {
         //Arrange
@@ -57,20 +56,20 @@ public class MsSqlSubscriberRetryTests
             : consumer.Requeue(message, _delay);
 
         //Assert
-        Assert.True(accepted);
-        Assert.Equal("subscriber", scheduler.Destination?.Value);
-        Assert.Equal(_delay, scheduler.Delay);
-        Assert.Equal(message.Id, scheduler.Message?.Id);
-        Assert.Equal("logical.topic", scheduler.Message?.Header.Topic.Value);
-        Assert.Equal("logical.topic", message.Header.Topic.Value);
-        Assert.Equal("payload", scheduler.Message?.Body.Value);
+        await Assert.That(accepted).IsTrue();
+        await Assert.That(scheduler.Destination?.Value).IsEqualTo("subscriber");
+        await Assert.That(scheduler.Delay).IsEqualTo(_delay);
+        await Assert.That(scheduler.Message?.Id).IsEqualTo(message.Id);
+        await Assert.That(scheduler.Message?.Header.Topic.Value).IsEqualTo("logical.topic");
+        await Assert.That(message.Header.Topic.Value).IsEqualTo("logical.topic");
+        await Assert.That(scheduler.Message?.Body.Value).IsEqualTo("payload");
         if (async)
-            Assert.Equal(cancellation.Token, scheduler.Cancellation);
+            await Assert.That(scheduler.Cancellation).IsEqualTo(cancellation.Token);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_targeted_scheduling_fails_should_propagate_the_failure_without_republishing(bool async)
     {
         //Arrange
@@ -81,18 +80,18 @@ public class MsSqlSubscriberRetryTests
 
         //Act
         var exception = async
-            ? await Assert.ThrowsAsync<InvalidOperationException>(() => consumer.RequeueAsync(message, _delay))
-            : Assert.Throws<InvalidOperationException>(() => consumer.Requeue(message, _delay));
+            ? await Assert.That(() => consumer.RequeueAsync(message, _delay)).ThrowsExactly<InvalidOperationException>()
+            : (await Assert.That(() => consumer.Requeue(message, _delay)).ThrowsExactly<InvalidOperationException>());
 
         //Assert
-        Assert.Equal("Scheduling failed", exception.Message);
-        Assert.Null(scheduler.Message);
-        Assert.Equal("logical.topic", message.Header.Topic.Value);
+        await Assert.That(exception.Message).IsEqualTo("Scheduling failed");
+        await Assert.That(scheduler.Message).IsNull();
+        await Assert.That(message.Header.Topic.Value).IsEqualTo("logical.topic");
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_a_subscriber_retry_is_already_cancelled_should_not_schedule_or_modify_the_message(bool delayed)
     {
         //Arrange
@@ -103,13 +102,13 @@ public class MsSqlSubscriberRetryTests
         var message = Message();
 
         //Act
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => consumer.RequeueAsync(message,
-            delayed ? _delay : TimeSpan.Zero, cancellation.Token));
+        await Assert.That(() => consumer.RequeueAsync(message,
+            delayed ? _delay : TimeSpan.Zero, cancellation.Token)).Throws<OperationCanceledException>();
 
         //Assert
-        Assert.Null(scheduler.Message);
-        Assert.Equal(0, scheduler.AsyncCalls);
-        Assert.False(message.Header.Bag.ContainsKey(Paramore.Brighter.Message.OriginalMessageIdHeaderName));
+        await Assert.That(scheduler.Message).IsNull();
+        await Assert.That(scheduler.AsyncCalls).IsEqualTo(0);
+        await Assert.That(message.Header.Bag.ContainsKey(Paramore.Brighter.Message.OriginalMessageIdHeaderName)).IsFalse();
     }
 
     private MsSqlSubscription Subscription() => new(new("subscription"), new("subscriber"), new("logical.topic"),

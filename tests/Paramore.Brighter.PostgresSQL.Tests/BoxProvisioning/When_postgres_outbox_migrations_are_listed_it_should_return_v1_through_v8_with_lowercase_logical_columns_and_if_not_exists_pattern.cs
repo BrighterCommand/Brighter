@@ -25,7 +25,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -50,8 +50,8 @@ public class PostgreSqlOutboxMigrationsTests
     private static readonly string[] s_v7Added = ["dataref", "specversion"];
     private static readonly string[] s_v8Added = ["causationid"];
 
-    [Fact]
-    public void When_postgres_outbox_migrations_are_listed_it_should_return_v1_through_v8_with_lowercase_logical_columns_and_if_not_exists_pattern()
+    [Test]
+    public async System.Threading.Tasks.Task When_postgres_outbox_migrations_are_listed_it_should_return_v1_through_v8_with_lowercase_logical_columns_and_if_not_exists_pattern()
     {
         //Arrange
         var config = new RelationalDatabaseConfiguration(
@@ -63,46 +63,37 @@ public class PostgreSqlOutboxMigrationsTests
         var migrations = new PostgreSqlOutboxMigrationCatalog().All(config);
 
         //Assert
-        Assert.Equal(8, migrations.Count);
+        await Assert.That(migrations.Count).IsEqualTo(8);
         for (var i = 0; i < migrations.Count; i++)
         {
-            Assert.Equal(i + 1, migrations[i].Version.Value);
+            await Assert.That(migrations[i].Version.Value).IsEqualTo(i + 1);
         }
 
         for (var v = 1; v <= 8; v++)
         {
             var migration = migrations[v - 1];
             var expected = expectedPerVersion[v];
-            Assert.True(
-                expected.SetEquals(migration.LogicalColumns),
-                $"V{v} LogicalColumns mismatch — " +
-                $"expected: [{string.Join(", ", expected.OrderBy(c => c, StringComparer.Ordinal))}], " +
-                $"got: [{string.Join(", ", migration.LogicalColumns.OrderBy(c => c, StringComparer.Ordinal))}]");
+            await Assert.That(expected.SetEquals(migration.LogicalColumns)).IsTrue();
         }
 
         for (var v = 2; v <= 8; v++)
         {
-            var script = migrations[v - 1].UpScript;
-            Assert.Contains(
-                "ADD COLUMN IF NOT EXISTS",
-                script,
-                StringComparison.OrdinalIgnoreCase);
+            var script = migrations[v - 1].UpScript.Value;
+            await Assert.That(script).Contains("ADD COLUMN IF NOT EXISTS");
         }
 
-        Assert.Null(migrations[0].SourceReference);
+        await Assert.That(migrations[0].SourceReference).IsNull();
         for (var v = 2; v <= 8; v++)
         {
-            Assert.False(
-                string.IsNullOrWhiteSpace(migrations[v - 1].SourceReference),
-                $"V{v} must have a non-empty SourceReference (archaeology pointer)");
+            await Assert.That(string.IsNullOrWhiteSpace(migrations[v - 1].SourceReference)).IsFalse().Because($"V{v} must have a non-empty SourceReference (archaeology pointer)");
         }
 
-        Assert.Equal("cff67fd5e / #3464", migrations[3].SourceReference);
+        await Assert.That(migrations[3].SourceReference).IsEqualTo("cff67fd5e / #3464");
 
         var v8Script = migrations[7].UpScript;
-        Assert.Contains("causationid", v8Script, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("CREATE INDEX IF NOT EXISTS", v8Script, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("idx_outbox_test_causationid", v8Script, StringComparison.OrdinalIgnoreCase);
+        await Assert.That((v8Script).Value).Contains("causationid");
+        await Assert.That((v8Script).Value).Contains("CREATE INDEX IF NOT EXISTS");
+        await Assert.That((v8Script).Value).Contains("idx_outbox_test_causationid");
     }
 
     private static Dictionary<int, HashSet<string>> BuildExpectedColumnsByVersion()

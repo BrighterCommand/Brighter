@@ -27,7 +27,6 @@ using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -36,12 +35,12 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 /// but matches no version, and the provisioner refuses both; otherwise detection returns the highest
 /// version whose columns are all present (ADR 0057 §2).
 /// </summary>
-public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
+public class MsSqlBoxDiscriminatorDetectionTests
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly List<string> _tablesToCleanup = [];
 
-    [Fact]
+    [Test]
     public async Task When_mssql_outbox_detects_table_missing_headerbag_discriminator_it_should_return_negative_one()
     {
         //Arrange
@@ -63,7 +62,7 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         }
 
         //Assert
-        Assert.Equal(-1, detected);
+        await Assert.That(detected).IsEqualTo(-1);
 
         //Act
         var runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
@@ -73,14 +72,14 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             new MsSqlPayloadModeValidator(),
             config,
             runner);
-        var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
+        var ex = await Assert.That(() => provisioner.ProvisionAsync()).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.Contains("not a Brighter outbox", ex.Message);
-        Assert.Contains("HeaderBag", ex.Message);
+        await Assert.That(ex.Message).Contains("not a Brighter outbox");
+        await Assert.That(ex.Message).Contains("HeaderBag");
     }
 
-    [Fact]
+    [Test]
     public async Task When_mssql_inbox_detects_table_missing_commandbody_discriminator_it_should_return_negative_one()
     {
         //Arrange
@@ -102,7 +101,7 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         }
 
         //Assert
-        Assert.Equal(-1, detected);
+        await Assert.That(detected).IsEqualTo(-1);
 
         //Act
         var runner = new MsSqlBoxMigrationRunner(new MsSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
@@ -112,14 +111,14 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             new MsSqlPayloadModeValidator(),
             config,
             runner);
-        var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
+        var ex = await Assert.That(() => provisioner.ProvisionAsync()).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.Contains("not a Brighter inbox", ex.Message);
-        Assert.Contains("CommandBody", ex.Message);
+        await Assert.That(ex.Message).Contains("not a Brighter inbox");
+        await Assert.That(ex.Message).Contains("CommandBody");
     }
 
-    [Fact]
+    [Test]
     public async Task When_mssql_outbox_detects_headerbag_present_but_no_v1_columns_it_should_return_zero()
     {
         //Arrange
@@ -141,7 +140,7 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         }
 
         //Assert
-        Assert.Equal(0, detected);
+        await Assert.That(detected).IsEqualTo(0);
 
         //Act
         var runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
@@ -151,13 +150,13 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             new MsSqlPayloadModeValidator(),
             config,
             runner);
-        var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
+        var ex = await Assert.That(() => provisioner.ProvisionAsync()).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.Contains("does not match any known schema version", ex.Message);
+        await Assert.That(ex.Message).Contains("does not match any known schema version");
     }
 
-    [Fact]
+    [Test]
     public async Task When_mssql_outbox_detects_v3_shaped_table_it_should_return_three()
     {
         //Arrange
@@ -192,7 +191,7 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         }
 
         //Assert
-        Assert.Equal(3, detected);
+        await Assert.That(detected).IsEqualTo(3);
     }
 
     private string TrackTable(string tableName)
@@ -201,8 +200,10 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         return tableName;
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

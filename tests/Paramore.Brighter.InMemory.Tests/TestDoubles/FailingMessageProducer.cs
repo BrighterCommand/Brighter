@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             => throw new NotImplementedException();
         public void SendWithDelay(Message message, TimeSpan? delay = null)
             => throw new NotImplementedException();
-        public Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default) 
+        public Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
         public Task SendAsync(IAmAMessageBatch batch, CancellationToken cancellationToken)
             => throw new NotImplementedException();

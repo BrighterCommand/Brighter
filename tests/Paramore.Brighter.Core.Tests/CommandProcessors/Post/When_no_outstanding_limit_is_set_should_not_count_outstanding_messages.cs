@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post;
 
@@ -34,7 +33,7 @@ public class OutstandingCountWithoutLimitTests
             maxOutStandingCheckInterval: TimeSpan.Zero);
     }
 
-    [Fact]
+    [Test]
     public async Task When_no_outstanding_limit_is_set_should_not_count_outstanding_messages()
     {
         //Arrange
@@ -48,10 +47,10 @@ public class OutstandingCountWithoutLimitTests
         await WaitForBackgroundCountsToHaveRun();
 
         //Assert
-        Assert.Equal(0, _outbox.OutstandingCountCalls);
+        await Assert.That(_outbox.OutstandingCountCalls).IsEqualTo(0);
     }
 
-    [Fact]
+    [Test]
     public async Task When_no_outstanding_limit_is_set_should_not_count_outstanding_messages_async()
     {
         //Arrange
@@ -65,7 +64,7 @@ public class OutstandingCountWithoutLimitTests
         await WaitForBackgroundCountsToHaveRun();
 
         //Assert
-        Assert.Equal(0, _outbox.OutstandingCountCalls);
+        await Assert.That(_outbox.OutstandingCountCalls).IsEqualTo(0);
     }
 
     /// <summary>
@@ -78,9 +77,7 @@ public class OutstandingCountWithoutLimitTests
     {
         _controlCommandProcessor.Post(new MyCommand { Value = "Control" });
 
-        Assert.True(
-            await _controlOutbox.WaitForOutstandingCountCallsAsync(1, TimeSpan.FromSeconds(5)),
-            "The control mediator never counted, so the background work is not running");
+        await Assert.That(await _controlOutbox.WaitForOutstandingCountCallsAsync(1, TimeSpan.FromSeconds(5))).IsTrue().Because("The control mediator never counted, so the background work is not running");
 
         await Task.Delay(250);
     }

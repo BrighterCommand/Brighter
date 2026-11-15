@@ -37,29 +37,18 @@ using Paramore.Brighter.MessageScheduler.Azure;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Collection("AzureServiceBus")]
+[NotInParallel("AzureServiceBus")]
 public class AzureServiceBusRetryInstrumentationOptionsTests
 {
-    public static TheoryData<bool, bool, InstrumentationOptions> Options => new()
+    public static List<(bool, bool, InstrumentationOptions)> Options => new()
     {
-        { false, false, InstrumentationOptions.None },
-        { true, false, InstrumentationOptions.None },
-        { false, true, InstrumentationOptions.None },
-        { true, true, InstrumentationOptions.None },
-        { false, false, InstrumentationOptions.RequestInformation },
-        { true, true, InstrumentationOptions.RequestInformation },
-        { false, false, InstrumentationOptions.Messaging },
-        { true, true, InstrumentationOptions.Messaging },
-        { false, false, InstrumentationOptions.All },
-        { true, true, InstrumentationOptions.All }
-    };
+(false,false,InstrumentationOptions.None ),(true,false,InstrumentationOptions.None ),(false,true,InstrumentationOptions.None ),(true,true,InstrumentationOptions.None ),(false,false,InstrumentationOptions.RequestInformation ),(true,true,InstrumentationOptions.RequestInformation ),(false,false,InstrumentationOptions.Messaging ),(true,true,InstrumentationOptions.Messaging ),(false,false,InstrumentationOptions.All ),(true,true,InstrumentationOptions.All )    };
 
-    [Theory]
-    [MemberData(nameof(Options))]
+    [Test]
+    [MethodDataSource(nameof(Options))]
     public async Task When_retrying_should_respect_instrumentation_options(
         bool synchronous, bool global, InstrumentationOptions options)
     {
@@ -107,32 +96,31 @@ public class AzureServiceBusRetryInstrumentationOptionsTests
         using var activity = new Activity("retry options").SetIdFormat(ActivityIdFormat.W3C).Start();
 
         // Act
-        Assert.True(synchronous ? syncChannel!.Requeue(message, TimeSpan.Zero)
-            : await asyncChannel!.RequeueAsync(message, TimeSpan.Zero));
+        await Assert.That(synchronous ? syncChannel!.Requeue(message, TimeSpan.Zero)
+            : await asyncChannel!.RequeueAsync(message, TimeSpan.Zero)).IsTrue();
 
         // Assert
-        var retry = Assert.Single(client.Scheduled).Message;
+        var retry = (await Assert.That(client.Scheduled).HasSingleItem()).Message;
         var tags = activity.Events.SelectMany(e => e.Tags).ToArray();
         if (options.HasFlag(InstrumentationOptions.Messaging))
         {
-            Assert.Contains(tags, tag => tag.Key == BrighterSemanticConventions.MessageHeaders);
-            Assert.Contains(tags, tag => tag.Key == BrighterSemanticConventions.MessageId
-                && Equals(tag.Value, retry.MessageId));
+            await Assert.That(System.Linq.Enumerable.Any(tags, tag => tag.Key == BrighterSemanticConventions.MessageHeaders)).IsTrue();
+            await Assert.That(System.Linq.Enumerable.Any(tags, tag => tag.Key == BrighterSemanticConventions.MessageId
+                && Equals(tag.Value, retry.MessageId))).IsTrue();
         }
         else
         {
-            Assert.DoesNotContain(tags, tag => tag.Key == BrighterSemanticConventions.MessageHeaders);
-            Assert.DoesNotContain(tags, tag => tag.Value?.ToString()?.Contains("sensitive-value") == true);
+            await Assert.That(System.Linq.Enumerable.Any(tags, tag => tag.Key == BrighterSemanticConventions.MessageHeaders)).IsFalse();
+            await Assert.That(System.Linq.Enumerable.Any(tags, tag => tag.Value?.ToString()?.Contains("sensitive-value") == true)).IsFalse();
         }
-        Assert.Equal(options.HasFlag(InstrumentationOptions.RequestBody),
-            tags.Any(tag => tag.Key == BrighterSemanticConventions.MessageBody));
+        await Assert.That(tags.Any(tag => tag.Key == BrighterSemanticConventions.MessageBody)).IsEqualTo(options.HasFlag(InstrumentationOptions.RequestBody));
         if (options.HasFlag(InstrumentationOptions.RequestInformation))
-            Assert.Contains(tags, tag => tag.Key == BrighterSemanticConventions.CeMessageId
-                && Equals(tag.Value, "business-event"));
-        Assert.Equal("business-event", retry.ApplicationProperties["cloudEvents:id"]);
-        Assert.Equal(activity.Id, retry.ApplicationProperties["cloudevents:traceparent"]);
-        Assert.Equal("original", message.Id.Value);
-        Assert.Equal(previousTraceParent, message.Header.TraceParent);
-        Assert.Equal(1, client.Receiver.CompletionAttempts);
+            await Assert.That(System.Linq.Enumerable.Any(tags, tag => tag.Key == BrighterSemanticConventions.CeMessageId
+                && Equals(tag.Value, "business-event"))).IsTrue();
+        await Assert.That(retry.ApplicationProperties["cloudEvents:id"]).IsEqualTo("business-event");
+        await Assert.That(retry.ApplicationProperties["cloudevents:traceparent"]).IsEqualTo(activity.Id);
+        await Assert.That(message.Id.Value).IsEqualTo("original");
+        await Assert.That(message.Header.TraceParent).IsEqualTo(previousTraceParent);
+        await Assert.That(client.Receiver.CompletionAttempts).IsEqualTo(1);
     }
 }

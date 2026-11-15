@@ -2,11 +2,10 @@ using System;
 using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class OutboxProvisionerFreshDatabaseTests : IAsyncLifetime
+public class OutboxProvisionerFreshDatabaseTests
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName;
@@ -28,7 +27,7 @@ public class OutboxProvisionerFreshDatabaseTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table()
     {
         // Act
@@ -38,8 +37,8 @@ public class OutboxProvisionerFreshDatabaseTests : IAsyncLifetime
         using var connection = new MySqlConnection(_connectionString);
         await connection.OpenAsync();
 
-        Assert.True(await TableExistsAsync(connection));
-        Assert.Equal(1, await CountHistoryRowsAtLatestVersionAsync(connection));
+        await Assert.That(await TableExistsAsync(connection)).IsTrue();
+        await Assert.That(await CountHistoryRowsAtLatestVersionAsync(connection)).IsEqualTo(1);
     }
 
     private async Task<bool> TableExistsAsync(MySqlConnection connection)
@@ -63,8 +62,10 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion";
         return (long)(await historyCheck.ExecuteScalarAsync())!;
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

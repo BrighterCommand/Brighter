@@ -7,14 +7,13 @@ using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 using System.Collections.Generic;
 using Amazon.SimpleNotificationService.Model;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Proactor;
 
-[Trait("Category", "AWS")]
-public class AwsValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
+[Category("AWS")]
+public class AwsValidateInfrastructureTestsAsync : IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerAsync _consumer;
@@ -39,9 +38,9 @@ public class AwsValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
             channelName: new ChannelName(channelName),
             channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            queueAttributes: new SqsAttributes(type: SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }), 
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }),
             topicAttributes: topicAttributes,
-            messagePumpType: MessagePumpType.Proactor, 
+            messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
@@ -72,7 +71,7 @@ public class AwsValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
         _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
     }
 
-    [Fact]
+    [Test]
     public async Task When_infrastructure_exists_can_verify_async()
     {
         await _messageProducer.SendAsync(_message);
@@ -82,18 +81,19 @@ public class AwsValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
         var messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
         var message = messages.First();
-        Assert.Equal(_myCommand.Id, message.Id);
+        await Assert.That(message.Id).IsEqualTo(_myCommand.Id);
 
         await _consumer.AcknowledgeAsync(message);
     }
 
-    public void Dispose()
+    [After(HookType.Test)]
+    public async Task Cleanup()
     {
         //Clean up resources that we have created
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
         ((IAmAMessageConsumerSync)_consumer).Dispose();
-        _messageProducer.Dispose();
+        await _messageProducer.DisposeAsync();
     }
 
     public async ValueTask DisposeAsync()

@@ -26,8 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RocketMQ.Tests;
 
 /// <summary>
@@ -57,15 +56,15 @@ namespace Paramore.Brighter.RocketMQ.Tests;
 /// probe, not in any application code.
 /// </para>
 /// </remarks>
-[Trait("Category", "RocketMQ")]
-[Trait("Category", "RocketMQBrokerFree")]
+[Property("Category", "RocketMQ")]
+[Property("Category", "RocketMQBrokerFree")]
 public class RocketMqComposeBrokerReadinessWaitTests
 {
     private const string SolutionFileName = "Brighter.slnx";
     private const string ComposeFileName = "docker-compose-rocketmq.yaml";
 
-    [Fact]
-    public void When_the_create_topic_service_waits_for_broker_readiness_should_not_be_a_no_op()
+    [Test]
+    public async Task When_the_create_topic_service_waits_for_broker_readiness_should_not_be_a_no_op()
     {
         // Arrange - the compose file's own text is the thing under test; no broker is involved
         var composeText = File.ReadAllText(ComposeFilePath());
@@ -76,18 +75,17 @@ public class RocketMqComposeBrokerReadinessWaitTests
         var brokerWait = Regex.Match(
             composeText,
             @"Waiting for broker to be healthy[^\n]*\n\s*until\s+(?<condition>[^\n;]*);");
-        Assert.True(brokerWait.Success,
-            $"expected to find a broker-readiness `until <condition>;` wait in {ComposeFileName}");
+        await Assert.That(brokerWait.Success).IsTrue().Because($"expected to find a broker-readiness `until <condition>;` wait in {ComposeFileName}");
         var condition = brokerWait.Groups["condition"].Value;
 
         // Assert - a bare `&>` after a backgroundable command is the dash-ism that makes the
         // condition succeed immediately regardless of the probe's actual result
-        Assert.DoesNotMatch(@"&>", condition);
+        await Assert.That(condition).DoesNotMatch(@"&>");
 
         // Assert - non-vacuity: the condition must actually probe the broker's port, not just
         // avoid the broken operator while checking nothing
-        Assert.Contains("broker", condition);
-        Assert.Contains("10911", condition);
+        await Assert.That(condition).Contains("broker");
+        await Assert.That(condition).Contains("10911");
     }
 
     private static string ComposeFilePath()

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -25,14 +25,13 @@ THE SOFTWARE. */
 #nullable enable
 
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 // ApplicationLogging is static and the CapturingLoggerProvider is shared, so a test that asserts a log entry
 // would read the entries of any test logging alongside it. Serialising them through this collection removes the overlap.
-[CollectionDefinition(Name, DisableParallelization = true)]
-public class StaleMessageLoggingCollection : ICollectionFixture<StaleMessageLoggingFixture>
+[System.Obsolete]
+public class StaleMessageLoggingCollection
 {
     public const string Name = "StaleMessageLogging";
 }

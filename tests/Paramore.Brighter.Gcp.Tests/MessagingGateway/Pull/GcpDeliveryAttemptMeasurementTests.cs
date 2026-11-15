@@ -34,7 +34,6 @@ using Google.Api.Gax;
 using Google.Cloud.PubSub.V1;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 using GcpSubscriptionName = Google.Cloud.PubSub.V1.SubscriptionName;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
@@ -57,7 +56,7 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// Every stream delivery is settled (Nack or Ack) so <c>StopAsync</c> cannot block on an
 /// outstanding message.
 /// </remarks>
-[Trait("Category", "GcpPubSubPull")]
+[Property("Category", "GcpPubSubPull")]
 public class GcpDeliveryAttemptMeasurementTests
 {
     private const int Deliveries = 3;
@@ -67,8 +66,9 @@ public class GcpDeliveryAttemptMeasurementTests
     /// Pull: the raw <c>ReceivedMessage.DeliveryAttempt</c> on each of three deliveries, releasing
     /// the first two with <c>ModifyAckDeadline(…, 0)</c> and acknowledging the third.
     /// </summary>
-    [Fact(Skip = "measurement — AC-39")]
-    public void Measure_pull_delivery_attempt_over_three_deliveries_on_a_dlq_backed_subscription()
+    [Test]
+        [Skip("measurement — AC-39")]
+    public async Task Measure_pull_delivery_attempt_over_three_deliveries_on_a_dlq_backed_subscription()
     {
         var provider = new GcpPullMessageGatewayProvider();
         var builder = new DefaultMessageBuilder();
@@ -103,7 +103,7 @@ public class GcpDeliveryAttemptMeasurementTests
             for (var delivery = 1; delivery <= Deliveries; delivery++)
             {
                 var received = RawPull(client, subscriptionName);
-                Assert.NotNull(received);
+                await Assert.That(received).IsNotNull();
 
                 observed.Add(received!.DeliveryAttempt);
                 Console.WriteLine(
@@ -129,7 +129,8 @@ public class GcpDeliveryAttemptMeasurementTests
     /// Stream: <c>PubsubExtensions.GetDeliveryAttempt</c> on each of three deliveries through a raw
     /// <c>SubscriberClient</c>, Nacking the first two and Acking the third.
     /// </summary>
-    [Fact(Skip = "measurement — AC-39")]
+    [Test]
+        [Skip("measurement — AC-39")]
     public async Task Measure_stream_delivery_attempt_over_three_deliveries_on_a_dlq_backed_subscription()
     {
         var provider = new GcpPullMessageGatewayProvider();

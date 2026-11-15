@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -35,11 +35,11 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
-[Collection(StaleMessageLoggingCollection.Name)]
+[NotInParallel]
+[ClassDataSource<StaleMessageLoggingFixture>(Shared = SharedType.PerTestSession)]
 public class CountStillRunningTests
 {
     private readonly TimerCountingTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
@@ -50,7 +50,7 @@ public class CountStillRunningTests
         _logs = fixture.Logs;
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_count_is_still_running_at_the_next_due_time_should_skip_it()
     {
         //Arrange
@@ -79,17 +79,17 @@ public class CountStillRunningTests
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         var readings = metrics.Services.GetRequiredService<OutboxStaleMessageReadings>();
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromMinutes(1));
-        Assert.True(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5))).IsTrue();
         var runningToken = outbox.CountCalls.Single().CancellationToken;
         var cancelledBeforeTheTimeout = runningToken.IsCancellationRequested;
         _clock.Advance(TimeSpan.FromSeconds(10));
-        Assert.True(SpinWait.SpinUntil(() => runningToken.IsCancellationRequested, TimeSpan.FromSeconds(5)));
-        Assert.True(SpinWait.SpinUntil(
+        await Assert.That(SpinWait.SpinUntil(() => runningToken.IsCancellationRequested, TimeSpan.FromSeconds(5))).IsTrue();
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Abandoned) >= 1,
-            TimeSpan.FromSeconds(5)));
-        WaitUntilTheMonitorWaits(2);
+            TimeSpan.FromSeconds(5))).IsTrue();
+        await WaitUntilTheMonitorWaits(2);
 
         var collected = new List<StaleMeasurement>();
         var whileRunning = new List<(long Completed, long Abandoned, long Skipped)>();
@@ -104,11 +104,11 @@ public class CountStillRunningTests
 
         //Act
         _clock.Advance(TimeSpan.FromSeconds(50));
-        WaitUntilTheMonitorWaits(3);
+        await WaitUntilTheMonitorWaits(3);
         _clock.Advance(TimeSpan.FromSeconds(20));
         Collect();
         _clock.Advance(TimeSpan.FromSeconds(40));
-        WaitUntilTheMonitorWaits(4);
+        await WaitUntilTheMonitorWaits(4);
         _clock.Advance(TimeSpan.FromSeconds(20));
         Collect();
         _clock.Advance(TimeSpan.FromSeconds(10));
@@ -121,31 +121,31 @@ public class CountStillRunningTests
         var afterTheReturn = metrics.Observe();
 
         //Assert
-        Assert.False(cancelledBeforeTheTimeout);
-        Assert.Equal(
-            [new DateTimeOffset(2026, 1, 1, 12, 1, 0, TimeSpan.Zero), new DateTimeOffset(2026, 1, 1, 12, 4, 0, TimeSpan.Zero)],
-            outbox.CountCalls.Select(call => call.CalledAt));
+        await Assert.That(cancelledBeforeTheTimeout).IsFalse();
+        await Assert.That(outbox.CountCalls.Select(call => call.CalledAt)).IsEqualTo([new DateTimeOffset(2026, 1, 1, 12, 1, 0, TimeSpan.Zero), new DateTimeOffset(2026, 1, 1, 12, 4, 0, TimeSpan.Zero)]);
         var skipWarnings = _logs.Entries
             .Where(entry => entry.LogLevel == LogLevel.Warning && entry.Message.Contains("skipped"))
             .Select(entry => entry.Message)
             .ToArray();
-        Assert.Equal(2, skipWarnings.Length);
-        Assert.All(skipWarnings, message =>
-            Assert.Contains("skipped 1 due times of the Overall count for StaleMessageCountingOutbox", message));
-        Assert.All(whileRunning, totals =>
-        {
-            Assert.Equal(0, totals.Completed);
-            Assert.True(totals.Abandoned > 0);
-            Assert.True(totals.Skipped > 0);
-        });
-        Assert.DoesNotContain(collected, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES && m.Value == 7);
-        var overall = Assert.Single(afterTheReturn, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES);
-        Assert.Equal(3, overall.Value);
+        await Assert.That(skipWarnings.Length).IsEqualTo(2);
+        foreach (var message in skipWarnings)
+{
+    await Assert.That(message).Contains("skipped 1 due times of the Overall count for StaleMessageCountingOutbox");
+}
+        foreach (var totals in whileRunning)
+{
+    await Assert.That(totals.Completed).IsEqualTo(0);
+    await Assert.That(totals.Abandoned > 0).IsTrue();
+    await Assert.That(totals.Skipped > 0).IsTrue();
+}
+        await Assert.That(System.Linq.Enumerable.Any(collected, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES && m.Value == 7)).IsFalse();
+        var overall = (await Assert.That(System.Linq.Enumerable.Where(afterTheReturn, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)).HasSingleItem());
+        await Assert.That(overall.Value).IsEqualTo(3);
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
         new(new InternalBus(), new Publication { Topic = new RoutingKey(topic) });
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -31,25 +31,25 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class DefaultMapperRoundTripTests
 {
-    public static TheoryData<bool, string?> RequestCases => new()
+    public static IEnumerable<(bool, string?)> RequestCases => new (bool, string?)[]
     {
-        { false, "Hello" },
-        { true, "Hello" },
-        { false, "" },
-        { true, "" },
-        { false, null },
-        { true, null }
+        (false, "Hello"),
+        (true, "Hello"),
+        (false, ""),
+        (true, ""),
+        (false, null),
+        (true, null)
     };
 
-    [Theory]
-    [MemberData(nameof(RequestCases))]
-    public void When_default_mapper_should_round_trip_requests_as_plain_json(bool addConsumers, string? text)
+    [Test]
+    [MethodDataSource(nameof(RequestCases))]
+    public async System.Threading.Tasks.Task When_default_mapper_should_round_trip_requests_as_plain_json(bool addConsumers, string? text)
     {
         //Arrange
         using var provider = BuildProvider(addConsumers);
@@ -60,7 +60,7 @@ public class DefaultMapperRoundTripTests
 
         try
         {
-            Assert.NotNull(mapper);
+            await Assert.That(mapper).IsNotNull();
             mapper.Instance.Context = new RequestContext();
 
             //Act
@@ -68,10 +68,10 @@ public class DefaultMapperRoundTripTests
             var restored = mapper.Instance.MapToRequest(message);
 
             //Assert
-            AssertPlainJson(message, request);
-            Assert.Equal(request.Text, restored.Text);
-            Assert.Equal(request.Id, restored.Id);
-            Assert.Equal(request.CorrelationId, restored.CorrelationId);
+            await AssertPlainJson(message, request);
+            await Assert.That(restored.Text).IsEqualTo(request.Text);
+            await Assert.That(restored.Id).IsEqualTo(request.Id);
+            await Assert.That(restored.CorrelationId).IsEqualTo(request.CorrelationId);
         }
         finally
         {
@@ -79,8 +79,8 @@ public class DefaultMapperRoundTripTests
         }
     }
 
-    [Theory]
-    [MemberData(nameof(RequestCases))]
+    [Test]
+    [MethodDataSource(nameof(RequestCases))]
     public async Task When_default_async_mapper_should_round_trip_requests_as_plain_json(bool addConsumers, string? text)
     {
         //Arrange
@@ -92,7 +92,7 @@ public class DefaultMapperRoundTripTests
 
         try
         {
-            Assert.NotNull(mapper);
+            await Assert.That(mapper).IsNotNull();
             mapper.Instance.Context = new RequestContext();
 
             //Act
@@ -100,10 +100,10 @@ public class DefaultMapperRoundTripTests
             var restored = await mapper.Instance.MapToRequestAsync(message);
 
             //Assert
-            AssertPlainJson(message, request);
-            Assert.Equal(request.Text, restored.Text);
-            Assert.Equal(request.Id, restored.Id);
-            Assert.Equal(request.CorrelationId, restored.CorrelationId);
+            await AssertPlainJson(message, request);
+            await Assert.That(restored.Text).IsEqualTo(request.Text);
+            await Assert.That(restored.Id).IsEqualTo(request.Id);
+            await Assert.That(restored.CorrelationId).IsEqualTo(request.CorrelationId);
         }
         finally
         {
@@ -119,12 +119,12 @@ public class DefaultMapperRoundTripTests
         return services.BuildServiceProvider();
     }
 
-    private static void AssertPlainJson(Message message, DefaultMapperEvent request)
+    private static async System.Threading.Tasks.Task AssertPlainJson(Message message, DefaultMapperEvent request)
     {
-        Assert.Equal("application/json", message.Header.ContentType.MediaType);
+        await Assert.That(message.Header.ContentType.MediaType).IsEqualTo("application/json");
         using var json = JsonDocument.Parse(message.Body.Memory);
-        Assert.Equal(request.Text, json.RootElement.GetProperty("text").GetString());
-        Assert.False(json.RootElement.TryGetProperty("specversion", out _));
-        Assert.False(json.RootElement.TryGetProperty("data", out _));
+        await Assert.That(json.RootElement.GetProperty("text").GetString()).IsEqualTo(request.Text);
+        await Assert.That(json.RootElement.TryGetProperty("specversion", out _)).IsFalse();
+        await Assert.That(json.RootElement.TryGetProperty("data", out _)).IsFalse();
     }
 }

@@ -4,13 +4,12 @@ using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class TimedOutboxSweeperWallClockTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_wall_clock_steps_backwards_should_still_sweep_one_interval_later()
     {
         //Arrange
@@ -35,7 +34,7 @@ public class TimedOutboxSweeperWallClockTests
         sweeper.Dispose();
 
         //Assert
-        Assert.True(firstSweep, "The sweeper did not sweep at start");
-        Assert.True(secondSweep, "The sweeper did not sweep one interval later after the wall clock stepped back an hour");
+        await Assert.That(firstSweep).IsTrue().Because("The sweeper did not sweep at start");
+        await Assert.That(secondSweep).IsTrue().Because("The sweeper did not sweep one interval later after the wall clock stepped back an hour");
     }
 }

@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,14 +25,13 @@ THE SOFTWARE. */
 
 using System.Linq;
 using Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration;
 
 public class ChannelFactoryDeclarationSweepUnsoundReasonsTests
 {
-    [Fact]
-    public void When_sweeping_an_assembly_containing_unsound_declarations_should_report_their_reasons()
+    [Test]
+    public async System.Threading.Tasks.Task When_sweeping_an_assembly_containing_unsound_declarations_should_report_their_reasons()
     {
         // Arrange
         // Evident Data: sweeping the whole Core.Tests assembly, located from one of its own subjects
@@ -43,14 +43,14 @@ public class ChannelFactoryDeclarationSweepUnsoundReasonsTests
         // Assert
         // The not-a-channel-factory double (task 38) carries the expected non-null reason
         var notAFactoryEntry = result.Single(e => e.Subject == typeof(NonFactoryDeclaringSubscription));
-        Assert.NotNull(notAFactoryEntry.Reason);
-        Assert.Contains(typeof(NonFactoryDeclaringSubscription).FullName!, notAFactoryEntry.Reason);
-        Assert.Contains(typeof(NotAChannelFactory).FullName!, notAFactoryEntry.Reason);
+        await Assert.That(notAFactoryEntry.Reason).IsNotNull();
+        await Assert.That(notAFactoryEntry.Reason).Contains(typeof(NonFactoryDeclaringSubscription).FullName!);
+        await Assert.That(notAFactoryEntry.Reason).Contains(typeof(NotAChannelFactory).FullName!);
 
         // The inherited-default double (task 39) carries the expected non-null reason
         var inheritedDefaultEntry = result.Single(e => e.Subject == typeof(DefaultChannelFactoryDeclaringSubscription));
-        Assert.NotNull(inheritedDefaultEntry.Reason);
-        Assert.Contains(typeof(DefaultChannelFactoryDeclaringSubscription).FullName!, inheritedDefaultEntry.Reason);
-        Assert.Contains(typeof(InMemoryChannelFactory).FullName!, inheritedDefaultEntry.Reason);
+        await Assert.That(inheritedDefaultEntry.Reason).IsNotNull();
+        await Assert.That(inheritedDefaultEntry.Reason).Contains(typeof(DefaultChannelFactoryDeclaringSubscription).FullName!);
+        await Assert.That(inheritedDefaultEntry.Reason).Contains(typeof(InMemoryChannelFactory).FullName!);
     }
 }

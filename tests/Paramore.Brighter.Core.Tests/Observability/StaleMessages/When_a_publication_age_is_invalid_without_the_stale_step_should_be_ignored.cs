@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -32,7 +32,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -40,7 +39,7 @@ public class InvalidAgeWithoutStepTests
 {
     private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Fact]
+    [Test]
     public async Task When_a_publication_age_is_invalid_without_the_stale_step_should_be_ignored()
     {
         //Arrange
@@ -48,7 +47,7 @@ public class InvalidAgeWithoutStepTests
         IHost? host = null;
 
         //Act
-        var exception = await Record.ExceptionAsync(async () =>
+        var exception = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             var publication = new Publication { Topic = new RoutingKey("orders"), StaleMessageAge = TimeSpan.Zero };
             var producers = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
@@ -80,8 +79,8 @@ public class InvalidAgeWithoutStepTests
         }
 
         //Assert
-        Assert.Null(exception);
-        Assert.Empty(outbox.CountCalls);
-        Assert.Empty(outbox.TopicCountCalls);
+        await Assert.That(exception).IsNull();
+        await Assert.That(outbox.CountCalls).IsEmpty();
+        await Assert.That(outbox.TopicCountCalls).IsEmpty();
     }
 }

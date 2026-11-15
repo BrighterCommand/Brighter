@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,7 +34,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -45,7 +44,7 @@ public class BlockingCancellationCallbackTests
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
     private readonly TimerCountingTimeProvider _clock = new(s_start);
 
-    [Fact]
+    [Test]
     public async Task When_a_cancellation_callback_blocks_should_not_hold_the_loop()
     {
         //Arrange
@@ -73,9 +72,9 @@ public class BlockingCancellationCallbackTests
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         var readings = metrics.Services.GetRequiredService<OutboxStaleMessageReadings>();
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromMinutes(1));
-        Assert.True(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5))).IsTrue();
 
         bool deadlineReturned;
         bool callbackBlocked;
@@ -89,11 +88,11 @@ public class BlockingCancellationCallbackTests
         {
             deadlineReturned = AdvanceReturns(TimeSpan.FromSeconds(10));
             callbackBlocked = SpinWait.SpinUntil(() => outbox.CallbackBlocked.IsCompleted, TimeSpan.FromSeconds(5));
-            Assert.True(SpinWait.SpinUntil(
+            await Assert.That(SpinWait.SpinUntil(
                 () => readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Abandoned) >= 1,
-                TimeSpan.FromSeconds(5)));
+                TimeSpan.FromSeconds(5))).IsTrue();
             atTheDeadline = metrics.Observe();
-            Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= 2, TimeSpan.FromSeconds(5)));
+            await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= 2, TimeSpan.FromSeconds(5))).IsTrue();
 
             nextDueTimeReturned = AdvanceReturns(TimeSpan.FromSeconds(50));
             nextDueTimeHandled = SpinWait.SpinUntil(
@@ -108,12 +107,12 @@ public class BlockingCancellationCallbackTests
         }
 
         //Assert
-        Assert.True(deadlineReturned);
-        Assert.True(callbackBlocked);
-        Assert.Equal(1, Measured(atTheDeadline, "overall", "abandoned"));
-        Assert.True(nextDueTimeReturned);
-        Assert.True(nextDueTimeHandled);
-        Assert.True(stillBlocked);
+        await Assert.That(deadlineReturned).IsTrue();
+        await Assert.That(callbackBlocked).IsTrue();
+        await Assert.That(Measured(atTheDeadline, "overall", "abandoned")).IsEqualTo(1);
+        await Assert.That(nextDueTimeReturned).IsTrue();
+        await Assert.That(nextDueTimeHandled).IsTrue();
+        await Assert.That(stillBlocked).IsTrue();
     }
 
     private static long Measured(IEnumerable<StaleMeasurement> measurements, string count, string outcome) =>
@@ -132,6 +131,6 @@ public class BlockingCancellationCallbackTests
         return SpinWait.SpinUntil(() => advance.IsCompleted, TimeSpan.FromSeconds(5));
     }
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

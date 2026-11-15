@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class NoInnerFactoryCanServeSubscriptionValidationTests
 {
-    [Fact]
-    public void When_no_inner_factory_can_serve_a_subscription_should_name_the_inner_factories()
+    [Test]
+    public async System.Threading.Tasks.Task When_no_inner_factory_can_serve_a_subscription_should_name_the_inner_factories()
     {
         // Arrange — the AC-6 combined channel factory, but a plain subscription no inner factory matches
         var defaultChannelFactory = new CombinedChannelFactory([new DeclaredChannelFactory(), new NonMatchingChannelFactory()]);
@@ -47,15 +47,15 @@ public class NoInnerFactoryCanServeSubscriptionValidationTests
 
         // Assert — exactly one Error naming both inner factories, in constructor order, and never
         // naming the composite itself
-        Assert.False(satisfied);
-        var result = Assert.Single(results);
+        await Assert.That(satisfied).IsFalse();
+        var result = await Assert.That(results).HasSingleItem();
         var message = result.Error!.Message;
         var declaredIndex = message.IndexOf(typeof(DeclaredChannelFactory).FullName!, System.StringComparison.Ordinal);
         var nonMatchingIndex = message.IndexOf(typeof(NonMatchingChannelFactory).FullName!, System.StringComparison.Ordinal);
-        Assert.True(declaredIndex >= 0);
-        Assert.True(nonMatchingIndex >= 0);
-        Assert.True(declaredIndex < nonMatchingIndex);
-        Assert.DoesNotContain(typeof(CombinedChannelFactory).FullName!, message);
-        Assert.Contains("will be handed one of '", message);
+        await Assert.That(declaredIndex >= 0).IsTrue();
+        await Assert.That(nonMatchingIndex >= 0).IsTrue();
+        await Assert.That(declaredIndex < nonMatchingIndex).IsTrue();
+        await Assert.That(message).DoesNotContain(typeof(CombinedChannelFactory).FullName!);
+        await Assert.That(message).Contains("will be handed one of '");
     }
 }

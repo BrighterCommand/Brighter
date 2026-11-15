@@ -1,8 +1,7 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Base.Test.Outbox;
 
@@ -47,7 +46,7 @@ public abstract class OutstandingCountCancellationOutboxBaseTests<TTransaction>
             if (setup.StoreHeld)
             {
                 await Task.Delay(s_cancelAfter);
-                Assert.False(count.IsCompleted, "The count ended before the cancellation");
+                await Assert.That(count.IsCompleted).IsFalse().Because("The count ended before the cancellation");
                 cancellation.Cancel();
             }
 
@@ -56,17 +55,13 @@ public abstract class OutstandingCountCancellationOutboxBaseTests<TTransaction>
             cancelledAt.Stop();
 
             // Assert
-            Assert.True(ReferenceEquals(finished, count),
-                $"The count was still running {cancelledAt.Elapsed.TotalSeconds:F1} seconds after the cancellation");
-            Assert.True(cancelledAt.Elapsed <= s_mustEndWithin,
-                $"The count ended {cancelledAt.Elapsed.TotalSeconds:F1} seconds after the cancellation");
+            await Assert.That(ReferenceEquals(finished, count)).IsTrue().Because($"The count was still running {cancelledAt.Elapsed.TotalSeconds:F1} seconds after the cancellation");
+            await Assert.That(cancelledAt.Elapsed <= s_mustEndWithin).IsTrue().Because($"The count ended {cancelledAt.Elapsed.TotalSeconds:F1} seconds after the cancellation");
 
-            var exception = await Record.ExceptionAsync(() => count);
-            Assert.NotNull(exception);
-            Assert.True(
-                exception is OperationCanceledException
-                || (setup.ClientCancellationException != null && setup.ClientCancellationException.IsInstanceOfType(exception)),
-                $"The count ended with {exception.GetType().FullName}: {exception.Message}");
+            var exception = await TestExceptionRecorder.CaptureAsync(() => count);
+            await Assert.That(exception).IsNotNull();
+            await Assert.That(exception is OperationCanceledException
+                || (setup.ClientCancellationException != null && setup.ClientCancellationException.IsInstanceOfType(exception))).IsTrue().Because($"The count ended with {exception.GetType().FullName}: {exception.Message}");
         }
         finally
         {

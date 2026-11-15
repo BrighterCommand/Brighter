@@ -36,7 +36,6 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -44,7 +43,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// Characterises that, with the dispatcher running and nothing shut or in excess, the worst consumer remedy status
 /// equals the existing consumer check status and the remedy descriptions carry the values of the existing description.
 /// </summary>
-[Collection(DispatcherHealthCheckCollection.NAME)]
+[NotInParallel]
 public class ConsumerRemedyChecksAgreeWithExistingCheckTests
 {
     private const string ExistingCheckName = "brighter-consumer-existing";
@@ -52,11 +51,11 @@ public class ConsumerRemedyChecksAgreeWithExistingCheckTests
     private const string RestartName = "brighter-consumer-restart";
     private static readonly TimeSpan s_guard = TimeSpan.FromSeconds(10);
 
-    [Theory]
-    [InlineData("short burst", HealthStatus.Healthy)]
-    [InlineData("persistent failure", HealthStatus.Degraded)]
-    [InlineData("some missing", HealthStatus.Degraded)]
-    [InlineData("none running", HealthStatus.Unhealthy)]
+    [Test]
+    [Arguments("short burst", HealthStatus.Healthy)]
+    [Arguments("persistent failure", HealthStatus.Degraded)]
+    [Arguments("some missing", HealthStatus.Degraded)]
+    [Arguments("none running", HealthStatus.Unhealthy)]
     public async Task When_the_dispatcher_is_running_should_agree_with_the_existing_consumer_check(
         string state, HealthStatus expectedStatus)
     {
@@ -78,15 +77,15 @@ public class ConsumerRemedyChecksAgreeWithExistingCheckTests
         var takeOutOfService = report.Entries[TakeOutOfServiceName];
         var restart = report.Entries[RestartName];
         var worst = (HealthStatus)Math.Min((int)takeOutOfService.Status, (int)restart.Status);
-        Assert.Equal(expectedStatus, existing.Status);
-        Assert.Equal(existing.Status, worst);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.TakeOutOfService), takeOutOfService.Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), restart.Data[RemedyCheckConvention.RemedyKindKey]);
+        await Assert.That(existing.Status).IsEqualTo(expectedStatus);
+        await Assert.That(worst).IsEqualTo(existing.Status);
+        await Assert.That(takeOutOfService.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.TakeOutOfService));
+        await Assert.That(restart.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
         if (existing.Status != HealthStatus.Healthy)
         {
             var remedyDescriptions = takeOutOfService.Description + ";" + restart.Description;
             foreach (var condition in existing.Description!.Split(';'))
-                Assert.Contains(condition, remedyDescriptions);
+                await Assert.That(remedyDescriptions).Contains(condition);
         }
     }
 

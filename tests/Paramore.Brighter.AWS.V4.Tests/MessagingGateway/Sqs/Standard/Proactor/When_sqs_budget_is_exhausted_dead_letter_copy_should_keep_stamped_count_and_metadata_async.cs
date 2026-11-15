@@ -31,7 +31,6 @@ using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SqsStandard;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Standard.Proactor;
 
@@ -43,8 +42,8 @@ namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Standard.Proactor;
 /// Covers both message creators via <paramref name="rawMessageDelivery"/>:
 /// <c>true</c> → <c>SqsMessageCreator</c>; <c>false</c> → <c>SqsInlineMessageCreator</c>.
 /// </summary>
-[Trait("Category", "AWS")]
-[Collection("SqsStandard")]
+[Property("Category", "AWS")]
+[NotInParallel("SqsStandard")]
 public class SqsBudgetExhaustedDlqTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
@@ -64,9 +63,9 @@ public class SqsBudgetExhaustedDlqTestsAsync : IDisposable, IAsyncDisposable
     /// <c>HandledCount >= 3</c> (stamped — not the DLQ's own normalised counter, which is 0)
     /// and the full rejection metadata bag.
     /// </summary>
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
+    [Test]
+    [Arguments(true)]
+    [Arguments(false)]
     public async Task When_sqs_budget_is_exhausted_dead_letter_copy_should_keep_stamped_count_and_metadata_async(
         bool rawMessageDelivery)
     {
@@ -145,44 +144,31 @@ public class SqsBudgetExhaustedDlqTestsAsync : IDisposable, IAsyncDisposable
         // Assert — read the dead-letter copy via the ChannelFactory channel (AC-41 / R-28)
         var dlqMessage = await dlqChannel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
-        Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         // AC-41: HandledCount must be >= 3 (stamped) and NOT 0 (the DLQ's own normalised counter)
-        Assert.True(dlqMessage.Header.HandledCount >= 3,
-            $"R-28: HandledCount must be >= 3 but was {dlqMessage.Header.HandledCount}");
-        Assert.NotEqual(0, dlqMessage.Header.HandledCount);
+        await Assert.That(dlqMessage.Header.HandledCount >= 3).IsTrue().Because($"R-28: HandledCount must be >= 3 but was {dlqMessage.Header.HandledCount}");
+        await Assert.That(dlqMessage.Header.HandledCount).IsNotEqualTo(0);
 
         // AC-4 / R-5: rejection reason must be DeliveryError
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("rejectionReason"),
-            "bag must carry rejectionReason");
-        Assert.Equal(RejectionReason.DeliveryError.ToString(),
-            dlqMessage.Header.Bag["rejectionReason"].ToString());
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionReason")).IsTrue().Because("bag must carry rejectionReason");
+        await Assert.That(dlqMessage.Header.Bag["rejectionReason"].ToString()).IsEqualTo(RejectionReason.DeliveryError.ToString());
 
         // AC-4 / R-5: rejection message must be non-empty
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("rejectionMessage"),
-            "bag must carry rejectionMessage");
-        Assert.False(
-            string.IsNullOrWhiteSpace(dlqMessage.Header.Bag["rejectionMessage"].ToString()),
-            "rejectionMessage must be non-empty");
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionMessage")).IsTrue().Because("bag must carry rejectionMessage");
+        await Assert.That(string.IsNullOrWhiteSpace(dlqMessage.Header.Bag["rejectionMessage"].ToString())).IsFalse().Because("rejectionMessage must be non-empty");
 
         // AC-4 / R-5: rejection timestamp must be ISO-8601 parseable
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("rejectionTimestamp"),
-            "bag must carry rejectionTimestamp");
-        Assert.True(
-            DateTimeOffset.TryParse(dlqMessage.Header.Bag["rejectionTimestamp"].ToString(), out _),
-            $"rejectionTimestamp must be ISO-8601 parseable but was "
-            + $"'{dlqMessage.Header.Bag["rejectionTimestamp"]}'");
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionTimestamp")).IsTrue().Because("bag must carry rejectionTimestamp");
+        await Assert.That(DateTimeOffset.TryParse(dlqMessage.Header.Bag["rejectionTimestamp"].ToString(), out _)).IsTrue();
 
         // AC-4 / R-5: original topic must match the source topic
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("originalTopic"),
-            "bag must carry originalTopic");
-        Assert.Equal(routingKey.Value, dlqMessage.Header.Bag["originalTopic"].ToString());
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("originalTopic")).IsTrue().Because("bag must carry originalTopic");
+        await Assert.That(dlqMessage.Header.Bag["originalTopic"].ToString()).IsEqualTo(routingKey.Value);
 
         // AC-4 / R-5: original message type must be present
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("originalMessageType"),
-            "bag must carry originalMessageType");
-        Assert.Equal(MessageType.MT_COMMAND.ToString(),
-            dlqMessage.Header.Bag["originalMessageType"].ToString());
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("originalMessageType")).IsTrue().Because("bag must carry originalMessageType");
+        await Assert.That(dlqMessage.Header.Bag["originalMessageType"].ToString()).IsEqualTo(MessageType.MT_COMMAND.ToString());
     }
 
     public void Dispose()

@@ -25,14 +25,13 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Confirmation;
 
 public class AsyncConfirmationOffTests
 {
-    [Fact]
-    public void When_async_confirmation_is_off_should_write_and_confirm_synchronously()
+    [Test]
+    public async Task When_async_confirmation_is_off_should_write_and_confirm_synchronously()
     {
         // Arrange
         const string topic = "test_topic";
@@ -53,14 +52,14 @@ public class AsyncConfirmationOffTests
         producer.Send(message);
 
         // Assert — default switch is off, write is inline, confirmation is synchronous
-        Assert.False(producer.UseAsyncPublishConfirmation);
-        Assert.Single(bus.Stream(new RoutingKey(topic)));
-        Assert.Single(confirmations);
-        Assert.True(confirmations[0].Success);
-        Assert.Equal(messageId, confirmations[0].MessageId);
+        await Assert.That(producer.UseAsyncPublishConfirmation).IsFalse();
+        await Assert.That(bus.Stream(new RoutingKey(topic))).HasSingleItem();
+        await Assert.That(confirmations).HasSingleItem();
+        await Assert.That(confirmations[0].Success).IsTrue();
+        await Assert.That(confirmations[0].MessageId).IsEqualTo(messageId);
     }
 
-    [Fact]
+    [Test]
     public async Task When_async_confirmation_is_off_with_send_async_should_write_and_confirm_synchronously()
     {
         // Arrange
@@ -79,9 +78,9 @@ public class AsyncConfirmationOffTests
         await producer.SendAsync(message);
 
         // Assert — write is inline and confirmation is synchronous even via async path
-        Assert.Single(bus.Stream(new RoutingKey(topic)));
-        Assert.Single(confirmations);
-        Assert.True(confirmations[0].Success);
-        Assert.Equal(messageId, confirmations[0].MessageId);
+        await Assert.That(bus.Stream(new RoutingKey(topic))).HasSingleItem();
+        await Assert.That(confirmations).HasSingleItem();
+        await Assert.That(confirmations[0].Success).IsTrue();
+        await Assert.That(confirmations[0].MessageId).IsEqualTo(messageId);
     }
 }

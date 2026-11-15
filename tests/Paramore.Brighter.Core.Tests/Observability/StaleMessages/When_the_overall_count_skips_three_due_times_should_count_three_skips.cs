@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -27,8 +27,7 @@ using System;
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleOverallCountSkippedTests
@@ -36,8 +35,8 @@ public class StaleOverallCountSkippedTests
     private const string COUNT = "paramore.brighter.outbox.stale.count";
     private const string OUTCOME = "paramore.brighter.outbox.stale.outcome";
 
-    [Fact]
-    public void When_the_overall_count_skips_three_due_times_should_count_three_skips()
+    [Test]
+    public async Task When_the_overall_count_skips_three_due_times_should_count_three_skips()
     {
         //Arrange
         using var observed = new ObservedStaleMessageInstruments();
@@ -51,17 +50,15 @@ public class StaleOverallCountSkippedTests
         var measurements = observed.Observe();
 
         //Assert
-        Assert.DoesNotContain(measurements, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES);
+        await Assert.That(System.Linq.Enumerable.Any(measurements, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)).IsFalse();
 
-        Assert.Equal(
-            [
-                "overall/abandoned=0", "overall/completed=1", "overall/failed=0", "overall/skipped=3",
-                "per_topic/abandoned=0", "per_topic/completed=0", "per_topic/failed=0", "per_topic/skipped=0"
-            ],
-            measurements
+        await Assert.That(measurements
                 .Where(m => m.Instrument == ObservedStaleMessageInstruments.MEASUREMENTS)
                 .Select(m => $"{m.Attributes[COUNT]}/{m.Attributes[OUTCOME]}={m.Value}")
                 .OrderBy(s => s, StringComparer.Ordinal)
-                .ToArray());
+                .ToArray()).IsEqualTo([
+                "overall/abandoned=0", "overall/completed=1", "overall/failed=0", "overall/skipped=3",
+                "per_topic/abandoned=0", "per_topic/completed=0", "per_topic/failed=0", "per_topic/skipped=0"
+            ]);
     }
 }

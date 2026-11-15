@@ -7,12 +7,11 @@
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.Outbox;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Text.OutstandingCount;
 
-[Trait("Category", "PostgresSql")]
-[Collection("PostgresTextOutbox")]
+[Property("Category", "PostgresSql")]
+[NotInParallel("PostgresTextOutbox")]
 public class WhenCountingOutstandingMessagesOlderThanTheAgeShouldCountOnlyStaleOnes : OutstandingCountOutboxBaseTests<System.Data.Common.DbTransaction>
 {
     private readonly IAmAnOutstandingCountOutboxProvider _outboxProvider = new PostgresTextOutboxProvider();
@@ -35,9 +34,8 @@ public class WhenCountingOutstandingMessagesOlderThanTheAgeShouldCountOnlyStaleO
         await Outbox.AddAsync(aged, new RequestContext());
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_outstanding_messages_older_than_the_age_should_count_only_stale_ones()
     {
         await AssertAgeAsync();
-    }
-}
+    }}

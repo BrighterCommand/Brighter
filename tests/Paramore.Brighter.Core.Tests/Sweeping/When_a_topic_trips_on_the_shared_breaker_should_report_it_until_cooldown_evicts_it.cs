@@ -6,13 +6,12 @@ using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Paramore.Brighter.Outbox.Hosting.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class When_a_topic_trips_on_the_shared_breaker_should_report_it_until_cooldown_evicts_it_tests
 {
-    [Fact]
+    [Test]
     public async Task When_a_topic_trips_on_the_shared_breaker_should_report_it_until_cooldown_evicts_it()
     {
         //Arrange
@@ -34,12 +33,12 @@ public class When_a_topic_trips_on_the_shared_breaker_should_report_it_until_coo
         var afterThirdCoolDown = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
 
         //Assert
-        Assert.True(state.Read().IsActive);
-        Assert.Equal(HealthStatus.Degraded, afterTrip.Status);
-        Assert.Equal(HealthStatus.Degraded, afterFirstCoolDown.Status);
-        Assert.Equal(HealthStatus.Degraded, afterSecondCoolDown.Status);
-        Assert.Equal(HealthStatus.Healthy, afterThirdCoolDown.Status);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), afterTrip.Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), afterThirdCoolDown.Data[RemedyCheckConvention.RemedyKindKey]);
+        await Assert.That(state.Read().IsActive).IsTrue();
+        await Assert.That(afterTrip.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(afterFirstCoolDown.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(afterSecondCoolDown.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(afterThirdCoolDown.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(afterTrip.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+        await Assert.That(afterThirdCoolDown.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
     }
 }

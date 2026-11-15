@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel <guilhermeaappel@gmail.com>
 
@@ -24,13 +24,12 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox;
 
 public class AbandonedOutstandingCountReadTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_count_is_cancelled_while_an_abandoned_read_is_blocked_should_not_start_another_read()
     {
         //Arrange
@@ -38,17 +37,17 @@ public class AbandonedOutstandingCountReadTests
         locked.LockFor(TimeSpan.FromSeconds(10));
         var readsBeforeTheCounts = locked.AsyncConnections;
         using var firstCall = new CancellationTokenSource(TimeSpan.FromSeconds(1));
-        var first = await Record.ExceptionAsync(() => locked.Outbox.GetOutstandingMessageCountAsync(
+        var first = await TestExceptionRecorder.CaptureAsync(() => locked.Outbox.GetOutstandingMessageCountAsync(
             TimeSpan.Zero, new RequestContext(), cancellationToken: firstCall.Token));
 
         //Act
         using var secondCall = new CancellationTokenSource(TimeSpan.FromSeconds(1));
-        var second = await Record.ExceptionAsync(() => locked.Outbox.GetOutstandingMessageCountAsync(
+        var second = await TestExceptionRecorder.CaptureAsync(() => locked.Outbox.GetOutstandingMessageCountAsync(
             TimeSpan.Zero, new RequestContext(), cancellationToken: secondCall.Token));
 
         //Assert
-        Assert.IsAssignableFrom<OperationCanceledException>(first);
-        Assert.IsAssignableFrom<OperationCanceledException>(second);
-        Assert.Equal(1, locked.AsyncConnections - readsBeforeTheCounts);
+        await Assert.That(first).IsAssignableTo<OperationCanceledException>();
+        await Assert.That(second).IsAssignableTo<OperationCanceledException>();
+        await Assert.That(locked.AsyncConnections - readsBeforeTheCounts).IsEqualTo(1);
     }
 }

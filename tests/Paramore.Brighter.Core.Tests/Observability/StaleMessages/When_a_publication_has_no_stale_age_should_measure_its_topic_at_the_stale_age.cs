@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -35,7 +35,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -43,7 +42,7 @@ public class TopicWithoutAnAgeTests
 {
     private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Fact]
+    [Test]
     public async Task When_a_publication_has_no_stale_age_should_measure_its_topic_at_the_stale_age()
     {
         //Arrange
@@ -74,14 +73,12 @@ public class TopicWithoutAnAgeTests
         //Act
         await monitor.StartAsync(default);
         _clock.Advance(TimeSpan.FromMinutes(1));
-        Assert.True(SpinWait.SpinUntil(
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Completed) >= 1,
-            TimeSpan.FromSeconds(5)));
+            TimeSpan.FromSeconds(5))).IsTrue();
 
         //Assert
-        var call = Assert.Single(outbox.TopicCountCalls);
-        Assert.Equal(
-            new Dictionary<RoutingKey, TimeSpan> { [new RoutingKey("orders")] = TimeSpan.FromMinutes(5) },
-            call.DispatchedSinceByTopic);
+        var call = await Assert.That(outbox.TopicCountCalls).HasSingleItem();
+        await Assert.That(call.DispatchedSinceByTopic).IsEqualTo(new Dictionary<RoutingKey, TimeSpan> { [new RoutingKey("orders")] = TimeSpan.FromMinutes(5) });
     }
 }

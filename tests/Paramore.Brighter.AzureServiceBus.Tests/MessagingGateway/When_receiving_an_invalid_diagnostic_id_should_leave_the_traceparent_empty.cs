@@ -28,22 +28,21 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "ASB")]
+[Property("Category", "ASB")]
 public class AzureServiceBusInvalidDiagnosticIdTests
 {
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("not-a-traceparent")]
-    [InlineData("|a67a6a91e19aaba2a6fb61a533ad84e1.1.")]
-    [InlineData("00-00000000000000000000000000000000-05c07e9784472964-01")]
-    [InlineData("00-a67a6a91e19aaba2a6fb61a533ad84e1-0000000000000000-01")]
-    [InlineData("00-a67a6a91e19aaba2a6fb61a533ad84e1-05c07e9784472964-zz")]
-    [InlineData(123)]
+    [Test]
+    [Arguments(null)]
+    [Arguments("")]
+    [Arguments("not-a-traceparent")]
+    [Arguments("|a67a6a91e19aaba2a6fb61a533ad84e1.1.")]
+    [Arguments("00-00000000000000000000000000000000-05c07e9784472964-01")]
+    [Arguments("00-a67a6a91e19aaba2a6fb61a533ad84e1-0000000000000000-01")]
+    [Arguments("00-a67a6a91e19aaba2a6fb61a533ad84e1-05c07e9784472964-zz")]
+    [Arguments(123)]
     public async Task When_receiving_an_invalid_diagnostic_id_should_leave_the_traceparent_empty(object? diagnosticId)
     {
         // Arrange
@@ -63,8 +62,8 @@ public class AzureServiceBusInvalidDiagnosticIdTests
         var messages = await consumer.ReceiveAsync(TimeSpan.FromSeconds(1));
 
         // Assert
-        var received = Assert.Single(messages);
-        Assert.Equal(string.Empty, received.Header.TraceParent?.Value);
-        Assert.Equal(diagnosticId, received.Header.Bag["Diagnostic-Id"]);
+        var received = await Assert.That(messages).HasSingleItem();
+        await Assert.That(received.Header.TraceParent?.Value).IsEqualTo(string.Empty);
+        await Assert.That(received.Header.Bag["Diagnostic-Id"]).IsEqualTo(diagnosticId);
     }
 }

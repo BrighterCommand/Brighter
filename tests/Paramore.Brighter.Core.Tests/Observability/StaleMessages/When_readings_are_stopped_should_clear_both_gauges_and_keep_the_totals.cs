@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -28,8 +28,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleReadingsStoppedTests
@@ -37,8 +36,8 @@ public class StaleReadingsStoppedTests
     private const string COUNT = "paramore.brighter.outbox.stale.count";
     private const string OUTCOME = "paramore.brighter.outbox.stale.outcome";
 
-    [Fact]
-    public void When_readings_are_stopped_should_clear_both_gauges_and_keep_the_totals()
+    [Test]
+    public async Task When_readings_are_stopped_should_clear_both_gauges_and_keep_the_totals()
     {
         //Arrange
         using var observed = new ObservedStaleMessageInstruments();
@@ -53,18 +52,16 @@ public class StaleReadingsStoppedTests
         var measurements = observed.Observe();
 
         //Assert
-        Assert.DoesNotContain(measurements, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES);
-        Assert.DoesNotContain(measurements, m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES);
+        await Assert.That(System.Linq.Enumerable.Any(measurements, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)).IsFalse();
+        await Assert.That(System.Linq.Enumerable.Any(measurements, m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES)).IsFalse();
 
-        Assert.Equal(
-            [
-                "overall/abandoned=0", "overall/completed=1", "overall/failed=0", "overall/skipped=0",
-                "per_topic/abandoned=0", "per_topic/completed=1", "per_topic/failed=0", "per_topic/skipped=0"
-            ],
-            measurements
+        await Assert.That(measurements
                 .Where(m => m.Instrument == ObservedStaleMessageInstruments.MEASUREMENTS)
                 .Select(m => $"{m.Attributes[COUNT]}/{m.Attributes[OUTCOME]}={m.Value}")
                 .OrderBy(s => s, StringComparer.Ordinal)
-                .ToArray());
+                .ToArray()).IsEqualTo([
+                "overall/abandoned=0", "overall/completed=1", "overall/failed=0", "overall/skipped=0",
+                "per_topic/abandoned=0", "per_topic/completed=1", "per_topic/failed=0", "per_topic/skipped=0"
+            ]);
     }
 }

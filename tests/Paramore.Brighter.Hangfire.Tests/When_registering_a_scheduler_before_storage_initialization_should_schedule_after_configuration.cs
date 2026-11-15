@@ -32,10 +32,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Hangfire.Tests.TestDoubles;
 using Paramore.Brighter.MessageScheduler.Hangfire;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Hangfire.Tests;
 
-[Collection("Scheduler")]
+[NotInParallel("Scheduler")]
 public class HangfireSchedulerFactoryConfigurationTests : IDisposable
 {
     private readonly JobStorage? _previousStorage;
@@ -55,11 +55,11 @@ public class HangfireSchedulerFactoryConfigurationTests : IDisposable
         JobStorage.Current = null!;
     }
 
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_registering_a_scheduler_before_storage_initialization_should_schedule_after_configuration(
         bool supplyClient, bool isAsync)
     {
@@ -72,7 +72,7 @@ public class HangfireSchedulerFactoryConfigurationTests : IDisposable
             ? new HangfireMessageSchedulerFactory { Client = new BackgroundJobClient(storage) }
             : new HangfireMessageSchedulerFactory();
         services.AddBrighter().UseScheduler(factory);
-        Assert.Throws<InvalidOperationException>(() => JobStorage.Current);
+        await Assert.That(() => JobStorage.Current).ThrowsExactly<InvalidOperationException>();
         using var provider = services.BuildServiceProvider();
         if (!supplyClient)
             provider.GetRequiredService<IBackgroundJobClientV2>();
@@ -101,12 +101,12 @@ public class HangfireSchedulerFactoryConfigurationTests : IDisposable
         }
 
         //Assert
-        Assert.Equal(2, storage.GetMonitoringApi().ScheduledCount());
+        await Assert.That(storage.GetMonitoringApi().ScheduledCount()).IsEqualTo(2);
         using var connection = storage.GetConnection();
-        Assert.Equal("Scheduled", connection.GetJobData(requestId).State);
-        Assert.Equal("Scheduled", connection.GetJobData(messageId).State);
+        await Assert.That(connection.GetJobData(requestId).State).IsEqualTo("Scheduled");
+        await Assert.That(connection.GetJobData(messageId).State).IsEqualTo("Scheduled");
         if (supplyClient)
-            Assert.Throws<InvalidOperationException>(() => JobStorage.Current);
+            await Assert.That(() => JobStorage.Current).ThrowsExactly<InvalidOperationException>();
     }
 
     public void Dispose()

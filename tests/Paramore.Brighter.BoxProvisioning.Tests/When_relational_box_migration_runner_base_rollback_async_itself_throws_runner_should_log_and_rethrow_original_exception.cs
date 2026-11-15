@@ -30,7 +30,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -41,7 +40,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// </summary>
 public class SqlBoxMigrationRunnerRollbackFailureTests
 {
-    [Fact]
+    [Test]
     public async Task When_rollback_async_throws_the_original_hook_exception_should_propagate_and_rollback_failure_should_be_logged()
     {
         //Arrange
@@ -50,7 +49,7 @@ public class SqlBoxMigrationRunnerRollbackFailureTests
         var runner = new TestableRollbackFailureRunner(unitOfWork, logger);
 
         //Act
-        var thrown = await Record.ExceptionAsync(() => runner.MigrateAsync(
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => runner.MigrateAsync(
             tableName: "Orders",
             schemaName: null,
             boxType: BoxType.Outbox,
@@ -58,14 +57,12 @@ public class SqlBoxMigrationRunnerRollbackFailureTests
             cancellationToken: CancellationToken.None));
 
         //Assert
-        Assert.IsType<InvalidOperationException>(thrown);
-        Assert.Equal(TestableRollbackFailureRunner.PrimarySentinelMessage, thrown!.Message);
+        await Assert.That(thrown).IsTypeOf<InvalidOperationException>();
+        await Assert.That(thrown!.Message).IsEqualTo(TestableRollbackFailureRunner.PrimarySentinelMessage);
 
-        Assert.Contains(
-            logger.Entries,
-            e => e.Level == LogLevel.Error
+        await Assert.That(System.Linq.Enumerable.Any(logger.Entries, e => e.Level == LogLevel.Error
                  && e.Exception is InvalidProgramException
-                 && e.Exception.Message == ThrowingRollbackUnitOfWork.RollbackSentinelMessage);
+                 && e.Exception.Message == ThrowingRollbackUnitOfWork.RollbackSentinelMessage)).IsTrue();
     }
 
     private sealed class TestableRollbackFailureRunner : SqlBoxMigrationRunner<FakeDbConnection, FakeDbTransaction>

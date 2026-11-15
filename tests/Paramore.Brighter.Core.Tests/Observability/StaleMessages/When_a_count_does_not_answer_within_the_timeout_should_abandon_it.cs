@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -35,11 +35,11 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
-[Collection(StaleMessageLoggingCollection.Name)]
+[NotInParallel]
+[ClassDataSource<StaleMessageLoggingFixture>(Shared = SharedType.PerTestSession)]
 public class AbandonedCountTests
 {
     private readonly TimerCountingTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
@@ -50,7 +50,7 @@ public class AbandonedCountTests
         _logs = fixture.Logs;
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_count_does_not_answer_within_the_timeout_should_abandon_it()
     {
         //Arrange
@@ -78,35 +78,35 @@ public class AbandonedCountTests
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         var readings = metrics.Services.GetRequiredService<OutboxStaleMessageReadings>();
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromMinutes(1));
-        Assert.True(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5))).IsTrue();
         var token = outbox.CountCalls.Single().CancellationToken;
 
         //Act
         _clock.Advance(TimeSpan.FromSeconds(10));
 
         //Assert
-        Assert.True(SpinWait.SpinUntil(() => token.IsCancellationRequested, TimeSpan.FromSeconds(5)));
-        Assert.True(SpinWait.SpinUntil(() => outbox.CallEnded.IsCompleted, TimeSpan.FromSeconds(5)));
-        Assert.True(SpinWait.SpinUntil(
+        await Assert.That(SpinWait.SpinUntil(() => token.IsCancellationRequested, TimeSpan.FromSeconds(5))).IsTrue();
+        await Assert.That(SpinWait.SpinUntil(() => outbox.CallEnded.IsCompleted, TimeSpan.FromSeconds(5))).IsTrue();
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Abandoned) >= 1,
-            TimeSpan.FromSeconds(5)));
+            TimeSpan.FromSeconds(5))).IsTrue();
 
-        Assert.False(readings.TryGetLatestOverall(out _));
-        Assert.Equal(1, readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Abandoned));
-        Assert.Equal(0, readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Failed));
+        await Assert.That(readings.TryGetLatestOverall(out _)).IsFalse();
+        await Assert.That(readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Abandoned)).IsEqualTo(1);
+        await Assert.That(readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Failed)).IsEqualTo(0);
 
         var warnings = _logs.Entries.Where(entry => entry.LogLevel == LogLevel.Warning).Select(entry => entry.Message).ToArray();
-        var warning = Assert.Single(warnings);
-        Assert.Contains(nameof(StaleMessageCountingOutbox), warning);
-        Assert.Contains("abandoned the Overall count", warning);
-        Assert.Contains("00:00:10", warning);
+        var warning = await Assert.That(warnings).HasSingleItem();
+        await Assert.That(warning).Contains(nameof(StaleMessageCountingOutbox));
+        await Assert.That(warning).Contains("abandoned the Overall count");
+        await Assert.That(warning).Contains("00:00:10");
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
         new(new InternalBus(), new Publication { Topic = new RoutingKey(topic) });
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
@@ -10,34 +9,28 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand>? _pipeline;
-
-        public PipelineBuildForAgreementTests ()
+        public PipelineBuildForAgreementTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand>(router: (request, context) =>
             {
                 var command = request as MyCommand;
                 if (command.Value == "new")
-                    return [typeof(MyCommandHandler)];
-
-                return [typeof(MyObsoleteCommandHandler)];
-            },
-                    [typeof(MyCommandHandler), typeof(MyObsoleteCommandHandler)]
-            );
+                    return[typeof(MyCommandHandler)];
+                return[typeof(MyObsoleteCommandHandler)];
+            }, [typeof(MyCommandHandler), typeof(MyObsoleteCommandHandler)]);
             var handlerFactory = new SimpleHandlerFactorySync(factoryMethod: _ => new MyCommandHandler(new Dictionary<string, string>()));
-
             _pipelineBuilder = new PipelineBuilder<MyCommand>(subscriberRegistry: registry, syncHandlerFactory: handlerFactory);
-            PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
-        [Fact]
-        public void When_Finding_A_Handler_For_A_Command()
+        [Test]
+        public async Task When_Finding_A_Handler_For_A_Command()
         {
-            _pipeline = _pipelineBuilder.Build(new MyCommand {Value = "new"}, new RequestContext()).First();
-
-            Assert.IsType<MyCommandHandler>(_pipeline);
-            Assert.Equal("MyCommandHandler|", TracePipeline().ToString());
+            _pipeline = _pipelineBuilder.Build(new MyCommand { Value = "new" }, new RequestContext()).First();
+            await Assert.That(_pipeline).IsTypeOf<MyCommandHandler>();
+            await Assert.That(TracePipeline().ToString()).IsEqualTo("MyCommandHandler|");
         }
+
         private PipelineTracer TracePipeline()
         {
             var pipelineTracer = new PipelineTracer();

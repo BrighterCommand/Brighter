@@ -5,12 +5,11 @@ using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
+[Property("Category", "Kafka")]
+[NotInParallel("Kafka")]
 public class KafkaProducerOversizedMessageTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly string _topic = Guid.NewGuid().ToString();
@@ -21,7 +20,8 @@ public class KafkaProducerOversizedMessageTestsAsync : IDisposable, IAsyncDispos
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
-                Name = "Kafka Oversized Produce Test", BootStrapServers = new[] { "localhost:9092" }
+                Name = "Kafka Oversized Produce Test",
+                BootStrapServers = new[] { "localhost:9092" }
             },
             [
                 new KafkaPublication
@@ -36,7 +36,7 @@ public class KafkaProducerOversizedMessageTestsAsync : IDisposable, IAsyncDispos
             ]).CreateAsync().Result;
     }
 
-    [Fact]
+    [Test]
     public async Task When_an_async_produce_throws_should_warn_and_synthesize_not_persisted()
     {
         //Let the topic propagate in the broker
@@ -69,16 +69,16 @@ public class KafkaProducerOversizedMessageTestsAsync : IDisposable, IAsyncDispos
         // FR-7: the synthetic NotPersisted delivery result is still routed to the callback (it does
         // not bubble out of Send) — and it surfaces as a failed confirmation.
         var confirmation = await raised.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        Assert.False(confirmation.Success);
+        await Assert.That(confirmation.Success).IsFalse();
 
         // FR-6 / NFR-1: the swallowed ProduceException's reason and code were logged at Warning.
         var warnings = TestCorrelator.GetLogEventsFromCurrentContext()
             .Where(e => e.Level == LogEventLevel.Warning)
             .Select(e => e.RenderMessage())
             .ToList();
-        Assert.Contains(warnings, m =>
+        await Assert.That(warnings.Any(m =>
             m.Contains("MsgSizeTooLarge", StringComparison.OrdinalIgnoreCase)
-            || m.Contains("Message size too large", StringComparison.OrdinalIgnoreCase));
+            || m.Contains("Message size too large", StringComparison.OrdinalIgnoreCase))).IsTrue();
     }
 
     public void Dispose() => _producerRegistry.Dispose();

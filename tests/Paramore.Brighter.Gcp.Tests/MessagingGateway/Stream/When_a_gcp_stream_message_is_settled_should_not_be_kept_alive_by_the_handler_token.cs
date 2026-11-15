@@ -32,7 +32,6 @@ using System.Threading.Tasks;
 using Google.Cloud.PubSub.V1;
 using Google.Protobuf;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 using StreamChannel = System.Threading.Channels.Channel;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
@@ -42,12 +41,12 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 /// long as the client. Once a message is settled and the handler has replied, nothing registered on that token may
 /// still reference it, or every message the client ever delivers stays in memory until the client stops.
 /// </summary>
-[Trait("Category", "GcpPubSub")]
+[Property("Category", "GcpPubSub")]
 public class GcpStreamSettledMessageRetentionTests
 {
     private const int SettledMessages = 100;
 
-    [Fact]
+    [Test]
     public async Task When_a_gcp_stream_message_is_settled_should_not_be_kept_alive_by_the_handler_token()
     {
         // Arrange — a handler fed by a token whose source outlives every message, as the client's does
@@ -67,7 +66,7 @@ public class GcpStreamSettledMessageRetentionTests
         GC.Collect();
 
         // Assert — no settled message is still reachable
-        Assert.Equal(0, settled.Count(message => message.IsAlive));
+        await Assert.That(settled.Count(message => message.IsAlive)).IsEqualTo(0);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -80,7 +79,7 @@ public class GcpStreamSettledMessageRetentionTests
 
         var delivered = await buffer.Reader.ReadAsync();
         delivered.Accepted();
-        Assert.Equal(SubscriberClient.Reply.Ack, await reply);
+        await Assert.That(await reply).IsEqualTo(SubscriberClient.Reply.Ack);
 
         return new WeakReference(delivered);
     }

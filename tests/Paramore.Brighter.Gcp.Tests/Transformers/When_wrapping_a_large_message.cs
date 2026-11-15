@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
@@ -8,8 +8,8 @@ using Paramore.Brighter.Transforms.Transformers;
 
 namespace Paramore.Brighter.Gcp.Tests.Transformers;
 
-[Trait("Category", "GCS")] 
-public class LargeMessagePayloadWrapTests : IDisposable 
+[Category("GCS")]
+public class LargeMessagePayloadWrapTests : IDisposable
 {
     private string? _id;
     private WrapPipelineAsync<MyLargeCommand>? _transformPipeline;
@@ -23,15 +23,14 @@ public class LargeMessagePayloadWrapTests : IDisposable
     public LargeMessagePayloadWrapTests()
     {
         //arrange
-        TransformPipelineBuilderAsync.ClearPipelineCache();
-            
+
         var mapperRegistry =
             new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync(
                 _ => new MyLargeCommandMessageMapperAsync())
             );
-           
+
         mapperRegistry.RegisterAsync<MyLargeCommand, MyLargeCommandMessageMapperAsync>();
-            
+
         _myCommand = new MyLargeCommand(6000);
 
         _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
@@ -41,7 +40,7 @@ public class LargeMessagePayloadWrapTests : IDisposable
             Credential = GatewayFactory.GetCredential(),
             BucketName = _bucketName
         };
-        
+
         _luggageStore = new GcsLuggageStore(_luggageStoreOptions);
         _luggageStore.EnsureStoreExists();
 
@@ -52,7 +51,7 @@ public class LargeMessagePayloadWrapTests : IDisposable
         _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, InstrumentationOptions.None);
     }
 
-    [Fact]
+    [Test]
     public async Task When_wrapping_a_large_message()
     {
         //act
@@ -60,12 +59,12 @@ public class LargeMessagePayloadWrapTests : IDisposable
         var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
 
         //assert
-        Assert.True(message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK));
-        Assert.NotNull(message.Header.DataRef);
+        await Assert.That(message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK)).IsTrue();
+        await Assert.That(message.Header.DataRef).IsNotNull();
         _id = (string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
-        Assert.Equal($"Claim Check {_id}", message.Body.Value);
-            
-        Assert.True(await _luggageStore.HasClaimAsync(_id));
+        await Assert.That(message.Body.Value).IsEqualTo($"Claim Check {_id}");
+
+        await Assert.That(await _luggageStore.HasClaimAsync(_id)).IsTrue();
     }
 
     public void Dispose()

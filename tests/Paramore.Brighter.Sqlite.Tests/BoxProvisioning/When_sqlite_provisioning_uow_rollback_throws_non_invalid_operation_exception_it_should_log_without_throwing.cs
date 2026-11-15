@@ -32,7 +32,6 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
 using Paramore.Brighter.Sqlite.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
@@ -45,7 +44,7 @@ namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 /// <see cref="TaskCanceledException"/>: a deterministic failure that is not an
 /// <see cref="InvalidOperationException"/>.
 /// </remarks>
-public class ProvisioningUnitOfWorkRollbackNonInvalidOperationTests : IAsyncLifetime
+public class ProvisioningUnitOfWorkRollbackNonInvalidOperationTests
 {
     private readonly string _dbPath = Path.Combine(
         Path.GetTempPath(), $"brighter_sqlite_uow_rollback_non_ioe_{Guid.NewGuid():N}.db");
@@ -59,8 +58,10 @@ public class ProvisioningUnitOfWorkRollbackNonInvalidOperationTests : IAsyncLife
         _connection = new SqliteConnection(_connectionString);
     }
 
+    [Before(HookType.Test)]
     public async Task InitializeAsync() => await _connection.OpenAsync();
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         await _connection.DisposeAsync();
@@ -75,7 +76,7 @@ public class ProvisioningUnitOfWorkRollbackNonInvalidOperationTests : IAsyncLife
         }
     }
 
-    [Fact]
+    [Test]
     public async Task When_sqlite_provisioning_uow_rollback_throws_non_invalid_operation_exception_it_should_log_without_throwing()
     {
         var capturingLogger = new CapturingLogger();
@@ -89,11 +90,11 @@ public class ProvisioningUnitOfWorkRollbackNonInvalidOperationTests : IAsyncLife
         preCancelled.Cancel();
 
         // Act
-        var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(preCancelled.Token));
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => uow.RollbackAsync(preCancelled.Token));
 
-        Assert.Null(thrown);
+        await Assert.That(thrown).IsNull();
 
         var warnings = capturingLogger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        Assert.Single(warnings);
+        await Assert.That(warnings).HasSingleItem();
     }
 }

@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class NestedCombinedChannelFactoryIsNotUnwrappedValidationTests
 {
-    [Fact]
-    public void When_a_combined_channel_factory_is_nested_should_not_unwrap_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_combined_channel_factory_is_nested_should_not_unwrap_it()
     {
         // Arrange — a combined channel factory nested inside another; the subscription's declared
         // type only matches the innermost factory
@@ -49,7 +49,7 @@ public class NestedCombinedChannelFactoryIsNotUnwrappedValidationTests
         // Assert — exactly one Error, matching CombinedChannelFactory's own runtime routing, which
         // also fails to route this subscription. Only the verdict is asserted, not the message
         // wording (D5 permits naming the nested composite among the candidate types).
-        Assert.False(satisfied);
-        Assert.Single(results);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
     }
 }

@@ -29,11 +29,10 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Logging;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection(LoggerCaptureCollection.NAME)]
+[NotInParallel(LoggerCaptureCollection.NAME)]
 public class LateLoggingFactoryTests : IDisposable
 {
     private readonly ILoggerFactory _originalFactory = ApplicationLogging.LoggerFactory;
@@ -44,17 +43,17 @@ public class LateLoggingFactoryTests : IDisposable
         ApplicationLogging.LoggerFactory = _initialFactory;
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_a_logger_precedes_command_processor_resolution_should_use_the_host_logging_factory(bool useRuntimeType)
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_a_logger_precedes_command_processor_resolution_should_use_the_host_logging_factory(bool useRuntimeType)
     {
         // Arrange
         var logger = useRuntimeType
             ? ApplicationLogging.CreateLogger(typeof(LateLoggingFactoryTests))
             : ApplicationLogging.CreateLogger<LateLoggingFactoryTests>();
         logger.LogWarning("Before host initialization");
-        Assert.False(logger.IsEnabled(LogLevel.Warning));
+        await Assert.That(logger.IsEnabled(LogLevel.Warning)).IsFalse();
         var capture = new CapturingLoggerProvider();
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddProvider(capture));
@@ -68,18 +67,18 @@ public class LateLoggingFactoryTests : IDisposable
         logger.LogWarning(eventId, exception, "Message {MessageId} failed", "after-initialization");
 
         // Assert
-        Assert.True(logger.IsEnabled(LogLevel.Warning));
-        var entry = Assert.Single(capture.Entries, e => e.EventId == eventId);
-        Assert.Equal(typeof(LateLoggingFactoryTests).FullName, entry.CategoryName);
-        Assert.Equal(LogLevel.Warning, entry.Level);
-        Assert.Equal("Message after-initialization failed", entry.Message);
-        Assert.Same(exception, entry.Exception);
+        await Assert.That(logger.IsEnabled(LogLevel.Warning)).IsTrue();
+        var entry = await Assert.That(System.Linq.Enumerable.Where(capture.Entries, e => e.EventId == eventId)).HasSingleItem();
+        await Assert.That(entry.CategoryName).IsEqualTo(typeof(LateLoggingFactoryTests).FullName);
+        await Assert.That(entry.Level).IsEqualTo(LogLevel.Warning);
+        await Assert.That(entry.Message).IsEqualTo("Message after-initialization failed");
+        await Assert.That(entry.Exception).IsSameReferenceAs(exception);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_the_logging_factory_is_replaced_should_route_existing_loggers_with_the_current_filters(bool useRuntimeType)
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_the_logging_factory_is_replaced_should_route_existing_loggers_with_the_current_filters(bool useRuntimeType)
     {
         // Arrange
         var firstCapture = new CapturingLoggerProvider();
@@ -90,7 +89,7 @@ public class LateLoggingFactoryTests : IDisposable
             ? ApplicationLogging.CreateLogger(typeof(LateLoggingFactoryTests))
             : ApplicationLogging.CreateLogger<LateLoggingFactoryTests>();
         logger.LogInformation("First factory");
-        Assert.True(logger.IsEnabled(LogLevel.Information));
+        await Assert.That(logger.IsEnabled(LogLevel.Information)).IsTrue();
         var secondCapture = new CapturingLoggerProvider();
         using var secondFactory = LoggerFactory.Create(builder => builder
             .SetMinimumLevel(LogLevel.Error).AddProvider(secondCapture));
@@ -101,13 +100,13 @@ public class LateLoggingFactoryTests : IDisposable
         logger.LogError("Second factory");
 
         // Assert
-        Assert.False(logger.IsEnabled(LogLevel.Information));
-        Assert.True(logger.IsEnabled(LogLevel.Error));
-        Assert.Equal("First factory", Assert.Single(firstCapture.Entries).Message);
-        Assert.Equal("Second factory", Assert.Single(secondCapture.Entries).Message);
+        await Assert.That(logger.IsEnabled(LogLevel.Information)).IsFalse();
+        await Assert.That(logger.IsEnabled(LogLevel.Error)).IsTrue();
+        await Assert.That((await Assert.That(firstCapture.Entries).HasSingleItem()).Message).IsEqualTo("First factory");
+        await Assert.That((await Assert.That(secondCapture.Entries).HasSingleItem()).Message).IsEqualTo("Second factory");
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_producer_logs_before_command_processor_resolution_should_log_subsequent_failures_to_the_host()
     {
         // Arrange
@@ -123,12 +122,12 @@ public class LateLoggingFactoryTests : IDisposable
         await PublishWithFailingConfirmationAsync("after-initialization");
 
         // Assert
-        var entry = Assert.Single(capture.Entries, e => e.EventId.Name == "ConfirmationCallbackFault");
-        Assert.Equal(typeof(InMemoryMessageProducer).FullName, entry.CategoryName);
-        Assert.Equal(LogLevel.Warning, entry.Level);
-        Assert.Contains("after-initialization", entry.Message);
-        Assert.IsType<InvalidOperationException>(entry.Exception);
-        Assert.Equal("Confirmation failed", entry.Exception.Message);
+        var entry = await Assert.That(System.Linq.Enumerable.Where(capture.Entries, e => e.EventId.Name == "ConfirmationCallbackFault")).HasSingleItem();
+        await Assert.That(entry.CategoryName).IsEqualTo(typeof(InMemoryMessageProducer).FullName);
+        await Assert.That(entry.Level).IsEqualTo(LogLevel.Warning);
+        await Assert.That(entry.Message).Contains("after-initialization");
+        await Assert.That(entry.Exception).IsTypeOf<InvalidOperationException>();
+        await Assert.That(entry.Exception.Message).IsEqualTo("Confirmation failed");
     }
 
     public void Dispose()

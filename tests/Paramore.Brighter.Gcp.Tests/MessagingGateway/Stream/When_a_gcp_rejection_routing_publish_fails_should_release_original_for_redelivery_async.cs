@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 
@@ -42,8 +41,8 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 /// Receive is settled (Reject or Acknowledge) before the channel is disposed, so Dispose cannot
 /// hang (see this spec's GCP Stream ack-before-dispose gotcha).
 /// </summary>
-[Trait("Category", "GcpPubSubStream")]
-[Collection("Stream")]
+[Property("Category", "GcpPubSubStream")]
+[NotInParallel("Stream")]
 public class GcpStreamConsumerRejectRoutingFailureReleasesOriginalAsyncTests
 {
     private const int WindowSeconds = 10;
@@ -53,7 +52,7 @@ public class GcpStreamConsumerRejectRoutingFailureReleasesOriginalAsyncTests
     /// does not exist. RejectAsync Nacks the original (proven by redelivery within W), returns
     /// true, and the destination topic is still absent.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_rejection_routing_publish_fails_async_on_stream_with_assume_should_release_original_for_redelivery()
     {
         var provider = new GcpStreamMessageGatewayProvider();
@@ -82,13 +81,13 @@ public class GcpStreamConsumerRejectRoutingFailureReleasesOriginalAsyncTests
             await producer.SendAsync(message);
 
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(20));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             // Act — the routing publish fails (destination topic never existed).
             var result = await channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.DeliveryError, "publish failure"));
 
             // Assert — RejectAsync returns true
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             // Assert — the original is Nacked (not accepted): it is redelivered within W
             Message redelivered = new Message();
@@ -101,14 +100,14 @@ public class GcpStreamConsumerRejectRoutingFailureReleasesOriginalAsyncTests
                 await Task.Delay(250);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-            Assert.Equal(received.Id, redelivered.Id);
+            await Assert.That(redelivered.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+            await Assert.That(redelivered.Id).IsEqualTo(received.Id);
 
             // Settle the redelivered message — mandatory: an un-acked Stream receive hangs Dispose.
             await channel.AcknowledgeAsync(redelivered);
 
             // Assert — the destination topic was never created
-            Assert.False(await provider.TopicExistsAsync(deadLetterRoutingKey));
+            await Assert.That(await provider.TopicExistsAsync(deadLetterRoutingKey)).IsFalse();
         }
         finally
         {
@@ -123,7 +122,7 @@ public class GcpStreamConsumerRejectRoutingFailureReleasesOriginalAsyncTests
     /// is still absent. Exactly one RejectAsync is issued in this test (the topic-existence check
     /// cache trap — see ADR 0078 / tasks.md 5.8).
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_rejection_routing_publish_fails_async_on_stream_with_validate_should_release_original_for_redelivery()
     {
         var provider = new GcpStreamMessageGatewayProvider();
@@ -152,13 +151,13 @@ public class GcpStreamConsumerRejectRoutingFailureReleasesOriginalAsyncTests
             await producer.SendAsync(message);
 
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(20));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             // Act — the destination producer construction fails Validate; exactly one RejectAsync call.
             var result = await channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.DeliveryError, "validate failure"));
 
             // Assert — RejectAsync returns true
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             // Assert — the original is Nacked (not accepted): it is redelivered within W
             Message redelivered = new Message();
@@ -171,14 +170,14 @@ public class GcpStreamConsumerRejectRoutingFailureReleasesOriginalAsyncTests
                 await Task.Delay(250);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-            Assert.Equal(received.Id, redelivered.Id);
+            await Assert.That(redelivered.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+            await Assert.That(redelivered.Id).IsEqualTo(received.Id);
 
             // Settle the redelivered message — mandatory: an un-acked Stream receive hangs Dispose.
             await channel.AcknowledgeAsync(redelivered);
 
             // Assert — the destination topic was never created
-            Assert.False(await provider.TopicExistsAsync(deadLetterRoutingKey));
+            await Assert.That(await provider.TopicExistsAsync(deadLetterRoutingKey)).IsFalse();
         }
         finally
         {

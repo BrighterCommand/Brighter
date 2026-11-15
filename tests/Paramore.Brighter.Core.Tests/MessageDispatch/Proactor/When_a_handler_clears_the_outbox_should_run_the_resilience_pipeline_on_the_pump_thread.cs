@@ -12,7 +12,6 @@ using Paramore.Brighter.ServiceActivator;
 using Polly;
 using Polly.Registry;
 using Polly.Retry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor;
 
@@ -21,7 +20,7 @@ public class ProactorOutboxClearContextTests
     private readonly RoutingKey _incoming = new("MyCommand");
     private readonly RoutingKey _outgoing = new("Outgoing");
 
-    [Fact]
+    [Test]
     public async Task When_a_handler_clears_the_outbox_should_run_the_resilience_pipeline_on_the_pump_thread()
     {
         //Arrange
@@ -65,10 +64,10 @@ public class ProactorOutboxClearContextTests
         await producer.DisposeAsync();
 
         //Assert
-        Assert.True(handled, "The handler did not finish clearing the outbox");
-        Assert.Single(outgoingBus.Stream(_outgoing)); // sent on the retry
-        Assert.Equal(commandProcessor.HandlerThread, retryThread); // Polly kept the pump's context
-        Assert.Equal(commandProcessor.HandlerThread, commandProcessor.ThreadAfterClear);
+        await Assert.That(handled).IsTrue().Because("The handler did not finish clearing the outbox");
+        await Assert.That(outgoingBus.Stream(_outgoing)).HasSingleItem(); // sent on the retry
+        await Assert.That(retryThread).IsEqualTo(commandProcessor.HandlerThread); // Polly kept the pump's context
+        await Assert.That(commandProcessor.ThreadAfterClear).IsEqualTo(commandProcessor.HandlerThread);
     }
 
     private (IAmAMessagePump Pump, ChannelAsync Channel) CreatePump(IAmACommandProcessor commandProcessor)

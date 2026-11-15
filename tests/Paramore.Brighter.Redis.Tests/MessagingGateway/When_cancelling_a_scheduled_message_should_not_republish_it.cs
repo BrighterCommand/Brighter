@@ -28,7 +28,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using Xunit;
+
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
 
@@ -54,8 +54,8 @@ public class ConformanceHarnessMessageSchedulerTests
     // Long enough that an uncancelled timer would certainly have fired, short enough to stay cheap.
     private static readonly TimeSpan WELL_PAST_THE_DELAY = TimeSpan.FromSeconds(2);
 
-    [Fact]
-    public void When_cancelling_a_scheduled_message_should_not_republish_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_cancelling_a_scheduled_message_should_not_republish_it()
     {
         // Arrange
         var republished = new ManualResetEventSlim(false);
@@ -72,14 +72,13 @@ public class ConformanceHarnessMessageSchedulerTests
 
         // Assert — a cancelled schedule never fires. Asserting an absence, so this is a single
         // bounded wait rather than a retry: waiting for it to happen would invert the assertion.
-        Assert.False(republished.Wait(WELL_PAST_THE_DELAY),
-            "Cancel was given the id Schedule returned, so the message should never have been "
+        await Assert.That(republished.Wait(WELL_PAST_THE_DELAY)).IsFalse().Because("Cancel was given the id Schedule returned, so the message should never have been "
             + "republished. A Cancel that cannot find its timer is a silent no-op: the caller is "
             + "told nothing, and the message arrives anyway.");
     }
 
-    [Fact]
-    public void When_a_schedule_is_not_cancelled_should_republish_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_schedule_is_not_cancelled_should_republish_it()
     {
         // Arrange — the other half of the same claim. Without this, a Cancel that disabled the
         // scheduler entirely, or a Schedule that never armed a timer, would pass the test above.
@@ -94,12 +93,11 @@ public class ConformanceHarnessMessageSchedulerTests
         scheduler.Schedule(AMessage(), DELAY);
 
         // Assert
-        Assert.True(republished.Wait(WELL_PAST_THE_DELAY),
-            "an uncancelled schedule should republish once its delay elapses.");
+        await Assert.That(republished.Wait(WELL_PAST_THE_DELAY)).IsTrue().Because("an uncancelled schedule should republish once its delay elapses.");
     }
 
-    [Fact]
-    public void When_cancelling_one_of_two_schedules_should_republish_only_the_other()
+    [Test]
+    public async System.Threading.Tasks.Task When_cancelling_one_of_two_schedules_should_republish_only_the_other()
     {
         // Arrange — Cancel must find the one schedule it was given, not all of them and not none
         var republished = new List<string>();
@@ -126,16 +124,18 @@ public class ConformanceHarnessMessageSchedulerTests
         scheduler.Cancel(cancelled);
 
         // Assert
-        Assert.True(second.Wait(WELL_PAST_THE_DELAY), "the schedule that was not cancelled should fire.");
+        await Assert.That(second.Wait(WELL_PAST_THE_DELAY)).IsTrue().Because("the schedule that was not cancelled should fire.");
 
+        string[] observed;
         lock (republished)
         {
-            Assert.Equal(new[] { "kept" }, republished);
+            observed = republished.ToArray();
         }
+        await Assert.That(observed).IsEquivalentTo(new[] { "kept" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
-    [Fact]
-    public void When_disposing_with_a_republish_in_flight_should_dispose_what_it_allocated()
+    [Test]
+    public async System.Threading.Tasks.Task When_disposing_with_a_republish_in_flight_should_dispose_what_it_allocated()
     {
         // Arrange - a republish that has started but not returned when Dispose runs. Publishing
         // allocates a producer holding a broker connection, and the scheduler is the only thing
@@ -153,7 +153,7 @@ public class ConformanceHarnessMessageSchedulerTests
         });
 
         scheduler.Schedule(AMessage(), TimeSpan.Zero);
-        Assert.True(inFlight.Wait(WELL_PAST_THE_DELAY), "the republish should have begun.");
+        await Assert.That(inFlight.Wait(WELL_PAST_THE_DELAY)).IsTrue().Because("the republish should have begun.");
 
         // Act - tear the scheduler down with the republish still inside the delegate, then let it
         // return. Nothing may block: Dispose must not wait on a callback that is waiting on us.
@@ -161,14 +161,13 @@ public class ConformanceHarnessMessageSchedulerTests
         release.Set();
 
         // Assert
-        Assert.True(allocated.Disposed.Wait(WELL_PAST_THE_DELAY),
-            "a republish that returned after Dispose had run handed its producer to a list that "
+        await Assert.That(allocated.Disposed.Wait(WELL_PAST_THE_DELAY)).IsTrue().Because("a republish that returned after Dispose had run handed its producer to a list that "
             + "will never be walked again. Nothing else holds it, so the connection it opened stays "
             + "open past the end of the test that opened it.");
     }
 
-    [Fact]
-    public void When_a_send_throws_should_dispose_what_the_republish_allocated()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_send_throws_should_dispose_what_the_republish_allocated()
     {
         // Arrange - the scheduler only ever learns about a resource that is handed back to it, so a
         // send that throws on the way out takes its producer with it. The nine hand-written copies
@@ -188,15 +187,14 @@ public class ConformanceHarnessMessageSchedulerTests
         scheduler.Schedule(AMessage(), DELAY);
 
         // Assert
-        Assert.True(attempted.Wait(WELL_PAST_THE_DELAY), "the republish should have been attempted.");
-        Assert.True(allocated.Disposed.Wait(WELL_PAST_THE_DELAY),
-            "a send that threw left a producer nobody holds a reference to. It is never handed back, "
+        await Assert.That(attempted.Wait(WELL_PAST_THE_DELAY)).IsTrue().Because("the republish should have been attempted.");
+        await Assert.That(allocated.Disposed.Wait(WELL_PAST_THE_DELAY)).IsTrue().Because("a send that threw left a producer nobody holds a reference to. It is never handed back, "
             + "so Dispose will not find it, and the broker connection it opened stays open for the "
             + "life of the process.");
     }
 
-    [Fact]
-    public void When_a_send_succeeds_should_dispose_what_it_allocated_only_at_teardown()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_send_succeeds_should_dispose_what_it_allocated_only_at_teardown()
     {
         // Arrange - the other half. Without it, a SendAndHandBack that simply disposed whatever it
         // was given would pass the test above while closing every producer the moment it had sent.
@@ -208,18 +206,17 @@ public class ConformanceHarnessMessageSchedulerTests
 
         // Act
         scheduler.Schedule(AMessage(), DELAY);
-        Assert.True(sent.Wait(WELL_PAST_THE_DELAY), "the republish should have sent.");
+        await Assert.That(sent.Wait(WELL_PAST_THE_DELAY)).IsTrue().Because("the republish should have sent.");
 
         // Assert
-        Assert.False(allocated.Disposed.IsSet,
-            "a producer that sent successfully is handed back to the scheduler, not closed behind "
+        await Assert.That(allocated.Disposed.IsSet).IsFalse().Because("a producer that sent successfully is handed back to the scheduler, not closed behind "
             + "its back - closing it here would dispose it twice and tear down a connection the "
             + "harness may still be using.");
 
         scheduler.Dispose();
 
-        Assert.True(allocated.Disposed.Wait(WELL_PAST_THE_DELAY), "teardown should close it.");
-        Assert.Equal(1, allocated.DisposeCount);
+        await Assert.That(allocated.Disposed.Wait(WELL_PAST_THE_DELAY)).IsTrue().Because("teardown should close it.");
+        await Assert.That(allocated.DisposeCount).IsEqualTo(1);
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────

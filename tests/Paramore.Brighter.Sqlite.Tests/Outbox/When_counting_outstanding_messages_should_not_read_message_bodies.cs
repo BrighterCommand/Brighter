@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -27,11 +27,10 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Outbox.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox;
 
-[Trait("Category", "Sqlite")]
+[Property("Category", "Sqlite")]
 public class OutstandingCountWithoutMessageBodiesTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -56,15 +55,15 @@ public class OutstandingCountWithoutMessageBodiesTests : IDisposable
         _outbox = new SqliteOutbox(new RelationalDatabaseConfiguration(connectionString, outBoxTableName: "outbox"));
     }
 
-    [Theory]
-    [InlineData(false, 100, 3)]
-    [InlineData(true, 100, 3)]
-    [InlineData(false, int.MaxValue, 3)]
-    [InlineData(true, int.MaxValue, 3)]
-    [InlineData(false, 2, 2)]
-    [InlineData(true, 2, 2)]
-    [InlineData(false, 0, 0)]
-    [InlineData(true, 0, 0)]
+    [Test]
+    [Arguments(false, 100, 3)]
+    [Arguments(true, 100, 3)]
+    [Arguments(false, int.MaxValue, 3)]
+    [Arguments(true, int.MaxValue, 3)]
+    [Arguments(false, 2, 2)]
+    [Arguments(true, 2, 2)]
+    [Arguments(false, 0, 0)]
+    [Arguments(true, 0, 0)]
     public async Task When_counting_outstanding_messages_should_not_read_message_bodies(bool useAsync, int maxCount, int expected)
     {
         //Arrange
@@ -76,12 +75,12 @@ public class OutstandingCountWithoutMessageBodiesTests : IDisposable
             : _outbox.GetOutstandingMessageCount(age, new RequestContext(), maxCount);
 
         //Assert
-        Assert.Equal(expected, count);
+        await Assert.That(count).IsEqualTo(expected);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_no_messages_are_old_enough_should_count_zero(bool useAsync)
     {
         //Arrange
@@ -93,12 +92,12 @@ public class OutstandingCountWithoutMessageBodiesTests : IDisposable
             : _outbox.GetOutstandingMessageCount(age, new RequestContext());
 
         //Assert
-        Assert.Equal(0, count);
+        await Assert.That(count).IsEqualTo(0);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_counting_with_a_ceiling_should_stop_reading_rows_at_the_ceiling(bool useAsync)
     {
         //Arrange
@@ -117,7 +116,7 @@ public class OutstandingCountWithoutMessageBodiesTests : IDisposable
             : _outbox.GetOutstandingMessageCount(TimeSpan.FromMinutes(5), new RequestContext(), 2);
 
         //Assert
-        Assert.Equal(2, count);
+        await Assert.That(count).IsEqualTo(2);
     }
 
     public void Dispose() => _connection.Dispose();

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -24,21 +24,20 @@ THE SOFTWARE. */
 #nullable enable
 
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleInstrumentationWithoutReadingsTests
 {
-    [Fact]
-    public void When_brighter_instrumentation_is_added_without_readings_should_create_no_stale_instruments()
+    [Test]
+    public async Task When_brighter_instrumentation_is_added_without_readings_should_create_no_stale_instruments()
     {
         //Act
         using var metrics = new StaleMessageMetricsFixture(_ => { });
 
         //Assert
-        Assert.DoesNotContain(ObservedStaleMessageInstruments.MESSAGES, metrics.PublishedInstruments);
-        Assert.DoesNotContain(ObservedStaleMessageInstruments.TOPIC_MESSAGES, metrics.PublishedInstruments);
-        Assert.DoesNotContain(ObservedStaleMessageInstruments.MEASUREMENTS, metrics.PublishedInstruments);
+        await Assert.That(metrics.PublishedInstruments).DoesNotContain(ObservedStaleMessageInstruments.MESSAGES);
+        await Assert.That(metrics.PublishedInstruments).DoesNotContain(ObservedStaleMessageInstruments.TOPIC_MESSAGES);
+        await Assert.That(metrics.PublishedInstruments).DoesNotContain(ObservedStaleMessageInstruments.MEASUREMENTS);
     }
 }

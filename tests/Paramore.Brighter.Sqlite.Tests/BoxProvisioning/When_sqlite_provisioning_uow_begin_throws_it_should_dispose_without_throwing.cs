@@ -29,7 +29,6 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
@@ -40,14 +39,14 @@ namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 /// </summary>
 public class ProvisioningUnitOfWorkBeginThrowsTests
 {
-    [Fact]
+    [Test]
     public async Task When_sqlite_provisioning_uow_begin_throws_it_should_dispose_without_throwing()
     {
         // Arrange
         await using var closedConnection = new SqliteConnection("Data Source=:memory:");
 
         // Act
-        var thrown = await Record.ExceptionAsync(async () =>
+        var thrown = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             await using var uow = new SqliteProvisioningUnitOfWork(closedConnection, NullLogger.Instance);
             await uow.BeginAsync(
@@ -57,6 +56,6 @@ public class ProvisioningUnitOfWorkBeginThrowsTests
         });
 
         // Assert
-        Assert.IsType<InvalidOperationException>(thrown);
+        await Assert.That(thrown).IsTypeOf<InvalidOperationException>();
     }
 }

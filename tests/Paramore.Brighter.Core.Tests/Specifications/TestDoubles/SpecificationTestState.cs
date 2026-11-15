@@ -2,7 +2,7 @@
 
 namespace Paramore.Brighter.Core.Tests.Specifications.TestDoubles;
 
-public enum TestState
+public enum SpecificationState
 {
     Done,
     Ready,
@@ -10,8 +10,8 @@ public enum TestState
     Waiting
 }
 
-public class SpecificationTestState 
+public class SpecificationTestState
 {
-    public TestState State { get; set; }
+    public SpecificationState State { get; set; }
     public Dictionary<string, object> Bag { get; set; }
 }

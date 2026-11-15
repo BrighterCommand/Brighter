@@ -27,7 +27,6 @@ using Npgsql;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.Outbox.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -35,7 +34,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// When another instance creates the table after detection but before this runner takes the advisory lock, the re-check
 /// under the lock routes to the bootstrap path instead of creating the table again, and existing rows survive (ADR 0057 §3).
 /// </summary>
-public class PostgreSqlRunnerFreshPathRecheckTests : IAsyncLifetime
+public class PostgreSqlRunnerFreshPathRecheckTests
 {
     private const string MarkerMessageId = "marker-row-must-survive";
 
@@ -50,7 +49,7 @@ public class PostgreSqlRunnerFreshPathRecheckTests : IAsyncLifetime
         _runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30));
     }
 
-    [Fact]
+    [Test]
     public async Task When_postgres_runner_fresh_path_acquires_advisory_lock_it_should_re_check_table_existence_before_creating()
     {
         //Arrange
@@ -67,12 +66,12 @@ public class PostgreSqlRunnerFreshPathRecheckTests : IAsyncLifetime
             BoxType.Outbox,
             staleState);
 
-        var ex = await Record.ExceptionAsync(act);
+        var ex = await TestExceptionRecorder.CaptureAsync(act);
 
         //Assert
-        Assert.Null(ex);
-        Assert.True(await GetHistoryRowCount() >= 1, "Bootstrap branch should have inserted at least one history row");
-        Assert.Equal(1, await GetMarkerRowCount());
+        await Assert.That(ex).IsNull();
+        await Assert.That(await GetHistoryRowCount() >= 1).IsTrue().Because("Bootstrap branch should have inserted at least one history row");
+        await Assert.That(await GetMarkerRowCount()).IsEqualTo(1);
     }
 
     private async Task ExecuteDdl(string sql)
@@ -116,8 +115,10 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = 'public'";
         return (long)(await command.ExecuteScalarAsync())!;
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

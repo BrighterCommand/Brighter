@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
@@ -30,7 +30,6 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.OutboxGenerator;
 
@@ -44,9 +43,9 @@ public class OutstandingCountReadConsistencyTimeoutGenerationTests : IDisposable
 
     private readonly string _testDirectory = Path.Combine(Path.GetTempPath(), $"OutboxGeneratorTests_{Guid.NewGuid()}");
 
-    [Theory]
-    [InlineData(AgeTest)]
-    [InlineData(CeilingTest)]
+    [Test]
+    [Arguments(AgeTest)]
+    [Arguments(CeilingTest)]
     public async Task When_an_outbox_sets_an_outstanding_count_read_consistency_timeout_should_render_it(string testFile)
     {
         // Arrange
@@ -58,14 +57,12 @@ public class OutstandingCountReadConsistencyTimeoutGenerationTests : IDisposable
 
         // Assert
         var source = File.ReadAllText(Path.Combine(SuiteDirectory(), testFile));
-        Assert.Contains(
-            "protected override System.TimeSpan ReadConsistencyTimeout => System.TimeSpan.FromMilliseconds(10000);",
-            source);
+        await Assert.That(source).Contains("protected override System.TimeSpan ReadConsistencyTimeout => System.TimeSpan.FromMilliseconds(10000);");
     }
 
-    [Theory]
-    [InlineData(AgeTest)]
-    [InlineData(CeilingTest)]
+    [Test]
+    [Arguments(AgeTest)]
+    [Arguments(CeilingTest)]
     public async Task When_an_outbox_leaves_the_outstanding_count_read_consistency_timeout_unset_should_not_override_it(
         string testFile)
     {
@@ -77,12 +74,12 @@ public class OutstandingCountReadConsistencyTimeoutGenerationTests : IDisposable
 
         // Assert
         var source = File.ReadAllText(Path.Combine(SuiteDirectory(), testFile));
-        Assert.DoesNotContain("ReadConsistencyTimeout", source);
+        await Assert.That(source).DoesNotContain("ReadConsistencyTimeout");
     }
 
-    [Theory]
-    [InlineData(AgeTest)]
-    [InlineData(CeilingTest)]
+    [Test]
+    [Arguments(AgeTest)]
+    [Arguments(CeilingTest)]
     public async Task When_an_outbox_sets_only_the_causation_read_consistency_timeout_should_not_render_it_for_the_outstanding_count(
         string testFile)
     {
@@ -95,7 +92,7 @@ public class OutstandingCountReadConsistencyTimeoutGenerationTests : IDisposable
 
         // Assert
         var source = File.ReadAllText(Path.Combine(SuiteDirectory(), testFile));
-        Assert.DoesNotContain("ReadConsistencyTimeout", source);
+        await Assert.That(source).DoesNotContain("ReadConsistencyTimeout");
     }
 
     private static OutboxConfiguration Outbox() => new()

@@ -27,15 +27,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.Outbox;
 
 public class MsSqlMessageIdConcurrentRetryTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_mssql_concurrent_adds_share_a_message_id_should_store_one_row(bool binary)
     {
         //Arrange
@@ -55,6 +54,6 @@ public class MsSqlMessageIdConcurrentRetryTests
         await Task.WhenAll(writes);
 
         //Assert
-        Assert.Equal(1, await store.RowCountAsync());
+        await Assert.That(await store.RowCountAsync()).IsEqualTo(1);
     }
 }

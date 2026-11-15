@@ -28,22 +28,21 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "ASB")]
+[Property("Category", "ASB")]
 public class AzureServiceBusDiagnosticIdFallbackTests
 {
     private const string DIAGNOSTIC_ID = "00-a67a6a91e19aaba2a6fb61a533ad84e1-05c07e9784472964-01";
     private const string UNSAMPLED_DIAGNOSTIC_ID = "00-a67a6a91e19aaba2a6fb61a533ad84e1-05c07e9784472964-00";
 
-    [Theory]
-    [InlineData(DIAGNOSTIC_ID, false, false)]
-    [InlineData(DIAGNOSTIC_ID, false, true)]
-    [InlineData(DIAGNOSTIC_ID, true, false)]
-    [InlineData(DIAGNOSTIC_ID, true, true)]
-    [InlineData(UNSAMPLED_DIAGNOSTIC_ID, true, false)]
+    [Test]
+    [Arguments(DIAGNOSTIC_ID, false, false)]
+    [Arguments(DIAGNOSTIC_ID, false, true)]
+    [Arguments(DIAGNOSTIC_ID, true, false)]
+    [Arguments(DIAGNOSTIC_ID, true, true)]
+    [Arguments(UNSAMPLED_DIAGNOSTIC_ID, true, false)]
     public async Task When_receiving_a_message_should_use_a_valid_diagnostic_id_when_cloud_events_traceparent_is_absent(
         string diagnosticId, bool useAsync, bool useQueue)
     {
@@ -74,8 +73,8 @@ public class AzureServiceBusDiagnosticIdFallbackTests
         }
 
         // Assert
-        var received = Assert.Single(messages);
-        Assert.Equal(diagnosticId, received.Header.TraceParent?.Value);
-        Assert.Equal(diagnosticId, received.Header.Bag["Diagnostic-Id"]);
+        var received = await Assert.That(messages).HasSingleItem();
+        await Assert.That(received.Header.TraceParent?.Value).IsEqualTo(diagnosticId);
+        await Assert.That(received.Header.Bag["Diagnostic-Id"]).IsEqualTo(diagnosticId);
     }
 }

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,11 +34,11 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
-[Collection(StaleMessageLoggingCollection.Name)]
+[NotInParallel]
+[ClassDataSource<StaleMessageLoggingFixture>(Shared = SharedType.PerTestSession)]
 public class StaleMessageMonitorBothReasonsLogTests
 {
     private readonly CapturingLoggerProvider _logs;
@@ -48,7 +48,7 @@ public class StaleMessageMonitorBothReasonsLogTests
         _logs = fixture.Logs;
     }
 
-    [Fact]
+    [Test]
     public async Task When_both_reasons_apply_should_log_no_capability_once()
     {
         //Arrange
@@ -73,8 +73,8 @@ public class StaleMessageMonitorBothReasonsLogTests
         await monitor.StartAsync(default);
 
         //Assert
-        var entry = Assert.Single(_logs.Entries, logEntry => logEntry.LogLevel == LogLevel.Information);
-        Assert.Contains(nameof(StaleMessageCountingOutbox), entry.Message);
-        Assert.Contains("no capability", entry.Message);
+        var entry = await Assert.That(System.Linq.Enumerable.Where(_logs.Entries, logEntry => logEntry.LogLevel == LogLevel.Information)).HasSingleItem();
+        await Assert.That(entry.Message).Contains(nameof(StaleMessageCountingOutbox));
+        await Assert.That(entry.Message).Contains("no capability");
     }
 }

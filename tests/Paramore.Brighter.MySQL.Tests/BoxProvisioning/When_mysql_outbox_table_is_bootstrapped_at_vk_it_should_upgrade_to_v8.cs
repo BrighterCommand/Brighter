@@ -27,7 +27,6 @@ using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.Legacy;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -35,7 +34,7 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// A MySQL outbox at V_k with no history upgrades to the latest version: one synthetic row at V_k, one
 /// applied row per later version, and existing rows preserved.
 /// </summary>
-public class MySqlOutboxVkToV8UpgradeTests : IAsyncLifetime
+public class MySqlOutboxVkToV8UpgradeTests
 {
     private const string MarkerMessageId = "marker-row-must-survive";
 
@@ -50,11 +49,11 @@ public class MySqlOutboxVkToV8UpgradeTests : IAsyncLifetime
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Theory]
-    [InlineData(1)]
-    [InlineData(3)]
-    [InlineData(5)]
-    [InlineData(7)]
+    [Test]
+    [Arguments(1)]
+    [Arguments(3)]
+    [Arguments(5)]
+    [Arguments(7)]
     public async Task When_mysql_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v8(int k)
     {
         //Arrange
@@ -77,25 +76,25 @@ public class MySqlOutboxVkToV8UpgradeTests : IAsyncLifetime
         var actualColumns = await GetTableColumns();
         foreach (var expected in s_v8ExpectedColumns)
         {
-            Assert.Contains(expected, actualColumns);
+            await Assert.That(actualColumns).Contains(expected);
         }
 
         var rowsByVersion = await GetHistoryRowsByVersion();
-        Assert.Equal(8 - k + 1, rowsByVersion.Count);
+        await Assert.That(rowsByVersion.Count).IsEqualTo(8 - k + 1);
 
-        var syntheticDescription = Assert.Contains(k, rowsByVersion);
-        Assert.StartsWith($"bootstrap: detected at V{k}", syntheticDescription);
+        await Assert.That(rowsByVersion.ContainsKey(k)).IsTrue();
+
+        var syntheticDescription = rowsByVersion[k];
+        await Assert.That(syntheticDescription).StartsWith($"bootstrap: detected at V{k}");
 
         for (var v = k + 1; v <= 8; v++)
         {
-            var appliedDescription = Assert.Contains(v, rowsByVersion);
-            Assert.False(
-                appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal),
-                $"V{v} should be an applied migration row, not a synthetic bootstrap row " +
-                $"(description was: '{appliedDescription}')");
+            await Assert.That(rowsByVersion.ContainsKey(v)).IsTrue();
+            var appliedDescription = rowsByVersion[v];
+            await Assert.That(appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse();
         }
 
-        Assert.Equal(1, await GetMarkerRowCount());
+        await Assert.That(await GetMarkerRowCount()).IsEqualTo(1);
     }
 
     private async Task SeedMarkerRow()
@@ -166,7 +165,11 @@ ORDER BY `MigrationVersion`";
         return (long)(await command.ExecuteScalarAsync())!;
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

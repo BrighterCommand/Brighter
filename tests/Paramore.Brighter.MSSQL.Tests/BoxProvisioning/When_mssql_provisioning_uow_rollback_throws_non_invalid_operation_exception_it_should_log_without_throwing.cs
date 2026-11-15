@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -31,7 +31,6 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -45,20 +44,22 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 /// <see cref="OperationCanceledException"/>: the simplest deterministic stand-in for the
 /// <see cref="SqlException"/> or <see cref="ObjectDisposedException"/> a broken connection raises.
 /// </remarks>
-public class MsSqlProvisioningUnitOfWorkRollbackNonInvalidOperationTests : IAsyncLifetime
+public class MsSqlProvisioningUnitOfWorkRollbackNonInvalidOperationTests
 {
     private readonly SqlConnection _connection = new(Configuration.DefaultConnectingString);
     private readonly FakeMsSqlAdvisoryLock _advisoryLock = new(throwOnAcquire: null);
 
+    [Before(HookType.Test)]
     public async Task InitializeAsync()
     {
         await Configuration.EnsureDatabaseExistsAsync(_connection.ConnectionString);
         await _connection.OpenAsync();
     }
 
+    [After(HookType.Test)]
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_mssql_provisioning_uow_rollback_throws_non_invalid_operation_exception_it_should_log_without_throwing()
     {
         var capturingLogger = new CapturingLogger();
@@ -72,11 +73,11 @@ public class MsSqlProvisioningUnitOfWorkRollbackNonInvalidOperationTests : IAsyn
         preCancelled.Cancel();
 
         // Act
-        var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(preCancelled.Token));
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => uow.RollbackAsync(preCancelled.Token));
 
-        Assert.Null(thrown);
+        await Assert.That(thrown).IsNull();
 
         var warnings = capturingLogger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        Assert.Single(warnings);
+        await Assert.That(warnings).HasSingleItem();
     }
 }

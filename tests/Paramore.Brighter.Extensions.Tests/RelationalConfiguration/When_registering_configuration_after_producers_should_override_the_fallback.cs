@@ -29,16 +29,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Sqlite;
 using Paramore.Brighter.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests.RelationalConfiguration;
 
 public class LaterRelationalConfigurationTests
 {
-    [Theory]
-    [InlineData(ServiceLifetime.Singleton)]
-    [InlineData(ServiceLifetime.Scoped)]
-    public void When_registering_configuration_after_producers_should_override_the_fallback(ServiceLifetime lifetime)
+    [Test]
+    [Arguments(ServiceLifetime.Singleton)]
+    [Arguments(ServiceLifetime.Scoped)]
+    public async Task When_registering_configuration_after_producers_should_override_the_fallback(ServiceLifetime lifetime)
     {
         //Arrange
         var outboxConfiguration = new RelationalDatabaseConfiguration("Data Source=:memory:");
@@ -50,7 +49,7 @@ public class LaterRelationalConfigurationTests
             options.TransactionProvider = typeof(SqliteTransactionProvider);
             options.ConnectionProvider = typeof(SqliteConnectionProvider);
         }, ServiceLifetime.Scoped);
-        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IAmARelationalDatabaseConfiguration));
+        await Assert.That(services.Any(descriptor => descriptor.ServiceType == typeof(IAmARelationalDatabaseConfiguration))).IsTrue();
         if (lifetime == ServiceLifetime.Singleton)
             services.AddSingleton<IAmARelationalDatabaseConfiguration>(explicitConfiguration);
         else
@@ -62,8 +61,8 @@ public class LaterRelationalConfigurationTests
         var configuration = scope.ServiceProvider.GetRequiredService<IAmARelationalDatabaseConfiguration>();
 
         //Assert
-        Assert.Same(explicitConfiguration, configuration);
-        Assert.IsType<SqliteTransactionProvider>(scope.ServiceProvider.GetRequiredService<IAmABoxTransactionProvider>());
-        Assert.IsType<SqliteConnectionProvider>(scope.ServiceProvider.GetRequiredService<IAmARelationalDbConnectionProvider>());
+        await Assert.That(configuration).IsSameReferenceAs(explicitConfiguration);
+        await Assert.That(scope.ServiceProvider.GetRequiredService<IAmABoxTransactionProvider>()).IsTypeOf<SqliteTransactionProvider>();
+        await Assert.That(scope.ServiceProvider.GetRequiredService<IAmARelationalDbConnectionProvider>()).IsTypeOf<SqliteConnectionProvider>();
     }
 }

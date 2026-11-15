@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -33,7 +33,6 @@ using Microsoft.Extensions.Hosting;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -42,7 +41,7 @@ public class StoppingWhileACancellationCallbackBlocksTests
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
     private readonly TimerCountingTimeProvider _clock = new(s_start);
 
-    [Fact]
+    [Test]
     public async Task When_stopping_while_a_cancellation_callback_blocks_should_return_within_the_timeout()
     {
         //Arrange
@@ -68,10 +67,10 @@ public class StoppingWhileACancellationCallbackBlocksTests
         });
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromMinutes(1));
-        Assert.True(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5)));
-        Assert.True(AdvanceReturns(TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5))).IsTrue();
+        await Assert.That(AdvanceReturns(TimeSpan.FromSeconds(5))).IsTrue();
 
         Task? stopping = null;
         bool returned;
@@ -98,12 +97,12 @@ public class StoppingWhileACancellationCallbackBlocksTests
         }
 
         //Assert
-        Assert.True(returned);
-        Assert.True(callbackBlocked);
-        Assert.True(waitsForTheTimeout);
-        Assert.True(timeoutReturned);
-        Assert.True(stopped);
-        Assert.True(stillBlocked);
+        await Assert.That(returned).IsTrue();
+        await Assert.That(callbackBlocked).IsTrue();
+        await Assert.That(waitsForTheTimeout).IsTrue();
+        await Assert.That(timeoutReturned).IsTrue();
+        await Assert.That(stopped).IsTrue();
+        await Assert.That(stillBlocked).IsTrue();
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
@@ -115,6 +114,6 @@ public class StoppingWhileACancellationCallbackBlocksTests
         return SpinWait.SpinUntil(() => advance.IsCompleted, TimeSpan.FromSeconds(5));
     }
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

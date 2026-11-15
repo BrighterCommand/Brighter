@@ -27,8 +27,7 @@ using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
 using Paramore.Brighter.Validation;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 /// <summary>
@@ -39,8 +38,8 @@ namespace Paramore.Brighter.Core.Tests.Validation;
 /// </summary>
 public class SubscriptionBudgetAtNativeRedriveLimitValidationTests
 {
-    [Fact]
-    public void When_subscription_budget_meets_native_redrive_limit_should_report_one_warning_naming_budget_and_limit()
+    [Test]
+    public async Task When_subscription_budget_meets_native_redrive_limit_should_report_one_warning_naming_budget_and_limit()
     {
         // Arrange — requeueCount: 5, NativeRedriveLimit: 5 — budget equals native limit (R == M)
         var subscription = new DeliveryCountingSubscriptionDouble(
@@ -59,15 +58,15 @@ public class SubscriptionBudgetAtNativeRedriveLimitValidationTests
         var results = spec.Accept(collector).ToList();
 
         // Assert — exactly one Warning naming the budget 5, the native limit 5, and effective limit
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Warning, results[0].Error!.Severity);
-        Assert.Contains("5", results[0].Error!.Message);
-        Assert.Contains("native", results[0].Error!.Message, System.StringComparison.OrdinalIgnoreCase);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Error!.Severity).IsEqualTo(ValidationSeverity.Warning);
+        await Assert.That(results[0].Error!.Message).Contains("5");
+        await Assert.That(results[0].Error!.Message).Contains("native");
     }
 
-    [Fact]
-    public void When_subscription_budget_is_below_native_redrive_limit_should_not_report_warning()
+    [Test]
+    public async Task When_subscription_budget_is_below_native_redrive_limit_should_not_report_warning()
     {
         // Arrange — requeueCount: 3 is below NativeRedriveLimit: 5, so Brighter fires first
         var subscription = new DeliveryCountingSubscriptionDouble(
@@ -84,11 +83,11 @@ public class SubscriptionBudgetAtNativeRedriveLimitValidationTests
         var satisfied = spec.IsSatisfiedBy(subscription);
 
         // Assert — budget is below native limit; no warning
-        Assert.True(satisfied);
+        await Assert.That(satisfied).IsTrue();
     }
 
-    [Fact]
-    public void When_subscription_budget_is_minus_one_should_not_report_warning()
+    [Test]
+    public async Task When_subscription_budget_is_minus_one_should_not_report_warning()
     {
         // Arrange — requeueCount: -1 disables the budget; R-10 checks R != -1, so no warning
         var subscription = new DeliveryCountingSubscriptionDouble(
@@ -105,11 +104,11 @@ public class SubscriptionBudgetAtNativeRedriveLimitValidationTests
         var satisfied = spec.IsSatisfiedBy(subscription);
 
         // Assert — R == -1 means no budget; the rule does not fire
-        Assert.True(satisfied);
+        await Assert.That(satisfied).IsTrue();
     }
 
-    [Fact]
-    public void When_subscription_does_not_implement_delivery_counting_interface_should_pass_vacuously()
+    [Test]
+    public async Task When_subscription_does_not_implement_delivery_counting_interface_should_pass_vacuously()
     {
         // Arrange — a plain Subscription without IAmADeliveryCountingSubscription (R-22)
         var subscription = new Subscription(
@@ -127,6 +126,6 @@ public class SubscriptionBudgetAtNativeRedriveLimitValidationTests
         var satisfied = spec.IsSatisfiedBy(subscription);
 
         // Assert — plain Subscription has no NativeRedriveLimit; rule passes vacuously
-        Assert.True(satisfied);
+        await Assert.That(satisfied).IsTrue();
     }
 }

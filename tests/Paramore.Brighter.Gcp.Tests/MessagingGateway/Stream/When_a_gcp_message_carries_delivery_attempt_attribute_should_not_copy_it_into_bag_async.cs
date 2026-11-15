@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 
@@ -37,14 +36,14 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 /// explicitly published <c>googclient_deliveryattempt</c> attribute (5.5c(ii) measurement), so this
 /// publishes it explicitly rather than relying on delivery to inject one.
 /// </summary>
-[Trait("Category", "GcpPubSubStream")]
-[Collection("Stream")]
-[Trait("Requires", "PubSubEmulator")]
+[Property("Category", "GcpPubSubStream")]
+[NotInParallel("Stream")]
+[Property("Requires", "PubSubEmulator")]
 public class GcpStreamDeliveryAttemptAttributeAsyncTests
 {
     private const string DeliveryAttemptAttrKey = "googclient_deliveryattempt";
 
-    [Fact]
+    [Test]
     public async Task When_a_gcp_stream_message_carries_delivery_attempt_attribute_async_should_not_copy_it_into_bag()
     {
         var provider = new GcpStreamMessageGatewayProvider();
@@ -72,12 +71,11 @@ public class GcpStreamDeliveryAttemptAttributeAsyncTests
             // Act
             await producer.SendAsync(message);
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(20));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
             await channel.AcknowledgeAsync(received);
 
             // Assert
-            Assert.False(received.Header.Bag.ContainsKey(DeliveryAttemptAttrKey),
-                "Header.Bag must not admit googclient_deliveryattempt");
+            await Assert.That(received.Header.Bag.ContainsKey(DeliveryAttemptAttrKey)).IsFalse().Because("Header.Bag must not admit googclient_deliveryattempt");
         }
         finally
         {

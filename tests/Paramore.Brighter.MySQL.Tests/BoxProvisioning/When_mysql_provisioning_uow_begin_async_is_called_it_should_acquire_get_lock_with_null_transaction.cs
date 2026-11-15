@@ -30,7 +30,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -38,16 +37,20 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// <c>BeginAsync</c> acquires <c>GET_LOCK</c> and opens no transaction: MySQL DDL commits implicitly,
 /// so the UoW's <c>Transaction</c> stays null (ADR 0057 §5a, ADR 0058 §B.1).
 /// </summary>
-public class MySqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
+public class MySqlProvisioningUnitOfWorkBeginTests
 {
     private readonly MySqlConnection _connection = new(Const.DefaultConnectingString);
     private readonly FakeMySqlAdvisoryLock _advisoryLock = new(releaseResult: true);
 
+    [Before(HookType.Test)]
+
     public async Task InitializeAsync() => await _connection.OpenAsync();
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_mysql_provisioning_uow_begin_async_is_called_it_should_acquire_get_lock_with_null_transaction()
     {
         // Arrange
@@ -61,7 +64,7 @@ public class MySqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
             cancellationToken: CancellationToken.None);
 
         // Assert
-        Assert.Equal("test_lock_resource", _advisoryLock.AcquiredKey);
-        Assert.Null(uow.Transaction);
+        await Assert.That(_advisoryLock.AcquiredKey).IsEqualTo("test_lock_resource");
+        await Assert.That(uow.Transaction).IsNull();
     }
 }

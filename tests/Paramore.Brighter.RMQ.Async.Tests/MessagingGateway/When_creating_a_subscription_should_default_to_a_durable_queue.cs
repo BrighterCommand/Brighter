@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway;
 
@@ -34,11 +34,11 @@ namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway;
 /// subscription that does not say otherwise must ask for a durable queue, or the broker rejects
 /// the declaration and the consumer cannot connect at all.
 /// </summary>
-[Trait("Category", "RMQ")]
+[Property("Category", "RMQ")]
 public class RmqSubscriptionDurabilityDefaultTests
 {
-    [Fact]
-    public void When_creating_a_subscription_should_default_to_a_durable_queue()
+    [Test]
+    public async System.Threading.Tasks.Task When_creating_a_subscription_should_default_to_a_durable_queue()
     {
         // Arrange, Act - a subscription that says nothing about durability
         var subscription = new RmqSubscription(
@@ -49,11 +49,11 @@ public class RmqSubscriptionDurabilityDefaultTests
             messagePumpType: MessagePumpType.Proactor);
 
         // Assert
-        Assert.True(subscription.IsDurable);
+        await Assert.That(subscription.IsDurable).IsTrue();
     }
 
-    [Fact]
-    public void When_creating_a_typed_subscription_should_default_to_a_durable_queue()
+    [Test]
+    public async System.Threading.Tasks.Task When_creating_a_typed_subscription_should_default_to_a_durable_queue()
     {
         // Arrange, Act - the generic overload forwards its own default to the base class, so it
         // has to be kept in step; a divergence here is invisible until the broker rejects a declare
@@ -63,11 +63,11 @@ public class RmqSubscriptionDurabilityDefaultTests
             new RoutingKey("test.topic"));
 
         // Assert
-        Assert.True(subscription.IsDurable);
+        await Assert.That(subscription.IsDurable).IsTrue();
     }
 
-    [Fact]
-    public void When_creating_a_subscription_that_asks_for_a_transient_queue_should_not_be_durable()
+    [Test]
+    public async System.Threading.Tasks.Task When_creating_a_subscription_that_asks_for_a_transient_queue_should_not_be_durable()
     {
         // Arrange, Act - the default moved, but opting out must still be possible: RabbitMQ 4.3 can
         // be configured to permit the deprecated feature, and 3.x permits it outright
@@ -80,6 +80,6 @@ public class RmqSubscriptionDurabilityDefaultTests
             messagePumpType: MessagePumpType.Proactor);
 
         // Assert
-        Assert.False(subscription.IsDurable);
+        await Assert.That(subscription.IsDurable).IsFalse();
     }
 }

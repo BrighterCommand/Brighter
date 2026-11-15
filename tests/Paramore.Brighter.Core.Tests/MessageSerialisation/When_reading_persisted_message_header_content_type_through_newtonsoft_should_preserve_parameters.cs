@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia <irakli.gabisonia94@gmail.com>
@@ -26,26 +26,25 @@ THE SOFTWARE. */
 #nullable enable
 
 using Newtonsoft.Json;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
 public class PersistedMessageHeaderNewtonsoftContentTypeTests
 {
-    [Theory]
-    [InlineData("""
+    [Test]
+    [Arguments("""
         {"MessageId":"order-42","Topic":"orders","ContentType":{
             "Boundary":null,"CharSet":"utf-8","MediaType":"application/json","Name":null,
             "Parameters":[{"Key":"charset","Value":"utf-8"},{"Key":"profile","Value":"urn:example:orders"}]
         }}
         """)]
-    [InlineData("""
+    [Arguments("""
         {"messageId":"order-42","topic":"orders","contentType":{
             "boundary":null,"charSet":"utf-8","mediaType":"application/json","name":null,
             "parameters":[{"key":"charset","value":"utf-8"},{"key":"profile","value":"urn:example:orders"}]
         }}
         """)]
-    public void When_reading_persisted_message_header_content_type_through_newtonsoft_should_preserve_parameters(string json)
+    public async Task When_reading_persisted_message_header_content_type_through_newtonsoft_should_preserve_parameters(string json)
     {
         // Arrange
         const string EXPECTED_MEDIA_TYPE = "application/json";
@@ -56,13 +55,13 @@ public class PersistedMessageHeaderNewtonsoftContentTypeTests
         MessageHeader? header = JsonConvert.DeserializeObject<MessageHeader>(json);
 
         // Assert
-        Assert.NotNull(header);
-        Assert.Equal(new Id("order-42"), header.MessageId);
-        Assert.Equal(new RoutingKey("orders"), header.Topic);
-        Assert.Equal(EXPECTED_MEDIA_TYPE, header.ContentType.MediaType);
-        Assert.Equal(EXPECTED_CHAR_SET, header.ContentType.CharSet);
-        Assert.Equal(EXPECTED_CHAR_SET, header.ContentType.Parameters["charset"]);
-        Assert.Equal(EXPECTED_PROFILE, header.ContentType.Parameters["profile"]);
-        Assert.Equal(2, header.ContentType.Parameters.Count);
+        await Assert.That(header).IsNotNull();
+        await Assert.That(header.MessageId).IsEqualTo(new Id("order-42"));
+        await Assert.That(header.Topic).IsEqualTo(new RoutingKey("orders"));
+        await Assert.That(header.ContentType.MediaType).IsEqualTo(EXPECTED_MEDIA_TYPE);
+        await Assert.That(header.ContentType.CharSet).IsEqualTo(EXPECTED_CHAR_SET);
+        await Assert.That(header.ContentType.Parameters["charset"]).IsEqualTo(EXPECTED_CHAR_SET);
+        await Assert.That(header.ContentType.Parameters["profile"]).IsEqualTo(EXPECTED_PROFILE);
+        await Assert.That(header.ContentType.Parameters.Count).IsEqualTo(2);
     }
 }

@@ -34,20 +34,19 @@ using Microsoft.Extensions.Options;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 /// <summary>
 /// Verifies the opt-in call validates the channel failure threshold before registering anything.
 /// </summary>
-[Collection(DispatcherHealthCheckCollection.NAME)]
+[NotInParallel]
 public class ConsumerHealthChecksThresholdValidationTests
 {
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public void When_consumer_checks_are_added_with_a_non_positive_threshold_should_throw_before_registering(int threshold)
+    [Test]
+    [Arguments(0)]
+    [Arguments(-1)]
+    public async Task When_consumer_checks_are_added_with_a_non_positive_threshold_should_throw_before_registering(int threshold)
     {
         //Arrange
         var services = new ServiceCollection();
@@ -55,16 +54,16 @@ public class ConsumerHealthChecksThresholdValidationTests
         services.AddOptions();
 
         //Act
-        var exception = Assert.Throws<ArgumentOutOfRangeException>(() => builder.AddBrighterConsumerHealthChecks(threshold));
+        var exception = (await Assert.That(() => builder.AddBrighterConsumerHealthChecks(threshold)).ThrowsExactly<ArgumentOutOfRangeException>());
 
         //Assert
-        Assert.Equal("channelFailureThreshold", exception.ParamName);
+        await Assert.That(exception.ParamName).IsEqualTo("channelFailureThreshold");
         using var provider = services.BuildServiceProvider();
         var registrations = provider.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value.Registrations;
-        Assert.Empty(registrations);
+        await Assert.That(registrations).IsEmpty();
     }
 
-    [Fact]
+    [Test]
     public async Task When_consumer_checks_are_added_with_no_threshold_should_degrade_at_three_failures()
     {
         //Arrange
@@ -84,6 +83,6 @@ public class ConsumerHealthChecksThresholdValidationTests
         var result = await registration.Factory(provider).CheckHealthAsync(new HealthCheckContext { Registration = registration });
 
         //Assert
-        Assert.Equal(HealthStatus.Degraded, result.Status);
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Degraded);
     }
 }

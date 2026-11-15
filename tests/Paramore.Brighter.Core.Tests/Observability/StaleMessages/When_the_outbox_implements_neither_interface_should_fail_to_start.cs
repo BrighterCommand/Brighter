@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -33,13 +33,12 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleMessageMonitorNeitherInterfaceOutboxTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_outbox_implements_neither_interface_should_fail_to_start()
     {
         //Arrange
@@ -60,11 +59,11 @@ public class StaleMessageMonitorNeitherInterfaceOutboxTests
         var readings = provider.GetRequiredService<OutboxStaleMessageReadings>();
 
         //Act
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(() => monitor.StartAsync(default));
+        var exception = await Assert.That(() => monitor.StartAsync(default)).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.Contains(nameof(NeitherInterfaceOutbox), exception.Message);
-        Assert.Contains("implements neither", exception.Message);
-        Assert.False(readings.IsStarted);
+        await Assert.That(exception.Message).Contains(nameof(NeitherInterfaceOutbox));
+        await Assert.That(exception.Message).Contains("implements neither");
+        await Assert.That(readings.IsStarted).IsFalse();
     }
 }

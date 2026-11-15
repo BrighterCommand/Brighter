@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -28,21 +28,19 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleMessageMonitorInvalidCountCeilingTests
 {
-    public static TheoryData<int> InvalidCountCeilings => new()
+    public static List<int> InvalidCountCeilings => new()
     {
-        0,
-        int.MaxValue
+        0,        int.MaxValue
     };
 
-    [Theory]
-    [MemberData(nameof(InvalidCountCeilings))]
-    public void When_the_count_ceiling_is_invalid_should_throw_a_configuration_exception(int countCeiling)
+    [Test]
+    [MethodDataSource(nameof(InvalidCountCeilings))]
+    public async Task When_the_count_ceiling_is_invalid_should_throw_a_configuration_exception(int countCeiling)
     {
         //Arrange
         var services = new ServiceCollection();
@@ -53,14 +51,14 @@ public class StaleMessageMonitorInvalidCountCeilingTests
         var registrationsBefore = services.ToList();
 
         //Act
-        var exception = Assert.Throws<ConfigurationException>(() =>
+        var exception = (await Assert.That(() =>
             builder.UseOutboxStaleMessageMonitor(
                 TimeSpan.FromMinutes(5),
-                options => options.CountCeiling = countCeiling));
+                options => options.CountCeiling = countCeiling)).ThrowsExactly<ConfigurationException>());
 
         //Assert
-        Assert.Contains(nameof(TimedOutboxStaleMessageMonitorOptions.CountCeiling), exception.Message);
-        Assert.Contains(countCeiling.ToString(), exception.Message);
-        Assert.Equal(registrationsBefore, services);
+        await Assert.That(exception.Message).Contains(nameof(TimedOutboxStaleMessageMonitorOptions.CountCeiling));
+        await Assert.That(exception.Message).Contains(countCeiling.ToString());
+        await Assert.That(services).IsEqualTo(registrationsBefore);
     }
 }

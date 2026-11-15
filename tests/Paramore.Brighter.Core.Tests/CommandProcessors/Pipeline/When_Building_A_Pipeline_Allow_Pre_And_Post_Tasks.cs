@@ -1,9 +1,8 @@
-﻿using System;
+using System;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
@@ -11,32 +10,27 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
-
         public PipelinePreAndPostFiltersTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
-
             var container = new ServiceCollection();
             container.AddTransient<MyPreAndPostDecoratedHandler>();
             container.AddTransient<MyValidationHandler<MyCommand>>();
             container.AddTransient<MyLoggingHandler<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
-
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory);
-            PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
-        [Fact]
-        public void When_Building_A_Pipeline_Allow_Pre_And_Post_Tasks()
+        [Test]
+        public async Task When_Building_A_Pipeline_Allow_Pre_And_Post_Tasks()
         {
             _pipeline = _pipelineBuilder.Build(new MyCommand(), new RequestContext()).First();
-
             var trace = TraceFilters().ToString();
-            Assert.Equal("MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|", trace);
+            await Assert.That(trace).IsEqualTo("MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|");
         }
+
         private PipelineTracer TraceFilters()
         {
             var pipelineTracer = new PipelineTracer();

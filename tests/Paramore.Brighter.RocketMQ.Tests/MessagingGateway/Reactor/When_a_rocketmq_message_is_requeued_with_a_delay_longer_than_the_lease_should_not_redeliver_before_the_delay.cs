@@ -27,8 +27,7 @@ using System.Diagnostics;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 
 /// <summary>
@@ -36,7 +35,7 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 /// here is longer than the subscription's invisibility lease, so a redelivery that arrives inside the
 /// quiet window can only have come from the receive lease lapsing, which means the delay was ignored.
 /// </summary>
-[Trait("Category", "RocketMQ")]
+[Property("Category", "RocketMQ")]
 public class RocketMqRequeueDelayBeyondLeaseTests : IDisposable
 {
     private const string Topic = "rmq_requeue_beyond_lease_r";
@@ -81,8 +80,8 @@ public class RocketMqRequeueDelayBeyondLeaseTests : IDisposable
         _producer.Dispose();
     }
 
-    [Fact]
-    public void When_a_rocketmq_message_is_requeued_with_a_delay_longer_than_the_lease_should_not_redeliver_before_the_delay()
+    [Test]
+    public async Task When_a_rocketmq_message_is_requeued_with_a_delay_longer_than_the_lease_should_not_redeliver_before_the_delay()
     {
         // Arrange
         var routingKey = new RoutingKey(Topic);
@@ -92,22 +91,20 @@ public class RocketMqRequeueDelayBeyondLeaseTests : IDisposable
         _producer.Send(message);
 
         var received = ReceiveOurs(message.Id, s_receiveCeiling);
-        Assert.NotNull(received);
+        await Assert.That(received).IsNotNull();
 
         // Act
         var requeued = _consumer.Requeue(received!, s_requeueDelay);
         var sinceRequeue = Stopwatch.StartNew();
 
         // Assert - nothing within the quiet window, then the message comes back
-        Assert.True(requeued);
+        await Assert.That(requeued).IsTrue();
 
         var early = ReceiveOurs(message.Id, s_quietWindow);
-        Assert.True(early == null,
-            $"Requeued with a {s_requeueDelay.TotalSeconds:F0} s delay but redelivered after " +
-            $"{sinceRequeue.Elapsed.TotalSeconds:F1} s; the {s_invisibilityTimeout.TotalSeconds:F0} s lease, not the delay, decided it");
+        await Assert.That(early == null).IsTrue();
 
         var redelivered = ReceiveOurs(message.Id, s_receiveCeiling);
-        Assert.NotNull(redelivered);
+        await Assert.That(redelivered).IsNotNull();
 
         _consumer.Acknowledge(redelivered!);
     }

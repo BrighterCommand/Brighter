@@ -31,7 +31,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.OutboxGenerator;
 
@@ -39,13 +38,13 @@ public class TopicCountingSuiteGenerationTests : IDisposable
 {
     private readonly string _testDirectory = Path.Combine(Path.GetTempPath(), $"TopicCountingGeneratorTests_{Guid.NewGuid():N}");
 
-    [Theory]
-    [InlineData(false, true)]
-    [InlineData(true, true)]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, null)]
-    [InlineData(true, null)]
+    [Test]
+    [Arguments(false, true)]
+    [Arguments(true, true)]
+    [Arguments(false, false)]
+    [Arguments(true, false)]
+    [Arguments(false, null)]
+    [Arguments(true, null)]
     public async Task When_topic_counting_is_enabled_should_generate_the_conformance_and_cancellation_suites(
         bool multipleOutboxes, bool? supportsTopicCounting)
     {
@@ -88,32 +87,32 @@ public class TopicCountingSuiteGenerationTests : IDisposable
             .Select(file => file.DestinationPath).OrderBy(path => path).ToArray();
         if (supportsTopicCounting == true)
         {
-            Assert.NotEmpty(plannedSuite);
-            Assert.True(Directory.Exists(suiteDirectory));
+            await Assert.That(plannedSuite).IsNotEmpty();
+            await Assert.That(Directory.Exists(suiteDirectory)).IsTrue();
             var generated = Directory.GetFiles(suiteDirectory, "*.cs").OrderBy(path => path).ToArray();
-            Assert.Equal(plannedSuite, generated);
+            await Assert.That(generated).IsEqualTo(plannedSuite);
             var sources = generated.Select(File.ReadAllText).ToArray();
-            Assert.Contains(sources, source => source.Contains("TopicCountingOutboxBaseTests<System.Data.Common.DbTransaction>"));
-            Assert.Contains(sources, source => source.Contains("When_a_topic_count_is_cancelled_should_end_the_call"));
+            await Assert.That(System.Linq.Enumerable.Any(sources, source => source.Contains("TopicCountingOutboxBaseTests<System.Data.Common.DbTransaction>"))).IsTrue();
+            await Assert.That(System.Linq.Enumerable.Any(sources, source => source.Contains("When_a_topic_count_is_cancelled_should_end_the_call"))).IsTrue();
             var tests = generated.Where(path => !Path.GetFileName(path).StartsWith("IAm", StringComparison.Ordinal));
-            Assert.All(tests, path =>
-            {
-                var source = File.ReadAllText(path);
-                Assert.Contains("[Collection(\"TopicCounts\")]", source);
-                Assert.Contains("[Trait(\"Category\", \"TestDatabase\")]", source);
-                Assert.DoesNotContain("Skip =", source);
-            });
+            foreach (var path in tests)
+{
+    var source = File.ReadAllText(path);
+    await Assert.That(source).Contains("[NotInParallel(\"TopicCounts\")]");
+    await Assert.That(source).Contains("[Property(\"Category\", \"TestDatabase\")]");
+    await Assert.That(source).DoesNotContain("Skip =");
+}
         }
         else
         {
-            Assert.Empty(plannedSuite);
-            Assert.False(Directory.Exists(suiteDirectory));
+            await Assert.That(plannedSuite).IsEmpty();
+            await Assert.That(Directory.Exists(suiteDirectory)).IsFalse();
         }
         if (multipleOutboxes)
         {
             var defaultSuite = Path.Combine(_testDirectory, "Outbox", "Default", "Generated", "TopicCounting");
-            Assert.False(Directory.Exists(defaultSuite));
-            Assert.DoesNotContain(planned, file => Path.GetDirectoryName(file.DestinationPath) == defaultSuite);
+            await Assert.That(Directory.Exists(defaultSuite)).IsFalse();
+            await Assert.That(System.Linq.Enumerable.Any(planned, file => Path.GetDirectoryName(file.DestinationPath) == defaultSuite)).IsFalse();
         }
     }
 

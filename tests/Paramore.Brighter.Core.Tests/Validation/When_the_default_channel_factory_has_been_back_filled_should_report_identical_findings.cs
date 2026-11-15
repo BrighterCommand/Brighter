@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class ChannelFactoryCompatibleInvariantToBackFillValidationTests
 {
-    [Fact]
-    public void When_the_default_channel_factory_has_been_back_filled_should_report_identical_findings()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_default_channel_factory_has_been_back_filled_should_report_identical_findings()
     {
         // Arrange — the AC-4 configuration: sub-a's own ChannelFactory is null, the default
         // channel factory does not match its declared type
@@ -54,9 +54,9 @@ public class ChannelFactoryCompatibleInvariantToBackFillValidationTests
         var after = spec.Accept(afterCollector).ToList();
 
         // Assert — byte-identical findings, before and after the back-fill
-        Assert.Single(before);
-        Assert.Single(after);
-        Assert.Equal(before[0].Error!.Source, after[0].Error!.Source);
-        Assert.Equal(before[0].Error!.Message, after[0].Error!.Message);
+        await Assert.That(before).HasSingleItem();
+        await Assert.That(after).HasSingleItem();
+        await Assert.That(after[0].Error!.Source).IsEqualTo(before[0].Error!.Source);
+        await Assert.That(after[0].Error!.Message).IsEqualTo(before[0].Error!.Message);
     }
 }

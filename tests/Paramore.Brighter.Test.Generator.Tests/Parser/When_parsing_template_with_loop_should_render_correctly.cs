@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.Parser;
 
@@ -19,7 +18,7 @@ public class WhenParsingTemplateWithLoopShouldRenderCorrectly : IDisposable
         _outputPath = Path.Combine(_testDirectory, "output.txt");
     }
 
-    [Fact]
+    [Test]
     public async Task When_parsing_template_with_loop_should_render_correctly()
     {
         // Arrange
@@ -34,9 +33,9 @@ public class WhenParsingTemplateWithLoopShouldRenderCorrectly : IDisposable
 
         // Assert
         var result = await File.ReadAllTextAsync(_outputPath);
-        Assert.Contains("Item1", result);
-        Assert.Contains("Item2", result);
-        Assert.Contains("Item3", result);
+        await Assert.That(result).Contains("Item1");
+        await Assert.That(result).Contains("Item2");
+        await Assert.That(result).Contains("Item3");
     }
 
     public void Dispose()

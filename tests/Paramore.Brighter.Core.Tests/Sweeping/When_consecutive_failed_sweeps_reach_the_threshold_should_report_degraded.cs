@@ -7,13 +7,12 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Paramore.Brighter.Outbox.Hosting.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class When_consecutive_failed_sweeps_reach_the_threshold_should_report_degraded_tests
 {
-    [Fact]
+    [Test]
     public async Task When_fewer_sweeps_have_failed_than_the_threshold_should_report_healthy()
     {
         //Arrange
@@ -24,15 +23,15 @@ public class When_consecutive_failed_sweeps_reach_the_threshold_should_report_de
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
 
         //Assert
-        Assert.Equal(HealthStatus.Healthy, result.Status);
-        Assert.Contains("condition", result.Description, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), result.Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Empty(Assert.IsType<string[]>(result.Data[RemedyCheckConvention.ConditionsKey]));
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(result.Description).Contains("condition");
+        await Assert.That(result.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+        await Assert.That((await Assert.That(result.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEmpty();
     }
 
-    [Theory]
-    [InlineData(3)]
-    [InlineData(4)]
+    [Test]
+    [Arguments(3)]
+    [Arguments(4)]
     public async Task When_the_failed_sweeps_reach_the_threshold_should_report_degraded(int failures)
     {
         //Arrange
@@ -43,19 +42,19 @@ public class When_consecutive_failed_sweeps_reach_the_threshold_should_report_de
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
 
         //Assert
-        Assert.Equal(HealthStatus.Degraded, result.Status);
-        Assert.Contains(failures.ToString(), result.Description);
-        Assert.Contains("3", result.Description);
-        Assert.Contains("10s", result.Description);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), result.Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Equal(new[] { "consecutive_failed_sweeps" }, Assert.IsType<string[]>(result.Data[RemedyCheckConvention.ConditionsKey]));
-        var failed = Assert.IsAssignableFrom<IDictionary<string, object>>(result.Data["consecutive_failed_sweeps"]);
-        Assert.Equal(failures, Assert.IsType<int>(failed["count"]));
-        Assert.Equal(3, Assert.IsType<int>(failed["threshold"]));
-        Assert.Equal(10.0, Assert.IsType<double>(failed["timer_interval_seconds"]));
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(result.Description).Contains(failures.ToString());
+        await Assert.That(result.Description).Contains("3");
+        await Assert.That(result.Description).Contains("10s");
+        await Assert.That(result.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+        await Assert.That((await Assert.That(result.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "consecutive_failed_sweeps" });
+        var failed = ((IDictionary<string, object>)(((IDictionary<string, object>)(await Assert.That(result.Data["consecutive_failed_sweeps"]).IsAssignableTo<IDictionary<string, object>>()))));
+        await Assert.That((await Assert.That(failed["count"]).IsTypeOf<int>())).IsEqualTo(failures);
+        await Assert.That((await Assert.That(failed["threshold"]).IsTypeOf<int>())).IsEqualTo(3);
+        await Assert.That((await Assert.That(failed["timer_interval_seconds"]).IsTypeOf<double>())).IsEqualTo(10.0);
     }
 
-    [Fact]
+    [Test]
     public async Task When_options_are_null_should_use_the_default_timer_interval()
     {
         //Arrange
@@ -65,10 +64,10 @@ public class When_consecutive_failed_sweeps_reach_the_threshold_should_report_de
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
 
         //Assert
-        Assert.Equal(HealthStatus.Degraded, result.Status);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), result.Data[RemedyCheckConvention.RemedyKindKey]);
-        var failed = Assert.IsAssignableFrom<IDictionary<string, object>>(result.Data["consecutive_failed_sweeps"]);
-        Assert.Equal((double)new TimedOutboxSweeperOptions().TimerInterval, Assert.IsType<double>(failed["timer_interval_seconds"]));
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(result.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+        var failed = ((IDictionary<string, object>)(((IDictionary<string, object>)(await Assert.That(result.Data["consecutive_failed_sweeps"]).IsAssignableTo<IDictionary<string, object>>()))));
+        await Assert.That((await Assert.That(failed["timer_interval_seconds"]).IsTypeOf<double>())).IsEqualTo((double)new TimedOutboxSweeperOptions().TimerInterval);
     }
 
     private static OutboxSweeperState FailedSweeps(int count)

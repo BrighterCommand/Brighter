@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -26,15 +26,14 @@ using System;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.Builders;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.InMemory.Tests.Outbox;
 
-[Trait("Category", "InMemory")]
+[Property("Category", "InMemory")]
 public class InMemoryOutboxOutstandingCountEligibilityTests
 {
-    [Fact]
-    public void When_counting_outstanding_messages_should_count_only_undispatched_entries_older_than_the_interval()
+    [Test]
+    public async Task When_counting_outstanding_messages_should_count_only_undispatched_entries_older_than_the_interval()
     {
         //Arrange
         var timeProvider = new FakeTimeProvider();
@@ -68,6 +67,6 @@ public class InMemoryOutboxOutstandingCountEligibilityTests
         var count = outbox.GetOutstandingMessageCount(interval, context, maxCount: 100);
 
         //Assert
-        Assert.Equal(3, count);
+        await Assert.That(count).IsEqualTo(3);
     }
 }

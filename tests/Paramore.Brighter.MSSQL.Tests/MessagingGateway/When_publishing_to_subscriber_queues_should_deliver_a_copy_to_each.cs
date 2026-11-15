@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -32,12 +32,11 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 
-[Trait("Category", "MSSQL")]
-[Collection("MSSQLMessagingGateway")]
+[Property("Category", "MSSQL")]
+[NotInParallel("MSSQLMessagingGateway")]
 public class MsSqlFanOutTests : IDisposable
 {
     private readonly RelationalDatabaseConfiguration _configuration = new MsSqlTestHelper().QueueConfiguration;
@@ -57,9 +56,9 @@ public class MsSqlFanOutTests : IDisposable
             _configuration, [_publication]).Create().Single().Value;
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_publishing_to_subscriber_queues_should_deliver_a_copy_to_each(bool async)
     {
         //Arrange
@@ -74,20 +73,20 @@ public class MsSqlFanOutTests : IDisposable
         var secondCopy = await Receive(second, async);
 
         //Assert
-        AssertCopy(message, firstCopy);
-        AssertCopy(message, secondCopy);
-        Assert.Equal("customer", firstCopy.Header.Bag["tenant"].ToString());
-        Assert.Equal("customer", secondCopy.Header.Bag["tenant"].ToString());
-        Assert.True((await Receive(first, async)).IsEmpty);
-        Assert.True((await Receive(second, async)).IsEmpty);
+        await AssertCopy(message, firstCopy);
+        await AssertCopy(message, secondCopy);
+        await Assert.That(firstCopy.Header.Bag["tenant"].ToString()).IsEqualTo("customer");
+        await Assert.That(secondCopy.Header.Bag["tenant"].ToString()).IsEqualTo("customer");
+        await Assert.That((await Receive(first, async)).IsEmpty).IsTrue();
+        await Assert.That((await Receive(second, async)).IsEmpty).IsTrue();
         using var unbound = Consumer(_topic.Value);
-        Assert.True((await Receive(unbound, async)).IsEmpty);
-        Assert.Equal(_topic, message.Header.Topic);
+        await Assert.That((await Receive(unbound, async)).IsEmpty).IsTrue();
+        await Assert.That(message.Header.Topic).IsEqualTo(_topic);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_workers_share_a_subscriber_queue_should_compete_for_its_copy(bool async)
     {
         //Arrange
@@ -102,14 +101,14 @@ public class MsSqlFanOutTests : IDisposable
         var competing = await Receive(otherWorker, async);
 
         //Assert
-        AssertCopy(message, received);
-        Assert.True(competing.IsEmpty);
-        AssertCopy(message, await Receive(second, async));
+        await AssertCopy(message, received);
+        await Assert.That(competing.IsEmpty).IsTrue();
+        await AssertCopy(message, await Receive(second, async));
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_retrying_a_subscriber_copy_should_only_requeue_to_that_subscriber(bool async)
     {
         //Arrange
@@ -118,24 +117,24 @@ public class MsSqlFanOutTests : IDisposable
         var message = CreateMessage();
         await Send(message, async);
         var failed = await Receive(first, async);
-        AssertCopy(message, failed);
-        AssertCopy(message, await Receive(second, async));
+        await AssertCopy(message, failed);
+        await AssertCopy(message, await Receive(second, async));
 
         //Act
         var accepted = async ? await first.RequeueAsync(failed) : first.Requeue(failed);
 
         //Assert
-        Assert.True(accepted);
-        AssertCopy(message, await Receive(first, async));
-        Assert.True((await Receive(second, async)).IsEmpty);
+        await Assert.That(accepted).IsTrue();
+        await AssertCopy(message, await Receive(first, async));
+        await Assert.That((await Receive(second, async)).IsEmpty).IsTrue();
         using var unbound = Consumer(_topic.Value);
-        Assert.True((await Receive(unbound, async)).IsEmpty);
-        Assert.Equal(_topic, failed.Header.Topic);
+        await Assert.That((await Receive(unbound, async)).IsEmpty).IsTrue();
+        await Assert.That(failed.Header.Topic).IsEqualTo(_topic);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_a_subscriber_requests_an_explicit_delay_without_a_scheduler_should_preserve_its_copy(bool async)
     {
         //Arrange
@@ -146,8 +145,8 @@ public class MsSqlFanOutTests : IDisposable
         message.Header.Bag["tenant"] = "customer";
         await Send(message, async);
         var failed = await Receive(first, async);
-        AssertCopy(message, failed);
-        AssertCopy(message, await Receive(second, async));
+        await AssertCopy(message, failed);
+        await AssertCopy(message, await Receive(second, async));
         failed.Header.UpdateHandledCount();
         var delay = TimeSpan.FromSeconds(1);
 
@@ -157,21 +156,21 @@ public class MsSqlFanOutTests : IDisposable
             : first.Requeue(failed, delay);
 
         //Assert
-        Assert.True(accepted);
+        await Assert.That(accepted).IsTrue();
         var retried = await Receive(first, async);
-        AssertCopy(message, retried);
-        Assert.Equal("customer", retried.Header.Bag["tenant"].ToString());
-        Assert.Equal(message.Id.Value, retried.Header.Bag[Message.OriginalMessageIdHeaderName].ToString());
-        Assert.Equal(failed.Header.HandledCount, retried.Header.HandledCount);
-        Assert.True((await Receive(first, async)).IsEmpty);
-        Assert.True((await Receive(second, async)).IsEmpty);
-        Assert.True((await Receive(unbound, async)).IsEmpty);
-        Assert.Equal(_topic, failed.Header.Topic);
+        await AssertCopy(message, retried);
+        await Assert.That(retried.Header.Bag["tenant"].ToString()).IsEqualTo("customer");
+        await Assert.That(retried.Header.Bag[Message.OriginalMessageIdHeaderName].ToString()).IsEqualTo(message.Id.Value);
+        await Assert.That(retried.Header.HandledCount).IsEqualTo(failed.Header.HandledCount);
+        await Assert.That((await Receive(first, async)).IsEmpty).IsTrue();
+        await Assert.That((await Receive(second, async)).IsEmpty).IsTrue();
+        await Assert.That((await Receive(unbound, async)).IsEmpty).IsTrue();
+        await Assert.That(failed.Header.Topic).IsEqualTo(_topic);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_purging_one_subscriber_should_preserve_other_subscribers(bool async)
     {
         //Arrange
@@ -187,13 +186,13 @@ public class MsSqlFanOutTests : IDisposable
             first.Purge();
 
         //Assert
-        Assert.True((await Receive(first, async)).IsEmpty);
-        AssertCopy(message, await Receive(second, async));
+        await Assert.That((await Receive(first, async)).IsEmpty).IsTrue();
+        await AssertCopy(message, await Receive(second, async));
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_one_subscriber_insert_fails_should_leave_no_partial_delivery(bool async)
     {
         //Arrange
@@ -201,22 +200,22 @@ public class MsSqlFanOutTests : IDisposable
         var message = CreateMessage();
 
         //Act
-        await Assert.ThrowsAsync<SqlException>(() => Send(message, async));
+        await Assert.That(() => Send(message, async)).ThrowsExactly<SqlException>();
 
         //Assert
         using var first = Consumer("first");
         using var second = Consumer("second");
-        Assert.True((await Receive(first, async)).IsEmpty);
-        Assert.True((await Receive(second, async)).IsEmpty);
+        await Assert.That((await Receive(first, async)).IsEmpty).IsTrue();
+        await Assert.That((await Receive(second, async)).IsEmpty).IsTrue();
         ExecuteSql($"ALTER TABLE [{_configuration.QueueStoreTable}] DROP CONSTRAINT [CK_{_configuration.QueueStoreTable}]");
         await Send(message, async);
-        AssertCopy(message, await Receive(first, async));
-        AssertCopy(message, await Receive(second, async));
+        await AssertCopy(message, await Receive(first, async));
+        await AssertCopy(message, await Receive(second, async));
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_the_ambient_transaction_rolls_back_should_roll_back_every_copy(bool async)
     {
         //Arrange
@@ -229,18 +228,18 @@ public class MsSqlFanOutTests : IDisposable
         //Assert
         using var first = Consumer("first");
         using var second = Consumer("second");
-        Assert.True((await Receive(first, async)).IsEmpty);
-        Assert.True((await Receive(second, async)).IsEmpty);
+        await Assert.That((await Receive(first, async)).IsEmpty).IsTrue();
+        await Assert.That((await Receive(second, async)).IsEmpty).IsTrue();
 
         var nextMessage = CreateMessage();
         await Send(nextMessage, async);
-        AssertCopy(nextMessage, await Receive(first, async));
-        AssertCopy(nextMessage, await Receive(second, async));
+        await AssertCopy(nextMessage, await Receive(first, async));
+        await AssertCopy(nextMessage, await Receive(second, async));
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_the_ambient_transaction_commits_should_deliver_every_copy(bool async)
     {
         //Arrange
@@ -256,13 +255,13 @@ public class MsSqlFanOutTests : IDisposable
         //Assert
         using var first = Consumer("first");
         using var second = Consumer("second");
-        AssertCopy(message, await Receive(first, async));
-        AssertCopy(message, await Receive(second, async));
-        Assert.True((await Receive(first, async)).IsEmpty);
-        Assert.True((await Receive(second, async)).IsEmpty);
+        await AssertCopy(message, await Receive(first, async));
+        await AssertCopy(message, await Receive(second, async));
+        await Assert.That((await Receive(first, async)).IsEmpty).IsTrue();
+        await Assert.That((await Receive(second, async)).IsEmpty).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_publishing_is_cancelled_should_not_enqueue_any_copy()
     {
         //Arrange
@@ -270,18 +269,18 @@ public class MsSqlFanOutTests : IDisposable
         cancelled.Cancel();
 
         //Act
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => _producer.SendAsync(CreateMessage(), cancelled.Token));
+        await Assert.That(() => _producer.SendAsync(CreateMessage(), cancelled.Token)).Throws<OperationCanceledException>();
 
         //Assert
         using var first = Consumer("first");
         using var second = Consumer("second");
-        Assert.True((await Receive(first, true)).IsEmpty);
-        Assert.True((await Receive(second, true)).IsEmpty);
+        await Assert.That((await Receive(first, true)).IsEmpty).IsTrue();
+        await Assert.That((await Receive(second, true)).IsEmpty).IsTrue();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_subscriber_names_are_equivalent_under_the_column_collation_should_enqueue_one_copy(bool async)
     {
         //Arrange
@@ -296,13 +295,13 @@ public class MsSqlFanOutTests : IDisposable
         await Send(message, async);
 
         //Assert
-        AssertCopy(message, await Receive(consumer, async));
-        Assert.True((await Receive(consumer, async)).IsEmpty);
+        await AssertCopy(message, await Receive(consumer, async));
+        await Assert.That((await Receive(consumer, async)).IsEmpty).IsTrue();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_a_subscriber_name_contains_sql_characters_should_treat_it_as_data(bool async)
     {
         //Arrange
@@ -316,13 +315,13 @@ public class MsSqlFanOutTests : IDisposable
         await Send(message, async);
 
         //Assert
-        AssertCopy(message, await Receive(consumer, async));
-        Assert.True((await Receive(consumer, async)).IsEmpty);
+        await AssertCopy(message, await Receive(consumer, async));
+        await Assert.That((await Receive(consumer, async)).IsEmpty).IsTrue();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_subscriber_names_differ_under_a_binary_collation_should_deliver_to_both_queues(bool async)
     {
         //Arrange
@@ -338,13 +337,13 @@ public class MsSqlFanOutTests : IDisposable
         //Assert
         using var lower = Consumer("subscriber");
         using var upper = Consumer("SUBSCRIBER");
-        AssertCopy(message, await Receive(lower, async));
-        AssertCopy(message, await Receive(upper, async));
-        Assert.True((await Receive(lower, async)).IsEmpty);
-        Assert.True((await Receive(upper, async)).IsEmpty);
+        await AssertCopy(message, await Receive(lower, async));
+        await AssertCopy(message, await Receive(upper, async));
+        await Assert.That((await Receive(lower, async)).IsEmpty).IsTrue();
+        await Assert.That((await Receive(upper, async)).IsEmpty).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_publishers_and_workers_run_concurrently_should_deliver_once_per_subscriber()
     {
         //Arrange
@@ -387,18 +386,21 @@ public class MsSqlFanOutTests : IDisposable
         var expected = messages.ToDictionary(message => message.Id.Value);
         foreach (var received in deliveries)
         {
-            Assert.Equal(expected.Keys.OrderBy(id => id), received.Select(message => message.Id.Value).OrderBy(id => id));
-            Assert.All(received, message => AssertCopy(expected[message.Id.Value], message));
+            await Assert.That(received.Select(message => message.Id.Value).OrderBy(id => id)).IsEqualTo(expected.Keys.OrderBy(id => id));
+            foreach (var message in received)
+{
+    await AssertCopy(expected[message.Id.Value], message);
+}
         }
         using var second = Consumer("second");
         using var first = Consumer("first");
-        Assert.True((await Receive(first, true)).IsEmpty);
-        Assert.True((await Receive(second, true)).IsEmpty);
+        await Assert.That((await Receive(first, true)).IsEmpty).IsTrue();
+        await Assert.That((await Receive(second, true)).IsEmpty).IsTrue();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_publishing_a_large_unicode_payload_to_a_maximum_length_queue_should_preserve_the_entire_message(bool async)
     {
         //Arrange
@@ -414,13 +416,13 @@ public class MsSqlFanOutTests : IDisposable
         //Assert
         using var first = Consumer(queue);
         using var second = Consumer("second");
-        AssertCopy(message, await Receive(first, async));
-        AssertCopy(message, await Receive(second, async));
-        Assert.True((await Receive(first, async)).IsEmpty);
-        Assert.True((await Receive(second, async)).IsEmpty);
+        await AssertCopy(message, await Receive(first, async));
+        await AssertCopy(message, await Receive(second, async));
+        await Assert.That((await Receive(first, async)).IsEmpty).IsTrue();
+        await Assert.That((await Receive(second, async)).IsEmpty).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_using_async_factories_should_deliver_to_each_subscriber_channel()
     {
         //Arrange
@@ -437,13 +439,13 @@ public class MsSqlFanOutTests : IDisposable
         await producer.SendAsync(message);
 
         //Assert
-        AssertCopy(message, await first.ReceiveAsync(s_timeout));
-        AssertCopy(message, await second.ReceiveAsync(s_timeout));
+        await AssertCopy(message, await first.ReceiveAsync(s_timeout));
+        await AssertCopy(message, await second.ReceiveAsync(s_timeout));
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_rejecting_one_copy_should_leave_the_other_subscriber_untouched(bool async)
     {
         //Arrange
@@ -453,25 +455,25 @@ public class MsSqlFanOutTests : IDisposable
         var message = CreateMessage();
         await Send(message, async);
         var rejected = await Receive(first, async);
-        AssertCopy(message, rejected);
+        await AssertCopy(message, rejected);
 
         //Act
         var reason = new MessageRejectionReason(RejectionReason.DeliveryError, "Failed handler");
         var accepted = async ? await first.RejectAsync(rejected, reason) : first.Reject(rejected, reason);
 
         //Assert
-        Assert.True(accepted);
+        await Assert.That(accepted).IsTrue();
         var deadCopy = await Receive(dead, async);
-        Assert.Equal(message.Id, deadCopy.Id);
-        Assert.Equal("dead", deadCopy.Header.Topic.Value);
-        Assert.Equal(_topic.Value, deadCopy.Header.Bag["originalTopic"].ToString());
-        AssertCopy(message, await Receive(second, async));
-        Assert.True((await Receive(first, async)).IsEmpty);
+        await Assert.That(deadCopy.Id).IsEqualTo(message.Id);
+        await Assert.That(deadCopy.Header.Topic.Value).IsEqualTo("dead");
+        await Assert.That(deadCopy.Header.Bag["originalTopic"].ToString()).IsEqualTo(_topic.Value);
+        await AssertCopy(message, await Receive(second, async));
+        await Assert.That((await Receive(first, async)).IsEmpty).IsTrue();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_publishing_to_the_maximum_number_of_subscribers_should_enqueue_every_copy(bool async)
     {
         //Arrange
@@ -487,11 +489,11 @@ public class MsSqlFanOutTests : IDisposable
         connection.Open();
         using var command = connection.CreateCommand();
         command.CommandText = $"SELECT COUNT(*) FROM [{_configuration.QueueStoreTable}]";
-        Assert.Equal(1000, Convert.ToInt32(command.ExecuteScalar()));
+        await Assert.That(Convert.ToInt32(command.ExecuteScalar())).IsEqualTo(1000);
         using var first = Consumer("subscriber0");
         using var last = Consumer("subscriber999");
-        AssertCopy(message, await Receive(first, async));
-        AssertCopy(message, await Receive(last, async));
+        await AssertCopy(message, await Receive(first, async));
+        await AssertCopy(message, await Receive(last, async));
     }
 
     // TransactionScope defaults to Serializable, which can survive pooling and invalidate READPAST dequeues.
@@ -517,12 +519,12 @@ public class MsSqlFanOutTests : IDisposable
     private static async Task<Message> Receive(MsSqlMessageConsumer consumer, bool async) =>
         (async ? await consumer.ReceiveAsync(s_timeout) : consumer.Receive(TimeSpan.Zero)).Single();
 
-    private static void AssertCopy(Message expected, Message received)
+    private static async Task AssertCopy(Message expected, Message received)
     {
-        Assert.False(received.IsEmpty);
-        Assert.Equal(expected.Id, received.Id);
-        Assert.Equal(expected.Header.Topic, received.Header.Topic);
-        Assert.Equal(expected.Body.Value, received.Body.Value);
+        await Assert.That(received.IsEmpty).IsFalse();
+        await Assert.That(received.Id).IsEqualTo(expected.Id);
+        await Assert.That(received.Header.Topic).IsEqualTo(expected.Header.Topic);
+        await Assert.That(received.Body.Value).IsEqualTo(expected.Body.Value);
     }
 
     private void ExecuteSql(string sql)

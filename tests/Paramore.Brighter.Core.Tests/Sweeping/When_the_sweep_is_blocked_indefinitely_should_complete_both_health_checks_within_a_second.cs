@@ -34,7 +34,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -43,9 +42,9 @@ public class BlockedSweepHealthCheckLatencyTests
     private const string RestartCheck = "brighter-outbox-sweeper-restart";
     private const string InvestigateCheck = "brighter-outbox-sweeper-investigate";
 
-    [Theory]
-    [InlineData(RestartCheck, RemedyKind.Restart)]
-    [InlineData(InvestigateCheck, RemedyKind.Investigate)]
+    [Test]
+    [Arguments(RestartCheck, RemedyKind.Restart)]
+    [Arguments(InvestigateCheck, RemedyKind.Investigate)]
     public async Task When_the_sweep_is_blocked_indefinitely_should_complete_both_health_checks_within_a_second(
         string checkName, RemedyKind remedyKind)
     {
@@ -73,10 +72,10 @@ public class BlockedSweepHealthCheckLatencyTests
                 .WaitAsync(TimeSpan.FromSeconds(1));
 
             //Assert
-            Assert.True(reachedMediator, "The sweep did not reach the mediator");
+            await Assert.That(reachedMediator).IsTrue().Because("The sweep did not reach the mediator");
             var result = report.Entries[checkName];
-            Assert.NotEqual(HealthStatus.Unhealthy, result.Status);
-            Assert.Equal(RemedyCheckConvention.Name(remedyKind), result.Data[RemedyCheckConvention.RemedyKindKey]);
+            await Assert.That(result.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(result.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(remedyKind));
         }
         finally
         {

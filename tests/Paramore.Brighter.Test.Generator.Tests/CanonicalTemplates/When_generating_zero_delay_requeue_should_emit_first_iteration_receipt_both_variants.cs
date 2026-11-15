@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -46,7 +46,7 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
         _logger = factory.CreateLogger<Generators.MessagingGatewayGenerator>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_zero_delay_requeue_reactor_file_should_exist_with_correct_name()
     {
         // Arrange
@@ -59,11 +59,10 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
 
         // Assert — Reactor file exists at the expected path
         var reactorPath = ReactorOutputPath();
-        Assert.True(File.Exists(reactorPath),
-            $"Reactor canonical zero-delay-requeue file not found at {reactorPath}");
+        await Assert.That(File.Exists(reactorPath)).IsTrue().Because($"Reactor canonical zero-delay-requeue file not found at {reactorPath}");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_zero_delay_requeue_proactor_file_should_exist_with_correct_name()
     {
         // Arrange
@@ -76,11 +75,10 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
 
         // Assert — Proactor file exists at the expected path
         var proactorPath = ProactorOutputPath();
-        Assert.True(File.Exists(proactorPath),
-            $"Proactor canonical zero-delay-requeue file not found at {proactorPath}");
+        await Assert.That(File.Exists(proactorPath)).IsTrue().Because($"Proactor canonical zero-delay-requeue file not found at {proactorPath}");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_zero_delay_requeue_reactor_should_call_requeue_with_timespanzero()
     {
         // Arrange
@@ -93,11 +91,11 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
 
         // Assert — Requeue is called with TimeSpan.Zero explicitly
         var content = await File.ReadAllTextAsync(ReactorOutputPath());
-        Assert.Contains("TimeSpan.Zero", content);
-        Assert.Contains("Requeue(", content);
+        await Assert.That(content).Contains("TimeSpan.Zero");
+        await Assert.That(content).Contains("Requeue(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_zero_delay_requeue_reactor_should_assert_requeue_returns_true()
     {
         // Arrange
@@ -110,10 +108,10 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
 
         // Assert — the return value of Requeue is captured and asserted true
         var content = await File.ReadAllTextAsync(ReactorOutputPath());
-        Assert.Contains("Assert.True(", content);
+        await Assert.That(content).Contains(".IsTrue(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_zero_delay_requeue_reactor_should_use_bounded_retry_loop()
     {
         // Arrange
@@ -126,12 +124,12 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
 
         // Assert — receipt assertion is inside a bounded retry loop
         var content = await File.ReadAllTextAsync(ReactorOutputPath());
-        Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(30)", content);
-        Assert.Contains("500", content);
+        await Assert.That(content).Contains("Stopwatch");
+        await Assert.That(content).Contains("TimeSpan.FromSeconds(30)");
+        await Assert.That(content).Contains("500");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_zero_delay_requeue_reactor_should_assert_elapsed_under_five_seconds()
     {
         // Arrange
@@ -144,10 +142,10 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
 
         // Assert — elapsed time from Requeue call to receipt is asserted less than 5 s
         var content = await File.ReadAllTextAsync(ReactorOutputPath());
-        Assert.Contains("TimeSpan.FromSeconds(5)", content);
+        await Assert.That(content).Contains("TimeSpan.FromSeconds(5)");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_zero_delay_requeue_reactor_should_start_the_stopwatch_after_requeue_returns()
     {
         // Arrange
@@ -165,15 +163,14 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
         var requeueIndex = content.IndexOf(REACTOR_ZERO_DELAY_REQUEUE_CALL, StringComparison.Ordinal);
         var stopwatchIndex = content.IndexOf(STOPWATCH_START, StringComparison.Ordinal);
 
-        Assert.True(requeueIndex >= 0, $"Expected the generated Reactor file to call {REACTOR_ZERO_DELAY_REQUEUE_CALL}");
-        Assert.True(stopwatchIndex >= 0, $"Expected the generated Reactor file to start a {STOPWATCH_START}");
-        Assert.True(requeueIndex < stopwatchIndex,
-            $"Expected {STOPWATCH_START} to appear AFTER {REACTOR_ZERO_DELAY_REQUEUE_CALL}, so the requeue "
+        await Assert.That(requeueIndex >= 0).IsTrue().Because($"Expected the generated Reactor file to call {REACTOR_ZERO_DELAY_REQUEUE_CALL}");
+        await Assert.That(stopwatchIndex >= 0).IsTrue().Because($"Expected the generated Reactor file to start a {STOPWATCH_START}");
+        await Assert.That(requeueIndex < stopwatchIndex).IsTrue().Because($"Expected {STOPWATCH_START} to appear AFTER {REACTOR_ZERO_DELAY_REQUEUE_CALL}, so the requeue "
             + $"call's own duration is excluded from the elapsed window; found the stopwatch at {stopwatchIndex} "
             + $"and the requeue at {requeueIndex}.");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_zero_delay_requeue_proactor_should_start_the_stopwatch_after_requeue_returns()
     {
         // Arrange
@@ -189,15 +186,14 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
         var requeueIndex = content.IndexOf(PROACTOR_ZERO_DELAY_REQUEUE_CALL, StringComparison.Ordinal);
         var stopwatchIndex = content.IndexOf(STOPWATCH_START, StringComparison.Ordinal);
 
-        Assert.True(requeueIndex >= 0, $"Expected the generated Proactor file to call {PROACTOR_ZERO_DELAY_REQUEUE_CALL}");
-        Assert.True(stopwatchIndex >= 0, $"Expected the generated Proactor file to start a {STOPWATCH_START}");
-        Assert.True(requeueIndex < stopwatchIndex,
-            $"Expected {STOPWATCH_START} to appear AFTER {PROACTOR_ZERO_DELAY_REQUEUE_CALL}, so the requeue "
+        await Assert.That(requeueIndex >= 0).IsTrue().Because($"Expected the generated Proactor file to call {PROACTOR_ZERO_DELAY_REQUEUE_CALL}");
+        await Assert.That(stopwatchIndex >= 0).IsTrue().Because($"Expected the generated Proactor file to start a {STOPWATCH_START}");
+        await Assert.That(requeueIndex < stopwatchIndex).IsTrue().Because($"Expected {STOPWATCH_START} to appear AFTER {PROACTOR_ZERO_DELAY_REQUEUE_CALL}, so the requeue "
             + $"call's own duration is excluded from the elapsed window; found the stopwatch at {stopwatchIndex} "
             + $"and the requeue at {requeueIndex}.");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_zero_delay_requeue_reactor_should_not_have_negative_arm_before_loop()
     {
         // Arrange
@@ -211,10 +207,10 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
         // Assert — no absence-check single receive expecting MT_NONE before the loop;
         // a zero-delay requeue is a positive first-iteration arrival, not a before-delay negative arm
         var content = await File.ReadAllTextAsync(ReactorOutputPath());
-        Assert.DoesNotContain("Assert.Equal(MessageType.MT_NONE", content);
+        await Assert.That(content).DoesNotContain(".IsEqualTo(MessageType.MT_NONE");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_zero_delay_requeue_proactor_should_call_requeue_async_with_timespanzero()
     {
         // Arrange
@@ -227,11 +223,11 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
 
         // Assert — RequeueAsync is called with TimeSpan.Zero explicitly
         var content = await File.ReadAllTextAsync(ProactorOutputPath());
-        Assert.Contains("TimeSpan.Zero", content);
-        Assert.Contains("RequeueAsync(", content);
+        await Assert.That(content).Contains("TimeSpan.Zero");
+        await Assert.That(content).Contains("RequeueAsync(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_zero_delay_requeue_proactor_should_assert_requeue_returns_true()
     {
         // Arrange
@@ -244,10 +240,10 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
 
         // Assert — the return value of RequeueAsync is captured and asserted true
         var content = await File.ReadAllTextAsync(ProactorOutputPath());
-        Assert.Contains("Assert.True(", content);
+        await Assert.That(content).Contains(".IsTrue(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_zero_delay_requeue_proactor_should_use_bounded_retry_loop()
     {
         // Arrange
@@ -260,12 +256,12 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
 
         // Assert — receipt assertion is inside a bounded retry loop
         var content = await File.ReadAllTextAsync(ProactorOutputPath());
-        Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(30)", content);
-        Assert.Contains("500", content);
+        await Assert.That(content).Contains("Stopwatch");
+        await Assert.That(content).Contains("TimeSpan.FromSeconds(30)");
+        await Assert.That(content).Contains("500");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_zero_delay_requeue_proactor_should_assert_elapsed_under_five_seconds()
     {
         // Arrange
@@ -278,13 +274,13 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
 
         // Assert — elapsed time from RequeueAsync call to receipt is asserted less than 5 s
         var content = await File.ReadAllTextAsync(ProactorOutputPath());
-        Assert.Contains("TimeSpan.FromSeconds(5)", content);
+        await Assert.That(content).Contains("TimeSpan.FromSeconds(5)");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_is_pass_reactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange — ledger cell is Pass; the [Test] must carry no Skip argument
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
@@ -292,13 +288,13 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact] present; Skip absent (the conditional pattern renders nothing when Skip is empty)
+        // Assert — [Test] present; Skip absent (the conditional pattern renders nothing when Skip is empty)
         var content = await File.ReadAllTextAsync(ReactorOutputPath());
-        Assert.Contains("[Fact]", content);
-        Assert.DoesNotContain("Skip =", content);
+        await Assert.That(content).Contains("[Test]");
+        await Assert.That(content).DoesNotContain("[Skip(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_is_deferred_reactor_should_emit_skip_on_fact()
     {
         // Arrange — ledger cell is Deferred; the template must conditionally emit Skip
@@ -313,15 +309,15 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact, Skip = "Deferred: #9876 ..."] is emitted
+        // Assert — [Test, Skip = "Deferred: #9876 ..."] is emitted
         var content = await File.ReadAllTextAsync(ReactorOutputPath());
-        Assert.Contains("Skip = \"Deferred: #9876", content);
+        await Assert.That(content).Contains("Skip(\"Deferred: #9876");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_is_pass_proactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange — ledger cell is Pass; the [Test] must carry no Skip argument
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
@@ -331,8 +327,8 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
 
         // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath());
-        Assert.Contains("[Fact]", content);
-        Assert.DoesNotContain("Skip =", content);
+        await Assert.That(content).Contains("[Test]");
+        await Assert.That(content).DoesNotContain("[Skip(");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -27,16 +27,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleReadingsInvalidWriteTests
 {
     private const string OUTBOX_TYPE = "InMemoryOutbox";
 
-    [Fact]
-    public void When_readings_receive_an_invalid_write_should_throw()
+    [Test]
+    public async Task When_readings_receive_an_invalid_write_should_throw()
     {
         //Arrange
         var readings = new OutboxStaleMessageReadings();
@@ -48,35 +47,36 @@ public class StaleReadingsInvalidWriteTests
         readingsWithoutTopics.Start(OUTBOX_TYPE, measuresTopics: false);
 
         //Act
-        var negativeOverall = Record.Exception(() => readings.CompleteOverall(-1));
-        var negativeTopic = Record.Exception(() => readings.CompletePerTopic(new Dictionary<RoutingKey, int>
+        var negativeOverall = TestExceptionRecorder.Capture(() => readings.CompleteOverall(-1));
+        var negativeTopic = TestExceptionRecorder.Capture(() => readings.CompletePerTopic(new Dictionary<RoutingKey, int>
         {
             [new RoutingKey("orders")] = 3,
             [new RoutingKey("payments")] = -1
         }));
-        var skipBelowOne = Record.Exception(() => readings.Skip(StaleMessageCount.Overall, 0));
-        var topicsNotMeasured = Record.Exception(() => readingsWithoutTopics.CompletePerTopic(
+        var skipBelowOne = TestExceptionRecorder.Capture(() => readings.Skip(StaleMessageCount.Overall, 0));
+        var topicsNotMeasured = TestExceptionRecorder.Capture(() => readingsWithoutTopics.CompletePerTopic(
             new Dictionary<RoutingKey, int> { [new RoutingKey("orders")] = 1 }));
 
         //Assert
-        Assert.IsType<ArgumentOutOfRangeException>(negativeOverall);
-        Assert.IsType<ArgumentOutOfRangeException>(negativeTopic);
-        Assert.IsType<ArgumentOutOfRangeException>(skipBelowOne);
-        Assert.IsType<InvalidOperationException>(topicsNotMeasured);
+        await Assert.That(negativeOverall).IsTypeOf<ArgumentOutOfRangeException>();
+        await Assert.That(negativeTopic).IsTypeOf<ArgumentOutOfRangeException>();
+        await Assert.That(skipBelowOne).IsTypeOf<ArgumentOutOfRangeException>();
+        await Assert.That(topicsNotMeasured).IsTypeOf<InvalidOperationException>();
 
-        Assert.True(readings.TryGetLatestOverall(out var overall));
-        Assert.Equal(5, overall);
-        Assert.True(readings.TryGetLatestPerTopic(out var topics));
-        Assert.Equal(["orders=2"], topics.Select(t => $"{t.Key.Value}={t.Value}").ToArray());
-        Assert.Equal(
-            [
+        await Assert.That(readings.TryGetLatestOverall(out var overall)).IsTrue();
+        await Assert.That(overall).IsEqualTo(5);
+        await Assert.That(readings.TryGetLatestPerTopic(out var topics)).IsTrue();
+        await Assert.That(topics.Select(t => $"{t.Key.Value}={t.Value}").ToArray()).IsEqualTo(["orders=2"]);
+        await Assert.That(Totals(readings)).IsEqualTo([
                 "Overall/Completed=1", "Overall/Failed=0", "Overall/Abandoned=0", "Overall/Skipped=0",
                 "PerTopic/Completed=1", "PerTopic/Failed=0", "PerTopic/Abandoned=0", "PerTopic/Skipped=0"
-            ],
-            Totals(readings));
+            ]);
 
-        Assert.False(readingsWithoutTopics.TryGetLatestPerTopic(out _));
-        Assert.All(Totals(readingsWithoutTopics), total => Assert.EndsWith("=0", total));
+        await Assert.That(readingsWithoutTopics.TryGetLatestPerTopic(out _)).IsFalse();
+        foreach (var total in Totals(readingsWithoutTopics))
+{
+    await Assert.That(total).EndsWith("=0");
+}
     }
 
     private static string[] Totals(OutboxStaleMessageReadings readings) =>

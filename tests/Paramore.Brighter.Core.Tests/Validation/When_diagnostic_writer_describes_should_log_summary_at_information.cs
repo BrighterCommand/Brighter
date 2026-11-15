@@ -19,45 +19,39 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class PipelineDiagnosticWriterSummaryTests
 {
-    [Fact]
-    public void When_diagnostic_writer_describes_should_log_summary_at_information()
+    [Test]
+    public async Task When_diagnostic_writer_describes_should_log_summary_at_information()
     {
         // Arrange — two handler pipelines registered, one publication
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyDescribableCommand), typeof(MyPublicSyncHandler));
         registry.Add(typeof(MyDescribableCommand), typeof(MyPublicAsyncHandler));
         var pipelineBuilder = new PipelineBuilder<IRequest>(registry);
-        PipelineBuilder<IRequest>.ClearPipelineCache();
-
         var publications = new[]
         {
-            new Publication { Topic = new RoutingKey("topic.one"), RequestType = typeof(MyDescribableCommand) }
+            new Publication
+            {
+                Topic = new RoutingKey("topic.one"),
+                RequestType = typeof(MyDescribableCommand)
+            }
         };
-
         var logger = new SpyLogger();
-
         var writer = new PipelineDiagnosticWriter(logger, pipelineBuilder, publications: publications);
-
         // Act
         writer.Describe();
-
         // Assert — one Information-level summary line with correct counts
         var infoMessages = logger.InformationEntries.ToList();
-        Assert.Single(infoMessages);
-        Assert.Contains("2 handler pipeline", infoMessages[0].Message);
-        Assert.Contains("1 publication", infoMessages[0].Message);
+        await Assert.That(infoMessages).HasSingleItem();
+        await Assert.That(infoMessages[0].Message).Contains("2 handler pipeline");
+        await Assert.That(infoMessages[0].Message).Contains("1 publication");
     }
 }

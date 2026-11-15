@@ -28,8 +28,7 @@ using System.Threading;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 
 /// <summary>
@@ -47,7 +46,7 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 /// through into a strictly greater <see cref="MessageHeader.HandledCount"/> on m2. No production
 /// change is expected from this test.
 /// </remarks>
-[Trait("Category", "RocketMQ")]
+[Property("Category", "RocketMQ")]
 public class RocketMqLeaseLapseDeliveryCountTests : IDisposable
 {
     private const string Topic = "rmq_lease_lapse_r";
@@ -90,8 +89,8 @@ public class RocketMqLeaseLapseDeliveryCountTests : IDisposable
         _producer.Dispose();
     }
 
-    [Fact]
-    public void When_a_rocketmq_invisible_duration_lapses_should_present_greater_delivery_count()
+    [Test]
+    public async Task When_a_rocketmq_invisible_duration_lapses_should_present_greater_delivery_count()
     {
         // Arrange - a message published with HandledCount = 0 (evident data, before it is ever sent)
         var routingKey = new RoutingKey(Topic);
@@ -104,8 +103,8 @@ public class RocketMqLeaseLapseDeliveryCountTests : IDisposable
         // invisibility timeout so RocketMQ's own lease expiry — not a Requeue call — makes it
         // redeliverable, then receive again to observe the redelivery (no pump involved).
         var m1 = ReceiveOurs(_consumer, message.Id, s_receiveCeiling);
-        Assert.NotNull(m1);
-        Assert.Equal(message.Id, m1!.Id);
+        await Assert.That(m1).IsNotNull();
+        await Assert.That(m1!.Id).IsEqualTo(message.Id);
 
         var stopwatch = Stopwatch.StartNew();
         Thread.Sleep(s_invisibilityTimeout + TimeSpan.FromSeconds(2));
@@ -114,11 +113,9 @@ public class RocketMqLeaseLapseDeliveryCountTests : IDisposable
         var elapsed = stopwatch.Elapsed;
 
         // Assert - the expiry redelivery presents a strictly greater count than m1's (AC-42).
-        Assert.NotNull(m2);
-        Assert.Equal(message.Id, m2!.Id);
-        Assert.True(m2.Header.HandledCount > m1.Header.HandledCount,
-            $"R-1: m2 count {m2.Header.HandledCount} must be greater than m1 count {m1.Header.HandledCount}"
-            + $" (elapsed from m1 to m2: {elapsed})");
+        await Assert.That(m2).IsNotNull();
+        await Assert.That(m2!.Id).IsEqualTo(message.Id);
+        await Assert.That(m2.Header.HandledCount > m1.Header.HandledCount).IsTrue();
 
         // Settle m2 so nothing lingers on the topic for a later run. m1 was never settled.
         _consumer.Acknowledge(m2);

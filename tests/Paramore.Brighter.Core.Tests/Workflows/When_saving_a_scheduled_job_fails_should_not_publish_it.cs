@@ -29,15 +29,14 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
 public class SchedulerSaveBeforePublishTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_saving_a_scheduled_job_fails_should_not_publish_it(bool alreadyScheduled)
     {
         //Arrange
@@ -54,14 +53,14 @@ public class SchedulerSaveBeforePublishTests
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 
         //Act
-        var exception = await Record.ExceptionAsync(() => scheduler.ScheduleAsync(job, timeout.Token));
+        var exception = await TestExceptionRecorder.CaptureAsync(() => scheduler.ScheduleAsync(job, timeout.Token));
         channel.Stop();
         var published = await channel.DequeueJobAsync(timeout.Token);
 
         //Assert
-        Assert.Same(failure, exception);
-        Assert.Null(published);
-        Assert.Equal(originalDueTime, job.DueTime);
-        Assert.Equal(originalDueTime, store.LastSavedDueTime);
+        await Assert.That(exception).IsSameReferenceAs(failure);
+        await Assert.That(published).IsNull();
+        await Assert.That(job.DueTime).IsEqualTo(originalDueTime);
+        await Assert.That(store.LastSavedDueTime).IsEqualTo(originalDueTime);
     }
 }

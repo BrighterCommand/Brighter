@@ -26,15 +26,14 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
 public class MsSqlMessageIdFreshProvisioningTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_mssql_provisions_a_new_outbox_should_enforce_message_id_uniqueness(bool binary)
     {
         //Arrange
@@ -50,9 +49,9 @@ public class MsSqlMessageIdFreshProvisioningTests
         await store.ProvisionAsync();
 
         //Assert
-        Assert.Equal(1, await store.RowCountAsync());
-        Assert.True(await store.MessageIdUniqueIndexesAsync() > 0);
-        Assert.Equal(9, await store.LatestVersionAsync());
-        Assert.Equal(1, await store.ScalarAsync($"SELECT COUNT(*) FROM [{store.Schema}].[__BrighterMigrationHistory]"));
+        await Assert.That(await store.RowCountAsync()).IsEqualTo(1);
+        await Assert.That(await store.MessageIdUniqueIndexesAsync() > 0).IsTrue();
+        await Assert.That(await store.LatestVersionAsync()).IsEqualTo(9);
+        await Assert.That(await store.ScalarAsync($"SELECT COUNT(*) FROM [{store.Schema}].[__BrighterMigrationHistory]")).IsEqualTo(1);
     }
 }

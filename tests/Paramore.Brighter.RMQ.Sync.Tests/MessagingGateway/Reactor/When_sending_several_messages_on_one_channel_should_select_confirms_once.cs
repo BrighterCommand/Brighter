@@ -1,12 +1,11 @@
 using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Property("Category", "RMQ")]
+[NotInParallel("RMQ")]
 public class RmqConfirmSelectOncePerChannelTests : IDisposable
 {
     private readonly RoutingKey _routingKey = new(Guid.NewGuid().ToString());
@@ -27,8 +26,8 @@ public class RmqConfirmSelectOncePerChannelTests : IDisposable
             .Create(TimeSpan.FromMilliseconds(1000));
     }
 
-    [Fact]
-    public void When_sending_several_messages_on_one_channel_should_select_confirms_once()
+    [Test]
+    public async Task When_sending_several_messages_on_one_channel_should_select_confirms_once()
     {
         //Arrange — the first send opens the channel
         _messageProducer.Send(NewMessage());
@@ -38,9 +37,9 @@ public class RmqConfirmSelectOncePerChannelTests : IDisposable
         _messageProducer.Send(NewMessage());
 
         //Assert — the channel was put into confirm mode, and given its confirm handlers, only once
-        Assert.Equal(1, _messageProducer.Confirms.ConfirmSelectCount);
-        Assert.Equal(1, _messageProducer.Confirms.AckSubscriberCount);
-        Assert.Equal(1, _messageProducer.Confirms.NackSubscriberCount);
+        await Assert.That(_messageProducer.Confirms.ConfirmSelectCount).IsEqualTo(1);
+        await Assert.That(_messageProducer.Confirms.AckSubscriberCount).IsEqualTo(1);
+        await Assert.That(_messageProducer.Confirms.NackSubscriberCount).IsEqualTo(1);
     }
 
     private Message NewMessage() => new(

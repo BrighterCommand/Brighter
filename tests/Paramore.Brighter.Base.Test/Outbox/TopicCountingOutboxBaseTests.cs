@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Base.Test.Outbox;
 
@@ -96,7 +95,7 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
             new MessageBody("message body"));
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_by_topic_should_return_each_topic_stale_count_capped_at_the_ceiling()
     {
         // Arrange
@@ -118,18 +117,18 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
             result => result.TryGetValue(Orders, out var orders) && orders == 7);
 
         // Assert
-        Assert.Equal(5, counts[Orders]);
-        Assert.Equal(1, counts[Payments]);
-        Assert.Equal(0, counts[Refunds]);
+        await Assert.That(counts[Orders]).IsEqualTo(5);
+        await Assert.That(counts[Payments]).IsEqualTo(1);
+        await Assert.That(counts[Refunds]).IsEqualTo(0);
 
-        Assert.Equal(3, cappedCounts[Orders]);
-        Assert.Equal(1, cappedCounts[Payments]);
-        Assert.Equal(0, cappedCounts[Refunds]);
+        await Assert.That(cappedCounts[Orders]).IsEqualTo(3);
+        await Assert.That(cappedCounts[Payments]).IsEqualTo(1);
+        await Assert.That(cappedCounts[Refunds]).IsEqualTo(0);
 
-        Assert.Equal(7, youngerCounts[Orders]);
+        await Assert.That(youngerCounts[Orders]).IsEqualTo(7);
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_by_topic_should_answer_exactly_the_requested_topics()
     {
         // Arrange
@@ -146,12 +145,12 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
             result => result.TryGetValue(Orders, out var orders) && orders == 5);
 
         // Assert
-        Assert.Equal(new HashSet<RoutingKey> { Orders, Payments, Refunds }, counts.Keys.ToHashSet());
-        Assert.Equal(0, counts[Refunds]);
-        Assert.False(counts.ContainsKey(Audit));
+        await Assert.That(counts.Keys.ToHashSet()).IsEqualTo(new HashSet<RoutingKey> { Orders, Payments, Refunds });
+        await Assert.That(counts[Refunds]).IsEqualTo(0);
+        await Assert.That(counts.ContainsKey(Audit)).IsFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_by_topic_with_a_topic_in_args_should_not_narrow_the_topics()
     {
         // Arrange
@@ -175,12 +174,12 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
             [Payments] = 1,
             [Refunds] = 0
         };
-        Assert.Equal(expected, counts);
+        await Assert.That(counts).IsEqualTo(expected);
 
-        Assert.Equal(new Dictionary<string, object> { ["Topic"] = Orders.Value }, args);
+        await Assert.That(args).IsEqualTo(new Dictionary<string, object> { ["Topic"] = Orders.Value });
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_by_topic_should_count_a_message_toward_its_header_topic()
     {
         // Arrange
@@ -204,10 +203,10 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
             [Orders] = 0,
             [ordersV2] = 1
         };
-        Assert.Equal(expected, counts);
+        await Assert.That(counts).IsEqualTo(expected);
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_by_topic_with_no_topics_should_return_an_empty_result()
     {
         // Arrange
@@ -218,25 +217,25 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
         var counts = await WaitForCountsByTopicAsync(request, 100, result => result.Count == 0);
 
         // Assert
-        Assert.NotNull(counts);
-        Assert.Empty(counts);
+        await Assert.That(counts).IsNotNull();
+        await Assert.That(counts).IsEmpty();
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_by_topic_with_a_null_map_should_throw_argument_null()
     {
         // Arrange
         BeforeCount();
 
         // Act
-        var exception = await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            TopicCountingOutbox.GetOutstandingMessageCountsByTopicAsync(null, new RequestContext(), 100));
+        var exception = await Assert.That(() =>
+            TopicCountingOutbox.GetOutstandingMessageCountsByTopicAsync(null, new RequestContext(), 100)).ThrowsExactly<ArgumentNullException>();
 
         // Assert
-        Assert.Equal("dispatchedSinceByTopic", exception.ParamName);
+        await Assert.That(exception.ParamName).IsEqualTo("dispatchedSinceByTopic");
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_by_topic_with_an_empty_topic_should_throw_argument()
     {
         // Arrange
@@ -247,14 +246,14 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
         BeforeCount();
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            TopicCountingOutbox.GetOutstandingMessageCountsByTopicAsync(request, new RequestContext(), 100));
+        await Assert.That(() =>
+            TopicCountingOutbox.GetOutstandingMessageCountsByTopicAsync(request, new RequestContext(), 100)).ThrowsExactly<ArgumentException>();
     }
 
-    [Theory]
-    [InlineData(0L)]
-    [InlineData(-TimeSpan.TicksPerSecond)]
-    [InlineData(365 * TimeSpan.TicksPerDay + 1)]
+    [Test]
+    [Arguments(0L)]
+    [Arguments(-TimeSpan.TicksPerSecond)]
+    [Arguments(365 * TimeSpan.TicksPerDay + 1)]
     public async Task When_counting_by_topic_with_an_age_out_of_range_should_throw_argument(long ageTicks)
     {
         // Arrange
@@ -265,14 +264,14 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
         BeforeCount();
 
         // Act
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-            TopicCountingOutbox.GetOutstandingMessageCountsByTopicAsync(request, new RequestContext(), 100));
+        var exception = await Assert.That(() =>
+            TopicCountingOutbox.GetOutstandingMessageCountsByTopicAsync(request, new RequestContext(), 100)).ThrowsExactly<ArgumentException>();
 
         // Assert
-        Assert.Contains(Orders.Value, exception.Message);
+        await Assert.That(exception.Message).Contains(Orders.Value);
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_by_topic_with_an_age_of_365_days_should_count()
     {
         // Arrange
@@ -289,10 +288,10 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
         {
             [Orders] = 0
         };
-        Assert.Equal(expected, counts);
+        await Assert.That(counts).IsEqualTo(expected);
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_by_topic_with_a_ceiling_of_zero_should_throw_out_of_range()
     {
         // Arrange
@@ -303,14 +302,14 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
         BeforeCount();
 
         // Act
-        var exception = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
-            TopicCountingOutbox.GetOutstandingMessageCountsByTopicAsync(request, new RequestContext(), 0));
+        var exception = await Assert.That(() =>
+            TopicCountingOutbox.GetOutstandingMessageCountsByTopicAsync(request, new RequestContext(), 0)).ThrowsExactly<ArgumentOutOfRangeException>();
 
         // Assert
-        Assert.Equal("maxCountPerTopic", exception.ParamName);
+        await Assert.That(exception.ParamName).IsEqualTo("maxCountPerTopic");
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_by_topic_beside_posting_path_calls_should_answer_every_requested_topic()
     {
         // Arrange
@@ -333,8 +332,10 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
         await Task.WhenAll(postingPath);
 
         // Assert
-        Assert.All(results, counts =>
-            Assert.Equal(new HashSet<RoutingKey> { Orders, Payments, Refunds }, counts.Keys.ToHashSet()));
+        foreach (var counts in results)
+{
+    await Assert.That(counts.Keys.ToHashSet()).IsEqualTo(new HashSet<RoutingKey> { Orders, Payments, Refunds });
+}
     }
 
     private async Task AddTopicStoreAsync()

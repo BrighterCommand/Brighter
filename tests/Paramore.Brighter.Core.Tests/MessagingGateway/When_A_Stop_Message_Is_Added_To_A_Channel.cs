@@ -19,11 +19,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway
 {
@@ -33,30 +30,22 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         private const string ChannelName = "myChannel";
         private readonly IAmAChannelSync _channel;
         private readonly InternalBus _bus;
-
         public ChannelStopTests()
         {
             _bus = new InternalBus();
-            IAmAMessageConsumerSync gateway = new InMemoryMessageConsumer(_routingKey, _bus, TimeProvider.System, ackTimeout: TimeSpan.FromMilliseconds(1000)); 
-
-            _channel = new Channel(new(ChannelName),_routingKey, gateway);
-
-            Message sentMessage = new(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
-                new MessageBody("a test body"));
-            
+            IAmAMessageConsumerSync gateway = new InMemoryMessageConsumer(_routingKey, _bus, TimeProvider.System, ackTimeout: TimeSpan.FromMilliseconds(1000));
+            _channel = new Channel(new(ChannelName), _routingKey, gateway);
+            Message sentMessage = new(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT), new MessageBody("a test body"));
             _bus.Enqueue(sentMessage);
-
             _channel.Stop(_routingKey);
         }
 
-        [Fact]
-        public void When_A_Stop_Message_Is_Added_To_A_Channel()
+        [Test]
+        public async Task When_A_Stop_Message_Is_Added_To_A_Channel()
         {
             var stopMessage = _channel.Receive(TimeSpan.FromMilliseconds(1000));
-            Assert.Equal(MessageType.MT_QUIT, stopMessage.Header.MessageType);
-            
-            Assert.Single(_bus.Stream(new RoutingKey(_routingKey)));
+            await Assert.That(stopMessage.Header.MessageType).IsEqualTo(MessageType.MT_QUIT);
+            await Assert.That(_bus.Stream(new RoutingKey(_routingKey))).HasSingleItem();
         }
     }
 }

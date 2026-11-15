@@ -30,27 +30,26 @@ using System.Threading.Tasks;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SqsFifo.Proactor;
 
-[Trait("Category", "Sqs")]
-[Collection("SqsFifo")]
-public class SqsFifoDeferredOrderingAsyncTests : IAsyncLifetime
+[Property("Category", "Sqs")]
+[NotInParallel("SqsFifo")]
+public class SqsFifoDeferredOrderingAsyncTests
 {
     private readonly SqsFifoMessageGatewayProvider _provider = new();
     private IAmAMessageProducerAsync _producer;
     private IAmAChannelAsync _channel;
     private readonly List<Message> _messages = [];
 
-    public Task InitializeAsync() => Task.CompletedTask;
+    [Before(HookType.Test)]public Task InitializeAsync() => Task.CompletedTask;
 
-    public async Task DisposeAsync()
+    [After(HookType.Test)]public async Task DisposeAsync()
     {
         await _provider.CleanUpAsync(_producer, _channel, _messages);
     }
 
-    [Fact]
+    [Test]
     public async Task When_deferring_the_head_of_a_fifo_group_should_preserve_order_async()
     {
         // Arrange
@@ -96,12 +95,12 @@ public class SqsFifoDeferredOrderingAsyncTests : IAsyncLifetime
         }
 
         // Assert
-        Assert.True(pumpChannel.RequeueSucceeded);
-        Assert.Equal(1, ConformanceDeferredPump.GetDispatchCount(ConformanceDeferredPump.KeyOf(_messages[0])));
-        Assert.Equal(0, ConformanceDeferredPump.GetDispatchCount(ConformanceDeferredPump.KeyOf(_messages[1])));
-        Assert.Equal(0, ConformanceDeferredPump.GetDispatchCount(ConformanceDeferredPump.KeyOf(_messages[2])));
+        await Assert.That(pumpChannel.RequeueSucceeded).IsTrue();
+        await Assert.That(ConformanceDeferredPump.GetDispatchCount(ConformanceDeferredPump.KeyOf(_messages[0]))).IsEqualTo(1);
+        await Assert.That(ConformanceDeferredPump.GetDispatchCount(ConformanceDeferredPump.KeyOf(_messages[1]))).IsEqualTo(0);
+        await Assert.That(ConformanceDeferredPump.GetDispatchCount(ConformanceDeferredPump.KeyOf(_messages[2]))).IsEqualTo(0);
         var beforeDelay = await _channel.ReceiveAsync(TimeSpan.FromSeconds(2));
-        Assert.Equal(MessageType.MT_NONE, beforeDelay.Header.MessageType);
+        await Assert.That(beforeDelay.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
         foreach (var expected in _messages)
         {
@@ -111,7 +110,7 @@ public class SqsFifoDeferredOrderingAsyncTests : IAsyncLifetime
             {
                 received = await _channel.ReceiveAsync(TimeSpan.FromSeconds(1));
             }
-            Assert.Equal(expected.Id, received.Id);
+            await Assert.That(received.Id).IsEqualTo(expected.Id);
             await _channel.AcknowledgeAsync(received);
         }
     }

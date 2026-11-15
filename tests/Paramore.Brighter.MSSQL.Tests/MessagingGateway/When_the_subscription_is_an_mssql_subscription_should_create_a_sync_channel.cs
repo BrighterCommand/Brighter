@@ -24,7 +24,7 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Xunit;
+
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 
@@ -40,7 +40,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 /// provisioning; the positive ones get a channel because Assume opens no connection and
 /// <c>MsSqlMessageConsumer</c> opens none in its constructor either.
 /// </remarks>
-[Trait("Category", "MSSQL")]
+[Property("Category", "MSSQL")]
 public class MsSqlChannelFactorySubscriptionTypeTests
 {
     private readonly RelationalDatabaseConfiguration _configuration =
@@ -60,52 +60,49 @@ public class MsSqlChannelFactorySubscriptionTypeTests
     private ChannelFactory CreateChannelFactory() =>
         new(new MsSqlMessageConsumerFactory(_configuration));
 
-    [Fact]
-    public void When_the_subscription_is_not_an_mssql_subscription_should_throw_creating_a_sync_channel()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_subscription_is_not_an_mssql_subscription_should_throw_creating_a_sync_channel()
     {
         // Arrange
         var channelFactory = CreateChannelFactory();
 
         // Act
-        var exception = Assert.Throws<ConfigurationException>(
-            () => channelFactory.CreateSyncChannel(PlainSubscription()));
+        var exception = await Assert.That(() => channelFactory.CreateSyncChannel(PlainSubscription())).ThrowsExactly<ConfigurationException>();
 
         // Assert
-        Assert.Contains("MsSqlSubscription", exception.Message);
+        await Assert.That(exception.Message).Contains("MsSqlSubscription");
     }
 
-    [Fact]
-    public void When_the_subscription_is_not_an_mssql_subscription_should_throw_creating_an_async_channel()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_subscription_is_not_an_mssql_subscription_should_throw_creating_an_async_channel()
     {
         // Arrange
         var channelFactory = CreateChannelFactory();
 
         // Act
-        var exception = Assert.Throws<ConfigurationException>(
-            () => channelFactory.CreateAsyncChannel(PlainSubscription()));
+        var exception = await Assert.That(() => channelFactory.CreateAsyncChannel(PlainSubscription())).ThrowsExactly<ConfigurationException>();
 
         // Assert
-        Assert.Contains("MsSqlSubscription", exception.Message);
+        await Assert.That(exception.Message).Contains("MsSqlSubscription");
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_subscription_is_not_an_mssql_subscription_should_throw_creating_an_async_channel_asynchronously()
     {
         // Arrange
         var channelFactory = CreateChannelFactory();
 
         // Act
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(
-            () => channelFactory.CreateAsyncChannelAsync(PlainSubscription()));
+        var exception = await Assert.That(() => channelFactory.CreateAsyncChannelAsync(PlainSubscription())).ThrowsExactly<ConfigurationException>();
 
         // Assert
-        Assert.Contains("MsSqlSubscription", exception.Message);
+        await Assert.That(exception.Message).Contains("MsSqlSubscription");
     }
 
     // The controls. Without one per creation method, any of the three could regress to an
     // unconditional throw and every test above would stay green.
-    [Fact]
-    public void When_the_subscription_is_an_mssql_subscription_should_create_a_sync_channel()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_subscription_is_an_mssql_subscription_should_create_a_sync_channel()
     {
         // Arrange
         var channelFactory = CreateChannelFactory();
@@ -114,11 +111,11 @@ public class MsSqlChannelFactorySubscriptionTypeTests
         using var channel = channelFactory.CreateSyncChannel(AnMsSqlSubscription());
 
         // Assert
-        Assert.NotNull(channel);
-        Assert.Equal(new ChannelName("test.topic"), channel.Name);
+        await Assert.That(channel).IsNotNull();
+        await Assert.That(channel.Name).IsEqualTo(new ChannelName("test.topic"));
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_subscription_is_an_mssql_subscription_should_create_an_async_channel()
     {
         // Arrange
@@ -128,11 +125,11 @@ public class MsSqlChannelFactorySubscriptionTypeTests
         await using var channel = channelFactory.CreateAsyncChannel(AnMsSqlSubscription());
 
         // Assert
-        Assert.NotNull(channel);
-        Assert.Equal(new ChannelName("test.topic"), channel.Name);
+        await Assert.That(channel).IsNotNull();
+        await Assert.That(channel.Name).IsEqualTo(new ChannelName("test.topic"));
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_subscription_is_an_mssql_subscription_should_create_an_async_channel_asynchronously()
     {
         // Arrange
@@ -142,14 +139,14 @@ public class MsSqlChannelFactorySubscriptionTypeTests
         await using var channel = await channelFactory.CreateAsyncChannelAsync(AnMsSqlSubscription());
 
         // Assert
-        Assert.NotNull(channel);
-        Assert.Equal(new ChannelName("test.topic"), channel.Name);
+        await Assert.That(channel).IsNotNull();
+        await Assert.That(channel.Name).IsEqualTo(new ChannelName("test.topic"));
     }
 
     // The error message offers "MsSqlSubscription or MsSqlSubscription<T>", so the non-generic
     // form has to be accepted for the message to be true.
-    [Fact]
-    public void When_the_subscription_is_a_non_generic_mssql_subscription_should_create_a_channel()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_subscription_is_a_non_generic_mssql_subscription_should_create_a_channel()
     {
         // Arrange
         var channelFactory = CreateChannelFactory();
@@ -164,7 +161,7 @@ public class MsSqlChannelFactorySubscriptionTypeTests
         using var channel = channelFactory.CreateSyncChannel(subscription);
 
         // Assert
-        Assert.NotNull(channel);
-        Assert.Equal(new ChannelName("test.topic"), channel.Name);
+        await Assert.That(channel).IsNotNull();
+        await Assert.That(channel.Name).IsEqualTo(new ChannelName("test.topic"));
     }
 }

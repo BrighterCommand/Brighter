@@ -32,7 +32,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -42,7 +41,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 /// </summary>
 public class UnfilteredReportAndPublisherTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_sweep_is_hung_should_carry_each_check_to_the_report_and_a_publisher()
     {
         //Arrange
@@ -53,12 +52,12 @@ public class UnfilteredReportAndPublisherTests
             services => OutboxSweeperRecordScenario.RegisterHungSweep(services, new FakeTimeProvider()));
 
         //Assert
-        AssertEveryCheckCarried(report, published);
-        Assert.Equal(HealthStatus.Degraded, report.Entries["brighter-outbox-sweeper-restart"].Status);
-        Assert.Equal(HealthStatus.Healthy, report.Entries["brighter-outbox-sweeper-investigate"].Status);
+        await AssertEveryCheckCarried(report, published);
+        await Assert.That(report.Entries["brighter-outbox-sweeper-restart"].Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(report.Entries["brighter-outbox-sweeper-investigate"].Status).IsEqualTo(HealthStatus.Healthy);
     }
 
-    [Fact]
+    [Test]
     public async Task When_only_failures_apply_should_carry_each_check_to_the_report_and_a_publisher()
     {
         //Arrange
@@ -69,14 +68,14 @@ public class UnfilteredReportAndPublisherTests
             services => OutboxSweeperRecordScenario.RegisterConsecutiveFailures(services, new FakeTimeProvider()));
 
         //Assert
-        AssertEveryCheckCarried(report, published);
-        Assert.Equal(HealthStatus.Healthy, report.Entries["brighter-outbox-sweeper-restart"].Status);
+        await AssertEveryCheckCarried(report, published);
+        await Assert.That(report.Entries["brighter-outbox-sweeper-restart"].Status).IsEqualTo(HealthStatus.Healthy);
         var investigate = report.Entries["brighter-outbox-sweeper-investigate"];
-        Assert.Equal(HealthStatus.Degraded, investigate.Status);
-        Assert.Contains("consecutive_failed_sweeps", (string[])investigate.Data[RemedyCheckConvention.ConditionsKey]);
+        await Assert.That(investigate.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That((string[])investigate.Data[RemedyCheckConvention.ConditionsKey]).Contains("consecutive_failed_sweeps");
     }
 
-    [Fact]
+    [Test]
     public async Task When_only_a_tripped_topic_applies_should_carry_each_check_to_the_report_and_a_publisher()
     {
         //Arrange
@@ -90,11 +89,11 @@ public class UnfilteredReportAndPublisherTests
         });
 
         //Assert
-        AssertEveryCheckCarried(report, published);
-        Assert.Equal(HealthStatus.Healthy, report.Entries["brighter-outbox-sweeper-restart"].Status);
+        await AssertEveryCheckCarried(report, published);
+        await Assert.That(report.Entries["brighter-outbox-sweeper-restart"].Status).IsEqualTo(HealthStatus.Healthy);
         var investigate = report.Entries["brighter-outbox-sweeper-investigate"];
-        Assert.Equal(HealthStatus.Degraded, investigate.Status);
-        Assert.Contains("tripped_topics", (string[])investigate.Data[RemedyCheckConvention.ConditionsKey]);
+        await Assert.That(investigate.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That((string[])investigate.Data[RemedyCheckConvention.ConditionsKey]).Contains("tripped_topics");
     }
 
     private static async Task<(HealthReport Report, HealthReport Published)> RunAsync(
@@ -118,33 +117,27 @@ public class UnfilteredReportAndPublisherTests
         return (report, published);
     }
 
-    private static void AssertEveryCheckCarried(HealthReport report, HealthReport published)
+    private static async Task AssertEveryCheckCarried(HealthReport report, HealthReport published)
     {
-        Assert.Equal(
-            ["brighter-outbox-sweeper-investigate", "brighter-outbox-sweeper-restart"],
-            report.Entries.Keys.OrderBy(name => name, StringComparer.Ordinal));
-        Assert.NotEqual(HealthStatus.Unhealthy, report.Status);
-        Assert.All(report.Entries.Values, entry =>
-        {
-            Assert.NotEqual(HealthStatus.Unhealthy, entry.Status);
-            Assert.False(string.IsNullOrEmpty(entry.Description));
-            Assert.NotEmpty(entry.Data);
-        });
-        Assert.Equal(
-            RemedyCheckConvention.Name(RemedyKind.Restart),
-            report.Entries["brighter-outbox-sweeper-restart"].Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Equal(
-            RemedyCheckConvention.Name(RemedyKind.Investigate),
-            report.Entries["brighter-outbox-sweeper-investigate"].Data[RemedyCheckConvention.RemedyKindKey]);
+        await Assert.That(report.Entries.Keys.OrderBy(name => name, StringComparer.Ordinal)).IsEqualTo(["brighter-outbox-sweeper-investigate", "brighter-outbox-sweeper-restart"]);
+        await Assert.That(report.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+        foreach (var entry in report.Entries.Values)
+{
+    await Assert.That(entry.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+    await Assert.That(string.IsNullOrEmpty(entry.Description)).IsFalse();
+    await Assert.That(entry.Data).IsNotEmpty();
+}
+        await Assert.That(report.Entries["brighter-outbox-sweeper-restart"].Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+        await Assert.That(report.Entries["brighter-outbox-sweeper-investigate"].Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
 
-        Assert.Equal(report.Entries.Keys.OrderBy(name => name), published.Entries.Keys.OrderBy(name => name));
+        await Assert.That(published.Entries.Keys.OrderBy(name => name)).IsEqualTo(report.Entries.Keys.OrderBy(name => name));
         foreach (var (name, entry) in report.Entries)
         {
             var seen = published.Entries[name];
-            Assert.Equal(entry.Status, seen.Status);
-            Assert.Equal(entry.Description, seen.Description);
-            Assert.Equal(entry.Data.OrderBy(pair => pair.Key).Select(pair => pair.Key), seen.Data.OrderBy(pair => pair.Key).Select(pair => pair.Key));
-            Assert.Equal(entry.Data[RemedyCheckConvention.RemedyKindKey], seen.Data[RemedyCheckConvention.RemedyKindKey]);
+            await Assert.That(seen.Status).IsEqualTo(entry.Status);
+            await Assert.That(seen.Description).IsEqualTo(entry.Description);
+            await Assert.That(seen.Data.OrderBy(pair => pair.Key).Select(pair => pair.Key)).IsEqualTo(entry.Data.OrderBy(pair => pair.Key).Select(pair => pair.Key));
+            await Assert.That(seen.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(entry.Data[RemedyCheckConvention.RemedyKindKey]);
         }
     }
 }

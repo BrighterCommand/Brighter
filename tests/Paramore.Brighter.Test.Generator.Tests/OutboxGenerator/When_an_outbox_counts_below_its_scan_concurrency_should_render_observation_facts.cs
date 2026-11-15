@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
@@ -30,7 +30,6 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.OutboxGenerator;
 
@@ -41,9 +40,9 @@ public class OutstandingCountBelowScanConcurrencyGenerationTests : IDisposable
 
     private readonly string _testDirectory = Path.Combine(Path.GetTempPath(), $"OutboxGeneratorTests_{Guid.NewGuid()}");
 
-    [Theory]
-    [InlineData(1)]
-    [InlineData(2)]
+    [Test]
+    [Arguments(1)]
+    [Arguments(2)]
     public async Task When_an_outbox_counts_below_its_scan_concurrency_should_render_observation_facts(int ceiling)
     {
         // Arrange
@@ -54,11 +53,11 @@ public class OutstandingCountBelowScanConcurrencyGenerationTests : IDisposable
         var source = await GenerateCeilingTest(outbox);
 
         // Assert
-        Assert.Contains($"_output.WriteLine(await ObserveCountAsync({ceiling}));", source);
-        Assert.Contains("ITestOutputHelper", source);
+        await Assert.That(source).Contains($"_output.WriteLine(await ObserveCountAsync({ceiling}));");
+        await Assert.That(source).Contains("ITestOutputHelper");
     }
 
-    [Fact]
+    [Test]
     public async Task When_an_outbox_counts_below_its_scan_concurrency_should_assert_nothing_in_the_observation_facts()
     {
         // Arrange
@@ -70,10 +69,10 @@ public class OutstandingCountBelowScanConcurrencyGenerationTests : IDisposable
 
         // Assert
         var observation = source.Substring(source.IndexOf("ObserveCountAsync(1)", StringComparison.Ordinal));
-        Assert.DoesNotContain("Assert.", observation);
+        await Assert.That(observation).DoesNotContain("Assert.");
     }
 
-    [Fact]
+    [Test]
     public async Task When_an_outbox_leaves_the_scan_concurrency_setting_unset_should_not_render_observation_facts()
     {
         // Arrange
@@ -83,8 +82,8 @@ public class OutstandingCountBelowScanConcurrencyGenerationTests : IDisposable
         var source = await GenerateCeilingTest(outbox);
 
         // Assert
-        Assert.DoesNotContain("ObserveCountAsync", source);
-        Assert.DoesNotContain("ITestOutputHelper", source);
+        await Assert.That(source).DoesNotContain("ObserveCountAsync");
+        await Assert.That(source).DoesNotContain("ITestOutputHelper");
     }
 
     private static OutboxConfiguration Outbox() => new()

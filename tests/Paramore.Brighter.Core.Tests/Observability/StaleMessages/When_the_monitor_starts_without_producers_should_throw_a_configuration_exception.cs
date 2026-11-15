@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -33,15 +33,14 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleMessageMonitorMissingProducersTests
 {
-    [Theory]
-    [InlineData(nameof(IAmProducersConfiguration), nameof(IAmAnOutbox))]
-    [InlineData(nameof(IAmAnOutbox), nameof(IAmProducersConfiguration))]
+    [Test]
+    [Arguments(nameof(IAmProducersConfiguration), nameof(IAmAnOutbox))]
+    [Arguments(nameof(IAmAnOutbox), nameof(IAmProducersConfiguration))]
     public async Task When_the_monitor_starts_without_producers_should_throw_a_configuration_exception(string missingRegistration, string registeredService)
     {
         //Arrange
@@ -66,14 +65,14 @@ public class StaleMessageMonitorMissingProducersTests
         var readings = provider.GetRequiredService<OutboxStaleMessageReadings>();
 
         //Act
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(() => monitor.StartAsync(default));
+        var exception = await Assert.That(() => monitor.StartAsync(default)).ThrowsExactly<ConfigurationException>();
         timeProvider.Advance(interval);
 
         //Assert
-        Assert.Contains(missingRegistration, exception.Message);
-        Assert.DoesNotContain(registeredService, exception.Message);
-        Assert.Contains("AddProducers", exception.Message);
-        Assert.False(readings.IsStarted);
-        Assert.Empty(outbox.CountCalls);
+        await Assert.That(exception.Message).Contains(missingRegistration);
+        await Assert.That(exception.Message).DoesNotContain(registeredService);
+        await Assert.That(exception.Message).Contains("AddProducers");
+        await Assert.That(readings.IsStarted).IsFalse();
+        await Assert.That(outbox.CountCalls).IsEmpty();
     }
 }

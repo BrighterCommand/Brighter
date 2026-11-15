@@ -22,14 +22,14 @@ THE SOFTWARE. */
 
 using Confluent.Kafka;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
+
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
 public class When_applying_consumer_group_protocol_should_not_set_classic_settings
 {
-    [Fact]
-    public void Should_set_consumer_group_protocol()
+    [Test]
+    public async System.Threading.Tasks.Task Should_set_consumer_group_protocol()
     {
         // Arrange
         var config = new ConsumerConfig();
@@ -38,11 +38,11 @@ public class When_applying_consumer_group_protocol_should_not_set_classic_settin
         new ConsumerGroupProtocol().Apply(config);
 
         // Assert
-        Assert.Equal(GroupProtocol.Consumer, config.GroupProtocol.GetValueOrDefault());
+        await Assert.That(config.GroupProtocol.GetValueOrDefault()).IsEqualTo(GroupProtocol.Consumer);
     }
 
-    [Fact]
-    public void Should_map_consumer_protocol_settings()
+    [Test]
+    public async System.Threading.Tasks.Task Should_map_consumer_protocol_settings()
     {
         // Arrange
         var config = new ConsumerConfig();
@@ -56,12 +56,12 @@ public class When_applying_consumer_group_protocol_should_not_set_classic_settin
         groupProtocol.Apply(config);
 
         // Assert
-        Assert.Equal("range", config.GroupRemoteAssignor);
-        Assert.Equal("consumer-1", config.GroupInstanceId);
+        await Assert.That(config.GroupRemoteAssignor).IsEqualTo("range");
+        await Assert.That(config.GroupInstanceId).IsEqualTo("consumer-1");
     }
 
-    [Fact]
-    public void Should_not_set_classic_only_settings()
+    [Test]
+    public async System.Threading.Tasks.Task Should_not_set_classic_only_settings()
     {
         // Arrange — librdkafka rejects a consumer creation when session.timeout.ms,
         // heartbeat.interval.ms or partition.assignment.strategy are present
@@ -72,8 +72,8 @@ public class When_applying_consumer_group_protocol_should_not_set_classic_settin
         new ConsumerGroupProtocol().Apply(config);
 
         // Assert
-        Assert.Null(config.SessionTimeoutMs);
-        Assert.Null(config.HeartbeatIntervalMs);
-        Assert.Null(config.PartitionAssignmentStrategy);
+        await Assert.That(config.SessionTimeoutMs).IsNull();
+        await Assert.That(config.HeartbeatIntervalMs).IsNull();
+        await Assert.That(config.PartitionAssignmentStrategy).IsNull();
     }
 }

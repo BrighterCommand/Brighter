@@ -27,15 +27,14 @@ using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "AzureServiceBus")]
-[Collection("AzureServiceBus")]
+[Property("Category", "AzureServiceBus")]
+[NotInParallel("AzureServiceBus")]
 public class AzureServiceBusBrokerLockRenewalTests
 {
-    [Fact]
+    [Test]
     public async Task When_processing_beyond_the_broker_lock_should_remove_the_message()
     {
         // Arrange
@@ -64,16 +63,16 @@ public class AzureServiceBusBrokerLockRenewalTests
 
             // Act
             var message = await channel.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.Equal(original.MessageId, message.Id.Value);
+            await Assert.That(message.Id.Value).IsEqualTo(original.MessageId);
             await Task.Delay(TimeSpan.FromSeconds(15));
             await channel.AcknowledgeAsync(message);
 
             // Assert
             await using var observer = client.CreateReceiver(queueName);
-            Assert.Null(await observer.PeekMessageAsync());
+            await Assert.That(await observer.PeekMessageAsync()).IsNull();
             await using var deadLetters = client.CreateReceiver(queueName,
                 new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter });
-            Assert.Null(await deadLetters.PeekMessageAsync());
+            await Assert.That(await deadLetters.PeekMessageAsync()).IsNull();
         }
         finally
         {

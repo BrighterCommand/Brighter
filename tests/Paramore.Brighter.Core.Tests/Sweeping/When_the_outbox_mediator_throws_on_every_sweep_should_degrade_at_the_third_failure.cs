@@ -35,7 +35,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -43,7 +42,7 @@ public class ThrowingMediatorFailureThresholdTests
 {
     private const string InvestigateCheck = "brighter-outbox-sweeper-investigate";
 
-    [Fact]
+    [Test]
     public async Task When_the_outbox_mediator_throws_on_every_sweep_should_degrade_at_the_third_failure()
     {
         //Arrange
@@ -78,24 +77,24 @@ public class ThrowingMediatorFailureThresholdTests
             var afterFour = (await healthChecks.CheckHealthAsync(CancellationToken.None)).Entries[InvestigateCheck];
 
             //Assert
-            Assert.True(firstFailed && secondFailed && thirdFailed && fourthFailed, "The sweeps did not all end");
-            Assert.Equal(HealthStatus.Healthy, afterTwo.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, afterTwo.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), afterTwo.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Empty(Assert.IsType<string[]>(afterTwo.Data[RemedyCheckConvention.ConditionsKey]));
+            await Assert.That(firstFailed && secondFailed && thirdFailed && fourthFailed).IsTrue().Because("The sweeps did not all end");
+            await Assert.That(afterTwo.Status).IsEqualTo(HealthStatus.Healthy);
+            await Assert.That(afterTwo.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(afterTwo.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+            await Assert.That((await Assert.That(afterTwo.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEmpty();
 
-            Assert.Equal(HealthStatus.Degraded, afterThree.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, afterThree.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), afterThree.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Equal(new[] { "consecutive_failed_sweeps" }, Assert.IsType<string[]>(afterThree.Data[RemedyCheckConvention.ConditionsKey]));
-            Assert.Contains("3", afterThree.Description);
-            Assert.Contains("10s", afterThree.Description);
+            await Assert.That(afterThree.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That(afterThree.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(afterThree.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+            await Assert.That((await Assert.That(afterThree.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "consecutive_failed_sweeps" });
+            await Assert.That(afterThree.Description).Contains("3");
+            await Assert.That(afterThree.Description).Contains("10s");
 
-            Assert.Equal(HealthStatus.Degraded, afterFour.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, afterFour.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), afterFour.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Equal(new[] { "consecutive_failed_sweeps" }, Assert.IsType<string[]>(afterFour.Data[RemedyCheckConvention.ConditionsKey]));
-            Assert.Contains("4", afterFour.Description);
+            await Assert.That(afterFour.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That(afterFour.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(afterFour.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+            await Assert.That((await Assert.That(afterFour.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "consecutive_failed_sweeps" });
+            await Assert.That(afterFour.Description).Contains("4");
         }
         finally
         {

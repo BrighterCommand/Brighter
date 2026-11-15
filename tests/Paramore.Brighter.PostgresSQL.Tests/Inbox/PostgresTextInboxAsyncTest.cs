@@ -4,6 +4,7 @@ using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.Postgres;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Inbox;
+[TUnit.Core.InheritsTests]
 
 public class PostgresTextInboxAsyncTest : RelationalDatabaseInboxAsyncTests
 {
@@ -11,7 +12,7 @@ public class PostgresTextInboxAsyncTest : RelationalDatabaseInboxAsyncTests
     protected override string TableNamePrefix => Const.TablePrefix;
     protected override bool BinaryMessagePayload => false;
     protected override bool JsonMessagePayload => false;
-    
+
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
     {
         return new PostgreSqlInbox(configuration);

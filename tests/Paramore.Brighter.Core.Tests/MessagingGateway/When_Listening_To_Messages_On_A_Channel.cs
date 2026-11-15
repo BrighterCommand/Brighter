@@ -19,12 +19,9 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System;
 using Microsoft.Extensions.Time.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway
 {
@@ -36,29 +33,21 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _fakeTimeProvider = new();
         private readonly Message _sentMessage;
-
         public ChannelMessageReceiveTests()
         {
             IAmAMessageConsumerSync gateway = new InMemoryMessageConsumer(new RoutingKey(_routingKey), _bus, _fakeTimeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000));
-
-            _channel = new Channel(new(ChannelName),new(_routingKey), gateway);
-
-            _sentMessage = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
-                new MessageBody("a test body"));
-            
+            _channel = new Channel(new(ChannelName), new(_routingKey), gateway);
+            _sentMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT), new MessageBody("a test body"));
             _bus.Enqueue(_sentMessage);
         }
 
-
-        [Fact]
-        public void When_Listening_To_Messages_On_A_Channel()
+        [Test]
+        public async Task When_Listening_To_Messages_On_A_Channel()
         {
             var receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(1000));
             _channel.Acknowledge(receivedMessage);
-            
-            Assert.NotNull(receivedMessage);
-            Assert.Equal(_sentMessage, receivedMessage);
+            await Assert.That(receivedMessage).IsNotNull();
+            await Assert.That(receivedMessage).IsEqualTo(_sentMessage);
         }
     }
 }

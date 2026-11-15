@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Google.Cloud.Firestore.V1;
@@ -65,7 +65,7 @@ public class FirestoreOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
     public async Task DeleteStoreAsync(IEnumerable<Message> messages)
     {
         var config = Configuration.CreateOutbox();
-        var firestore = new FirestoreConnectionProvider(config).GetFirestoreClient();
+        var firestore = await new FirestoreConnectionProvider(config).GetFirestoreClientAsync();
 
         foreach (var message in messages)
         {

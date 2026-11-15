@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Property("Category", "RMQ")]
+[NotInParallel("RMQ")]
 public class RmqCoalescedAckConfirmationTests : IDisposable
 {
     private readonly RoutingKey _routingKey = new(Guid.NewGuid().ToString());
@@ -29,8 +28,8 @@ public class RmqCoalescedAckConfirmationTests : IDisposable
             .Create(TimeSpan.FromMilliseconds(1000));
     }
 
-    [Fact]
-    public void When_the_broker_coalesces_acks_should_confirm_every_message_the_ack_covers()
+    [Test]
+    public async Task When_the_broker_coalesces_acks_should_confirm_every_message_the_ack_covers()
     {
         //Arrange
         var confirmations = new List<PublishConfirmationResult>();
@@ -49,8 +48,11 @@ public class RmqCoalescedAckConfirmationTests : IDisposable
         _messageProducer.Confirms.RaiseAck(deliveryTag: 3, multiple: true);
 
         //Assert — each covered message is confirmed once, in send order
-        Assert.Equal(sent.Select(m => m.Id), confirmations.Select(c => c.MessageId));
-        Assert.All(confirmations, c => Assert.True(c.Success));
+        await Assert.That(confirmations.Select(c => c.MessageId)).IsEqualTo(sent.Select(m => m.Id));
+        foreach (var c in confirmations)
+        {
+            await Assert.That(c.Success).IsTrue();
+        }
     }
 
     public void Dispose() => _messageProducer.Dispose();

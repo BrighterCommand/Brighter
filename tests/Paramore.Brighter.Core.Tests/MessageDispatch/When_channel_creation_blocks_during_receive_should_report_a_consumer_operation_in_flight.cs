@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -33,13 +33,12 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch;
 
 public class DispatcherConsumerOperationInFlightTests
 {
-    [Fact]
+    [Test]
     public async Task When_channel_creation_blocks_during_receive_should_report_a_consumer_operation_in_flight()
     {
         // Arrange
@@ -77,8 +76,8 @@ public class DispatcherConsumerOperationInFlightTests
             var afterRelease = dispatcher.GetLifecycleSnapshot();
 
             // Assert
-            Assert.Equal(1, whileBlocked.ConsumerOperationsInFlight);
-            Assert.Equal(0, afterRelease.ConsumerOperationsInFlight);
+            await Assert.That(whileBlocked.ConsumerOperationsInFlight).IsEqualTo(1);
+            await Assert.That(afterRelease.ConsumerOperationsInFlight).IsEqualTo(0);
         }
         finally
         {

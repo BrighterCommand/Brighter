@@ -4,14 +4,13 @@ using Google.Api.Gax;
 using Google.Cloud.Spanner.Data;
 using Paramore.Brighter.BoxProvisioning.Spanner;
 using Paramore.Brighter.Gcp.Tests.Helper;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
-[Trait("Category", "Spanner")]
-[Collection("Spanner")]
-[Trait("Category", "Spanner")]
-public class InboxProvisionerFreshDatabaseTests : IAsyncLifetime
+[Property("Category", "Spanner")]
+[NotInParallel]
+[Property("Category", "Spanner")]
+public class InboxProvisionerFreshDatabaseTests
 {
     private readonly string _tableName;
     private readonly string _connectionString;
@@ -33,7 +32,7 @@ public class InboxProvisionerFreshDatabaseTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_create_inbox_table()
     {
         // Act
@@ -43,8 +42,8 @@ public class InboxProvisionerFreshDatabaseTests : IAsyncLifetime
         using var connection = CreateConnection();
         await connection.OpenAsync();
 
-        Assert.Equal(1, await CountBoxTablesAsync(connection));
-        Assert.Equal(1, await CountHistoryRowsAtLatestVersionAsync(connection));
+        await Assert.That(await CountBoxTablesAsync(connection)).IsEqualTo(1);
+        await Assert.That(await CountHistoryRowsAtLatestVersionAsync(connection)).IsEqualTo(1);
     }
 
     private async Task<long> CountBoxTablesAsync(SpannerConnection connection)
@@ -68,7 +67,11 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion",
         return (long)(await historyCheck.ExecuteScalarAsync())!;
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

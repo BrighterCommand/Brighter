@@ -1,4 +1,5 @@
-﻿#region Licence
+#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -25,32 +26,31 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class GlobalInboxScopeDescriptionTests
 {
-    [Theory]
-    [InlineData(typeof(InboxScopeCommand), typeof(InboxScopeCommandHandler), InboxScope.Commands, true)]
-    [InlineData(typeof(InboxScopeCommand), typeof(InboxScopeCommandHandler), InboxScope.Events, false)]
-    [InlineData(typeof(InboxScopeCommand), typeof(InboxScopeCommandHandler), InboxScope.All, true)]
-    [InlineData(typeof(InboxScopeAsyncCommand), typeof(InboxScopeAsyncCommandHandler), InboxScope.Commands, true)]
-    [InlineData(typeof(InboxScopeAsyncCommand), typeof(InboxScopeAsyncCommandHandler), InboxScope.Events, false)]
-    [InlineData(typeof(InboxScopeAsyncCommand), typeof(InboxScopeAsyncCommandHandler), InboxScope.All, true)]
-    [InlineData(typeof(InboxScopeEvent), typeof(InboxScopeEventHandler), InboxScope.Commands, false)]
-    [InlineData(typeof(InboxScopeEvent), typeof(InboxScopeEventHandler), InboxScope.Events, true)]
-    [InlineData(typeof(InboxScopeEvent), typeof(InboxScopeEventHandler), InboxScope.All, true)]
-    [InlineData(typeof(InboxScopeAsyncEvent), typeof(InboxScopeAsyncEventHandler), InboxScope.Commands, false)]
-    [InlineData(typeof(InboxScopeAsyncEvent), typeof(InboxScopeAsyncEventHandler), InboxScope.Events, true)]
-    [InlineData(typeof(InboxScopeAsyncEvent), typeof(InboxScopeAsyncEventHandler), InboxScope.All, true)]
-    [InlineData(typeof(MyBareRequest), typeof(MyValidationHandler<MyBareRequest>), InboxScope.Commands, true)]
-    [InlineData(typeof(MyBareRequest), typeof(MyValidationHandler<MyBareRequest>), InboxScope.Events, true)]
-    [InlineData(typeof(MyBareRequest), typeof(MyValidationHandler<MyBareRequest>), InboxScope.All, true)]
-    [InlineData(typeof(MyBareRequest), typeof(MyValidationHandlerAsync<MyBareRequest>), InboxScope.Commands, true)]
-    [InlineData(typeof(MyBareRequest), typeof(MyValidationHandlerAsync<MyBareRequest>), InboxScope.Events, true)]
-    [InlineData(typeof(MyBareRequest), typeof(MyValidationHandlerAsync<MyBareRequest>), InboxScope.All, true)]
-    public void When_describing_a_pipeline_should_apply_the_global_inbox_scope(
+    [Test]
+    [Arguments(typeof(InboxScopeCommand), typeof(InboxScopeCommandHandler), InboxScope.Commands, true)]
+    [Arguments(typeof(InboxScopeCommand), typeof(InboxScopeCommandHandler), InboxScope.Events, false)]
+    [Arguments(typeof(InboxScopeCommand), typeof(InboxScopeCommandHandler), InboxScope.All, true)]
+    [Arguments(typeof(InboxScopeAsyncCommand), typeof(InboxScopeAsyncCommandHandler), InboxScope.Commands, true)]
+    [Arguments(typeof(InboxScopeAsyncCommand), typeof(InboxScopeAsyncCommandHandler), InboxScope.Events, false)]
+    [Arguments(typeof(InboxScopeAsyncCommand), typeof(InboxScopeAsyncCommandHandler), InboxScope.All, true)]
+    [Arguments(typeof(InboxScopeEvent), typeof(InboxScopeEventHandler), InboxScope.Commands, false)]
+    [Arguments(typeof(InboxScopeEvent), typeof(InboxScopeEventHandler), InboxScope.Events, true)]
+    [Arguments(typeof(InboxScopeEvent), typeof(InboxScopeEventHandler), InboxScope.All, true)]
+    [Arguments(typeof(InboxScopeAsyncEvent), typeof(InboxScopeAsyncEventHandler), InboxScope.Commands, false)]
+    [Arguments(typeof(InboxScopeAsyncEvent), typeof(InboxScopeAsyncEventHandler), InboxScope.Events, true)]
+    [Arguments(typeof(InboxScopeAsyncEvent), typeof(InboxScopeAsyncEventHandler), InboxScope.All, true)]
+    [Arguments(typeof(MyBareRequest), typeof(MyValidationHandler<MyBareRequest>), InboxScope.Commands, true)]
+    [Arguments(typeof(MyBareRequest), typeof(MyValidationHandler<MyBareRequest>), InboxScope.Events, true)]
+    [Arguments(typeof(MyBareRequest), typeof(MyValidationHandler<MyBareRequest>), InboxScope.All, true)]
+    [Arguments(typeof(MyBareRequest), typeof(MyValidationHandlerAsync<MyBareRequest>), InboxScope.Commands, true)]
+    [Arguments(typeof(MyBareRequest), typeof(MyValidationHandlerAsync<MyBareRequest>), InboxScope.Events, true)]
+    [Arguments(typeof(MyBareRequest), typeof(MyValidationHandlerAsync<MyBareRequest>), InboxScope.All, true)]
+    public async System.Threading.Tasks.Task When_describing_a_pipeline_should_apply_the_global_inbox_scope(
         Type requestType, Type handlerType, InboxScope scope, bool shouldUseInbox)
     {
         // Arrange
@@ -59,12 +59,12 @@ public class GlobalInboxScopeDescriptionTests
         using var builder = new PipelineBuilder<IRequest>(registry, new InboxConfiguration(scope: scope));
 
         // Act
-        var description = Assert.Single(builder.Describe(requestType));
+        var description = await Assert.That(builder.Describe(requestType)).HasSingleItem();
 
         // Assert
         if (shouldUseInbox)
-            Assert.Single(description.BeforeSteps);
+            await Assert.That(description.BeforeSteps).HasSingleItem();
         else
-            Assert.Empty(description.BeforeSteps);
+            await Assert.That(description.BeforeSteps).IsEmpty();
     }
 }

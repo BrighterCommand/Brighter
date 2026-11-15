@@ -31,7 +31,6 @@ using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SqsStandard;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Standard.Proactor;
 
@@ -43,8 +42,8 @@ namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Standard.Proactor;
 /// <c>HandledCountReached</c> is satisfied on the first deferral, so the message is rejected
 /// with a <c>DeliveryError</c> reason without ever being requeued.
 /// </summary>
-[Trait("Category", "AWS")]
-[Collection("SqsStandard")]
+[Property("Category", "AWS")]
+[NotInParallel("SqsStandard")]
 public class SqsBudgetOneZeroOrBelowMinusOneRejectsOnFirstDeferralProactorV4Tests : IDisposable, IAsyncDisposable
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
@@ -63,10 +62,10 @@ public class SqsBudgetOneZeroOrBelowMinusOneRejectsOnFirstDeferralProactorV4Test
     /// the recording consumer's Requeue count is 0, and a <c>DeliveryError</c> rejection is
     /// issued placing the message on the Brighter DLQ (R-7, AC-6, AC-35).
     /// </summary>
-    [Theory]
-    [InlineData(1)]
-    [InlineData(0)]
-    [InlineData(-3)]
+    [Test]
+    [Arguments(1)]
+    [Arguments(0)]
+    [Arguments(-3)]
     public async Task When_sqs_budget_is_one_zero_or_below_minus_one_should_reject_on_first_deferral_async(
         int requeueCount)
     {
@@ -160,20 +159,18 @@ public class SqsBudgetOneZeroOrBelowMinusOneRejectsOnFirstDeferralProactorV4Test
         // once before rejecting; requeue count is 1 instead of 0.  Checked first so this
         // assertion is the one that surfaces under mutation (b).
         var requeueCountActual = ConformanceDeferredPump.GetRequeueCount(key);
-        Assert.Equal(0, requeueCountActual);
+        await Assert.That(requeueCountActual).IsEqualTo(0);
 
         // Under mutation (a) the 0 and -3 rows requeue forever, so dispatch count > 1 and the
         // assertion below fails.
         var dispatchCount = ConformanceDeferredPump.GetDispatchCount(key);
-        Assert.Equal(1, dispatchCount);
+        await Assert.That(dispatchCount).IsEqualTo(1);
 
         // A DeliveryError rejection was issued — the DLQ copy must carry rejectionReason.
-        Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("rejectionReason"),
-            "DLQ bag must carry rejectionReason");
-        Assert.Equal(RejectionReason.DeliveryError.ToString(),
-            dlqMessage.Header.Bag["rejectionReason"].ToString());
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionReason")).IsTrue().Because("DLQ bag must carry rejectionReason");
+        await Assert.That(dlqMessage.Header.Bag["rejectionReason"].ToString()).IsEqualTo(RejectionReason.DeliveryError.ToString());
     }
 
     public void Dispose()

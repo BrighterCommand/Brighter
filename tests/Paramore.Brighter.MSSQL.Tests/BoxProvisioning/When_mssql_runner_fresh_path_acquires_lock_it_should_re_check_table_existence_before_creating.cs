@@ -27,7 +27,6 @@ using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.Outbox.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -36,7 +35,7 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 /// sends it down the bootstrap path rather than the fresh-install <c>CREATE TABLE</c>, and the
 /// table's rows survive (ADR 0057 §3).
 /// </summary>
-public class MsSqlRunnerFreshPathRecheckTests : IAsyncLifetime
+public class MsSqlRunnerFreshPathRecheckTests
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
@@ -49,7 +48,7 @@ public class MsSqlRunnerFreshPathRecheckTests : IAsyncLifetime
         _runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30));
     }
 
-    [Fact]
+    [Test]
     public async Task When_mssql_runner_fresh_path_acquires_lock_it_should_re_check_table_existence_before_creating()
     {
         //Arrange
@@ -66,12 +65,12 @@ public class MsSqlRunnerFreshPathRecheckTests : IAsyncLifetime
             BoxType.Outbox,
             staleState);
 
-        var ex = await Record.ExceptionAsync(act);
+        var ex = await TestExceptionRecorder.CaptureAsync(act);
 
         //Assert
-        Assert.Null(ex);
-        Assert.True(GetHistoryRowCount() >= 1, "Bootstrap branch should have inserted at least one history row");
-        Assert.Equal(1, GetMarkerRowCount());
+        await Assert.That(ex).IsNull();
+        await Assert.That(GetHistoryRowCount() >= 1).IsTrue().Because("Bootstrap branch should have inserted at least one history row");
+        await Assert.That(GetMarkerRowCount()).IsEqualTo(1);
     }
 
     private void SeedMarkerRow()
@@ -106,8 +105,10 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = 'dbo'";
         return (int)command.ExecuteScalar()!;
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

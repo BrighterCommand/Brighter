@@ -26,11 +26,10 @@ using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.Postgres;
 using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway;
 
-[Trait("Category", "PostgresSql")]
+[Category("PostgresSql")]
 public class PostgresMessageConsumerUnacceptableInvalidChannelTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _producer;
@@ -87,8 +86,8 @@ public class PostgresMessageConsumerUnacceptableInvalidChannelTests : IDisposabl
             new MessageBody("test content"));
     }
 
-    [Fact]
-    public void When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel()
+    [Test]
+    public async Task When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel()
     {
         // Arrange - send a message and consume it
         _producer.Send(_message);
@@ -99,20 +98,20 @@ public class PostgresMessageConsumerUnacceptableInvalidChannelTests : IDisposabl
             new MessageRejectionReason(RejectionReason.Unacceptable, "Bad message format"));
 
         // Assert - reject returns true
-        Assert.True(result);
+        await Assert.That(result).IsTrue();
 
         // Assert - message should appear on the invalid message channel
         var invalidMessage = ConsumeMessage(_invalidConsumer);
-        Assert.NotEqual(MessageType.MT_NONE, invalidMessage.Header.MessageType);
-        Assert.Equal(_message.Body.Value, invalidMessage.Body.Value);
+        await Assert.That(invalidMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await Assert.That(invalidMessage.Body.Value).IsEqualTo(_message.Body.Value);
 
         // Assert - DLQ should be empty
         var dlqMessage = ConsumeMessage(_dlqConsumer);
-        Assert.Equal(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        await Assert.That(dlqMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
         // Assert - source message is deleted
         var sourceMessage = ConsumeMessage(_consumer);
-        Assert.Equal(MessageType.MT_NONE, sourceMessage.Header.MessageType);
+        await Assert.That(sourceMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
     }
 
     private static Message ConsumeMessage(IAmAMessageConsumerSync consumer)

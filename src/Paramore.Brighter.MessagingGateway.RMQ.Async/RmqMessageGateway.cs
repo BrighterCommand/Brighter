@@ -196,7 +196,24 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
 
     protected async Task ResetConnectionToBrokerAsync(CancellationToken cancellationToken = default)
     {
-        await new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).ResetConnectionAsync(_connectionFactory, cancellationToken);
+        await _connectionLock.WaitAsync(cancellationToken);
+        try
+        {
+            try
+            {
+                if (Channel is not null)
+                    await Channel.DisposeAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                Channel = null;
+                await ReleaseConnectionAsync().ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            _connectionLock.Release();
+        }
     }
 
     ~RmqMessageGateway()
@@ -292,4 +309,3 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
         public static partial void OpeningChannelToRabbitMq(ILogger logger, string url);
     }
 }
-

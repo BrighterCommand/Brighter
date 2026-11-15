@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -21,16 +22,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 public class MissingSourceReferenceConversionTests
 {
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    public void When_a_missing_source_reference_is_converted_should_return_null(string? value)
+    [Test]
+    [Arguments(null)]
+    [Arguments("")]
+    public async Task When_a_missing_source_reference_is_converted_should_return_null(string? value)
     {
         //Arrange
         string? source = value;
@@ -39,6 +39,6 @@ public class MissingSourceReferenceConversionTests
         SourceReference? reference = source;
 
         //Assert
-        Assert.Null(reference);
+        await Assert.That(reference).IsNull();
     }
 }

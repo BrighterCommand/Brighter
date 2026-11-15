@@ -22,7 +22,6 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -40,9 +39,9 @@ namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 ///   - When_nacking_a_message_it_should_be_redelivered                              (FR-16)
 ///
 /// Each generated file must contain, in order:
-///   Assert.True(redelivered.Header.HandledCount >= message.Header.HandledCount ...)
+///   Assert.That(redelivered.Header.HandledCount >= message.Header.HandledCount) ...)
 ///   redelivered.Header.HandledCount = message.Header.HandledCount;
-///   _messageAssertion.Assert(message, redelivered)
+///   await _messageAssertion.AssertAsync(message, redelivered)
 ///
 /// First-receive assertions in other templates are unchanged (R-2 still applies).
 /// </summary>
@@ -73,7 +72,7 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
     /// Both templates name the variables <c>message</c> (sent) and <c>redelivered</c>.
     /// </summary>
     private const string HANDLED_COUNT_GE_CHECK =
-        "Assert.True(redelivered.Header.HandledCount >= message.Header.HandledCount";
+        "Assert.That(redelivered.Header.HandledCount >= message.Header.HandledCount)";
 
     /// <summary>
     /// The normalisation that resets the redelivered count to the sent count so the
@@ -86,7 +85,7 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
     /// The transport-specific message assertion call that follows the normalisation.
     /// </summary>
     private const string MESSAGE_ASSERTION_CALL =
-        "_messageAssertion.Assert(message, redelivered)";
+        "await _messageAssertion.AssertAsync(message, redelivered)";
 
     /// <summary>
     /// The equality assertion on the first-received message (R-2). The posting template calls
@@ -94,7 +93,7 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
     /// normalisation — because R-2 requires the first delivery to present exactly 0.
     /// </summary>
     private const string FIRST_RECEIVE_ASSERTION_CALL =
-        "_messageAssertion.Assert(message, received)";
+        "await _messageAssertion.AssertAsync(message, received)";
 
     private readonly string _testDirectory;
     private readonly ILogger<Generators.MessagingGatewayGenerator> _logger;
@@ -112,7 +111,7 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
 
     // ── Plain requeue (FR-22) — Reactor ─────────────────────────────────────
 
-    [Fact]
+    [Test]
     public async Task When_generating_plain_requeue_reactor_should_assert_redelivered_handled_count_is_at_least_sent_count()
     {
         // Arrange
@@ -125,10 +124,10 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
 
         // Assert — the redelivery arm asserts HandledCount >= sent count, normalises, then asserts
         var content = await File.ReadAllTextAsync(TemplatePath("Reactor", PLAIN_REQUEUE_TEMPLATE));
-        AssertRedeliveryArmShape(content, "Reactor plain-requeue");
+        await AssertRedeliveryArmShape(content, "Reactor plain-requeue");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_plain_requeue_proactor_should_assert_redelivered_handled_count_is_at_least_sent_count()
     {
         // Arrange
@@ -141,12 +140,12 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
 
         // Assert — the redelivery arm asserts HandledCount >= sent count, normalises, then asserts
         var content = await File.ReadAllTextAsync(TemplatePath("Proactor", PLAIN_REQUEUE_TEMPLATE));
-        AssertRedeliveryArmShape(content, "Proactor plain-requeue");
+        await AssertRedeliveryArmShape(content, "Proactor plain-requeue");
     }
 
     // ── Zero-delay requeue (FR-15) — Reactor ────────────────────────────────
 
-    [Fact]
+    [Test]
     public async Task When_generating_zero_delay_requeue_reactor_should_assert_redelivered_handled_count_is_at_least_sent_count()
     {
         // Arrange
@@ -159,10 +158,10 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
 
         // Assert — the redelivery arm asserts HandledCount >= sent count, normalises, then asserts
         var content = await File.ReadAllTextAsync(TemplatePath("Reactor", ZERO_DELAY_TEMPLATE));
-        AssertRedeliveryArmShape(content, "Reactor zero-delay requeue");
+        await AssertRedeliveryArmShape(content, "Reactor zero-delay requeue");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_zero_delay_requeue_proactor_should_assert_redelivered_handled_count_is_at_least_sent_count()
     {
         // Arrange
@@ -175,12 +174,12 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
 
         // Assert — the redelivery arm asserts HandledCount >= sent count, normalises, then asserts
         var content = await File.ReadAllTextAsync(TemplatePath("Proactor", ZERO_DELAY_TEMPLATE));
-        AssertRedeliveryArmShape(content, "Proactor zero-delay requeue");
+        await AssertRedeliveryArmShape(content, "Proactor zero-delay requeue");
     }
 
     // ── Delayed requeue (FR-2) — Reactor ────────────────────────────────────
 
-    [Fact]
+    [Test]
     public async Task When_generating_delay_requeue_reactor_should_assert_redelivered_handled_count_is_at_least_sent_count()
     {
         // Arrange
@@ -193,10 +192,10 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
 
         // Assert — the redelivery arm asserts HandledCount >= sent count, normalises, then asserts
         var content = await File.ReadAllTextAsync(TemplatePath("Reactor", DELAY_TEMPLATE));
-        AssertRedeliveryArmShape(content, "Reactor delayed requeue");
+        await AssertRedeliveryArmShape(content, "Reactor delayed requeue");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_delay_requeue_proactor_should_assert_redelivered_handled_count_is_at_least_sent_count()
     {
         // Arrange
@@ -209,12 +208,12 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
 
         // Assert — the redelivery arm asserts HandledCount >= sent count, normalises, then asserts
         var content = await File.ReadAllTextAsync(TemplatePath("Proactor", DELAY_TEMPLATE));
-        AssertRedeliveryArmShape(content, "Proactor delayed requeue");
+        await AssertRedeliveryArmShape(content, "Proactor delayed requeue");
     }
 
     // ── Nack (FR-16) — Reactor ──────────────────────────────────────────────
 
-    [Fact]
+    [Test]
     public async Task When_generating_nack_reactor_should_assert_redelivered_handled_count_is_at_least_sent_count()
     {
         // Arrange
@@ -227,10 +226,10 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
 
         // Assert — the single-message nack redelivery arm asserts HandledCount >= sent count
         var content = await File.ReadAllTextAsync(TemplatePath("Reactor", NACK_TEMPLATE));
-        AssertRedeliveryArmShape(content, "Reactor nack redelivery");
+        await AssertRedeliveryArmShape(content, "Reactor nack redelivery");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_nack_proactor_should_assert_redelivered_handled_count_is_at_least_sent_count()
     {
         // Arrange
@@ -243,7 +242,7 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
 
         // Assert — the single-message nack redelivery arm asserts HandledCount >= sent count
         var content = await File.ReadAllTextAsync(TemplatePath("Proactor", NACK_TEMPLATE));
-        AssertRedeliveryArmShape(content, "Proactor nack redelivery");
+        await AssertRedeliveryArmShape(content, "Proactor nack redelivery");
     }
 
     // ── First-receive (R-2) — posting template, both variants ───────────────
@@ -252,7 +251,7 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
     // transport's equality assertion on the first-received message.  A mutation that adds
     // those lines to the posting template must make these facts fail.
 
-    [Fact]
+    [Test]
     public async Task When_generating_posting_reactor_should_not_add_handled_count_ge_check_to_first_receive()
     {
         // Arrange
@@ -265,11 +264,11 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
 
         // Assert — no >= check on the first-received variable (R-2: first delivery is exact 0)
         var content = await File.ReadAllTextAsync(TemplatePath("Reactor", POSTING_TEMPLATE));
-        Assert.DoesNotContain(HANDLED_COUNT_GE_CHECK, content);
-        Assert.DoesNotContain(HANDLED_COUNT_ASSIGNMENT, content);
+        await Assert.That(content).DoesNotContain(HANDLED_COUNT_GE_CHECK);
+        await Assert.That(content).DoesNotContain(HANDLED_COUNT_ASSIGNMENT);
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_posting_proactor_should_not_add_handled_count_ge_check_to_first_receive()
     {
         // Arrange
@@ -282,11 +281,11 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
 
         // Assert — no >= check on the first-received variable (R-2: first delivery is exact 0)
         var content = await File.ReadAllTextAsync(TemplatePath("Proactor", POSTING_TEMPLATE));
-        Assert.DoesNotContain(HANDLED_COUNT_GE_CHECK, content);
-        Assert.DoesNotContain(HANDLED_COUNT_ASSIGNMENT, content);
+        await Assert.That(content).DoesNotContain(HANDLED_COUNT_GE_CHECK);
+        await Assert.That(content).DoesNotContain(HANDLED_COUNT_ASSIGNMENT);
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_posting_reactor_should_still_call_equality_assertion_on_first_received_message()
     {
         // Arrange
@@ -300,10 +299,10 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
         // Assert — _messageAssertion.Assert is still called directly on the received message;
         // R-2's equality check is intact because no normalisation precedes it.
         var content = await File.ReadAllTextAsync(TemplatePath("Reactor", POSTING_TEMPLATE));
-        AssertFirstReceiveIntact(content, "Reactor posting");
+        await AssertFirstReceiveIntact(content, "Reactor posting");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_posting_proactor_should_still_call_equality_assertion_on_first_received_message()
     {
         // Arrange
@@ -317,7 +316,7 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
         // Assert — _messageAssertion.Assert is still called directly on the received message;
         // R-2's equality check is intact because no normalisation precedes it.
         var content = await File.ReadAllTextAsync(TemplatePath("Proactor", POSTING_TEMPLATE));
-        AssertFirstReceiveIntact(content, "Proactor posting");
+        await AssertFirstReceiveIntact(content, "Proactor posting");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -327,29 +326,25 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
     /// <list type="number">
     ///   <item><c>Assert.True(redelivered.Header.HandledCount &gt;= message.Header.HandledCount …)</c></item>
     ///   <item><c>redelivered.Header.HandledCount = message.Header.HandledCount;</c></item>
-    ///   <item><c>_messageAssertion.Assert(message, redelivered)</c></item>
+    ///   <item><c>await _messageAssertion.AssertAsync(message, redelivered)</c></item>
     /// </list>
     /// and that they appear in that order.
     /// </summary>
-    private static void AssertRedeliveryArmShape(string content, string label)
+    private static async Task AssertRedeliveryArmShape(string content, string label)
     {
         // All three statements must be present
-        Assert.Contains(HANDLED_COUNT_GE_CHECK, content);
-        Assert.Contains(HANDLED_COUNT_ASSIGNMENT, content);
-        Assert.Contains(MESSAGE_ASSERTION_CALL, content);
+        await Assert.That(content).Contains(HANDLED_COUNT_GE_CHECK);
+        await Assert.That(content).Contains(HANDLED_COUNT_ASSIGNMENT);
+        await Assert.That(content).Contains(MESSAGE_ASSERTION_CALL);
 
         // They must appear in the correct order: >= check, then assignment, then assertion call
         var geCheckIndex = content.IndexOf(HANDLED_COUNT_GE_CHECK, StringComparison.Ordinal);
         var assignmentIndex = content.IndexOf(HANDLED_COUNT_ASSIGNMENT, StringComparison.Ordinal);
         var assertCallIndex = content.IndexOf(MESSAGE_ASSERTION_CALL, StringComparison.Ordinal);
 
-        Assert.True(
-            geCheckIndex < assignmentIndex,
-            $"{label}: >= check (at {geCheckIndex}) must precede the HandledCount assignment (at {assignmentIndex})");
+        await Assert.That(geCheckIndex < assignmentIndex).IsTrue().Because($"{label}: >= check (at {geCheckIndex}) must precede the HandledCount assignment (at {assignmentIndex})");
 
-        Assert.True(
-            assignmentIndex < assertCallIndex,
-            $"{label}: HandledCount assignment (at {assignmentIndex}) must precede _messageAssertion.Assert call (at {assertCallIndex})");
+        await Assert.That(assignmentIndex < assertCallIndex).IsTrue().Because($"{label}: HandledCount assignment (at {assignmentIndex}) must precede _messageAssertion.Assert call (at {assertCallIndex})");
     }
 
     private static InMemoryConformanceLedger PassLedger(string frColumn) =>
@@ -379,19 +374,19 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
     /// <summary>
     /// Verifies the first-receive shape required by R-2:
     /// <list type="number">
-    ///   <item><c>_messageAssertion.Assert(message, received)</c> is present — equality check intact</item>
+    ///   <item><c>await _messageAssertion.AssertAsync(message, received)</c> is present — equality check intact</item>
     ///   <item><c>HANDLED_COUNT_GE_CHECK</c> is absent — no >= relaxation on first receive</item>
     ///   <item><c>HANDLED_COUNT_ASSIGNMENT</c> is absent — no normalisation before assertion</item>
     /// </list>
     /// </summary>
-    private static void AssertFirstReceiveIntact(string content, string label)
+    private static async Task AssertFirstReceiveIntact(string content, string label)
     {
         // R-2: equality assertion must still be called on the first-received message
-        Assert.Contains(FIRST_RECEIVE_ASSERTION_CALL, content);
+        await Assert.That(content).Contains(FIRST_RECEIVE_ASSERTION_CALL);
 
         // The >= check and normalisation must NOT appear — they belong only in redelivery arms
-        Assert.DoesNotContain(HANDLED_COUNT_GE_CHECK, content);
-        Assert.DoesNotContain(HANDLED_COUNT_ASSIGNMENT, content);
+        await Assert.That(content).DoesNotContain(HANDLED_COUNT_GE_CHECK);
+        await Assert.That(content).DoesNotContain(HANDLED_COUNT_ASSIGNMENT);
     }
 
     private string TemplatePath(string variant, string templateName) =>

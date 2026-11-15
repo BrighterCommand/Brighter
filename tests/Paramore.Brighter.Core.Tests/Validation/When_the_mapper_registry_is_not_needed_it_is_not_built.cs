@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.MessageMappers;
 using Paramore.Brighter.Validation;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
@@ -18,8 +18,8 @@ public class ValidationComponentLazyRegistryTests
     private static Publication PublicationFor<TRequest>(string topic) =>
         new() { Topic = new RoutingKey(topic), RequestType = typeof(TRequest) };
 
-    [Fact]
-    public void When_the_validator_has_no_transformer_probe_it_does_not_build_the_registry()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_validator_has_no_transformer_probe_it_does_not_build_the_registry()
     {
         //arrange — a factory is supplied but no probe, so the wrap-transform check never runs and the
         //registry is never needed. The validator must not build it just because a factory was passed.
@@ -43,11 +43,11 @@ public class ValidationComponentLazyRegistryTests
         validator.Validate();
 
         //assert
-        Assert.Equal(0, factoryInvocations);
+        await Assert.That(factoryInvocations).IsEqualTo(0);
     }
 
-    [Fact]
-    public void When_the_diagnostic_writer_has_no_publications_it_does_not_build_the_registry()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_diagnostic_writer_has_no_publications_it_does_not_build_the_registry()
     {
         //arrange — a factory is supplied but there are no publications to describe, so the registry is
         //never needed. The writer must not build it just because a factory was passed.
@@ -71,6 +71,6 @@ public class ValidationComponentLazyRegistryTests
         writer.Describe();
 
         //assert
-        Assert.Equal(0, factoryInvocations);
+        await Assert.That(factoryInvocations).IsEqualTo(0);
     }
 }

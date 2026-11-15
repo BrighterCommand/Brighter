@@ -32,22 +32,21 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ConsumerRestartNonBrighterDispatcherTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_consumer_restart_check_is_given_a_non_brighter_dispatcher_should_throw()
     {
         //Arrange
         var healthCheck = new ConsumerRestartHealthCheck(new SpyDispatcher(new List<string>()));
 
         //Act
-        var exception = await Record.ExceptionAsync(() => healthCheck.CheckHealthAsync(new HealthCheckContext()));
+        var exception = await TestExceptionRecorder.CaptureAsync(() => healthCheck.CheckHealthAsync(new HealthCheckContext()));
 
         //Assert
-        Assert.IsType<InvalidCastException>(exception);
+        await Assert.That(exception).IsTypeOf<InvalidCastException>();
     }
 }

@@ -40,7 +40,6 @@ using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -49,7 +48,7 @@ public class SweeperChecksWithoutASweeperTests
     private const string RunningTime = "paramore.brighter.outbox_sweeper.sweep.running_time";
     private const string TrippedTopics = "paramore.brighter.outbox_sweeper.tripped_topics";
 
-    [Fact]
+    [Test]
     public async Task When_sweeper_checks_are_added_without_a_sweeper_should_report_no_sweeper_registered()
     {
         //Arrange
@@ -74,7 +73,7 @@ public class SweeperChecksWithoutASweeperTests
 
         //Act
         HealthReport? report = null;
-        var thrown = await Record.ExceptionAsync(async () =>
+        var thrown = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             using var meterProvider = provider.GetRequiredService<MeterProvider>();
             listener.Start();
@@ -83,22 +82,22 @@ public class SweeperChecksWithoutASweeperTests
         });
 
         //Assert
-        Assert.Null(thrown);
-        Assert.NotNull(report);
-        AssertNoSweeperRegistered(report.Entries["brighter-outbox-sweeper-restart"], RemedyKind.Restart);
-        AssertNoSweeperRegistered(report.Entries["brighter-outbox-sweeper-investigate"], RemedyKind.Investigate);
-        Assert.Equal([0.0], recorded[RunningTime]);
-        Assert.Equal([0.0], recorded[TrippedTopics]);
+        await Assert.That(thrown).IsNull();
+        await Assert.That(report).IsNotNull();
+        await AssertNoSweeperRegistered(report.Entries["brighter-outbox-sweeper-restart"], RemedyKind.Restart);
+        await AssertNoSweeperRegistered(report.Entries["brighter-outbox-sweeper-investigate"], RemedyKind.Investigate);
+        await Assert.That(recorded[RunningTime]).IsEqualTo([0.0]);
+        await Assert.That(recorded[TrippedTopics]).IsEqualTo([0.0]);
     }
 
-    private static void AssertNoSweeperRegistered(HealthReportEntry entry, RemedyKind kind)
+    private static async Task AssertNoSweeperRegistered(HealthReportEntry entry, RemedyKind kind)
     {
-        Assert.Equal(HealthStatus.Healthy, entry.Status);
-        Assert.NotEqual(HealthStatus.Unhealthy, entry.Status);
-        Assert.Contains("no outbox sweeper is registered", entry.Description, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(RemedyCheckConvention.Name(kind), entry.Data[RemedyCheckConvention.RemedyKindKey]);
-        var conditions = Assert.IsType<string[]>(entry.Data[RemedyCheckConvention.ConditionsKey]);
-        Assert.Empty(conditions);
+        await Assert.That(entry.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(entry.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+        await Assert.That(entry.Description).Contains("no outbox sweeper is registered");
+        await Assert.That(entry.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(kind));
+        var conditions = await Assert.That(entry.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>();
+        await Assert.That(conditions).IsEmpty();
     }
 
     private static void Measure(Dictionary<string, List<double>> recorded, Instrument instrument, double value)

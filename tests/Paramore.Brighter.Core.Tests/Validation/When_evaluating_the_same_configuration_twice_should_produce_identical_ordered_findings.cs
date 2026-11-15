@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,7 +27,7 @@ using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
 using Paramore.Brighter.Validation;
-using Xunit;
+
 using AlphaBus = Paramore.Brighter.Core.Tests.Validation.TestDoubles.AlphaBus;
 using BetaBus = Paramore.Brighter.Core.Tests.Validation.TestDoubles.BetaBus;
 
@@ -34,8 +35,8 @@ namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class EvaluatingTheSameConfigurationTwiceProducesIdenticalOrderedFindingsTests
 {
-    [Fact]
-    public void When_evaluating_the_same_configuration_twice_should_produce_identical_ordered_findings()
+    [Test]
+    public async System.Threading.Tasks.Task When_evaluating_the_same_configuration_twice_should_produce_identical_ordered_findings()
     {
         // Arrange — two mismatched subscriptions, sub-a then sub-b, against a combined factory whose
         // three inner factories match neither declared type
@@ -69,16 +70,16 @@ public class EvaluatingTheSameConfigurationTwiceProducesIdenticalOrderedFindings
         var firstErrors = firstRun.Errors.ToList();
         var secondErrors = secondRun.Errors.ToList();
 
-        Assert.Equal(2, firstErrors.Count);
-        Assert.Equal("Subscription 'sub-a'", firstErrors[0].Source);
-        Assert.Equal("Subscription 'sub-b'", firstErrors[1].Source);
+        await Assert.That(firstErrors.Count).IsEqualTo(2);
+        await Assert.That(firstErrors[0].Source).IsEqualTo("Subscription 'sub-a'");
+        await Assert.That(firstErrors[1].Source).IsEqualTo("Subscription 'sub-b'");
 
-        Assert.Equal(2, secondErrors.Count);
-        Assert.Equal("Subscription 'sub-a'", secondErrors[0].Source);
-        Assert.Equal("Subscription 'sub-b'", secondErrors[1].Source);
+        await Assert.That(secondErrors.Count).IsEqualTo(2);
+        await Assert.That(secondErrors[0].Source).IsEqualTo("Subscription 'sub-a'");
+        await Assert.That(secondErrors[1].Source).IsEqualTo("Subscription 'sub-b'");
 
         // Assert — the messages are byte-identical across the two runs
-        Assert.Equal(firstErrors[0].Message, secondErrors[0].Message);
-        Assert.Equal(firstErrors[1].Message, secondErrors[1].Message);
+        await Assert.That(secondErrors[0].Message).IsEqualTo(firstErrors[0].Message);
+        await Assert.That(secondErrors[1].Message).IsEqualTo(firstErrors[1].Message);
     }
 }

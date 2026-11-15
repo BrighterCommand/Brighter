@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -25,14 +25,13 @@ THE SOFTWARE. */
 
 using System;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleMessageMonitorOptionsDefaultsTests
 {
-    [Fact]
-    public void When_only_the_stale_age_is_given_should_use_the_default_settings()
+    [Test]
+    public async Task When_only_the_stale_age_is_given_should_use_the_default_settings()
     {
         //Arrange
         var staleMessageAge = TimeSpan.FromMinutes(5);
@@ -41,14 +40,14 @@ public class StaleMessageMonitorOptionsDefaultsTests
         var options = new TimedOutboxStaleMessageMonitorOptions(staleMessageAge);
 
         //Assert
-        Assert.Equal(staleMessageAge, options.StaleMessageAge);
-        Assert.Equal(100, options.CountCeiling);
-        Assert.Equal(TimeSpan.FromMinutes(1), options.MeasurementInterval);
-        Assert.Equal(TimeSpan.FromSeconds(10), options.MeasurementTimeout);
-        Assert.True(options.MeasurementTimeout < options.MeasurementInterval);
+        await Assert.That(options.StaleMessageAge).IsEqualTo(staleMessageAge);
+        await Assert.That(options.CountCeiling).IsEqualTo(100);
+        await Assert.That(options.MeasurementInterval).IsEqualTo(TimeSpan.FromMinutes(1));
+        await Assert.That(options.MeasurementTimeout).IsEqualTo(TimeSpan.FromSeconds(10));
+        await Assert.That(options.MeasurementTimeout < options.MeasurementInterval).IsTrue();
 
-        Assert.Equal(TimeSpan.FromDays(365), TimedOutboxStaleMessageMonitorOptions.MaxStaleMessageAge);
-        Assert.Equal(1000, TimedOutboxStaleMessageMonitorOptions.MAX_COUNT_CEILING);
-        Assert.Equal(TimeSpan.FromMilliseconds(4_294_967_294), TimedOutboxStaleMessageMonitorOptions.MaxMeasurementInterval);
+        await Assert.That(TimedOutboxStaleMessageMonitorOptions.MaxStaleMessageAge).IsEqualTo(TimeSpan.FromDays(365));
+        await Assert.That(TimedOutboxStaleMessageMonitorOptions.MAX_COUNT_CEILING).IsEqualTo(1000);
+        await Assert.That(TimedOutboxStaleMessageMonitorOptions.MaxMeasurementInterval).IsEqualTo(TimeSpan.FromMilliseconds(4_294_967_294));
     }
 }

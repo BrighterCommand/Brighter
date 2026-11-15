@@ -21,7 +21,6 @@ THE SOFTWARE. */
 #endregion
 
 using Paramore.Brighter.MessagingGateway.Redis;
-using Xunit;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
 
@@ -41,8 +40,8 @@ public class When_redis_consumer_factory_creates_consumer_should_pass_scheduler
         messagePumpType: MessagePumpType.Reactor
     );
 
-    [Fact]
-    public void Should_create_sync_consumer_when_scheduler_provided()
+    [Test]
+    public async Task Should_create_sync_consumer_when_scheduler_provided()
     {
         // Arrange — factory constructed with a scheduler
         var scheduler = new StubMessageScheduler();
@@ -52,12 +51,12 @@ public class When_redis_consumer_factory_creates_consumer_should_pass_scheduler
         var consumer = factory.Create(_subscription);
 
         // Assert — consumer is created successfully
-        Assert.NotNull(consumer);
-        Assert.IsType<RedisMessageConsumer>(consumer);
+        await Assert.That(consumer).IsNotNull();
+        await Assert.That(consumer).IsTypeOf<RedisMessageConsumer>();
     }
 
-    [Fact]
-    public void Should_create_async_consumer_when_scheduler_provided()
+    [Test]
+    public async Task Should_create_async_consumer_when_scheduler_provided()
     {
         // Arrange — factory constructed with a scheduler
         var scheduler = new StubMessageScheduler();
@@ -67,12 +66,12 @@ public class When_redis_consumer_factory_creates_consumer_should_pass_scheduler
         var consumer = factory.CreateAsync(_subscription);
 
         // Assert — consumer is created successfully
-        Assert.NotNull(consumer);
-        Assert.IsType<RedisMessageConsumer>(consumer);
+        await Assert.That(consumer).IsNotNull();
+        await Assert.That(consumer).IsTypeOf<RedisMessageConsumer>();
     }
 
-    [Fact]
-    public void Should_create_consumer_without_scheduler_for_backward_compat()
+    [Test]
+    public async Task Should_create_consumer_without_scheduler_for_backward_compat()
     {
         // Arrange — factory constructed without a scheduler (backward compat)
         var factory = new RedisMessageConsumerFactory(_configuration);
@@ -81,8 +80,8 @@ public class When_redis_consumer_factory_creates_consumer_should_pass_scheduler
         var consumer = factory.Create(_subscription);
 
         // Assert — consumer is created successfully without scheduler
-        Assert.NotNull(consumer);
-        Assert.IsType<RedisMessageConsumer>(consumer);
+        await Assert.That(consumer).IsNotNull();
+        await Assert.That(consumer).IsTypeOf<RedisMessageConsumer>();
     }
 
     private class StubMessageScheduler : IAmAMessageScheduler;

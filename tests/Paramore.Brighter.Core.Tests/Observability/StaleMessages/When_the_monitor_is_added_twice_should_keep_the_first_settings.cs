@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -29,14 +29,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleMessageMonitorAddedTwiceTests
 {
-    [Fact]
-    public void When_the_monitor_is_added_twice_should_keep_the_first_settings()
+    [Test]
+    public async Task When_the_monitor_is_added_twice_should_keep_the_first_settings()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -50,9 +49,9 @@ public class StaleMessageMonitorAddedTwiceTests
         builder.UseOutboxStaleMessageMonitor(TimeSpan.FromMinutes(10));
 
         //Assert
-        Assert.Single(services, descriptor => descriptor.ServiceType == typeof(TimedOutboxStaleMessageMonitorOptions));
-        Assert.Single(services, descriptor => descriptor.ServiceType == typeof(OutboxStaleMessageReadings));
+        await Assert.That(System.Linq.Enumerable.Where(services, descriptor => descriptor.ServiceType == typeof(TimedOutboxStaleMessageMonitorOptions))).HasSingleItem();
+        await Assert.That(System.Linq.Enumerable.Where(services, descriptor => descriptor.ServiceType == typeof(OutboxStaleMessageReadings))).HasSingleItem();
         var options = services.BuildServiceProvider().GetRequiredService<TimedOutboxStaleMessageMonitorOptions>();
-        Assert.Equal(TimeSpan.FromMinutes(5), options.StaleMessageAge);
+        await Assert.That(options.StaleMessageAge).IsEqualTo(TimeSpan.FromMinutes(5));
     }
 }

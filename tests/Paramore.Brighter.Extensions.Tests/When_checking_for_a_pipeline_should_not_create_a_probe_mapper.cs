@@ -2,14 +2,14 @@ using System;
 using System.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class TransformPipelineBuilderHasPipelineTests
 {
-    [Fact]
-    public void When_checking_for_a_pipeline_should_not_create_a_probe_mapper()
+    [Test]
+    public async System.Threading.Tasks.Task When_checking_for_a_pipeline_should_not_create_a_probe_mapper()
     {
         //arrange
         const int messageCount = 10;
@@ -30,10 +30,10 @@ public class TransformPipelineBuilderHasPipelineTests
         //act — HasPipeline resolves the mapper TYPE to answer "is there a pipeline?"; it no longer creates
         //an instance, so on the mediator's once-per-message probe there is nothing to release or leak
         for (var i = 0; i < messageCount; i++)
-            Assert.True(pipelineBuilder.HasPipeline<MinimalCommand>());
+            await Assert.That(pipelineBuilder.HasPipeline<MinimalCommand>()).IsTrue();
 
         //assert — no mapper was ever instantiated, so none was disposed
-        Assert.Equal(0, disposals.Count);
+        await Assert.That(disposals.Count).IsEqualTo(0);
     }
 
     private sealed class MinimalCommand : Command

@@ -26,7 +26,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -35,12 +34,12 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// one naming <c>public</c>. Without the substitution, Npgsql's AddWithValue rejects the null value and the call throws
 /// <see cref="InvalidOperationException"/> instead.
 /// </summary>
-public class PostgreSqlPayloadValidatorNullSchemaTests : IAsyncLifetime
+public class PostgreSqlPayloadValidatorNullSchemaTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly List<string> _tablesToCleanup = [];
 
-    [Fact]
+    [Test]
     public async Task When_postgres_payload_validator_receives_null_schema_name_it_should_substitute_public()
     {
         // Arrange
@@ -66,12 +65,12 @@ public class PostgreSqlPayloadValidatorNullSchemaTests : IAsyncLifetime
             connection, textTable, schemaName: null, "body", binaryMessagePayload: false, default);
 
         // Act + Assert
-        await Assert.ThrowsAsync<ConfigurationException>(() =>
+        await Assert.That(() =>
             validator.ValidateAsync(
-                connection, binaryTable, "public", "body", binaryMessagePayload: false, default));
-        await Assert.ThrowsAsync<ConfigurationException>(() =>
+                connection, binaryTable, "public", "body", binaryMessagePayload: false, default)).ThrowsExactly<ConfigurationException>();
+        await Assert.That(() =>
             validator.ValidateAsync(
-                connection, binaryTable, schemaName: null, "body", binaryMessagePayload: false, default));
+                connection, binaryTable, schemaName: null, "body", binaryMessagePayload: false, default)).ThrowsExactly<ConfigurationException>();
     }
 
     private async Task ExecuteDdl(string sql)
@@ -89,8 +88,10 @@ public class PostgreSqlPayloadValidatorNullSchemaTests : IAsyncLifetime
         return tableName;
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

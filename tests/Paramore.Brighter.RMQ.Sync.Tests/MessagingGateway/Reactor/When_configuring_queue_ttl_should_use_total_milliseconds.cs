@@ -25,21 +25,20 @@ using System;
 using System.Collections.Generic;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using RabbitMQ.Client;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Property("Category", "RMQ")]
+[NotInParallel("RMQ")]
 public class RmqQueueTtlTests
 {
-    [Theory]
-    [InlineData(0)]
-    [InlineData(500)]
-    [InlineData(1500)]
-    [InlineData(30000)]
-    [InlineData(int.MaxValue)]
-    public void When_configuring_queue_ttl_should_use_total_milliseconds(int ttlMilliseconds)
+    [Test]
+    [Arguments(0)]
+    [Arguments(500)]
+    [Arguments(1500)]
+    [Arguments(30000)]
+    [Arguments(int.MaxValue)]
+    public async Task When_configuring_queue_ttl_should_use_total_milliseconds(int ttlMilliseconds)
     {
         //Arrange
         var queueName = new ChannelName(Guid.NewGuid().ToString());
@@ -72,10 +71,15 @@ public class RmqQueueTtlTests
             using var channel = connection.CreateModel();
             channel.QueueDeclarePassive(queueName.Value);
 
-            var exception = Record.Exception(() => channel.QueueDeclare(
+            Exception? exception = null;
+            try
+            {
+                channel.QueueDeclare(
                 queueName.Value, durable: false, exclusive: false, autoDelete: false,
-                arguments: new Dictionary<string, object> { ["x-message-ttl"] = ttlMilliseconds }));
-            Assert.Null(exception);
+                arguments: new Dictionary<string, object> { ["x-message-ttl"] = ttlMilliseconds });
+            }
+            catch (Exception e) { exception = e; }
+            await Assert.That(exception).IsNull();
         }
         finally
         {

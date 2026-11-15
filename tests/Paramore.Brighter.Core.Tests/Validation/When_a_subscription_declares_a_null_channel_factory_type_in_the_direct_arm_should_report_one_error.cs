@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class NullDeclaredChannelFactoryTypeDirectArmValidationTests
 {
-    [Fact]
-    public void When_a_subscription_declares_a_null_channel_factory_type_in_the_direct_arm_should_report_one_error()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_subscription_declares_a_null_channel_factory_type_in_the_direct_arm_should_report_one_error()
     {
         // Arrange — a subscription whose ChannelFactoryType is overridden to null, in a direct-arm
         // (non-combined) configuration
@@ -47,15 +47,13 @@ public class NullDeclaredChannelFactoryTypeDirectArmValidationTests
         var results = spec.Accept(collector).ToList();
 
         // Assert — exactly one Error for null-sub
-        Assert.False(satisfied);
-        var result = Assert.Single(results);
-        Assert.Equal("Subscription 'null-sub'", result.Error!.Source);
+        await Assert.That(satisfied).IsFalse();
+        var result = await Assert.That(results).HasSingleItem();
+        await Assert.That(result.Error!.Source).IsEqualTo("Subscription 'null-sub'");
 
         var message = result.Error.Message;
-        Assert.Contains("no ChannelFactoryType", message);
-        Assert.EndsWith(
-            $"— use a subscription type whose ChannelFactoryType is {typeof(DeclaredChannelFactory).FullName}",
-            message);
-        Assert.DoesNotContain("configure a channel factory of type", message);
+        await Assert.That(message).Contains("no ChannelFactoryType");
+        await Assert.That(message).EndsWith($"— use a subscription type whose ChannelFactoryType is {typeof(DeclaredChannelFactory).FullName}");
+        await Assert.That(message).DoesNotContain("configure a channel factory of type");
     }
 }

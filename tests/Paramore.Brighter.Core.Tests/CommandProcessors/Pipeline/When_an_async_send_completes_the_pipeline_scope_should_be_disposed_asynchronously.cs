@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,7 +26,6 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     // -> the pipeline's own IAmAScope handle.
     public class AsyncPipelineScopeDisposalTests
     {
-        [Fact]
+        [Test]
         public async Task When_an_async_send_completes_the_pipeline_scope_should_be_disposed_asynchronously()
         {
             // Arrange - a handler factory that hands every pipeline the same recording scope handle
@@ -59,8 +59,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             await commandProcessor.SendAsync(new MyCommand());
 
             // Assert - the async disposal path ran; the synchronous one never did
-            Assert.True(scopeHandle.DisposeAsyncWasCalled);
-            Assert.False(scopeHandle.DisposeWasCalled);
+            await Assert.That(scopeHandle.DisposeAsyncWasCalled).IsTrue();
+            await Assert.That(scopeHandle.DisposeWasCalled).IsFalse();
         }
     }
 }

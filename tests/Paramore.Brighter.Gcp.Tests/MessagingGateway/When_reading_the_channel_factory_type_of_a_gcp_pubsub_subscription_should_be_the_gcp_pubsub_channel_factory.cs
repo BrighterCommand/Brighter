@@ -30,8 +30,8 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 
 public class GcpPubSubSubscriptionChannelFactoryTypeTests
 {
-    [Fact]
-    public void When_reading_the_channel_factory_type_of_a_gcp_pubsub_subscription_should_be_the_gcp_pubsub_channel_factory()
+    [Test]
+    public async System.Threading.Tasks.Task When_reading_the_channel_factory_type_of_a_gcp_pubsub_subscription_should_be_the_gcp_pubsub_channel_factory()
     {
         // Arrange — the three positional arguments and the explicit pump type are both required:
         // GcpPubSubSubscription<T> defaults messagePumpType to Unknown, which Subscription rejects
@@ -45,6 +45,6 @@ public class GcpPubSubSubscriptionChannelFactoryTypeTests
         var channelFactoryType = subscription.ChannelFactoryType;
 
         // Assert
-        Assert.Equal(typeof(GcpPubSubChannelFactory), channelFactoryType);
+        await Assert.That(channelFactoryType).IsEqualTo(typeof(GcpPubSubChannelFactory));
     }
 }

@@ -4,7 +4,6 @@ using System.Text;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
@@ -23,10 +22,9 @@ public class AzureServiceBusMessageMemoryTests
         _creator = new AzureServiceBusMessageCreator(subscription);
     }
 
-    [Fact]
-    public void When_creating_message_from_service_bus_should_preserve_body_content()
+    [Test]
+    public async Task When_creating_message_from_service_bus_should_preserve_body_content()
     {
-        // Arrange
         var bodyContent = "{\"key\":\"value\"}";
         var bodyBytes = Encoding.UTF8.GetBytes(bodyContent);
 
@@ -43,18 +41,15 @@ public class AzureServiceBusMessageMemoryTests
             ContentType = "application/json"
         };
 
-        // Act
         var message = _creator.MapToBrighterMessage(brokeredMessage);
 
-        // Assert — body content is accessible via both Memory and Value
-        Assert.Equal(bodyContent, message.Body.Value);
-        Assert.True(message.Body.Memory.Length > 0);
+        await Assert.That(message.Body.Value).IsEqualTo(bodyContent);
+        await Assert.That(message.Body.Memory.Length).IsGreaterThan(0);
     }
 
-    [Fact]
-    public void When_creating_message_from_service_bus_memory_should_expose_body_bytes()
+    [Test]
+    public async Task When_creating_message_from_service_bus_memory_should_expose_body_bytes()
     {
-        // Arrange
         var bodyContent = "{\"key\":\"value\"}";
         var bodyBytes = Encoding.UTF8.GetBytes(bodyContent);
 
@@ -71,12 +66,10 @@ public class AzureServiceBusMessageMemoryTests
             ContentType = "application/json"
         };
 
-        // Act — access MessageBodyMemory through the interface
         IBrokeredMessageWrapper wrapper = brokeredMessage;
         var memoryFromWrapper = wrapper.MessageBodyMemory;
 
-        // Assert
-        Assert.Equal(bodyBytes.Length, memoryFromWrapper.Length);
-        Assert.True(memoryFromWrapper.Span.SequenceEqual(bodyBytes));
+        await Assert.That(memoryFromWrapper.Length).IsEqualTo(bodyBytes.Length);
+        await Assert.That(memoryFromWrapper.Span.SequenceEqual(bodyBytes)).IsTrue();
     }
 }

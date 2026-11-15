@@ -1,8 +1,7 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Consumer;
 
@@ -12,13 +11,13 @@ public class AsyncInMemoryConsumerReceiveTests
     private readonly InMemoryConsumerAcknowledgeTests _inMemoryConsumerAcknowledgeTests = new InMemoryConsumerAcknowledgeTests();
     private readonly InMemoryConsumerRejectTests _inMemoryConsumerRejectTests = new InMemoryConsumerRejectTests();
 
-    [Fact]
+    [Test]
     public async Task When_reading_messages_via_a_consumer()
     {
         //arrange
         const string myTopic = "my topic";
         var routingKey = new RoutingKey(myTopic);
-        
+
         var expectedMessage = new Message(
             new MessageHeader(Id.Random(), routingKey, MessageType.MT_EVENT),
             new MessageBody("a test body"));
@@ -28,14 +27,14 @@ public class AsyncInMemoryConsumerReceiveTests
         bus.Enqueue(expectedMessage);
 
         var consumer = new InMemoryMessageConsumer(routingKey, bus, new FakeTimeProvider(), ackTimeout: TimeSpan.FromMilliseconds(1000));
-        
+
         //act
         var receivedMessage = await consumer.ReceiveAsync();
         var message = receivedMessage.Single();
         await consumer.AcknowledgeAsync(message);
 
         //assert
-        Assert.Equal(expectedMessage, message);
-        Assert.Empty(bus.Stream(routingKey));
+        await Assert.That(message).IsEqualTo(expectedMessage);
+        await Assert.That(bus.Stream(routingKey)).IsEmpty();
     }
 }

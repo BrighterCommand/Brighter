@@ -30,16 +30,15 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
 public class SchedulerEnqueueFailureDeadlineTests
 {
-    [Theory]
-    [InlineData("closed")]
-    [InlineData("cancelled")]
-    [InlineData("cancelled-while-full")]
+    [Test]
+    [Arguments("closed")]
+    [Arguments("cancelled")]
+    [Arguments("cancelled-while-full")]
     public async Task When_enqueue_fails_should_preserve_the_existing_schedule(string failure)
     {
         //Arrange
@@ -67,22 +66,22 @@ public class SchedulerEnqueueFailureDeadlineTests
         var scheduling = scheduler.ScheduleAsync(job, cancellation.Token);
         if (failure == "cancelled-while-full")
             cancellation.Cancel();
-        var exception = await Record.ExceptionAsync(() => scheduling.WaitAsync(timeout.Token));
+        var exception = await TestExceptionRecorder.CaptureAsync(() => scheduling.WaitAsync(timeout.Token));
 
         //Assert
         if (failure == "closed")
-            Assert.IsType<ChannelClosedException>(exception);
+            await Assert.That(exception).IsTypeOf<ChannelClosedException>();
         else
-            Assert.IsAssignableFrom<OperationCanceledException>(exception);
-        Assert.Equal(originalDueTime, job.DueTime);
-        Assert.Equal(originalDueTime, store.LastSavedDueTime);
-        Assert.True(job.IsScheduled);
-        Assert.Equal(originalDueTime, (await store.GetJobAsync(job.Id))!.DueTime);
+            await Assert.That(exception).IsAssignableTo<OperationCanceledException>();
+        await Assert.That(job.DueTime).IsEqualTo(originalDueTime);
+        await Assert.That(store.LastSavedDueTime).IsEqualTo(originalDueTime);
+        await Assert.That(job.IsScheduled).IsTrue();
+        await Assert.That((await store.GetJobAsync(job.Id))!.DueTime).IsEqualTo(originalDueTime);
 
         if (failure != "closed")
             channel.Stop();
         if (occupyingJob is not null)
-            Assert.Same(occupyingJob, await channel.DequeueJobAsync(timeout.Token));
-        Assert.Null(await channel.DequeueJobAsync(timeout.Token));
+            await Assert.That(await channel.DequeueJobAsync(timeout.Token)).IsSameReferenceAs(occupyingJob);
+        await Assert.That(await channel.DequeueJobAsync(timeout.Token)).IsNull();
     }
 }

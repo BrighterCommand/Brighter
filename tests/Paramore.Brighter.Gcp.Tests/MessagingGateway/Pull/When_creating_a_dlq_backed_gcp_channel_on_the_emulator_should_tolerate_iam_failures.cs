@@ -33,8 +33,7 @@ using Paramore.Brighter.MessagingGateway.GcpPubSub;
 using Serilog.Events;
 using Serilog.Formatting.Display;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
 /// <summary>
@@ -56,7 +55,7 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// project existing, the construction step succeeds and no Warning is logged. In either offline
 /// case GetProjectAsync returns Unavailable (not tolerated), and the test fails — see ADR 0078 §Risks.
 /// </summary>
-[Trait("Category", "GcpPubSubPull")]
+[Property("Category", "GcpPubSubPull")]
 public class DlqBackedGcpChannelIamToleranceTests
 {
     /// <summary>
@@ -64,8 +63,8 @@ public class DlqBackedGcpChannelIamToleranceTests
     /// GetProjectAsync on the real GCP API fails with Unauthenticated (tolerated). GetIamPolicyAsync
     /// is not reached. Exactly two Warnings are logged, one per helper.
     /// </summary>
-    [Fact]
-    public void When_creating_a_dlq_backed_gcp_channel_on_the_emulator_should_tolerate_iam_failures()
+    [Test]
+    public async Task When_creating_a_dlq_backed_gcp_channel_on_the_emulator_should_tolerate_iam_failures()
     {
         // Arrange
         var topicName = new RoutingKey($"gen-iam-{Guid.NewGuid():N}");
@@ -90,7 +89,7 @@ public class DlqBackedGcpChannelIamToleranceTests
             },
             makeChannels: OnMissingChannel.Create,
             subscriptionMode: SubscriptionMode.Pull
-            // subscriberMember intentionally NOT set (members-unset case)
+        // subscriberMember intentionally NOT set (members-unset case)
         );
 
         IAmAChannelSync? channel = null;
@@ -102,7 +101,7 @@ public class DlqBackedGcpChannelIamToleranceTests
             channel = channelFactory.CreateSyncChannel(subscription);
 
             // Assert
-            Assert.NotNull(channel);
+            await Assert.That(channel).IsNotNull();
 
             var projectId = GatewayFactory.GetProjectId();
             var warnings = TestCorrelator.GetLogEventsFromCurrentContext()
@@ -111,14 +110,14 @@ public class DlqBackedGcpChannelIamToleranceTests
                 .ToList();
 
             // AC-20: exactly two Warnings, one per IAM helper
-            Assert.Equal(2, warnings.Count);
+            await Assert.That(warnings.Count).IsEqualTo(2);
 
             // Consequence clause (fifth element) present in all Warnings
             foreach (var w in warnings)
-                Assert.Contains("native dead-lettering may be inactive", w);
+                await Assert.That(w).Contains("native dead-lettering may be inactive");
 
             // Parse each Warning against the five-element template and assert
-            var parsed = warnings.Select(ParseIamWarning).ToList();
+            var parsed = (await Task.WhenAll(warnings.Select(ParseIamWarning))).ToList();
 
             // Exactly one Warning per helper (Single throws if 0 or >1 match)
             var dlqParsed = parsed.Single(p => p.Helper == "UpdateIAmRoleForDeadLetterAsync");
@@ -128,19 +127,15 @@ public class DlqBackedGcpChannelIamToleranceTests
             foreach (var p in new[] { dlqParsed, subParsed })
             {
                 // {Rpc}: resource-manager lookup step, not GetIamPolicyAsync
-                Assert.True(
-                    p.Rpc == "GetProjectAsync" || p.Rpc == "construct ProjectsClient",
-                    $"Expected GetProjectAsync or construct ProjectsClient, got: {p.Rpc}");
+                await Assert.That(p.Rpc == "GetProjectAsync" || p.Rpc == "construct ProjectsClient").IsTrue().Because($"Expected GetProjectAsync or construct ProjectsClient, got: {p.Rpc}");
                 // {Resource}: the project resource path
-                Assert.Equal($"projects/{projectId}", p.Resource);
+                await Assert.That(p.Resource).IsEqualTo($"projects/{projectId}");
                 // {Status}: one of the tolerated auth-failure codes (do not hard-assert which)
-                Assert.True(
-                    p.Status is "Unauthenticated" or "PermissionDenied" or "InvalidOperationException",
-                    $"Expected a tolerated auth status, got: {p.Status}");
+                await Assert.That(p.Status is "Unauthenticated" or "PermissionDenied" or "InvalidOperationException").IsTrue().Because($"Expected a tolerated auth status, got: {p.Status}");
             }
 
             // GetIamPolicyAsync is not reached: resource-manager step is abandoned first
-            Assert.DoesNotContain(parsed, p => p.Rpc == "GetIamPolicyAsync");
+            await Assert.That(System.Linq.Enumerable.Any(parsed, p => p.Rpc == "GetIamPolicyAsync")).IsFalse();
         }
         finally
         {
@@ -156,9 +151,9 @@ public class DlqBackedGcpChannelIamToleranceTests
     /// Members set (C-11): no Resource Manager call is issued. GetIamPolicyAsync on the emulator
     /// returns Unimplemented (tolerated). Exactly two Warnings are logged, one per helper.
     /// </summary>
-    [Trait("Requires", "PubSubEmulator")]
-    [Fact]
-    public void When_creating_a_dlq_backed_gcp_channel_on_the_emulator_with_members_set_should_succeed_and_log_two_warnings()
+    [Property("Requires", "PubSubEmulator")]
+    [Test]
+    public async Task When_creating_a_dlq_backed_gcp_channel_on_the_emulator_with_members_set_should_succeed_and_log_two_warnings()
     {
         // Arrange
         var topicName = new RoutingKey($"gen-iam-{Guid.NewGuid():N}");
@@ -198,7 +193,7 @@ public class DlqBackedGcpChannelIamToleranceTests
             channel = channelFactory.CreateSyncChannel(subscription);
 
             // Assert
-            Assert.NotNull(channel);
+            await Assert.That(channel).IsNotNull();
 
             var projectId = GatewayFactory.GetProjectId();
             var expectedDlqResource = $"projects/{projectId}/topics/{dlqTopicName.Value}";
@@ -210,14 +205,14 @@ public class DlqBackedGcpChannelIamToleranceTests
                 .ToList();
 
             // AC-20: exactly two Warnings, one per IAM helper
-            Assert.Equal(2, warnings.Count);
+            await Assert.That(warnings.Count).IsEqualTo(2);
 
             // Consequence clause (fifth element) present in all Warnings
             foreach (var w in warnings)
-                Assert.Contains("native dead-lettering may be inactive", w);
+                await Assert.That(w).Contains("native dead-lettering may be inactive");
 
             // Parse each Warning against the five-element template and assert
-            var parsed = warnings.Select(ParseIamWarning).ToList();
+            var parsed = (await Task.WhenAll(warnings.Select(ParseIamWarning))).ToList();
 
             // Exactly one Warning per helper (Single throws if 0 or >1 match)
             var dlqParsed = parsed.Single(p => p.Helper == "UpdateIAmRoleForDeadLetterAsync");
@@ -227,17 +222,17 @@ public class DlqBackedGcpChannelIamToleranceTests
             foreach (var p in new[] { dlqParsed, subParsed })
             {
                 // {Rpc}: GetIamPolicyAsync (emulator returns Unimplemented)
-                Assert.Equal("GetIamPolicyAsync", p.Rpc);
+                await Assert.That(p.Rpc).IsEqualTo("GetIamPolicyAsync");
                 // {Status}: Unimplemented from the emulator
-                Assert.Equal("Unimplemented", p.Status);
+                await Assert.That(p.Status).IsEqualTo("Unimplemented");
             }
 
             // Exact resource names per helper (TopicName.ToString() / SubscriptionName.ToString())
-            Assert.Equal(expectedDlqResource, dlqParsed.Resource);
-            Assert.Equal(expectedSubResource, subParsed.Resource);
+            await Assert.That(dlqParsed.Resource).IsEqualTo(expectedDlqResource);
+            await Assert.That(subParsed.Resource).IsEqualTo(expectedSubResource);
 
             // No Resource Manager calls: GetProjectAsync and construct ProjectsClient never reached
-            Assert.DoesNotContain(parsed, p => p.Rpc == "GetProjectAsync" || p.Rpc == "construct ProjectsClient");
+            await Assert.That(System.Linq.Enumerable.Any(parsed, p => p.Rpc == "GetProjectAsync" || p.Rpc == "construct ProjectsClient")).IsFalse();
         }
         finally
         {
@@ -282,32 +277,32 @@ public class DlqBackedGcpChannelIamToleranceTests
     /// "{Helper} abandoned: {Rpc} on {Resource} failed with {Status}; native dead-lettering may be inactive".
     /// Asserts the message matches the template and returns the five elements.
     /// </summary>
-    private static (string Helper, string Rpc, string Resource, string Status) ParseIamWarning(string message)
+    private static async Task<(string Helper, string Rpc, string Resource, string Status)> ParseIamWarning(string message)
     {
         const string abandonedSep = " abandoned: ";
         const string onSep = " on ";
         const string failedSep = " failed with ";
         const string tail = "; native dead-lettering may be inactive";
 
-        Assert.Contains(tail, message);
+        await Assert.That(message).Contains(tail);
 
         var ai = message.IndexOf(abandonedSep, StringComparison.Ordinal);
-        Assert.True(ai > 0, $"Missing '{abandonedSep}' in: {message}");
+        await Assert.That(ai > 0).IsTrue().Because($"Missing '{abandonedSep}' in: {message}");
         var helper = message[..ai];
 
         var rpcStart = ai + abandonedSep.Length;
         var oi = message.IndexOf(onSep, rpcStart, StringComparison.Ordinal);
-        Assert.True(oi > rpcStart, $"Missing '{onSep}' in: {message}");
+        await Assert.That(oi > rpcStart).IsTrue().Because($"Missing '{onSep}' in: {message}");
         var rpc = message[rpcStart..oi];
 
         var resStart = oi + onSep.Length;
         var fi = message.IndexOf(failedSep, resStart, StringComparison.Ordinal);
-        Assert.True(fi > resStart, $"Missing '{failedSep}' in: {message}");
+        await Assert.That(fi > resStart).IsTrue().Because($"Missing '{failedSep}' in: {message}");
         var resource = message[resStart..fi];
 
         var statusStart = fi + failedSep.Length;
         var ti = message.IndexOf(tail, statusStart, StringComparison.Ordinal);
-        Assert.True(ti > statusStart, $"Missing tail in: {message}");
+        await Assert.That(ti > statusStart).IsTrue().Because($"Missing tail in: {message}");
         var status = message[statusStart..ti];
 
         return (helper, rpc, resource, status);

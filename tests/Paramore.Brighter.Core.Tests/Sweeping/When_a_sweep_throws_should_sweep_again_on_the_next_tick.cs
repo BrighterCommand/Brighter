@@ -9,7 +9,6 @@ using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -17,7 +16,7 @@ public class TimedOutboxSweeperFailedSweepTests
 {
     private static readonly TimeSpan s_waitForSweep = TimeSpan.FromSeconds(3);
 
-    [Fact]
+    [Test]
     public async Task When_a_sweep_throws_should_sweep_again_on_the_next_tick()
     {
         //Arrange
@@ -51,7 +50,7 @@ public class TimedOutboxSweeperFailedSweepTests
         sweeper.Dispose();
 
         //Assert
-        Assert.True(swept, $"The sweeper did not recover from a failed sweep within {s_waitForSweep}");
+        await Assert.That(swept).IsTrue().Because($"The sweeper did not recover from a failed sweep within {s_waitForSweep}");
     }
 
     private static OutboxProducerMediator<Message, CommittableTransaction> CreateMediator(

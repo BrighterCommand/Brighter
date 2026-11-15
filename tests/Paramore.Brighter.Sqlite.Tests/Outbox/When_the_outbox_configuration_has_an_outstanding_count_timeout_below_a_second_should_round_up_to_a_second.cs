@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel <guilhermeaappel@gmail.com>
 
@@ -24,14 +24,13 @@ THE SOFTWARE. */
 using System;
 using System.Diagnostics;
 using Microsoft.Data.Sqlite;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Sqlite.Tests.Outbox;
 
 public class OutboxSubSecondOutstandingCountTimeoutTests
 {
-    [Fact]
-    public void When_the_outbox_configuration_has_an_outstanding_count_timeout_below_a_second_should_round_up_to_a_second()
+    [Test]
+    public async Task When_the_outbox_configuration_has_an_outstanding_count_timeout_below_a_second_should_round_up_to_a_second()
     {
         //Arrange
         using var locked = new LockedSqliteOutbox((connectionString, tableName) =>
@@ -40,11 +39,11 @@ public class OutboxSubSecondOutstandingCountTimeoutTests
         var stopwatch = Stopwatch.StartNew();
 
         //Act
-        var exception = Record.Exception(() => locked.Outbox.GetOutstandingMessageCount(TimeSpan.Zero, new RequestContext()));
+        var exception = TestExceptionRecorder.Capture(() => locked.Outbox.GetOutstandingMessageCount(TimeSpan.Zero, new RequestContext()));
         stopwatch.Stop();
 
         //Assert
-        Assert.IsType<SqliteException>(exception);
-        Assert.InRange(stopwatch.Elapsed, TimeSpan.FromSeconds(0.5), TimeSpan.FromSeconds(4));
+        await Assert.That(exception).IsTypeOf<SqliteException>();
+        await Assert.That(stopwatch.Elapsed >= TimeSpan.FromSeconds(0.5) && stopwatch.Elapsed <= TimeSpan.FromSeconds(4)).IsTrue();
     }
 }

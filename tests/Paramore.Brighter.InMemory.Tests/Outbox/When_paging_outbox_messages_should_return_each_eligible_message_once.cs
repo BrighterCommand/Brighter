@@ -27,30 +27,29 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.Builders;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Outbox;
 
-[Trait("Category", "InMemory")]
+[Property("Category", "InMemory")]
 public class InMemoryOutboxPaginationTests
 {
-    [Theory]
-    [InlineData(false, false, 1)]
-    [InlineData(false, true, 1)]
-    [InlineData(true, false, 1)]
-    [InlineData(true, true, 1)]
-    [InlineData(false, false, 2)]
-    [InlineData(false, true, 2)]
-    [InlineData(true, false, 2)]
-    [InlineData(true, true, 2)]
-    [InlineData(false, false, 3)]
-    [InlineData(false, true, 3)]
-    [InlineData(true, false, 3)]
-    [InlineData(true, true, 3)]
-    [InlineData(false, false, 4)]
-    [InlineData(false, true, 4)]
-    [InlineData(true, false, 4)]
-    [InlineData(true, true, 4)]
+    [Test]
+    [Arguments(false, false, 1)]
+    [Arguments(false, true, 1)]
+    [Arguments(true, false, 1)]
+    [Arguments(true, true, 1)]
+    [Arguments(false, false, 2)]
+    [Arguments(false, true, 2)]
+    [Arguments(true, false, 2)]
+    [Arguments(true, true, 2)]
+    [Arguments(false, false, 3)]
+    [Arguments(false, true, 3)]
+    [Arguments(true, false, 3)]
+    [Arguments(true, true, 3)]
+    [Arguments(false, false, 4)]
+    [Arguments(false, true, 4)]
+    [Arguments(true, false, 4)]
+    [Arguments(true, true, 4)]
     public async Task When_paging_outbox_messages_should_return_each_eligible_message_once(
         bool dispatched, bool useAsync, int pageSize)
     {
@@ -131,17 +130,17 @@ public class InMemoryOutboxPaginationTests
         var maximumPage = await ReadPage(int.MaxValue, int.MaxValue);
 
         //Assert
-        Assert.Equal(expectedIds, allEligible);
+        await Assert.That(allEligible).IsEqualTo(expectedIds);
         for (var pageIndex = 0; pageIndex < pages.Count; pageIndex++)
-            Assert.Equal(expectedIds.Skip(pageIndex * pageSize).Take(pageSize), pages[pageIndex]);
+            await Assert.That(pages[pageIndex]).IsEqualTo(expectedIds.Skip(pageIndex * pageSize).Take(pageSize));
 
         var pagedIds = pages.SelectMany(page => page).ToArray();
-        Assert.Equal(expectedIds, pagedIds);
-        Assert.Equal(3, pagedIds.Distinct().Count());
-        Assert.Empty(pages[3]);
-        Assert.Equal(pages[0], firstPageAgain);
-        Assert.Empty(zeroSizePage);
-        Assert.Empty(farPage);
-        Assert.Empty(maximumPage);
+        await Assert.That(pagedIds).IsEqualTo(expectedIds);
+        await Assert.That(pagedIds.Distinct().Count()).IsEqualTo(3);
+        await Assert.That(pages[3]).IsEmpty();
+        await Assert.That(firstPageAgain).IsEqualTo(pages[0]);
+        await Assert.That(zeroSizePage).IsEmpty();
+        await Assert.That(farPage).IsEmpty();
+        await Assert.That(maximumPage).IsEmpty();
     }
 }

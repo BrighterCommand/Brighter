@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -33,13 +33,12 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleMessageMonitorStartScopeTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_monitor_starts_should_dispose_its_scope_before_returning()
     {
         //Arrange
@@ -73,7 +72,7 @@ public class StaleMessageMonitorStartScopeTests
         await monitor.StartAsync(default);
 
         //Assert
-        var resolved = Assert.Single(created);
-        Assert.True(resolved.Disposed);
+        var resolved = await Assert.That(created).HasSingleItem();
+        await Assert.That(resolved.Disposed).IsTrue();
     }
 }

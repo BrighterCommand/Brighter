@@ -26,8 +26,7 @@ using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
 using Paramore.Brighter.Validation;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 /// <summary>
@@ -38,8 +37,8 @@ namespace Paramore.Brighter.Core.Tests.Validation;
 /// </summary>
 public class PipelineValidatorBudgetOnlyWarningsTests
 {
-    [Fact]
-    public void When_only_budget_rules_fire_should_report_only_warning_findings()
+    [Test]
+    public async Task When_only_budget_rules_fire_should_report_only_warning_findings()
     {
         // Arrange — one subscription per budget rule; none of the three budget rules is an Error
         var registry = new SubscriberRegistry();
@@ -87,16 +86,19 @@ public class PipelineValidatorBudgetOnlyWarningsTests
         var result = validator.Validate();
 
         // Assert — exactly three Warnings (one per budget rule), no Errors; result is valid (R-25, AC-32)
-        Assert.True(result.IsValid);
-        Assert.Equal(3, result.Warnings.Count);
-        Assert.Empty(result.Errors);
-        Assert.All(result.Warnings, w => Assert.Equal(ValidationSeverity.Warning, w.Severity));
+        await Assert.That(result.IsValid).IsTrue();
+        await Assert.That(result.Warnings.Count).IsEqualTo(3);
+        await Assert.That(result.Errors).IsEmpty();
+        foreach (var w in result.Warnings)
+{
+    await Assert.That(w.Severity).IsEqualTo(ValidationSeverity.Warning);
+}
     }
 
     // AC-29: a single subscription that trips two budget rules produces exactly two Warning findings,
     // one per rule, and no Error
-    [Fact]
-    public void When_subscription_trips_two_budget_rules_should_produce_two_warning_findings()
+    [Test]
+    public async Task When_subscription_trips_two_budget_rules_should_produce_two_warning_findings()
     {
         // Arrange — requeueCount 0 trips R-7 (zero-budget: 0 != -1, 0 < 1) and R-11 (unenforceable:
         // 0 != -1, reason not null); NativeRedriveLimit null means R-10 passes vacuously
@@ -127,9 +129,12 @@ public class PipelineValidatorBudgetOnlyWarningsTests
         var result = validator.Validate();
 
         // Assert — exactly two Warnings (R-7 and R-11), no Errors (AC-29)
-        Assert.True(result.IsValid);
-        Assert.Equal(2, result.Warnings.Count);
-        Assert.Empty(result.Errors);
-        Assert.All(result.Warnings, w => Assert.Equal(ValidationSeverity.Warning, w.Severity));
+        await Assert.That(result.IsValid).IsTrue();
+        await Assert.That(result.Warnings.Count).IsEqualTo(2);
+        await Assert.That(result.Errors).IsEmpty();
+        foreach (var w in result.Warnings)
+{
+    await Assert.That(w.Severity).IsEqualTo(ValidationSeverity.Warning);
+}
     }
 }

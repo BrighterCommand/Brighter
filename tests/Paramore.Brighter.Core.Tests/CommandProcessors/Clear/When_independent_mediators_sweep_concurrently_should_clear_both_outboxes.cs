@@ -2,17 +2,14 @@
 
 /* The MIT License (MIT)
 Copyright © 2026 Tom Longhurst <30480171+thomhurst@users.noreply.github.com>
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
-
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
-
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -30,7 +27,7 @@ using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear;
 
@@ -47,7 +44,7 @@ public class IndependentOutboxSweepTests
         _secondMediator = CreateMediator(_secondOutbox);
     }
 
-    [Fact]
+    [Test]
     public async Task When_independent_mediators_sweep_concurrently_should_clear_both_outboxes()
     {
         // Arrange
@@ -75,8 +72,8 @@ public class IndependentOutboxSweepTests
         }
 
         // Assert
-        Assert.Equal(1, _firstOutbox.SweepCount);
-        Assert.Equal(1, _secondOutbox.SweepCount);
+        await Assert.That(_firstOutbox.SweepCount).IsEqualTo(1);
+        await Assert.That(_secondOutbox.SweepCount).IsEqualTo(1);
     }
 
     private static OutboxProducerMediator<Message, IndependentOutboxSweepTransaction> CreateMediator(

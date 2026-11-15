@@ -7,13 +7,12 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Archiving.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Archiving;
 
 public class TimedOutboxArchiverSyncFallbackTests
 {
-    [Fact]
+    [Test]
     public async Task When_archiving_with_sync_only_outbox_should_call_sync_archive()
     {
         //Arrange
@@ -48,12 +47,11 @@ public class TimedOutboxArchiverSyncFallbackTests
         await timedArchiver.StopAsync(cts.Token);
 
         //Assert
-        Assert.True(archiver.HasOutbox(), "Should have a sync outbox");
-        Assert.False(archiver.HasAsyncOutbox(), "Should not have an async outbox");
-        Assert.Equal(0, innerOutbox.EntryCount);
-        Assert.Contains(
-            new KeyValuePair<string, Message>(message.Id, message),
+        await Assert.That(archiver.HasOutbox()).IsTrue().Because("Should have a sync outbox");
+        await Assert.That(archiver.HasAsyncOutbox()).IsFalse().Because("Should not have an async outbox");
+        await Assert.That(innerOutbox.EntryCount).IsZero();
+        await Assert.That(
             archiveProvider.ArchivedMessages
-        );
+        ).Contains(new KeyValuePair<string, Message>(message.Id, message));
     }
 }

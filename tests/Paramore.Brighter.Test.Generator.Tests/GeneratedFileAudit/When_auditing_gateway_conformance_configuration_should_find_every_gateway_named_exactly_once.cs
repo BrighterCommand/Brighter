@@ -23,7 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.GeneratedFileAudit;
 
@@ -35,8 +35,8 @@ namespace Paramore.Brighter.Test.Generator.Tests.GeneratedFileAudit;
 /// </summary>
 public class RealTreeGatewayConformanceAuditTests
 {
-    [Fact]
-    public void When_auditing_gateway_conformance_configuration_should_find_every_gateway_named_exactly_once()
+    [Test]
+    public async System.Threading.Tasks.Task When_auditing_gateway_conformance_configuration_should_find_every_gateway_named_exactly_once()
     {
         // Arrange
         var testsRoot = GeneratedTreeAudit.LocateTestsRoot();
@@ -46,10 +46,10 @@ public class RealTreeGatewayConformanceAuditTests
 
         // Assert - an audit that walked nothing would satisfy the emptiness below trivially, so
         // pin that it found a real set of gateways to read before reading its answer
-        Assert.NotEmpty(audit.AuditedGateways);
+        await Assert.That(audit.AuditedGateways).IsNotEmpty();
 
         // Assert - every shipped gateway is named by exactly one configuration
-        Assert.Empty(audit.Unconfigured);
-        Assert.Empty(audit.ConfiguredMoreThanOnce);
+        await Assert.That(audit.Unconfigured).IsEmpty();
+        await Assert.That(audit.ConfiguredMoreThanOnce).IsEmpty();
     }
 }

@@ -34,7 +34,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -43,7 +42,7 @@ public class HungSweepAfterFailuresTests
     private const string RestartCheck = "brighter-outbox-sweeper-restart";
     private const string InvestigateCheck = "brighter-outbox-sweeper-investigate";
 
-    [Fact]
+    [Test]
     public async Task When_a_sweep_hangs_after_three_failures_should_report_each_condition_on_its_own_check()
     {
         //Arrange
@@ -76,29 +75,29 @@ public class HungSweepAfterFailuresTests
             var report = await healthChecks.CheckHealthAsync(CancellationToken.None);
 
             //Assert
-            Assert.True(firstFailed && secondFailed && thirdFailed, "The failing sweeps did not all end");
-            Assert.True(reachedLock, "The fourth sweep did not reach the lock");
+            await Assert.That(firstFailed && secondFailed && thirdFailed).IsTrue().Because("The failing sweeps did not all end");
+            await Assert.That(reachedLock).IsTrue().Because("The fourth sweep did not reach the lock");
 
             var restart = report.Entries[RestartCheck];
-            Assert.Equal(HealthStatus.Degraded, restart.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, restart.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), restart.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Equal(new[] { "hung_sweep" }, Assert.IsType<string[]>(restart.Data[RemedyCheckConvention.ConditionsKey]));
-            Assert.Contains("31", restart.Description);
-            Assert.Contains("30", restart.Description);
-            Assert.Contains("10", restart.Description);
-            Assert.DoesNotContain("consecutive", restart.Description);
-            Assert.False(restart.Data.ContainsKey("consecutive_failed_sweeps"));
+            await Assert.That(restart.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That(restart.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(restart.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+            await Assert.That((await Assert.That(restart.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "hung_sweep" });
+            await Assert.That(restart.Description).Contains("31");
+            await Assert.That(restart.Description).Contains("30");
+            await Assert.That(restart.Description).Contains("10");
+            await Assert.That(restart.Description).DoesNotContain("consecutive");
+            await Assert.That(restart.Data.ContainsKey("consecutive_failed_sweeps")).IsFalse();
 
             var investigate = report.Entries[InvestigateCheck];
-            Assert.Equal(HealthStatus.Degraded, investigate.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, investigate.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), investigate.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Equal(new[] { "consecutive_failed_sweeps" }, Assert.IsType<string[]>(investigate.Data[RemedyCheckConvention.ConditionsKey]));
-            Assert.Contains("3", investigate.Description);
-            Assert.Contains("10", investigate.Description);
-            Assert.DoesNotContain("running for", investigate.Description);
-            Assert.False(investigate.Data.ContainsKey("hung_sweep"));
+            await Assert.That(investigate.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That(investigate.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(investigate.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+            await Assert.That((await Assert.That(investigate.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "consecutive_failed_sweeps" });
+            await Assert.That(investigate.Description).Contains("3");
+            await Assert.That(investigate.Description).Contains("10");
+            await Assert.That(investigate.Description).DoesNotContain("running for");
+            await Assert.That(investigate.Data.ContainsKey("hung_sweep")).IsFalse();
         }
         finally
         {

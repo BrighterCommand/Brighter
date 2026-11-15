@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -25,14 +25,13 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleMeterWithoutReadingsTests
 {
-    [Fact]
-    public void When_the_meter_has_no_readings_should_create_no_instruments()
+    [Test]
+    public async Task When_the_meter_has_no_readings_should_create_no_instruments()
     {
         //Arrange
         using var observed = new ObservedStaleMessageInstruments();
@@ -41,6 +40,6 @@ public class StaleMeterWithoutReadingsTests
         _ = new OutboxStaleMessageMeter(observed.MeterFactory);
 
         //Assert
-        Assert.Empty(observed.Units);
+        await Assert.That(observed.Units).IsEmpty();
     }
 }

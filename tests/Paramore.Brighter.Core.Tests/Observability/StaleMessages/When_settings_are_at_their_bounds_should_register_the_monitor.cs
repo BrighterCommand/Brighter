@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -28,22 +28,18 @@ using System;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleMessageMonitorBoundarySettingsTests
 {
-    public static TheoryData<TimeSpan, int, TimeSpan, TimeSpan> BoundarySettings => new()
+    public static List<(TimeSpan,int,TimeSpan,TimeSpan)> BoundarySettings => new()
     {
-        { TimeSpan.FromMilliseconds(1), 1, TimeSpan.FromMinutes(1), TimeSpan.FromSeconds(59) },
-        { TimeSpan.FromDays(365), 1000, TimeSpan.FromMinutes(1), TimeSpan.FromSeconds(10) },
-        { TimeSpan.FromMinutes(5), 100, TimeSpan.FromMilliseconds(4_294_967_294), TimeSpan.FromSeconds(10) }
-    };
+(TimeSpan.FromMilliseconds(1),1,TimeSpan.FromMinutes(1),TimeSpan.FromSeconds(59) ),(TimeSpan.FromDays(365),1000,TimeSpan.FromMinutes(1),TimeSpan.FromSeconds(10) ),(TimeSpan.FromMinutes(5),100,TimeSpan.FromMilliseconds(4_294_967_294),TimeSpan.FromSeconds(10) )    };
 
-    [Theory]
-    [MemberData(nameof(BoundarySettings))]
-    public void When_settings_are_at_their_bounds_should_register_the_monitor(
+    [Test]
+    [MethodDataSource(nameof(BoundarySettings))]
+    public async Task When_settings_are_at_their_bounds_should_register_the_monitor(
         TimeSpan staleMessageAge, int countCeiling, TimeSpan measurementInterval, TimeSpan measurementTimeout)
     {
         //Arrange
@@ -64,6 +60,6 @@ public class StaleMessageMonitorBoundarySettingsTests
             });
 
         //Assert
-        Assert.Single(services, descriptor => descriptor.ServiceType == typeof(TimedOutboxStaleMessageMonitorOptions));
+        await Assert.That(System.Linq.Enumerable.Where(services, descriptor => descriptor.ServiceType == typeof(TimedOutboxStaleMessageMonitorOptions))).HasSingleItem();
     }
 }

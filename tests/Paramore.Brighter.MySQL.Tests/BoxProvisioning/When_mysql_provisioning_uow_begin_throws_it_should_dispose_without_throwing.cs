@@ -30,7 +30,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -39,22 +38,26 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// issues <c>RELEASE_LOCK</c> (ADR 0058 §B.3). A throwing dispose would replace the acquire's
 /// <see cref="TimeoutException"/>, so asserting its type checks both.
 /// </summary>
-public class MySqlProvisioningUnitOfWorkBeginThrowsTests : IAsyncLifetime
+public class MySqlProvisioningUnitOfWorkBeginThrowsTests
 {
     private readonly MySqlConnection _connection = new(Const.DefaultConnectingString);
     private readonly FakeMySqlAdvisoryLock _advisoryLock = new(
         releaseResult: true,
         throwOnAcquire: new TimeoutException("forced lock-acquisition failure for spec 0028 §B.3 test"));
 
+    [Before(HookType.Test)]
+
     public async Task InitializeAsync() => await _connection.OpenAsync();
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_mysql_provisioning_uow_begin_throws_it_should_dispose_without_throwing()
     {
         // Act
-        var thrown = await Record.ExceptionAsync(async () =>
+        var thrown = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             await using var uow = new MySqlProvisioningUnitOfWork(
                 _connection, _advisoryLock, NullLogger.Instance);
@@ -65,7 +68,7 @@ public class MySqlProvisioningUnitOfWorkBeginThrowsTests : IAsyncLifetime
         });
 
         // Assert
-        Assert.IsType<TimeoutException>(thrown);
-        Assert.Null(_advisoryLock.ReleasedKey);
+        await Assert.That(thrown).IsTypeOf<TimeoutException>();
+        await Assert.That(_advisoryLock.ReleasedKey).IsNull();
     }
 }

@@ -31,11 +31,10 @@ using Google.Cloud.PubSub.V1;
 using Grpc.Core;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 
-[Trait("Category", "GcpPubSubStream")]
+[Property("Category", "GcpPubSubStream")]
 public class GcpStreamShutdownCleanupTests
 {
     public static IEnumerable<object[]> Failures()
@@ -51,8 +50,8 @@ public class GcpStreamShutdownCleanupTests
         }
     }
 
-    [Theory]
-    [MemberData(nameof(Failures))]
+    [Test]
+    [MethodDataSource(nameof(Failures))]
     public async Task When_stream_shutdown_fails_should_dispose_the_client_and_preserve_non_cancellation_errors(
         bool useAsync, int stopFailureKind, int disposalFailureKind)
     {
@@ -61,30 +60,30 @@ public class GcpStreamShutdownCleanupTests
         var disposalFailure = CreateFailure(disposalFailureKind);
         var client = new InMemoryShutdownSubscriberClient(stopFailure, disposalFailure);
         var stream = new GcpStreamConsumer(client);
-        Assert.True(stream.TryStart());
+        await Assert.That(stream.TryStart()).IsTrue();
         var consumer = new GcpPubSubStreamMessageConsumer(
             new GcpMessagingGatewayConnection(), stream, client.SubscriptionName, TimeProvider.System);
 
         // Act
-        var error = await Record.ExceptionAsync(() => useAsync
+        var error = await TestExceptionRecorder.CaptureAsync(() => useAsync
             ? consumer.DisposeAsync().AsTask()
             : Task.Run(consumer.Dispose));
 
         // Assert
-        Assert.Equal(1, client.StopCount);
-        Assert.Equal(1, client.DisposeCount);
-        Assert.Equal(SubscriberClient.ShutdownMode.NackImmediately, client.ShutdownModeUsed);
-        Assert.False(client.StopTokenCanBeCanceled);
+        await Assert.That(client.StopCount).IsEqualTo(1);
+        await Assert.That(client.DisposeCount).IsEqualTo(1);
+        await Assert.That(client.ShutdownModeUsed).IsEqualTo(SubscriberClient.ShutdownMode.NackImmediately);
+        await Assert.That(client.StopTokenCanBeCanceled).IsFalse();
         var expectedError = disposalFailure as RpcException ?? stopFailure as RpcException;
-        Assert.Same(expectedError, error);
-        Assert.False(stream.TryStart());
+        await Assert.That(error).IsSameReferenceAs(expectedError);
+        await Assert.That(stream.TryStart()).IsFalse();
 
         if (useAsync)
             await consumer.DisposeAsync();
         else
             consumer.Dispose();
-        Assert.Equal(1, client.StopCount);
-        Assert.Equal(1, client.DisposeCount);
+        await Assert.That(client.StopCount).IsEqualTo(1);
+        await Assert.That(client.DisposeCount).IsEqualTo(1);
     }
 
     private static Exception? CreateFailure(int kind) => kind switch

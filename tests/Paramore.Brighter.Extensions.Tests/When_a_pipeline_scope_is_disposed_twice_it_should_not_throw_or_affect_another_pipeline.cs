@@ -26,7 +26,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -64,37 +64,45 @@ public class PipelineScopeDoubleDisposeTests
         _markerY = mapperY.Marker;
     }
 
-    [Fact]
-    public void When_a_pipeline_scopes_dispose_is_called_twice_it_should_not_throw_or_affect_another_pipeline()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_pipeline_scopes_dispose_is_called_twice_it_should_not_throw_or_affect_another_pipeline()
     {
         //act — X's scope already disposed once, then Dispose() invoked a second time
         _scopeX.Dispose();
-        var exception = Record.Exception(() => _scopeX.Dispose());
+        Exception? exception = null;
+        try
+        {
+            _scopeX.Dispose();
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //assert — the second Dispose() raises nothing, and Y's scope stays live and usable
-        Assert.Null(exception);
-        AssertYRemainsUsable();
+        await Assert.That(exception).IsNull();
+        await AssertYRemainsUsable();
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_pipeline_scopes_disposeasync_is_called_twice_it_should_not_throw_or_affect_another_pipeline()
     {
         //act — X's scope already disposed once, then DisposeAsync() invoked a second time
         await _scopeX.DisposeAsync();
-        var exception = await Record.ExceptionAsync(async () => await _scopeX.DisposeAsync());
+        var exception = await TestExceptionRecorder.CaptureAsync(async () => await _scopeX.DisposeAsync());
 
         //assert — the second DisposeAsync() raises nothing, and Y's scope stays live and usable
-        Assert.Null(exception);
-        AssertYRemainsUsable();
+        await Assert.That(exception).IsNull();
+        await AssertYRemainsUsable();
     }
 
     //Y's scope and the Scoped instance already resolved through it remain undisposed, and a further
     //resolution through Y still returns that same live instance — X's double dispose has not reached it
-    private void AssertYRemainsUsable()
+    private async System.Threading.Tasks.Task AssertYRemainsUsable()
     {
-        Assert.False(_markerY.IsDisposed);
+        await Assert.That(_markerY.IsDisposed).IsFalse();
         var mapperYAgain = (MarkerMapper)_factory.Create(typeof(MarkerMapper), _scopeY)!.Instance;
-        Assert.Same(_markerY, mapperYAgain.Marker);
-        Assert.False(mapperYAgain.Marker.IsDisposed);
+        await Assert.That(mapperYAgain.Marker).IsSameReferenceAs(_markerY);
+        await Assert.That(mapperYAgain.Marker.IsDisposed).IsFalse();
     }
 }

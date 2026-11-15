@@ -30,7 +30,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -42,8 +42,8 @@ namespace Paramore.Brighter.Extensions.Tests;
 // the fix belongs to the cache itself, so both routes must be proven to benefit from it, not just one.
 public class ScopedArtefactCacheFaultEvictionTests
 {
-    [Fact]
-    public void When_an_owned_scopes_artefact_resolution_throws_a_later_resolution_in_the_same_pipeline_resolves_again()
+    [Test]
+    public async System.Threading.Tasks.Task When_an_owned_scopes_artefact_resolution_throws_a_later_resolution_in_the_same_pipeline_resolves_again()
     {
         // Arrange - a Scoped mapper whose first construction attempt always throws. No ambient is
         // established, so CreatePipelineScope() returns Brighter's own owned scope
@@ -63,18 +63,26 @@ public class ScopedArtefactCacheFaultEvictionTests
 
         // Act - the first resolution faults; a second resolution of the same type, through the same
         // pipeline scope, follows it
-        var firstAttempt = Record.Exception(() => factory.Create(typeof(FlakyOnFirstResolutionMapper), scope));
+        Exception? firstAttempt = null;
+        try
+        {
+            factory.Create(typeof(FlakyOnFirstResolutionMapper), scope);
+        }
+        catch (Exception e)
+        {
+            firstAttempt = e;
+        }
         var lease = factory.Create(typeof(FlakyOnFirstResolutionMapper), scope);
 
         // Assert - the first attempt threw the mapper's own exception, and the fault was not
         // remembered: the second attempt resolved a fresh instance instead of rethrowing it
-        Assert.IsType<InvalidOperationException>(firstAttempt);
-        Assert.NotNull(lease);
-        Assert.IsType<FlakyOnFirstResolutionMapper>(lease!.Instance);
+        await Assert.That(firstAttempt).IsTypeOf<InvalidOperationException>();
+        await Assert.That(lease).IsNotNull();
+        await Assert.That(lease!.Instance).IsTypeOf<FlakyOnFirstResolutionMapper>();
     }
 
-    [Fact]
-    public void When_a_borrowed_scopes_artefact_resolution_throws_a_later_resolution_in_the_same_pipeline_resolves_again()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_borrowed_scopes_artefact_resolution_throws_a_later_resolution_in_the_same_pipeline_resolves_again()
     {
         // Arrange - the same flaky mapper, this time resolved through an ambient scope a non-ASP.NET
         // host offers, so CreatePipelineScope() adopts it (borrowed) instead of owning one
@@ -100,18 +108,26 @@ public class ScopedArtefactCacheFaultEvictionTests
 
         // Act - the first resolution faults; a second resolution of the same type, through the same
         // borrowed pipeline scope, follows it
-        var firstAttempt = Record.Exception(() => factory.Create(typeof(FlakyOnFirstResolutionMapper), scope));
+        Exception? firstAttempt = null;
+        try
+        {
+            factory.Create(typeof(FlakyOnFirstResolutionMapper), scope);
+        }
+        catch (Exception e)
+        {
+            firstAttempt = e;
+        }
         var lease = factory.Create(typeof(FlakyOnFirstResolutionMapper), scope);
 
         scopeProvider.Clear();
 
         // Assert - same outcome as the owned path: the fault propagated once and was not remembered
-        Assert.IsType<InvalidOperationException>(firstAttempt);
-        Assert.NotNull(lease);
-        Assert.IsType<FlakyOnFirstResolutionMapper>(lease!.Instance);
+        await Assert.That(firstAttempt).IsTypeOf<InvalidOperationException>();
+        await Assert.That(lease).IsNotNull();
+        await Assert.That(lease!.Instance).IsTypeOf<FlakyOnFirstResolutionMapper>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_concurrent_resolvers_race_a_fault_a_healthy_resolution_published_in_between_is_never_lost()
     {
         // Arrange - a bare cache, exercised directly: several "losing" resolvers share one faulted
@@ -168,7 +184,7 @@ public class ScopedArtefactCacheFaultEvictionTests
         // about how long the scheduler then takes to run each one's next statement, and under a
         // contended CI runner that gap can outlast the whole fault-then-heal cycle below, letting a
         // late loser's own GetOrAdd find the retryers' already-published healthy entry and return it
-        // without ever calling FaultingFactory (Record.Exception then sees no exception at all).
+        // without ever calling FaultingFactory (TestExceptionRecorder.Capture then sees no exception at all).
         // losersReady closes that gap: every loser signals immediately before calling GetOrAdd, and
         // the retryers are not started until all four signals have landed, so none of them can begin
         // that call after healing has already happened.
@@ -177,7 +193,7 @@ public class ScopedArtefactCacheFaultEvictionTests
             {
                 startBarrier.SignalAndWait();
                 losersReady.Signal();
-                return Record.Exception(() => cache.GetOrAdd(artefactType, FaultingFactory));
+                return TestExceptionRecorder.Capture(() => cache.GetOrAdd(artefactType, FaultingFactory));
             }))
             .ToArray();
         startBarrier.SignalAndWait();
@@ -191,12 +207,18 @@ public class ScopedArtefactCacheFaultEvictionTests
         var resolved = await Task.WhenAll(retryingResolvers);
 
         // Assert - every loser saw the fault
-        Assert.All(faults, fault => Assert.IsType<InvalidOperationException>(fault));
+        foreach (var fault in faults)
+{
+    await Assert.That(fault).IsTypeOf<InvalidOperationException>();
+}
 
         // Assert - exactly one healthy instance was ever created: every retrying resolver, and a
         // further resolution afterward, all observe that same instance - no loser's cleanup deleted it
-        var healthyInstance = Assert.Single(successfulInstances);
-        Assert.All(resolved, instance => Assert.Same(healthyInstance, instance));
-        Assert.Same(healthyInstance, cache.GetOrAdd(artefactType, SucceedingFactory));
+        var healthyInstance = await Assert.That(successfulInstances).HasSingleItem();
+        foreach (var instance in resolved)
+{
+    await Assert.That(instance).IsSameReferenceAs(healthyInstance);
+}
+        await Assert.That(cache.GetOrAdd(artefactType, SucceedingFactory)).IsSameReferenceAs(healthyInstance);
     }
 }

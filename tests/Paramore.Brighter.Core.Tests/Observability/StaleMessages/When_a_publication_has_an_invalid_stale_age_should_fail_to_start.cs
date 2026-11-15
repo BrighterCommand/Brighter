@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -33,22 +33,18 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleMessageMonitorInvalidPublicationStaleAgeTests
 {
-    public static TheoryData<TimeSpan> InvalidStaleAges => new()
+    public static List<TimeSpan> InvalidStaleAges => new()
     {
-        TimeSpan.Zero,
-        TimeSpan.FromSeconds(-1),
-        TimeSpan.FromDays(365) + TimeSpan.FromTicks(1),
-        TimeSpan.MaxValue
+        TimeSpan.Zero,        TimeSpan.FromSeconds(-1),        TimeSpan.FromDays(365) + TimeSpan.FromTicks(1),        TimeSpan.MaxValue
     };
 
-    [Theory]
-    [MemberData(nameof(InvalidStaleAges))]
+    [Test]
+    [MethodDataSource(nameof(InvalidStaleAges))]
     public async Task When_a_publication_has_an_invalid_stale_age_should_fail_to_start(TimeSpan staleMessageAge)
     {
         //Arrange
@@ -81,12 +77,12 @@ public class StaleMessageMonitorInvalidPublicationStaleAgeTests
         var monitor = provider.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
 
         //Act
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(() => monitor.StartAsync(default));
+        var exception = await Assert.That(() => monitor.StartAsync(default)).ThrowsExactly<ConfigurationException>();
         timeProvider.Advance(interval);
 
         //Assert
-        Assert.Contains("orders", exception.Message);
-        Assert.Contains(staleMessageAge.ToString(), exception.Message);
-        Assert.Empty(outbox.CountCalls);
+        await Assert.That(exception.Message).Contains("orders");
+        await Assert.That(exception.Message).Contains(staleMessageAge.ToString());
+        await Assert.That(outbox.CountCalls).IsEmpty();
     }
 }

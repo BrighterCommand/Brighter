@@ -30,7 +30,6 @@ using Microsoft.Data.Sqlite;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
 using Paramore.Brighter.Outbox.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
@@ -38,7 +37,7 @@ namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 /// The runner derives the connection's DefaultTimeout from lockTimeout, so a tight lockTimeout surfaces
 /// SQLITE_BUSY before a longer writer hold ends, rather than waiting out the driver's 30-second default.
 /// </summary>
-public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
+public class SqliteRunnerLockTimeoutBoundsContentionTests
 {
     // Outlasts TightLockTimeout by more than CI scheduler jitter.
     private static readonly TimeSpan WriterHold = TimeSpan.FromSeconds(3);
@@ -67,7 +66,7 @@ public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
             new SingleV1Catalog(_config), _config, TightLockTimeout);
     }
 
-    [Fact]
+    [Test]
     public async Task When_writer_hold_outlasts_lock_timeout_it_should_throw_sqlite_busy()
     {
         // Arrange
@@ -91,7 +90,7 @@ public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
 
         // Act
         var stopwatch = Stopwatch.StartNew();
-        var thrown = await Record.ExceptionAsync(async () => await _runner.MigrateAsync(
+        var thrown = await TestExceptionRecorder.CaptureAsync(async () => await _runner.MigrateAsync(
             _tableName,
             schemaName: null,
             BoxType.Outbox,
@@ -100,15 +99,10 @@ public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
         await releaseWriter;
 
         // Assert
-        var sqliteException = Assert.IsType<SqliteException>(thrown);
-        Assert.Equal(SqliteBusy, sqliteException.SqliteErrorCode);
+        var sqliteException = await Assert.That(thrown).IsTypeOf<SqliteException>();
+        await Assert.That(sqliteException.SqliteErrorCode).IsEqualTo(SqliteBusy);
 
-        Assert.True(
-            stopwatch.Elapsed < FailFastCeiling,
-            $"Runner returned in {stopwatch.Elapsed.TotalMilliseconds:F0}ms but lockTimeout " +
-            $"was {TightLockTimeout.TotalMilliseconds:F0}ms — expected the runner to give up " +
-            $"under {FailFastCeiling.TotalMilliseconds:F0}ms, suggesting it ignored lockTimeout " +
-            $"and inherited the driver's 30s default.");
+        await Assert.That(stopwatch.Elapsed < FailFastCeiling).IsTrue();
     }
 
     private sealed class SingleV1Catalog : IAmABoxMigrationCatalog
@@ -150,7 +144,11 @@ public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
         await command.ExecuteNonQueryAsync();
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public Task DisposeAsync()
     {

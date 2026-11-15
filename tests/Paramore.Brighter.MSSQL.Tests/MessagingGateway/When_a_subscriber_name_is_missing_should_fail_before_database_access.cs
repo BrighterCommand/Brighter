@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -28,7 +28,6 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 
@@ -36,90 +35,90 @@ public class MsSqlFanOutConfigurationTests
 {
     private readonly RelationalDatabaseConfiguration _configuration = new("Server=127.0.0.1,1;Database=unused;User Id=unused;Password=unused;Connect Timeout=1;Encrypt=false", queueStoreTable: "queue");
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData(" ")]
-    public void When_a_subscriber_name_is_missing_should_fail_before_database_access(string? name)
+    [Test]
+    [Arguments(null)]
+    [Arguments("")]
+    [Arguments(" ")]
+    public async Task When_a_subscriber_name_is_missing_should_fail_before_database_access(string? name)
     {
         //Arrange
         var publication = new MsSqlPublication { Topic = new("topic"), SubscriberChannels = [new(name!)] };
 
         //Act
-        var exception = Assert.Throws<ConfigurationException>(() => new MsSqlMessageProducer(_configuration, publication));
+        var exception = (await Assert.That(() => new MsSqlMessageProducer(_configuration, publication)).ThrowsExactly<ConfigurationException>());
 
         //Assert
-        Assert.Contains("subscriber", exception.Message, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("subscriber");
     }
 
-    [Fact]
-    public void When_no_subscribers_are_configured_should_fail_before_database_access()
+    [Test]
+    public async Task When_no_subscribers_are_configured_should_fail_before_database_access()
     {
         //Arrange
         var publication = new MsSqlPublication { Topic = new("topic") };
 
         //Act
-        var exception = Assert.Throws<ConfigurationException>(() => new MsSqlMessageProducer(_configuration, publication));
+        var exception = (await Assert.That(() => new MsSqlMessageProducer(_configuration, publication)).ThrowsExactly<ConfigurationException>());
 
         //Assert
-        Assert.Contains("subscriber", exception.Message, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("subscriber");
     }
 
-    [Fact]
-    public void When_a_subscriber_is_null_should_fail_before_database_access()
+    [Test]
+    public async Task When_a_subscriber_is_null_should_fail_before_database_access()
     {
         //Arrange
         var publication = new MsSqlPublication { Topic = new("topic"), SubscriberChannels = [null!] };
 
         //Act
-        var exception = Assert.Throws<ConfigurationException>(() => new MsSqlMessageProducer(_configuration, publication));
+        var exception = (await Assert.That(() => new MsSqlMessageProducer(_configuration, publication)).ThrowsExactly<ConfigurationException>());
 
         //Assert
-        Assert.Contains("subscriber", exception.Message, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("subscriber");
     }
 
-    [Fact]
-    public void When_a_subscriber_name_exceeds_the_column_size_should_fail_before_database_access()
+    [Test]
+    public async Task When_a_subscriber_name_exceeds_the_column_size_should_fail_before_database_access()
     {
         //Arrange
         var publication = new MsSqlPublication { Topic = new("topic"), SubscriberChannels = [new(new string('a', 256))] };
 
         //Act
-        var exception = Assert.Throws<ConfigurationException>(() => new MsSqlMessageProducer(_configuration, publication));
+        var exception = (await Assert.That(() => new MsSqlMessageProducer(_configuration, publication)).ThrowsExactly<ConfigurationException>());
 
         //Assert
-        Assert.Contains("255", exception.Message);
+        await Assert.That(exception.Message).Contains("255");
     }
 
-    [Fact]
-    public void When_subscriber_count_exceeds_the_limit_should_fail_before_database_access()
+    [Test]
+    public async Task When_subscriber_count_exceeds_the_limit_should_fail_before_database_access()
     {
         //Arrange
         var publication = new MsSqlPublication { Topic = new("topic"), SubscriberChannels = Enumerable.Range(0, 1001).Select(i => new ChannelName($"subscriber{i}")).ToArray() };
 
         //Act
-        var exception = Assert.Throws<ConfigurationException>(() => new MsSqlMessageProducer(_configuration, publication));
+        var exception = (await Assert.That(() => new MsSqlMessageProducer(_configuration, publication)).ThrowsExactly<ConfigurationException>());
 
         //Assert
-        Assert.Contains("1000", exception.Message);
+        await Assert.That(exception.Message).Contains("1000");
     }
 
-    [Fact]
-    public void When_a_subscriber_has_the_logical_topic_name_should_reject_ambiguous_retry_routing()
+    [Test]
+    public async Task When_a_subscriber_has_the_logical_topic_name_should_reject_ambiguous_retry_routing()
     {
         //Arrange
         var publication = new MsSqlPublication { Topic = new("topic"), SubscriberChannels = [new("topic")] };
 
         //Act
-        var exception = Assert.Throws<ConfigurationException>(() => new MsSqlMessageProducer(_configuration, publication));
+        var exception = (await Assert.That(() => new MsSqlMessageProducer(_configuration, publication)).ThrowsExactly<ConfigurationException>());
 
         //Assert
-        Assert.Contains("logical topic", exception.Message);
+        await Assert.That(exception.Message).Contains("logical topic");
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_sending_a_different_logical_topic_should_fail_before_database_access(bool async)
     {
         //Arrange
@@ -129,17 +128,17 @@ public class MsSqlFanOutConfigurationTests
 
         //Act
         var exception = async
-            ? await Assert.ThrowsAsync<ConfigurationException>(() => producer.SendAsync(message))
-            : Assert.Throws<ConfigurationException>(() => producer.Send(message));
+            ? await Assert.That(() => producer.SendAsync(message)).ThrowsExactly<ConfigurationException>()
+            : (await Assert.That(() => producer.Send(message)).ThrowsExactly<ConfigurationException>());
 
         //Assert
-        Assert.Contains("topic", exception.Message, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("topic");
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_an_alias_subscription_requests_delayed_retries_without_a_targeted_scheduler_should_fail_at_startup(bool async)
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_an_alias_subscription_requests_delayed_retries_without_a_targeted_scheduler_should_fail_at_startup(bool async)
     {
         //Arrange
         var subscription = new MsSqlSubscription(new("subscriber"), new("queue"), new("topic"),
@@ -147,22 +146,22 @@ public class MsSqlFanOutConfigurationTests
         var factory = new MsSqlMessageConsumerFactory(_configuration);
 
         //Act
-        var exception = Assert.Throws<ConfigurationException>(() =>
+        var exception = (await Assert.That(() =>
         {
             if (async)
                 factory.CreateAsync(subscription);
             else
                 factory.Create(subscription);
-        });
+        }).ThrowsExactly<ConfigurationException>());
 
         //Assert
-        Assert.Contains("scheduler", exception.Message, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("scheduler");
     }
 
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_opening_a_channel_with_unsafe_delayed_retries_should_fail_before_provisioning(bool async, bool asyncCreation)
     {
         //Arrange
@@ -173,7 +172,7 @@ public class MsSqlFanOutConfigurationTests
         var factory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
 
         //Act
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(async () =>
+        var exception = await Assert.That(async () =>
         {
             if (asyncCreation)
             {
@@ -187,9 +186,9 @@ public class MsSqlFanOutConfigurationTests
             {
                 using var channel = factory.CreateSyncChannel(subscription);
             }
-        });
+        }).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.Contains("scheduler", exception.Message, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("scheduler");
     }
 }

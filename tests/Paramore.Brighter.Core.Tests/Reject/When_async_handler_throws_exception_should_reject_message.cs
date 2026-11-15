@@ -19,9 +19,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Actions;
@@ -29,7 +27,6 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.Reject.TestDoubles;
 using Paramore.Brighter.Reject.Handlers;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Reject
 {
@@ -37,13 +34,11 @@ namespace Paramore.Brighter.Core.Tests.Reject
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _command = new();
-
         public When_async_handler_throws_exception_should_reject_message()
         {
             //Arrange
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyFailingRejectHandlerAsync>();
-
             var handlerFactory = new SimpleHandlerFactoryAsync(type =>
             {
                 if (type == typeof(MyFailingRejectHandlerAsync))
@@ -52,30 +47,20 @@ namespace Paramore.Brighter.Core.Tests.Reject
                     return new RejectMessageOnErrorHandlerAsync<MyCommand>();
                 throw new ArgumentOutOfRangeException(nameof(type), type.Name, null);
             });
-
             MyFailingRejectHandlerAsync.HandlerCalled = false;
-
-            _commandProcessor = new CommandProcessor(
-                registry,
-                handlerFactory,
-                new InMemoryRequestContextFactory(),
-                new PolicyRegistry(),
-                new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory()
-            );
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
         }
 
-        [Fact]
+        [Test]
         public async Task It_should_throw_RejectMessageAction_with_original_exception()
         {
             //Act
-            var exception = await Assert.ThrowsAsync<RejectMessageAction>(() => _commandProcessor.SendAsync(_command));
-
+            var exception = await Assert.That(() => _commandProcessor.SendAsync(_command)).ThrowsExactly<RejectMessageAction>();
             //Assert
-            Assert.True(MyFailingRejectHandlerAsync.HandlerCalled); // Handler was invoked
-            Assert.Equal(MyFailingRejectHandlerAsync.EXCEPTION_MESSAGE, exception.Message); // Preserves original message
-            Assert.IsType<InvalidOperationException>(exception.InnerException); // Preserves original exception type
-            Assert.Equal(MyFailingRejectHandlerAsync.EXCEPTION_MESSAGE, exception.InnerException.Message); // Inner has same message
+            await Assert.That(MyFailingRejectHandlerAsync.HandlerCalled).IsTrue(); // Handler was invoked
+            await Assert.That(exception.Message).IsEqualTo(MyFailingRejectHandlerAsync.EXCEPTION_MESSAGE); // Preserves original message
+            await Assert.That(exception.InnerException).IsTypeOf<InvalidOperationException>(); // Preserves original exception type
+            await Assert.That(exception.InnerException.Message).IsEqualTo(MyFailingRejectHandlerAsync.EXCEPTION_MESSAGE); // Inner has same message
         }
     }
 }

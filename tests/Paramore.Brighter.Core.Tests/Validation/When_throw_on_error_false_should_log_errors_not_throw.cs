@@ -31,7 +31,6 @@ using Microsoft.Extensions.Options;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
@@ -52,8 +51,8 @@ public class ThrowOnErrorFalseTests
             logger);
     }
 
-    [Fact]
-    public void When_validate_pipelines_with_throw_on_error_false_should_store_in_options()
+    [Test]
+    public async Task When_validate_pipelines_with_throw_on_error_false_should_store_in_options()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -67,11 +66,12 @@ public class ThrowOnErrorFalseTests
         // Assert — ThrowOnError should be false in the resolved options
         var provider = services.BuildServiceProvider();
         var options = provider.GetRequiredService<IOptions<BrighterPipelineValidationOptions>>().Value;
-        Assert.False(options.ThrowOnError);
+        await
+        Assert.That(options.ThrowOnError).IsFalse();
     }
 
-    [Fact]
-    public void When_validate_pipelines_with_throw_on_error_true_should_store_in_options()
+    [Test]
+    public async Task When_validate_pipelines_with_throw_on_error_true_should_store_in_options()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -85,11 +85,12 @@ public class ThrowOnErrorFalseTests
         // Assert — ThrowOnError should be true (the default)
         var provider = services.BuildServiceProvider();
         var options = provider.GetRequiredService<IOptions<BrighterPipelineValidationOptions>>().Value;
-        Assert.True(options.ThrowOnError);
+        await
+        Assert.That(options.ThrowOnError).IsTrue();
     }
 
-    [Fact]
-    public void When_validate_pipelines_default_should_have_throw_on_error_true()
+    [Test]
+    public async Task When_validate_pipelines_default_should_have_throw_on_error_true()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -103,10 +104,11 @@ public class ThrowOnErrorFalseTests
         // Assert — default ThrowOnError should be true
         var provider = services.BuildServiceProvider();
         var options = provider.GetRequiredService<IOptions<BrighterPipelineValidationOptions>>().Value;
-        Assert.True(options.ThrowOnError);
+        await
+        Assert.That(options.ThrowOnError).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_throw_on_error_false_and_errors_should_log_not_throw()
     {
         // Arrange
@@ -122,11 +124,13 @@ public class ThrowOnErrorFalseTests
         await service.StartAsync(CancellationToken.None);
 
         // Assert — error should be logged, not thrown
-        Assert.True(validator.ValidateWasCalled);
-        Assert.Contains(logger.Entries, e => e.LogLevel == LogLevel.Error && e.Message.Contains("misconfigured"));
+        await
+        Assert.That(validator.ValidateWasCalled).IsTrue();
+        await
+        Assert.That((logger.Entries).Any( e => e.LogLevel == LogLevel.Error && e.Message.Contains("misconfigured"))).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_throw_on_error_true_and_errors_should_throw()
     {
         // Arrange
@@ -139,11 +143,11 @@ public class ThrowOnErrorFalseTests
             logger);
 
         // Act & Assert — should throw PipelineValidationException
-        await Assert.ThrowsAsync<PipelineValidationException>(
-            () => service.StartAsync(CancellationToken.None));
+        await Assert.That(
+            () => service.StartAsync(CancellationToken.None)).ThrowsExactly<PipelineValidationException>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_throw_on_error_false_should_still_log_warnings()
     {
         // Arrange
@@ -160,7 +164,9 @@ public class ThrowOnErrorFalseTests
         await service.StartAsync(CancellationToken.None);
 
         // Assert — both error and warning should be logged
-        Assert.Contains(logger.Entries, e => e.LogLevel == LogLevel.Error && e.Message.Contains("misconfigured"));
-        Assert.Contains(logger.Entries, e => e.LogLevel == LogLevel.Warning && e.Message.Contains("suboptimal"));
+        await
+        Assert.That((logger.Entries).Any( e => e.LogLevel == LogLevel.Error && e.Message.Contains("misconfigured"))).IsTrue();
+        await
+        Assert.That((logger.Entries).Any( e => e.LogLevel == LogLevel.Warning && e.Message.Contains("suboptimal"))).IsTrue();
     }
 }

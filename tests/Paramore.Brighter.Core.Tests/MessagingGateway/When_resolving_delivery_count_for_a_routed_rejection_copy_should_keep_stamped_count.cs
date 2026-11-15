@@ -24,8 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.MessagingGateway
 {
     /// <summary>
@@ -36,8 +35,8 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
     public class DeliveryCountResolutionTests
     {
         // AC-41: "rejectionReason" (camelCase) is the discriminator (ADR 0077 §"Why the discriminator is rejectionReason")
-        [Fact]
-        public void When_resolving_delivery_count_for_a_routed_rejection_copy_should_keep_stamped_count()
+        [Test]
+        public async Task When_resolving_delivery_count_for_a_routed_rejection_copy_should_keep_stamped_count()
         {
             //Arrange
             var bag = new Dictionary<string, object>
@@ -51,14 +50,14 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             var result = DeliveryCount.Resolve(headerCount, brokerCount, bag);
 
             //Assert
-            Assert.Equal(3, result);   // stamped count kept, not Normalise(1)=0
+            await Assert.That(result).IsEqualTo(3);   // stamped count kept, not Normalise(1)=0
         }
 
         // PascalCase "RejectionReason" is the pump header key (Message.RejectionReasonHeaderName),
         // NOT the routing metadata key — bag lookup is ordinal/case-sensitive, so this is
         // not a routed copy and the normalised broker count is returned.
-        [Fact]
-        public void When_resolving_delivery_count_with_pascalcase_rejection_reason_should_not_treat_as_routed_copy()
+        [Test]
+        public async Task When_resolving_delivery_count_with_pascalcase_rejection_reason_should_not_treat_as_routed_copy()
         {
             //Arrange
             var bag = new Dictionary<string, object>
@@ -72,15 +71,15 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             var result = DeliveryCount.Resolve(headerCount, brokerCount, bag);
 
             //Assert
-            Assert.Equal(2, result);   // normalised broker count, not stamped headerCount (5)
+            await Assert.That(result).IsEqualTo(2);   // normalised broker count, not stamped headerCount (5)
         }
 
         // When no broker counter is available (null, 0 or negative), fall back to the header count.
-        [Theory]
-        [InlineData(null)]
-        [InlineData(0)]
-        [InlineData(-1)]
-        public void When_resolving_delivery_count_broker_count_absent_or_non_positive_should_return_header_count(
+        [Test]
+        [Arguments(null)]
+        [Arguments(0)]
+        [Arguments(-1)]
+        public async Task When_resolving_delivery_count_broker_count_absent_or_non_positive_should_return_header_count(
             int? brokerCount)
         {
             //Arrange
@@ -91,12 +90,12 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             var result = DeliveryCount.Resolve(headerCount, brokerCount, bag);
 
             //Assert
-            Assert.Equal(headerCount, result);
+            await Assert.That(result).IsEqualTo(headerCount);
         }
 
         // Positive broker count with no discriminator → normalised broker count.
-        [Fact]
-        public void When_resolving_delivery_count_no_discriminator_positive_broker_count_should_return_normalised()
+        [Test]
+        public async Task When_resolving_delivery_count_no_discriminator_positive_broker_count_should_return_normalised()
         {
             //Arrange
             var bag = new Dictionary<string, object>();   // no rejectionReason key
@@ -107,7 +106,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             var result = DeliveryCount.Resolve(headerCount, brokerCount, bag);
 
             //Assert
-            Assert.Equal(2, result);   // Normalise(3), not headerCount (5)
+            await Assert.That(result).IsEqualTo(2);   // Normalise(3), not headerCount (5)
         }
     }
 }

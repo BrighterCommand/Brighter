@@ -35,7 +35,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -43,7 +42,7 @@ public class LockUnavailableSweepBetweenFailuresTests
 {
     private const string InvestigateCheck = "brighter-outbox-sweeper-investigate";
 
-    [Fact]
+    [Test]
     public async Task When_a_lock_unavailable_sweep_falls_between_failures_should_neither_count_nor_reset()
     {
         //Arrange
@@ -85,16 +84,16 @@ public class LockUnavailableSweepBetweenFailuresTests
             var afterFourth = (await healthChecks.CheckHealthAsync(CancellationToken.None)).Entries[InvestigateCheck];
 
             //Assert
-            Assert.True(firstFailed && secondFailed && thirdUnavailable && fourthFailed, "The sweeps did not all end");
-            AssertHealthy(afterFirst);
-            AssertHealthy(afterSecond);
-            AssertHealthy(afterUnavailable);
+            await Assert.That(firstFailed && secondFailed && thirdUnavailable && fourthFailed).IsTrue().Because("The sweeps did not all end");
+            await AssertHealthy(afterFirst);
+            await AssertHealthy(afterSecond);
+            await AssertHealthy(afterUnavailable);
 
-            Assert.Equal(HealthStatus.Degraded, afterFourth.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, afterFourth.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), afterFourth.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Equal(new[] { "consecutive_failed_sweeps" }, Assert.IsType<string[]>(afterFourth.Data[RemedyCheckConvention.ConditionsKey]));
-            Assert.Contains("3", afterFourth.Description);
+            await Assert.That(afterFourth.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That(afterFourth.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(afterFourth.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+            await Assert.That((await Assert.That(afterFourth.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "consecutive_failed_sweeps" });
+            await Assert.That(afterFourth.Description).Contains("3");
         }
         finally
         {
@@ -102,12 +101,12 @@ public class LockUnavailableSweepBetweenFailuresTests
         }
     }
 
-    private static void AssertHealthy(HealthReportEntry entry)
+    private static async Task AssertHealthy(HealthReportEntry entry)
     {
-        Assert.Equal(HealthStatus.Healthy, entry.Status);
-        Assert.NotEqual(HealthStatus.Unhealthy, entry.Status);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), entry.Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Empty(Assert.IsType<string[]>(entry.Data[RemedyCheckConvention.ConditionsKey]));
+        await Assert.That(entry.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(entry.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+        await Assert.That(entry.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+        await Assert.That((await Assert.That(entry.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEmpty();
     }
 
     private static bool WaitForFailedSweeps(SwitchableOutboxProducerMediator mediator, OutboxSweeperState state, int count) =>

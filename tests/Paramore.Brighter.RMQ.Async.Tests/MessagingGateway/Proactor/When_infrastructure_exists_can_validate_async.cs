@@ -1,22 +1,21 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
-public class RmqValidateExistingInfrastructureTestsAsync : IDisposable, IAsyncDisposable
+public class RmqValidateExistingInfrastructureTestsAsync : IAsyncDisposable
 {
     private readonly IAmAMessageProducerAsync _messageProducer;
     private readonly IAmAMessageConsumerAsync _messageConsumer;
     private readonly Message _message;
-        
-    public RmqValidateExistingInfrastructureTestsAsync() 
+
+    public RmqValidateExistingInfrastructureTestsAsync()
     {
         var routingKey = new RoutingKey(Guid.NewGuid().ToString());
         var queueName = new ChannelName(Guid.NewGuid().ToString());
-            
-        _message = new Message(new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND), 
+
+        _message = new Message(new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND),
             new MessageBody("test content")
         );
 
@@ -28,11 +27,11 @@ public class RmqValidateExistingInfrastructureTestsAsync : IDisposable, IAsyncDi
 
         _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Validate});
         _messageConsumer = new RmqMessageConsumer(
-            connection: rmqConnection, 
-            queueName: queueName, 
-            routingKey: routingKey, 
-            isDurable: true, 
-            highAvailability: false, 
+            connection: rmqConnection,
+            queueName: queueName,
+            routingKey: routingKey,
+            isDurable: true,
+            highAvailability: false,
             makeChannels: OnMissingChannel.Validate);
 
         //This creates the infrastructure we want
@@ -41,8 +40,8 @@ public class RmqValidateExistingInfrastructureTestsAsync : IDisposable, IAsyncDi
             .GetAwaiter()
             .GetResult();
     }
-        
-    [Fact]
+
+    [Test]
     public async Task When_infrastructure_exists_can_validate_producer()
     {
         var exceptionThrown = false;
@@ -57,10 +56,11 @@ public class RmqValidateExistingInfrastructureTestsAsync : IDisposable, IAsyncDi
             exceptionThrown = true;
         }
 
-        Assert.False(exceptionThrown);
+        await Assert.That(exceptionThrown).IsFalse();
     }
 
-    public void Dispose()
+    [After(HookType.Test)]
+    public async Task Cleanup()
     {
         ((IAmAMessageProducerSync)_messageProducer).Dispose();
         ((IAmAMessageConsumerSync)_messageConsumer).Dispose();

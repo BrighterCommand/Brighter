@@ -28,8 +28,7 @@ using Paramore.Brighter.ServiceActivator.Validation;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
 using Paramore.Brighter.Validation;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 
 /// <summary>
@@ -41,8 +40,8 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 /// </summary>
 public class GcpPubSubSubscriptionValidationWarningTests
 {
-    [Fact]
-    public void When_validating_a_gcp_subscription_without_dead_letter_policy_should_report_one_warning()
+    [Test]
+    public async Task When_validating_a_gcp_subscription_without_dead_letter_policy_should_report_one_warning()
     {
         // Arrange — a real GcpPubSubSubscription with no DeadLetterPolicy and requeueCount: 3
         var pipelineBuilder = new PipelineBuilder<IRequest>(new SubscriberRegistry());
@@ -67,12 +66,12 @@ public class GcpPubSubSubscriptionValidationWarningTests
         var result = validator.Validate();
 
         // Assert — exactly one Warning, naming the subscription, the budget, and the reason; no Errors
-        Assert.True(result.IsValid);
-        Assert.Single(result.Warnings);
+        await Assert.That(result.IsValid).IsTrue();
+        await Assert.That(result.Warnings).HasSingleItem();
         var warning = result.Warnings.First();
-        Assert.Equal(ValidationSeverity.Warning, warning.Severity);
-        Assert.Contains(subscription.Name.ToString(), warning.Message);
-        Assert.Contains("3", warning.Message);
-        Assert.Contains("DeadLetterPolicy", warning.Message);
+        await Assert.That(warning.Severity).IsEqualTo(ValidationSeverity.Warning);
+        await Assert.That(warning.Message).Contains(subscription.Name.ToString());
+        await Assert.That(warning.Message).Contains("3");
+        await Assert.That(warning.Message).Contains("DeadLetterPolicy");
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
@@ -11,12 +11,12 @@ using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Transformers.AWS.V4;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.Transformers;
 
-[Trait("Category", "AWS")]
-public class LargeMessagePaylodUnwrapTests : IAsyncLifetime
+[Category("AWS")]
+[Property("Fragile", "CI")]
+public class LargeMessagePaylodUnwrapTests
 {
     private readonly TransformPipelineBuilderAsync _pipelineBuilder;
     private readonly string _bucketName;
@@ -25,7 +25,6 @@ public class LargeMessagePaylodUnwrapTests : IAsyncLifetime
     public LargeMessagePaylodUnwrapTests()
     {
         //arrange
-        TransformPipelineBuilder.ClearPipelineCache();
 
         var mapperRegistry = new MessageMapperRegistry(
             null,
@@ -55,7 +54,7 @@ public class LargeMessagePaylodUnwrapTests : IAsyncLifetime
         _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.None);
     }
 
-    [Fact]
+    [Test]
     public async Task When_unwrapping_a_large_message()
     {
         // xUnit v2 does not run async teardown when InitializeAsync fails.
@@ -97,11 +96,13 @@ public class LargeMessagePaylodUnwrapTests : IAsyncLifetime
 
         //assert
         //contents should be from storage
-        Assert.Equal(contents, transformedMessage.Value);
-        Assert.False((await _luggageStore.HasClaimAsync(id)));
+        await Assert.That(transformedMessage.Value).IsEqualTo(contents);
+        await Assert.That((await _luggageStore.HasClaimAsync(id))).IsFalse();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public Task DisposeAsync() => S3TestBucketCleanup.DeleteAsync(_bucketName);
 }

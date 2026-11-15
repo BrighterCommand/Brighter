@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia <irakli.gabisonia94@gmail.com>
 
@@ -26,19 +26,18 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
+[Property("Category", "Kafka")]
+[NotInParallel("Kafka")]
 public class KafkaProducerRepeatedDisposalTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, true)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(true, true)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
     public async Task When_a_kafka_producer_is_disposed_repeatedly_should_not_throw(
         bool firstDisposeAsync, bool subsequentDisposeAsync)
     {
@@ -62,7 +61,7 @@ public class KafkaProducerRepeatedDisposalTests
             producer.Dispose();
 
         // Act
-        var exception = await Record.ExceptionAsync(async () =>
+        var exception = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             for (var attempt = 0; attempt < 3; attempt++)
             {
@@ -74,6 +73,6 @@ public class KafkaProducerRepeatedDisposalTests
         });
 
         // Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 }

@@ -25,14 +25,13 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 
 public class GcpSubscriptionDlqRoutingKeyTests
 {
-    [Fact]
-    public void When_creating_gcp_subscription_with_dlq_routing_keys_should_expose_properties()
+    [Test]
+    public async Task When_creating_gcp_subscription_with_dlq_routing_keys_should_expose_properties()
     {
         // Arrange
         var deadLetterRoutingKey = new RoutingKey("orders-dlq");
@@ -67,29 +66,29 @@ public class GcpSubscriptionDlqRoutingKeyTests
         );
 
         // Assert — Brighter routing key interfaces are satisfied
-        Assert.IsAssignableFrom<IUseBrighterDeadLetterSupport>(subscription);
+        await Assert.That(subscription).IsAssignableTo<IUseBrighterDeadLetterSupport>();
         var dlqSupport = (IUseBrighterDeadLetterSupport)subscription;
-        Assert.Equal(deadLetterRoutingKey, dlqSupport.DeadLetterRoutingKey);
+        await Assert.That(dlqSupport.DeadLetterRoutingKey).IsEqualTo(deadLetterRoutingKey);
 
-        Assert.IsAssignableFrom<IUseBrighterInvalidMessageSupport>(subscription);
+        await Assert.That(subscription).IsAssignableTo<IUseBrighterInvalidMessageSupport>();
         var invalidSupport = (IUseBrighterInvalidMessageSupport)subscription;
-        Assert.Equal(invalidMessageRoutingKey, invalidSupport.InvalidMessageRoutingKey);
+        await Assert.That(invalidSupport.InvalidMessageRoutingKey).IsEqualTo(invalidMessageRoutingKey);
 
-        Assert.IsAssignableFrom<IUseBrighterDeadLetterSupport>(typedSubscription);
+        await Assert.That(typedSubscription).IsAssignableTo<IUseBrighterDeadLetterSupport>();
         var typedDlqSupport = (IUseBrighterDeadLetterSupport)typedSubscription;
-        Assert.Equal(deadLetterRoutingKey, typedDlqSupport.DeadLetterRoutingKey);
+        await Assert.That(typedDlqSupport.DeadLetterRoutingKey).IsEqualTo(deadLetterRoutingKey);
 
-        Assert.IsAssignableFrom<IUseBrighterInvalidMessageSupport>(typedSubscription);
+        await Assert.That(typedSubscription).IsAssignableTo<IUseBrighterInvalidMessageSupport>();
         var typedInvalidSupport = (IUseBrighterInvalidMessageSupport)typedSubscription;
-        Assert.Equal(invalidMessageRoutingKey, typedInvalidSupport.InvalidMessageRoutingKey);
+        await Assert.That(typedInvalidSupport.InvalidMessageRoutingKey).IsEqualTo(invalidMessageRoutingKey);
 
         // Assert — existing native DeadLetter policy is unchanged by the addition of Brighter routing keys
-        Assert.Same(nativeDeadLetterPolicy, subscription.DeadLetter);
-        Assert.Equal(nativeDeadLetterPolicy.TopicName, subscription.DeadLetter!.TopicName);
-        Assert.Equal(5, subscription.DeadLetter.MaxDeliveryAttempts);
+        await Assert.That(subscription.DeadLetter).IsSameReferenceAs(nativeDeadLetterPolicy);
+        await Assert.That(subscription.DeadLetter!.TopicName).IsEqualTo(nativeDeadLetterPolicy.TopicName);
+        await Assert.That(subscription.DeadLetter.MaxDeliveryAttempts).IsEqualTo(5);
 
-        Assert.Same(nativeDeadLetterPolicy, typedSubscription.DeadLetter);
-        Assert.Equal(nativeDeadLetterPolicy.TopicName, typedSubscription.DeadLetter!.TopicName);
-        Assert.Equal(5, typedSubscription.DeadLetter.MaxDeliveryAttempts);
+        await Assert.That(typedSubscription.DeadLetter).IsSameReferenceAs(nativeDeadLetterPolicy);
+        await Assert.That(typedSubscription.DeadLetter!.TopicName).IsEqualTo(nativeDeadLetterPolicy.TopicName);
+        await Assert.That(typedSubscription.DeadLetter.MaxDeliveryAttempts).IsEqualTo(5);
     }
 }

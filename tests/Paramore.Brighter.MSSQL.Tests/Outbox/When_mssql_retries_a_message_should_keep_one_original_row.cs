@@ -27,21 +27,20 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.Outbox;
 
 public class MsSqlMessageIdRetryTests
 {
-    [Theory]
-    [InlineData(false, false, false)]
-    [InlineData(false, true, false)]
-    [InlineData(true, false, false)]
-    [InlineData(true, true, false)]
-    [InlineData(false, false, true)]
-    [InlineData(false, true, true)]
-    [InlineData(true, false, true)]
-    [InlineData(true, true, true)]
+    [Test]
+    [Arguments(false, false, false)]
+    [Arguments(false, true, false)]
+    [Arguments(true, false, false)]
+    [Arguments(true, true, false)]
+    [Arguments(false, false, true)]
+    [Arguments(false, true, true)]
+    [Arguments(true, false, true)]
+    [Arguments(true, true, true)]
     public async Task When_mssql_retries_a_message_should_keep_one_original_row(bool binary, bool useAsync, bool customSchema)
     {
         //Arrange
@@ -65,12 +64,12 @@ public class MsSqlMessageIdRetryTests
         }
 
         //Assert
-        Assert.Equal(1, await store.RowCountAsync());
-        Assert.True(await store.MessageIdUniqueIndexesAsync() > 0);
+        await Assert.That(await store.RowCountAsync()).IsEqualTo(1);
+        await Assert.That(await store.MessageIdUniqueIndexesAsync() > 0).IsTrue();
         var outstanding = await outbox.OutstandingMessagesAsync(TimeSpan.Zero, context);
-        var stored = Assert.Single(outstanding);
-        Assert.Equal(original.Id, stored.Id);
-        Assert.Equal(original.Body.ToByteArray(), stored.Body.ToByteArray());
-        Assert.Equal(1, await outbox.GetNumberOfOutstandingMessagesAsync(context));
+        var stored = await Assert.That(outstanding).HasSingleItem();
+        await Assert.That(stored.Id).IsEqualTo(original.Id);
+        await Assert.That(stored.Body.ToByteArray()).IsEqualTo(original.Body.ToByteArray());
+        await Assert.That(await outbox.GetNumberOfOutstandingMessagesAsync(context)).IsEqualTo(1);
     }
 }

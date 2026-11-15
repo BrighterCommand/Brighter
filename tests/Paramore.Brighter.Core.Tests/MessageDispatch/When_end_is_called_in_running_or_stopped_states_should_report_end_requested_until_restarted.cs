@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -36,13 +36,12 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch;
 
 public class DispatcherEndRequestedUntilRestartedTests
 {
-    [Fact]
+    [Test]
     public async Task When_end_is_called_in_running_or_stopped_states_should_report_end_requested_until_restarted()
     {
         // Arrange
@@ -79,14 +78,14 @@ public class DispatcherEndRequestedUntilRestartedTests
             var afterDispose = disposedDispatcher.GetLifecycleSnapshot();
 
             // Assert
-            Assert.True(afterEndInRunning.EndRequested);
-            Assert.Equal(DispatcherState.DS_STOPPED, stoppedBeforeEnd.State);
-            Assert.False(stoppedBeforeEnd.EndRequested);
-            Assert.Equal(DispatcherState.DS_STOPPED, afterEndInStopped.State);
-            Assert.True(afterEndInStopped.EndRequested);
-            Assert.True(afterDispose.EndRequested);
-            Assert.Equal(DispatcherState.DS_RUNNING, afterRestart.State);
-            Assert.False(afterRestart.EndRequested);
+            await Assert.That(afterEndInRunning.EndRequested).IsTrue();
+            await Assert.That(stoppedBeforeEnd.State).IsEqualTo(DispatcherState.DS_STOPPED);
+            await Assert.That(stoppedBeforeEnd.EndRequested).IsFalse();
+            await Assert.That(afterEndInStopped.State).IsEqualTo(DispatcherState.DS_STOPPED);
+            await Assert.That(afterEndInStopped.EndRequested).IsTrue();
+            await Assert.That(afterDispose.EndRequested).IsTrue();
+            await Assert.That(afterRestart.State).IsEqualTo(DispatcherState.DS_RUNNING);
+            await Assert.That(afterRestart.EndRequested).IsFalse();
         }
         finally
         {

@@ -3,6 +3,7 @@ using Paramore.Brighter.Locking.MsSql;
 using Paramore.Brighter.MsSql;
 
 namespace Paramore.Brighter.MSSQL.Tests.LockingProvider;
+[TUnit.Core.InheritsTests]
 
 public class MsSqlLockingTest : RelationalDatabaseDistributedLockingAsyncTest
 {

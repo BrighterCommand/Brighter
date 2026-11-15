@@ -28,16 +28,15 @@ THE SOFTWARE. */
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests.RelationalConfiguration;
 
 public class NonRelationalConfigurationRegistrationTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_configuring_non_relational_producers_should_not_register_database_configuration(bool explicitOutbox)
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_configuring_non_relational_producers_should_not_register_database_configuration(bool explicitOutbox)
     {
         //Arrange
         var services = new ServiceCollection();
@@ -48,11 +47,11 @@ public class NonRelationalConfigurationRegistrationTests
         using var provider = services.BuildServiceProvider();
 
         //Assert
-        Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(IAmARelationalDatabaseConfiguration));
-        Assert.Null(provider.GetService<IAmARelationalDatabaseConfiguration>());
-        Assert.IsType<InMemoryOutbox>(provider.GetRequiredService<IAmAnOutbox>());
-        Assert.NotNull(provider.GetRequiredService<IAmACommandProcessor>());
+        await Assert.That(services.Any(descriptor => descriptor.ServiceType == typeof(IAmARelationalDatabaseConfiguration))).IsFalse();
+        await Assert.That(provider.GetService<IAmARelationalDatabaseConfiguration>()).IsNull();
+        await Assert.That(provider.GetRequiredService<IAmAnOutbox>()).IsTypeOf<InMemoryOutbox>();
+        await Assert.That(provider.GetRequiredService<IAmACommandProcessor>()).IsNotNull();
         if (explicitOutbox)
-            Assert.Same(outbox, provider.GetRequiredService<IAmAnOutbox>());
+            await Assert.That(provider.GetRequiredService<IAmAnOutbox>()).IsSameReferenceAs(outbox);
     }
 }

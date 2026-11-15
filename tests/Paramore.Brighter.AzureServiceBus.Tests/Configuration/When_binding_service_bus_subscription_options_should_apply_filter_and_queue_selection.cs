@@ -28,19 +28,18 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.Configuration;
 
 public class AzureSubscriptionConfigurationBindingTests
 {
-    [Fact]
-    public void When_binding_service_bus_subscription_options_should_apply_filter_and_queue_selection()
+    [Test]
+    public async Task When_binding_service_bus_subscription_options_should_apply_filter_and_queue_selection()
     {
         //Arrange
         var options = new AzureServiceBusSubscriptionConfiguration();
-        Assert.Equal(string.Empty, options.SqlFilter);
-        Assert.False(options.UseServiceBusQueue);
+        await Assert.That(options.SqlFilter).IsEqualTo(string.Empty);
+        await Assert.That(options.UseServiceBusQueue).IsFalse();
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["SqlFilter"] = "priority > 5",
@@ -51,11 +50,11 @@ public class AzureSubscriptionConfigurationBindingTests
         configuration.Bind(options);
 
         //Assert
-        Assert.Equal("priority > 5", options.SqlFilter);
-        Assert.True(options.UseServiceBusQueue);
+        await Assert.That(options.SqlFilter).IsEqualTo("priority > 5");
+        await Assert.That(options.UseServiceBusQueue).IsTrue();
         options.SqlFilter = "priority > 10";
         options.UseServiceBusQueue = false;
-        Assert.Equal("priority > 10", options.SqlFilter);
-        Assert.False(options.UseServiceBusQueue);
+        await Assert.That(options.SqlFilter).IsEqualTo("priority > 10");
+        await Assert.That(options.UseServiceBusQueue).IsFalse();
     }
 }

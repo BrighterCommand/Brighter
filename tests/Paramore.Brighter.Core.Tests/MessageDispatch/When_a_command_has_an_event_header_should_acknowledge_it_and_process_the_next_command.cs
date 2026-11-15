@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia <irakli.gabisonia94@gmail.com>
 
@@ -33,16 +33,15 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessageMappers;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.MessageDispatch;
 
 public class MessageTypeMismatchContinuationTests
 {
-    [Theory]
-    [InlineData(MessagePumpType.Reactor)]
-    [InlineData(MessagePumpType.Proactor)]
-    public void When_a_command_has_an_event_header_should_acknowledge_it_and_process_the_next_command(
+    [Test]
+    [Arguments(MessagePumpType.Reactor)]
+    [Arguments(MessagePumpType.Proactor)]
+    public async Task When_a_command_has_an_event_header_should_acknowledge_it_and_process_the_next_command(
         MessagePumpType pumpType)
     {
         //Arrange
@@ -88,17 +87,17 @@ public class MessageTypeMismatchContinuationTests
                 new EmptyMessageTransformerFactoryAsync(), contextFactory, new ChannelAsync(channelName, topic, consumer));
 
         //Act
-        Exception? exception = Record.Exception(pump.Run);
+        Exception? exception = TestExceptionRecorder.Capture(pump.Run);
 
         //Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
         Id[] expectedIds = [mismatchedCommand.Id, subsequentCommand.Id];
         Id[] handledIds = [.. handledRequests.Select(request => request.Id)];
-        Assert.Equal(expectedIds, handledIds);
-        Assert.Equal(expectedIds, consumer.Acknowledged);
-        Assert.Empty(consumer.Rejected);
-        Assert.Empty(consumer.RequeueAttempts);
-        Assert.Empty(consumer.NegativelyAcknowledged);
-        Assert.Equal(MessagePumpStatus.MP_STOPPED, pump.Status);
+        await Assert.That(handledIds).IsEqualTo(expectedIds);
+        await Assert.That(consumer.Acknowledged).IsEqualTo(expectedIds);
+        await Assert.That(consumer.Rejected).IsEmpty();
+        await Assert.That(consumer.RequeueAttempts).IsEmpty();
+        await Assert.That(consumer.NegativelyAcknowledged).IsEmpty();
+        await Assert.That(pump.Status).IsEqualTo(MessagePumpStatus.MP_STOPPED);
     }
 }

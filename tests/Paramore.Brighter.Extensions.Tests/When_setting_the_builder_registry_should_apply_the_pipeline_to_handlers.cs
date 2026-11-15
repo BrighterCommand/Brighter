@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -33,28 +33,27 @@ using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Polly;
 using Polly.Registry;
 using Polly.Retry;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class BuilderResilienceRegistryTests
 {
-    public static TheoryData<bool, bool, bool, bool> RegistryCases
+    public static List<(bool,bool,bool,bool)> RegistryCases
     {
         get
         {
-            var cases = new TheoryData<bool, bool, bool, bool>();
+            var cases = new List<(bool,bool,bool,bool)>();
             foreach (var addConsumers in new[] { false, true })
                 foreach (var useOptionsFactory in new[] { false, true })
                     foreach (var addProducers in new[] { false, true })
                         foreach (var configureOptions in new[] { false, true })
-                            cases.Add(addConsumers, useOptionsFactory, addProducers, configureOptions);
+                            cases.Add((addConsumers, useOptionsFactory, addProducers, configureOptions));
             return cases;
         }
     }
 
-    [Theory]
-    [MemberData(nameof(RegistryCases))]
+    [Test]
+    [MethodDataSource(nameof(RegistryCases))]
     public async Task When_setting_the_builder_registry_should_apply_the_pipeline_to_handlers(
         bool addConsumers, bool useOptionsFactory, bool addProducers, bool configureOptions)
     {
@@ -92,7 +91,7 @@ public class BuilderResilienceRegistryTests
         await processor.SendAsync(command);
 
         // Assert
-        Assert.Equal(2, command.HandleCount);
-        Assert.Same(registry, provider.GetRequiredService<IBrighterOptions>().ResiliencePipelineRegistry);
+        await Assert.That(command.HandleCount).IsEqualTo(2);
+        await Assert.That(provider.GetRequiredService<IBrighterOptions>().ResiliencePipelineRegistry).IsSameReferenceAs(registry);
     }
 }

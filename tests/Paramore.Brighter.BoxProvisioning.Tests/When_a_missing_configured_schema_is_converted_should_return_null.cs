@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -21,16 +22,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 public class MissingConfiguredSchemaConversionTests
 {
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    public void When_a_missing_configured_schema_is_converted_should_return_null(string? value)
+    [Test]
+    [Arguments(null)]
+    [Arguments("")]
+    public async Task When_a_missing_configured_schema_is_converted_should_return_null(string? value)
     {
         //Arrange
         var configuration = new RelationalDatabaseConfiguration("unused", schemaName: value);
@@ -39,6 +39,6 @@ public class MissingConfiguredSchemaConversionTests
         SchemaName? schemaName = configuration.SchemaName;
 
         //Assert
-        Assert.Null(schemaName);
+        await Assert.That(schemaName).IsNull();
     }
 }

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -35,7 +35,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -43,7 +42,7 @@ public class StaleStepAddedTests
 {
     private readonly TimerCountingTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Fact]
+    [Test]
     public async Task When_the_stale_step_is_added_should_measure_and_report_both_counts()
     {
         //Arrange
@@ -76,18 +75,18 @@ public class StaleStepAddedTests
 
         //Act
         await monitor.StartAsync(default);
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= 1, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= 1, TimeSpan.FromSeconds(5))).IsTrue();
         _clock.Advance(TimeSpan.FromMinutes(1));
-        Assert.True(SpinWait.SpinUntil(
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed) >= 1
                 && readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Completed) >= 1,
-            TimeSpan.FromSeconds(5)));
+            TimeSpan.FromSeconds(5))).IsTrue();
         var observed = metrics.Observe();
 
         //Assert
-        Assert.NotEmpty(outbox.CountCalls);
-        Assert.NotEmpty(outbox.TopicCountCalls);
-        Assert.Contains(observed, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES);
-        Assert.Contains(observed, m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES);
+        await Assert.That(outbox.CountCalls).IsNotEmpty();
+        await Assert.That(outbox.TopicCountCalls).IsNotEmpty();
+        await Assert.That(System.Linq.Enumerable.Any(observed, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)).IsTrue();
+        await Assert.That(System.Linq.Enumerable.Any(observed, m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES)).IsTrue();
     }
 }

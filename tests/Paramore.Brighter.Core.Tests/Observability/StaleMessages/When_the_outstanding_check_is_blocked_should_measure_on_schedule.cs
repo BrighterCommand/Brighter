@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -38,7 +38,6 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -78,13 +77,13 @@ public class BlockedOutstandingCheckTests : IDisposable
         });
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_outstanding_check_is_blocked_should_measure_on_schedule()
     {
         //Arrange
         var monitor = _metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         await monitor.StartAsync(default);
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= 1, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= 1, TimeSpan.FromSeconds(5))).IsTrue();
         var commandProcessor = CommandProcessorFor(_outbox, _producerRegistry);
 
         //Act
@@ -98,11 +97,11 @@ public class BlockedOutstandingCheckTests : IDisposable
             TimeSpan.FromSeconds(5));
 
         //Assert
-        Assert.True(checkBlocked);
-        Assert.True(measured);
-        var overall = Assert.Single(_outbox.CountCalls, call => !call.Synchronous);
-        Assert.Equal(s_start.AddMinutes(1), overall.CalledAt);
-        Assert.Equal(s_start.AddMinutes(1), Assert.Single(_outbox.TopicCountCalls).CalledAt);
+        await Assert.That(checkBlocked).IsTrue();
+        await Assert.That(measured).IsTrue();
+        var overall = await Assert.That(System.Linq.Enumerable.Where(_outbox.CountCalls, call => !call.Synchronous)).HasSingleItem();
+        await Assert.That(overall.CalledAt).IsEqualTo(s_start.AddMinutes(1));
+        await Assert.That((await Assert.That(_outbox.TopicCountCalls).HasSingleItem()).CalledAt).IsEqualTo(s_start.AddMinutes(1));
     }
 
     private static Brighter.CommandProcessor CommandProcessorFor(StaleMessageTopicCountingOutbox outbox, ProducerRegistry producerRegistry)

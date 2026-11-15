@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,21 +20,39 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
-using Xunit;
+
+
+
+
+
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
+
+
 // The finalizer-release tests force a full GC (GC.Collect + WaitForPendingFinalizers)
+
 // to reach an abandoned pipeline / lifetime scope's finalizer. That is a process-wide
+
 // operation: run in parallel with another class, a concurrently live object can make
+
 // the collection reach — or miss — the object under test, so the assertion flakes.
+
 // Serialising both classes through this collection removes the overlap. The collection
+
 // is Core.Tests-local because xUnit collections cannot span assemblies (the pump-deadlock
+
 // collection with the same intent lives in Extensions.Tests).
-[CollectionDefinition(Name, DisableParallelization = true)]
+
+[System.Obsolete]
+
 public class FinalizerTestCollection
+
 {
+
     public const string Name = "Finalizer";
+
 }

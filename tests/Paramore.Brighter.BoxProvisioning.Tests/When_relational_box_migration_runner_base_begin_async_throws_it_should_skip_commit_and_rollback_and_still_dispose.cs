@@ -29,7 +29,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -44,7 +43,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// </remarks>
 public class SqlBoxMigrationRunnerBeginFailureTests
 {
-    [Fact]
+    [Test]
     public async Task When_begin_async_throws_runner_should_skip_commit_and_rollback_and_still_dispose()
     {
         //Arrange
@@ -54,7 +53,7 @@ public class SqlBoxMigrationRunnerBeginFailureTests
         using var cts = new CancellationTokenSource();
 
         //Act
-        var thrown = await Record.ExceptionAsync(() => runner.MigrateAsync(
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => runner.MigrateAsync(
             tableName: "Orders",
             schemaName: null,
             boxType: BoxType.Outbox,
@@ -62,15 +61,15 @@ public class SqlBoxMigrationRunnerBeginFailureTests
             cancellationToken: cts.Token));
 
         //Assert
-        Assert.Same(sentinel, thrown);
+        await Assert.That(thrown).IsSameReferenceAs(sentinel);
 
-        Assert.True(unitOfWork.BeginAsyncCalled);
+        await Assert.That(unitOfWork.BeginAsyncCalled).IsTrue();
 
-        Assert.False(unitOfWork.CommitAsyncCalled);
+        await Assert.That(unitOfWork.CommitAsyncCalled).IsFalse();
 
-        Assert.False(unitOfWork.RollbackAsyncCalled);
+        await Assert.That(unitOfWork.RollbackAsyncCalled).IsFalse();
 
-        Assert.True(unitOfWork.DisposeAsyncCalled);
+        await Assert.That(unitOfWork.DisposeAsyncCalled).IsTrue();
     }
 
     // Post-Begin hooks throw NotSupportedException, so reaching one surfaces as the wrong exception rather than the sentinel.

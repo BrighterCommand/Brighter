@@ -30,7 +30,7 @@ using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Core.Tests.Confirmation.TestDoubles;
 using Paramore.Brighter.Extensions;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.Confirmation;
 
@@ -38,7 +38,7 @@ public class BrokerStyleAsyncConfirmationTests
 {
     private static readonly RoutingKey s_topic = new("Broker.Style.Confirmation.Topic");
 
-    [Fact]
+    [Test]
     public async Task When_broker_style_producer_confirms_should_await_dispatch()
     {
         // Arrange
@@ -58,8 +58,7 @@ public class BrokerStyleAsyncConfirmationTests
         try
         {
             // Assert
-            await Assert.ThrowsAsync<TimeoutException>(
-                async () => await raiseTask.WaitAsync(TimeSpan.FromMilliseconds(100)));
+            await Assert.That(async () => await raiseTask.WaitAsync(TimeSpan.FromMilliseconds(100))).ThrowsExactly<TimeoutException>();
         }
         finally
         {
@@ -67,11 +66,11 @@ public class BrokerStyleAsyncConfirmationTests
             await raiseTask.WaitAsync(TimeSpan.FromSeconds(1));
         }
 
-        Assert.True(outbox.WasDispatched(message.Id, requestContext));
+        await Assert.That(outbox.WasDispatched(message.Id, requestContext)).IsTrue();
     }
 
-    [Fact]
-    public void When_producer_supports_async_confirmation_mediator_should_not_subscribe_sync_event()
+    [Test]
+    public async System.Threading.Tasks.Task When_producer_supports_async_confirmation_mediator_should_not_subscribe_sync_event()
     {
         // Arrange
         var producer = new StubConfirmingProducerAsync(s_topic);
@@ -81,7 +80,7 @@ public class BrokerStyleAsyncConfirmationTests
 
         // Assert: the mediator must register exactly one callback — the awaited async event — or a
         // confirmation would be handled twice (once awaited, once fire-and-forget).
-        Assert.False(producer.SyncCallbackSubscribed);
+        await Assert.That(producer.SyncCallbackSubscribed).IsFalse();
     }
 
     private static Message CreateMessage() => new(

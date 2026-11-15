@@ -33,7 +33,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -42,7 +41,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 /// </summary>
 public class TrippedTopicReportTests
 {
-    [Fact]
+    [Test]
     public async Task When_only_a_tripped_topic_applies_should_pass_the_probes_and_report_investigate()
     {
         //Arrange
@@ -61,13 +60,16 @@ public class TrippedTopicReportTests
         var report = await service.CheckHealthAsync();
 
         //Assert
-        Assert.Equal(HttpStatusCode.OK, live.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
+        await Assert.That(live.StatusCode).IsEqualTo(HttpStatusCode.OK);
+        await Assert.That(ready.StatusCode).IsEqualTo(HttpStatusCode.OK);
         var investigate = report.Entries["brighter-outbox-sweeper-investigate"];
-        Assert.Equal(HealthStatus.Degraded, investigate.Status);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), investigate.Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Contains("tripped_topics", (string[])investigate.Data[RemedyCheckConvention.ConditionsKey]);
-        Assert.All(report.Entries.Values, entry => Assert.NotEqual(HealthStatus.Unhealthy, entry.Status));
-        Assert.NotEqual(HealthStatus.Unhealthy, report.Status);
+        await Assert.That(investigate.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(investigate.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+        await Assert.That((string[])investigate.Data[RemedyCheckConvention.ConditionsKey]).Contains("tripped_topics");
+        foreach (var entry in report.Entries.Values)
+{
+    await Assert.That(entry.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+}
+        await Assert.That(report.Status).IsNotEqualTo(HealthStatus.Unhealthy);
     }
 }

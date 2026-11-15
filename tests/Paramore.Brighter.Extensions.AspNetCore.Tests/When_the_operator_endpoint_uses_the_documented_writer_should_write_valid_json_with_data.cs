@@ -34,7 +34,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -46,7 +45,7 @@ public class OperatorEndpointDocumentedWriterTests
 {
     private const string InvestigateName = "brighter-outbox-sweeper-investigate";
 
-    [Fact]
+    [Test]
     public async Task When_the_operator_endpoint_uses_the_documented_writer_should_write_valid_json_with_data()
     {
         //Arrange
@@ -64,31 +63,31 @@ public class OperatorEndpointDocumentedWriterTests
         var report = await service.CheckHealthAsync();
 
         //Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
         using var document = JsonDocument.Parse(body);
         var root = document.RootElement;
-        Assert.Equal("Degraded", root.GetProperty("status").GetString());
-        Assert.NotEqual(HealthStatus.Unhealthy, report.Status);
-        Assert.NotEqual(HealthStatus.Unhealthy, report.Entries[InvestigateName].Status);
+        await Assert.That(root.GetProperty("status").GetString()).IsEqualTo("Degraded");
+        await Assert.That(report.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+        await Assert.That(report.Entries[InvestigateName].Status).IsNotEqualTo(HealthStatus.Unhealthy);
 
-        var entry = Assert.Single(root.GetProperty("entries").EnumerateArray());
-        Assert.Equal(InvestigateName, entry.GetProperty("name").GetString());
-        Assert.Equal("Degraded", entry.GetProperty("status").GetString());
-        Assert.Equal([RemedyCheckConvention.InvestigateTag], entry.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString()));
-        Assert.False(string.IsNullOrEmpty(entry.GetProperty("description").GetString()));
+        var entry = await Assert.That(root.GetProperty("entries").EnumerateArray()).HasSingleItem();
+        await Assert.That(entry.GetProperty("name").GetString()).IsEqualTo(InvestigateName);
+        await Assert.That(entry.GetProperty("status").GetString()).IsEqualTo("Degraded");
+        await Assert.That(entry.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString())).IsEqualTo([RemedyCheckConvention.InvestigateTag]);
+        await Assert.That(string.IsNullOrEmpty(entry.GetProperty("description").GetString())).IsFalse();
 
         var data = entry.GetProperty("data");
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), data.GetProperty(RemedyCheckConvention.RemedyKindKey).GetString());
-        Assert.Equal(["consecutive_failed_sweeps"], data.GetProperty(RemedyCheckConvention.ConditionsKey).EnumerateArray().Select(name => name.GetString()));
+        await Assert.That(data.GetProperty(RemedyCheckConvention.RemedyKindKey).GetString()).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+        await Assert.That(data.GetProperty(RemedyCheckConvention.ConditionsKey).EnumerateArray().Select(name => name.GetString())).IsEqualTo(["consecutive_failed_sweeps"]);
 
         var values = data.GetProperty("consecutive_failed_sweeps");
-        Assert.Equal(JsonValueKind.Number, values.GetProperty("timer_interval_seconds").ValueKind);
-        Assert.Equal(OutboxSweeperRecordScenario.TimerIntervalSeconds, values.GetProperty("timer_interval_seconds").GetDouble());
-        Assert.Equal(OutboxSweeperRecordScenario.ConsecutiveFailures, values.GetProperty("count").GetInt32());
-        Assert.Equal(OutboxSweeperRecordScenario.ConsecutiveFailures, values.GetProperty("threshold").GetInt32());
+        await Assert.That(values.GetProperty("timer_interval_seconds").ValueKind).IsEqualTo(JsonValueKind.Number);
+        await Assert.That(values.GetProperty("timer_interval_seconds").GetDouble()).IsEqualTo(OutboxSweeperRecordScenario.TimerIntervalSeconds);
+        await Assert.That(values.GetProperty("count").GetInt32()).IsEqualTo(OutboxSweeperRecordScenario.ConsecutiveFailures);
+        await Assert.That(values.GetProperty("threshold").GetInt32()).IsEqualTo(OutboxSweeperRecordScenario.ConsecutiveFailures);
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_topic_is_tripped_should_write_its_topics_as_a_json_array()
     {
         //Arrange
@@ -108,16 +107,16 @@ public class OperatorEndpointDocumentedWriterTests
         //Assert
         using var document = JsonDocument.Parse(body);
         var root = document.RootElement;
-        Assert.Equal("Degraded", root.GetProperty("status").GetString());
-        Assert.NotEqual(HealthStatus.Unhealthy, report.Entries[InvestigateName].Status);
-        var data = Assert.Single(root.GetProperty("entries").EnumerateArray()).GetProperty("data");
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), data.GetProperty(RemedyCheckConvention.RemedyKindKey).GetString());
+        await Assert.That(root.GetProperty("status").GetString()).IsEqualTo("Degraded");
+        await Assert.That(report.Entries[InvestigateName].Status).IsNotEqualTo(HealthStatus.Unhealthy);
+        var data = (await Assert.That(root.GetProperty("entries").EnumerateArray()).HasSingleItem()).GetProperty("data");
+        await Assert.That(data.GetProperty(RemedyCheckConvention.RemedyKindKey).GetString()).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
         var tripped = data.GetProperty("tripped_topics");
-        Assert.Equal(1, tripped.GetProperty("count").GetInt32());
-        Assert.Equal(["orders"], tripped.GetProperty("topics").EnumerateArray().Select(topic => topic.GetString()));
+        await Assert.That(tripped.GetProperty("count").GetInt32()).IsEqualTo(1);
+        await Assert.That(tripped.GetProperty("topics").EnumerateArray().Select(topic => topic.GetString())).IsEqualTo(["orders"]);
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_sweep_is_hung_should_keep_the_default_writer_and_codes_on_liveness_and_readiness()
     {
         //Arrange
@@ -136,16 +135,16 @@ public class OperatorEndpointDocumentedWriterTests
         var report = await service.CheckHealthAsync();
 
         //Assert
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, live.StatusCode);
-        Assert.Equal("Degraded", await live.Content.ReadAsStringAsync());
-        Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
-        Assert.Equal("Healthy", await ready.Content.ReadAsStringAsync());
-        Assert.NotEqual(HealthStatus.Unhealthy, report.Status);
+        await Assert.That(live.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
+        await Assert.That(await live.Content.ReadAsStringAsync()).IsEqualTo("Degraded");
+        await Assert.That(ready.StatusCode).IsEqualTo(HttpStatusCode.OK);
+        await Assert.That(await ready.Content.ReadAsStringAsync()).IsEqualTo("Healthy");
+        await Assert.That(report.Status).IsNotEqualTo(HealthStatus.Unhealthy);
         using var document = JsonDocument.Parse(operatorBody);
         var root = document.RootElement;
-        Assert.Equal("Healthy", root.GetProperty("status").GetString());
-        var data = Assert.Single(root.GetProperty("entries").EnumerateArray()).GetProperty("data");
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), data.GetProperty(RemedyCheckConvention.RemedyKindKey).GetString());
-        Assert.Empty(data.GetProperty(RemedyCheckConvention.ConditionsKey).EnumerateArray());
+        await Assert.That(root.GetProperty("status").GetString()).IsEqualTo("Healthy");
+        var data = (await Assert.That(root.GetProperty("entries").EnumerateArray()).HasSingleItem()).GetProperty("data");
+        await Assert.That(data.GetProperty(RemedyCheckConvention.RemedyKindKey).GetString()).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+        await Assert.That(data.GetProperty(RemedyCheckConvention.ConditionsKey).EnumerateArray()).IsEmpty();
     }
 }

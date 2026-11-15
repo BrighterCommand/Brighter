@@ -19,35 +19,32 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class PublicationMissingRequestTypeValidationTests
 {
-    [Fact]
-    public void When_publication_missing_request_type_should_report_error()
+    [Test]
+    public async Task When_publication_missing_request_type_should_report_error()
     {
         // Arrange — publication with RequestType = null
-        var publication = new Publication { Topic = new RoutingKey("test.topic"), RequestType = null };
-
+        var publication = new Publication
+        {
+            Topic = new RoutingKey("test.topic"),
+            RequestType = null
+        };
         var spec = ProducerValidationRules.PublicationRequestTypeSet();
-
         // Act
         var satisfied = spec.IsSatisfiedBy(publication);
         var collector = new ValidationResultCollector<Publication>();
         var results = spec.Accept(collector).ToList();
-
         // Assert
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Error, results[0].Error!.Severity);
-        Assert.Contains("test.topic", results[0].Error!.Source);
-        Assert.Contains("RequestType is null", results[0].Error!.Message);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Error!.Severity).IsEqualTo(ValidationSeverity.Error);
+        await Assert.That(results[0].Error!.Source).Contains("test.topic");
+        await Assert.That(results[0].Error!.Message).Contains("RequestType is null");
     }
 }

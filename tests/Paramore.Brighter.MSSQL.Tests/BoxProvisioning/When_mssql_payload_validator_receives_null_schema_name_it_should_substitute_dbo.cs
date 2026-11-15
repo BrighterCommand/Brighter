@@ -26,7 +26,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -34,12 +33,12 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 /// <see cref="MsSqlPayloadModeValidator"/> treats a null schema as <c>dbo</c>. Without that, the
 /// column lookup would match no rows and a payload-mode mismatch would pass silently.
 /// </summary>
-public class MsSqlPayloadValidatorNullSchemaTests : IAsyncLifetime
+public class MsSqlPayloadValidatorNullSchemaTests
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly List<string> _tablesToCleanup = [];
 
-    [Fact]
+    [Test]
     public async Task When_mssql_payload_validator_receives_null_schema_name_it_should_substitute_dbo()
     {
         // Arrange
@@ -64,12 +63,12 @@ public class MsSqlPayloadValidatorNullSchemaTests : IAsyncLifetime
         await validator.ValidateAsync(
             connection, textTable, schemaName: null, "Body", binaryMessagePayload: false, default);
 
-        await Assert.ThrowsAsync<ConfigurationException>(() =>
+        await Assert.That(() =>
             validator.ValidateAsync(
-                connection, binaryTable, "dbo", "Body", binaryMessagePayload: false, default));
-        await Assert.ThrowsAsync<ConfigurationException>(() =>
+                connection, binaryTable, "dbo", "Body", binaryMessagePayload: false, default)).ThrowsExactly<ConfigurationException>();
+        await Assert.That(() =>
             validator.ValidateAsync(
-                connection, binaryTable, schemaName: null, "Body", binaryMessagePayload: false, default));
+                connection, binaryTable, schemaName: null, "Body", binaryMessagePayload: false, default)).ThrowsExactly<ConfigurationException>();
     }
 
     private string TrackTable(string tableName)
@@ -78,8 +77,10 @@ public class MsSqlPayloadValidatorNullSchemaTests : IAsyncLifetime
         return tableName;
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

@@ -25,7 +25,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -49,8 +49,8 @@ public class MsSqlOutboxMigrationsTests
     private static readonly string[] s_v7Added = ["DataRef", "SpecVersion"];
     private static readonly string[] s_v8Added = ["CausationId"];
 
-    [Fact]
-    public void When_mssql_outbox_migrations_are_listed_it_should_return_v1_through_v9_with_correct_logical_columns()
+    [Test]
+    public async Task When_mssql_outbox_migrations_are_listed_it_should_return_v1_through_v9_with_correct_logical_columns()
     {
         //Arrange
         var config = new RelationalDatabaseConfiguration(
@@ -62,40 +62,34 @@ public class MsSqlOutboxMigrationsTests
         var migrations = new MsSqlOutboxMigrationCatalog().All(config);
 
         //Assert
-        Assert.Equal(9, migrations.Count);
+        await Assert.That(migrations.Count).IsEqualTo(9);
         for (var i = 0; i < migrations.Count; i++)
         {
-            Assert.Equal(i + 1, migrations[i].Version.Value);
+            await Assert.That(migrations[i].Version.Value).IsEqualTo(i + 1);
         }
 
         for (var v = 1; v <= 9; v++)
         {
             var migration = migrations[v - 1];
             var expected = expectedPerVersion[v];
-            Assert.True(
-                expected.SetEquals(migration.LogicalColumns),
-                $"V{v} LogicalColumns mismatch — " +
-                $"expected: [{string.Join(", ", expected.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-                $"got: [{string.Join(", ", migration.LogicalColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+            await Assert.That(expected.SetEquals(migration.LogicalColumns)).IsTrue();
         }
 
-        Assert.Null(migrations[0].SourceReference);
+        await Assert.That(migrations[0].SourceReference).IsNull();
         for (var v = 2; v <= 9; v++)
         {
-            Assert.False(
-                string.IsNullOrWhiteSpace(migrations[v - 1].SourceReference),
-                $"V{v} must have a non-empty SourceReference (archaeology pointer)");
+            await Assert.That(string.IsNullOrWhiteSpace(migrations[v - 1].SourceReference)).IsFalse().Because($"V{v} must have a non-empty SourceReference (archaeology pointer)");
         }
 
         var v9Script = migrations[8].UpScript;
-        Assert.Contains("[MessageId]", v9Script, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("CREATE UNIQUE INDEX", v9Script, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("IGNORE_DUP_KEY = ON", v9Script, StringComparison.OrdinalIgnoreCase);
+        await Assert.That((v9Script).Value).Contains("[MessageId]");
+        await Assert.That((v9Script).Value).Contains("CREATE UNIQUE INDEX");
+        await Assert.That((v9Script).Value).Contains("IGNORE_DUP_KEY = ON");
 
         var v8Script = migrations[7].UpScript;
-        Assert.Contains("[CausationId]", v8Script, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("CREATE INDEX", v8Script, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("idx_outbox_test_CausationId", v8Script, StringComparison.OrdinalIgnoreCase);
+        await Assert.That((v8Script).Value).Contains("[CausationId]");
+        await Assert.That((v8Script).Value).Contains("CREATE INDEX");
+        await Assert.That((v8Script).Value).Contains("idx_outbox_test_CausationId");
     }
 
     private static Dictionary<int, HashSet<string>> BuildExpectedColumnsByVersion()

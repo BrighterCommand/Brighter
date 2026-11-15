@@ -1,8 +1,9 @@
-﻿using Paramore.Brighter.Base.Test.Locking;
+using Paramore.Brighter.Base.Test.Locking;
 using Paramore.Brighter.Locking.MongoDb;
 
 namespace Paramore.Brighter.MongoDb.Tests.Locking;
 
+[TUnit.Core.InheritsTests]
 public class MongoDbLockingAsyncTest : DistributedLockingAsyncTest
 {
     protected override IDistributedLock CreateDistributedLock()

@@ -28,23 +28,22 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection(LoggerCaptureCollection.NAME)]
+[NotInParallel(LoggerCaptureCollection.NAME)]
 public class ConsumerOptionalInboxEventTests
 {
-    [Theory]
-    [InlineData(false, false, false)]
-    [InlineData(false, false, true)]
-    [InlineData(false, true, false)]
-    [InlineData(false, true, true)]
-    [InlineData(true, false, false)]
-    [InlineData(true, false, true)]
-    [InlineData(true, true, false)]
-    [InlineData(true, true, true)]
-    public void When_consumers_have_no_inbox_should_handle_duplicate_events(
+    [Test]
+    [Arguments(false, false, false)]
+    [Arguments(false, false, true)]
+    [Arguments(false, true, false)]
+    [Arguments(false, true, true)]
+    [Arguments(true, false, false)]
+    [Arguments(true, false, true)]
+    [Arguments(true, true, false)]
+    [Arguments(true, true, true)]
+    public async Task When_consumers_have_no_inbox_should_handle_duplicate_events(
         bool useOptionsFactory, bool addProducers, bool explicitlyDisableInbox)
     {
         // Arrange
@@ -91,22 +90,19 @@ public class ConsumerOptionalInboxEventTests
         processor.Publish(request);
 
         // Assert
-        Assert.Equal(2, request.HandleCount);
-        Assert.Null(provider.GetRequiredService<IAmConsumerOptions>().InboxConfiguration);
+        await Assert.That(request.HandleCount).IsEqualTo(2);
+        await Assert.That(provider.GetRequiredService<IAmConsumerOptions>().InboxConfiguration).IsNull();
         if (useOptionsFactory)
         {
-            Assert.Contains(nameof(InboxConfiguration), Assert.Throws<ConfigurationException>(
-                () => provider.GetService<InboxConfiguration>()).Message);
-            Assert.Contains(nameof(InboxConfiguration), Assert.Throws<ConfigurationException>(
-                () => provider.GetService<IAmAnInboxSync>()).Message);
-            Assert.Contains(nameof(InboxConfiguration), Assert.Throws<ConfigurationException>(
-                () => provider.GetService<IAmAnInboxAsync>()).Message);
+            await Assert.That((await Assert.That(() => provider.GetService<InboxConfiguration>()).ThrowsExactly<ConfigurationException>()).Message).Contains(nameof(InboxConfiguration));
+            await Assert.That((await Assert.That(() => provider.GetService<IAmAnInboxSync>()).ThrowsExactly<ConfigurationException>()).Message).Contains(nameof(InboxConfiguration));
+            await Assert.That((await Assert.That(() => provider.GetService<IAmAnInboxAsync>()).ThrowsExactly<ConfigurationException>()).Message).Contains(nameof(InboxConfiguration));
         }
         else
         {
-            Assert.Null(provider.GetService<InboxConfiguration>());
-            Assert.Null(provider.GetService<IAmAnInboxSync>());
-            Assert.Null(provider.GetService<IAmAnInboxAsync>());
+            await Assert.That(provider.GetService<InboxConfiguration>()).IsNull();
+            await Assert.That(provider.GetService<IAmAnInboxSync>()).IsNull();
+            await Assert.That(provider.GetService<IAmAnInboxAsync>()).IsNull();
         }
     }
 }

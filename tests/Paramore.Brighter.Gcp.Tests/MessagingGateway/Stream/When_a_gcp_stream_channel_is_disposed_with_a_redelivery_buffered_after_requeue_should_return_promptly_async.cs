@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 
@@ -35,13 +34,13 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 /// into the consumer's buffer and parks its callback until Brighter settles it; a pump that reads
 /// its quit first never reads that message, and disposing the channel must not then wait on it.
 /// </summary>
-[Trait("Category", "GcpPubSubStream")]
-[Collection("Stream")]
+[Property("Category", "GcpPubSubStream")]
+[NotInParallel("Stream")]
 public class GcpStreamDisposeWithBufferedRedeliveryAsyncTests
 {
     private static readonly TimeSpan s_disposeBound = TimeSpan.FromSeconds(10);
 
-    [Fact]
+    [Test]
     public async Task When_a_gcp_stream_channel_is_disposed_with_a_redelivery_buffered_after_requeue_async_should_return_promptly()
     {
         var provider = new GcpStreamMessageGatewayProvider();
@@ -67,7 +66,7 @@ public class GcpStreamDisposeWithBufferedRedeliveryAsyncTests
 
             await producer.SendAsync(builder.SetTopic(routingKey).Build());
             var first = await channel.ReceiveAsync(TimeSpan.FromSeconds(20));
-            Assert.NotEqual(MessageType.MT_NONE, first.Header.MessageType);
+            await Assert.That(first.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             await channel.RequeueAsync(first);
             await Task.Delay(TimeSpan.FromSeconds(2));
@@ -78,13 +77,13 @@ public class GcpStreamDisposeWithBufferedRedeliveryAsyncTests
             var disposed = await Task.WhenAny(disposing, Task.Delay(s_disposeBound)) == disposing;
 
             // Assert — dispose returns promptly, and the buffered message is still redeliverable
-            Assert.True(disposed, $"Disposing the stream channel did not return within {s_disposeBound}");
+            await Assert.That(disposed).IsTrue().Because($"Disposing the stream channel did not return within {s_disposeBound}");
 
             // a fresh subscription instance, so the factory builds a new stream consumer
             redeliveryChannel = await provider.CreateChannelAsync(
                 provider.CreateSubscription(routingKey, channelName, OnMissingChannel.Assume));
             var redelivered = await redeliveryChannel.ReceiveAsync(TimeSpan.FromSeconds(20));
-            Assert.Equal(first.Id, redelivered.Id);
+            await Assert.That(redelivered.Id).IsEqualTo(first.Id);
             await redeliveryChannel.AcknowledgeAsync(redelivered);
         }
         finally

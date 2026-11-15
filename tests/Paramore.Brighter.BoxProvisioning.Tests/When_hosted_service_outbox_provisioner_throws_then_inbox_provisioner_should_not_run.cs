@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -36,7 +35,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// </summary>
 public class BoxProvisioningHostedServiceFailureShortCircuitTests
 {
-    [Fact]
+    [Test]
     public async Task When_hosted_service_outbox_provisioner_throws_then_inbox_provisioner_should_not_run()
     {
         //Arrange
@@ -47,12 +46,12 @@ public class BoxProvisioningHostedServiceFailureShortCircuitTests
         var service = new BoxProvisioningHostedService(new IAmABoxProvisioner[] { inbox, outbox }, logger);
 
         //Act
-        var ex = await Assert.ThrowsAsync<ConfigurationException>(() =>
-            service.StartAsync(default));
+        var ex = await Assert.That(() =>
+            service.StartAsync(default)).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.True(outbox.ProvisionCalled, "outbox should have run first per OrderingOrdinal");
-        Assert.False(inbox.ProvisionCalled, "inbox must not run after an earlier provisioner has thrown");
-        Assert.Same(outboxFailure, ex.InnerException);
+        await Assert.That(outbox.ProvisionCalled).IsTrue().Because("outbox should have run first per OrderingOrdinal");
+        await Assert.That(inbox.ProvisionCalled).IsFalse().Because("inbox must not run after an earlier provisioner has thrown");
+        await Assert.That(ex.InnerException).IsSameReferenceAs(outboxFailure);
     }
 }

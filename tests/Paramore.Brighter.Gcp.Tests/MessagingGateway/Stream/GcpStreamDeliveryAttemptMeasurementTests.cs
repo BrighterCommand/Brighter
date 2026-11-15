@@ -24,8 +24,7 @@ THE SOFTWARE. */
 #nullable enable
 
 using System;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 
 /// <summary>
@@ -35,7 +34,7 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 /// then restore the Skip before committing — this measures the Google client library and emulator,
 /// not Brighter, so it is not something later code changes should ever need to keep green.
 /// </summary>
-[Trait("Category", "GcpPubSubStream")]
+[Property("Category", "GcpPubSubStream")]
 public class GcpStreamDeliveryAttemptMeasurementTests
 {
     private const string DeliveryAttemptAttrKey = "googclient_deliveryattempt";
@@ -49,8 +48,9 @@ public class GcpStreamDeliveryAttemptMeasurementTests
     /// <c>Header.Bag</c> verbatim, so its presence there is exactly what a real received
     /// <c>PubsubMessage.Attributes</c> would show.
     /// </summary>
-    [Fact(Skip = "measurement — ADR 0077 risk (5.5c); see docs/adr/0077-delivery-count-contract.md")]
-    public void Measure_whether_a_dlq_backed_stream_subscription_carries_delivery_attempt()
+    [Test]
+    [Skip("measurement — ADR 0077 risk (5.5c); see docs/adr/0077-delivery-count-contract.md")]
+    public async Task Measure_whether_a_dlq_backed_stream_subscription_carries_delivery_attempt()
     {
         var provider = new GcpStreamMessageGatewayProvider();
         var builder = new DefaultMessageBuilder();
@@ -78,7 +78,7 @@ public class GcpStreamDeliveryAttemptMeasurementTests
             // Act
             producer.Send(message);
             var received = channel.Receive(TimeSpan.FromSeconds(20));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
             channel.Acknowledge(received);
 
             var hasAttribute = received.Header.Bag.TryGetValue(DeliveryAttemptAttrKey, out var rawValue);
@@ -104,8 +104,9 @@ public class GcpStreamDeliveryAttemptMeasurementTests
     /// and, if so, whether the value a receiver sees is the stale one (kept) or a fresh one
     /// (overwritten by <c>SubscriberClient</c>).
     /// </summary>
-    [Fact(Skip = "measurement — ADR 0077 risk (5.5c); see docs/adr/0077-delivery-count-contract.md")]
-    public void Measure_whether_a_stale_delivery_attempt_attribute_is_accepted_and_overwritten()
+    [Test]
+    [Skip("measurement — ADR 0077 risk (5.5c); see docs/adr/0077-delivery-count-contract.md")]
+    public async Task Measure_whether_a_stale_delivery_attempt_attribute_is_accepted_and_overwritten()
     {
         const string staleValue = "999";
 
@@ -140,7 +141,7 @@ public class GcpStreamDeliveryAttemptMeasurementTests
             publishAccepted = true;
 
             var received = channel.Receive(TimeSpan.FromSeconds(20));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
             channel.Acknowledge(received);
 
             var hasAttribute = received.Header.Bag.TryGetValue(DeliveryAttemptAttrKey, out var rawValue);

@@ -1,16 +1,15 @@
 using System;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.SweeperState;
 
 public class SweeperStateAllocationTests
 {
     private const int Rounds = 10_000;
 
-    [Fact]
-    public void When_the_sweeper_state_is_driven_through_ten_thousand_sweeps_should_allocate_nothing()
+    [Test]
+    public async Task When_the_sweeper_state_is_driven_through_ten_thousand_sweeps_should_allocate_nothing()
     {
         //Arrange
         var clock = new FakeTimeProvider();
@@ -23,7 +22,7 @@ public class SweeperStateAllocationTests
         var after = GC.GetAllocatedBytesForCurrentThread();
 
         //Assert
-        Assert.Equal(0, after - before);
+        await Assert.That(after - before).IsEqualTo(0);
     }
 
     private static void Drive(OutboxSweeperState state, int rounds)

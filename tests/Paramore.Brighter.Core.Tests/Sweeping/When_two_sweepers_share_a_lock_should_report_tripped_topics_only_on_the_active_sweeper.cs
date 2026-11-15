@@ -40,7 +40,6 @@ using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -49,7 +48,7 @@ public class SweepersSharingALockTrippedTopicsTests
     private const string InvestigateCheck = "brighter-outbox-sweeper-investigate";
     private const string TrippedTopicsGauge = "paramore.brighter.outbox_sweeper.tripped_topics";
 
-    [Fact]
+    [Test]
     public async Task When_two_sweepers_share_a_lock_should_report_tripped_topics_only_on_the_active_sweeper()
     {
         //Arrange
@@ -90,29 +89,29 @@ public class SweepersSharingALockTrippedTopicsTests
             var takenOverGauge = waiter.TrippedTopics.Values.Last();
 
             //Assert
-            Assert.Equal(HealthStatus.Degraded, activeReport.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, activeReport.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), activeReport.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Equal(new[] { "tripped_topics" }, Assert.IsType<string[]>(activeReport.Data[RemedyCheckConvention.ConditionsKey]));
-            Assert.Contains("orders", activeReport.Description);
-            Assert.Equal(1L, activeGauge);
+            await Assert.That(activeReport.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That(activeReport.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(activeReport.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+            await Assert.That((await Assert.That(activeReport.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "tripped_topics" });
+            await Assert.That(activeReport.Description).Contains("orders");
+            await Assert.That(activeGauge).IsEqualTo(1L);
 
-            Assert.Equal(HealthStatus.Healthy, waiterReport.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, waiterReport.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), waiterReport.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Empty(Assert.IsType<string[]>(waiterReport.Data[RemedyCheckConvention.ConditionsKey]));
-            Assert.Equal(0L, waiterGauge);
+            await Assert.That(waiterReport.Status).IsEqualTo(HealthStatus.Healthy);
+            await Assert.That(waiterReport.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(waiterReport.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+            await Assert.That((await Assert.That(waiterReport.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEmpty();
+            await Assert.That(waiterGauge).IsEqualTo(0L);
 
-            Assert.Equal(HealthStatus.Degraded, takenOverReport.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, takenOverReport.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), takenOverReport.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Equal(new[] { "tripped_topics" }, Assert.IsType<string[]>(takenOverReport.Data[RemedyCheckConvention.ConditionsKey]));
-            Assert.Contains("orders", takenOverReport.Description);
-            Assert.Equal(1L, takenOverGauge);
+            await Assert.That(takenOverReport.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That(takenOverReport.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(takenOverReport.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+            await Assert.That((await Assert.That(takenOverReport.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "tripped_topics" });
+            await Assert.That(takenOverReport.Description).Contains("orders");
+            await Assert.That(takenOverGauge).IsEqualTo(1L);
 
-            Assert.True(activeReachedMediator, "The first sweeper's sweep did not reach the mediator");
-            Assert.True(waiterLockUnavailable, "The second sweeper's lock-unavailable sweep did not end");
-            Assert.True(waiterCompleted, "The second sweeper did not complete a sweep after the first released the lock");
+            await Assert.That(activeReachedMediator).IsTrue().Because("The first sweeper's sweep did not reach the mediator");
+            await Assert.That(waiterLockUnavailable).IsTrue().Because("The second sweeper's lock-unavailable sweep did not end");
+            await Assert.That(waiterCompleted).IsTrue().Because("The second sweeper did not complete a sweep after the first released the lock");
         }
         finally
         {

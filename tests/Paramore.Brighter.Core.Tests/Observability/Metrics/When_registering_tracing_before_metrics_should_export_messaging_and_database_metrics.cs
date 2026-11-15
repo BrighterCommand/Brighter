@@ -27,17 +27,16 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
 public class MetricsRegistrationOrderTests
 {
-    [Theory]
-    [InlineData(true, false)]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    public void When_registering_tracing_before_metrics_should_export_messaging_and_database_metrics(
+    [Test]
+    [Arguments(true, false)]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    public async Task When_registering_tracing_before_metrics_should_export_messaging_and_database_metrics(
         bool tracingFirst, bool combinedInstrumentation)
     {
         //Arrange
@@ -49,11 +48,11 @@ public class MetricsRegistrationOrderTests
 
         //Act
         var producerSpan = telemetry.Tracer.CreateProducerSpan(publication, message, parentActivity: null);
-        Assert.NotNull(producerSpan);
+        await Assert.That(producerSpan).IsNotNull();
         telemetry.Tracer.EndSpan(producerSpan);
 
         var receiveSpan = telemetry.Tracer.CreateReceiveSpan(publication.Topic, MessagingSystem.InternalBus);
-        Assert.NotNull(receiveSpan);
+        await Assert.That(receiveSpan).IsNotNull();
         telemetry.Tracer.EnrichReceiveSpan(receiveSpan, message);
         telemetry.Tracer.EndSpan(receiveSpan);
 
@@ -61,15 +60,15 @@ public class MetricsRegistrationOrderTests
             new BoxSpanInfo(DbSystem.MySql, "metrics-test", BoxDbOperation.Add, "outbox"),
             parentActivity: null,
             options: InstrumentationOptions.All);
-        Assert.NotNull(dbSpan);
+        await Assert.That(dbSpan).IsNotNull();
         telemetry.Tracer.EndSpan(dbSpan);
 
-        Assert.True(telemetry.Flush());
+        await Assert.That(telemetry.Flush()).IsTrue();
 
         //Assert
-        Assert.Equal(3, telemetry.Spans.Count);
-        Assert.Equal(1, telemetry.CounterTotal("messaging.client.sent.messages"));
-        Assert.Equal(1, telemetry.CounterTotal("messaging.client.consumed.messages"));
-        Assert.Equal(1, telemetry.HistogramCount("db.client.operation.duration"));
+        await Assert.That(telemetry.Spans.Count).IsEqualTo(3);
+        await Assert.That(telemetry.CounterTotal("messaging.client.sent.messages")).IsEqualTo(1);
+        await Assert.That(telemetry.CounterTotal("messaging.client.consumed.messages")).IsEqualTo(1);
+        await Assert.That(telemetry.HistogramCount("db.client.operation.duration")).IsEqualTo(1);
     }
 }

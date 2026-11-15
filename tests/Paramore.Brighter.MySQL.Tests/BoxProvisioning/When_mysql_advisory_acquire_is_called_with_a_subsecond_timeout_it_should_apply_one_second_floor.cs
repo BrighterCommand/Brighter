@@ -29,7 +29,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -46,7 +45,7 @@ public class MySqlAdvisoryAcquireSubsecondTimeoutFloorTests
 
     private readonly string _connectionString = Const.DefaultConnectingString;
 
-    [Fact]
+    [Test]
     public async Task When_acquire_is_called_with_a_subsecond_timeout_it_should_block_at_least_one_second()
     {
         //Arrange
@@ -61,13 +60,11 @@ public class MySqlAdvisoryAcquireSubsecondTimeoutFloorTests
             var stopwatch = Stopwatch.StartNew();
 
             //Act + Assert
-            await Assert.ThrowsAsync<TimeoutException>(() =>
-                advisoryLock.AcquireAsync(contender, lockKey, s_subsecondTimeout, CancellationToken.None));
+            await Assert.That(() =>
+                advisoryLock.AcquireAsync(contender, lockKey, s_subsecondTimeout, CancellationToken.None)).ThrowsExactly<TimeoutException>();
 
             stopwatch.Stop();
-            Assert.True(
-                stopwatch.ElapsedMilliseconds >= MinimumBlockMilliseconds,
-                $"Expected acquire to block for ≥ {MinimumBlockMilliseconds}ms (one-second floor minus jitter); blocked for {stopwatch.ElapsedMilliseconds}ms.");
+            await Assert.That(stopwatch.ElapsedMilliseconds >= MinimumBlockMilliseconds).IsTrue().Because($"Expected acquire to block for ≥ {MinimumBlockMilliseconds}ms (one-second floor minus jitter); blocked for {stopwatch.ElapsedMilliseconds}ms.");
         }
         finally
         {
@@ -75,7 +72,7 @@ public class MySqlAdvisoryAcquireSubsecondTimeoutFloorTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task When_acquire_blocks_until_lock_available_within_subsecond_timeout_it_should_succeed_after_floor_applied()
     {
         //Arrange
@@ -99,7 +96,7 @@ public class MySqlAdvisoryAcquireSubsecondTimeoutFloorTests
 
             //Assert
             var releaseResult = await advisoryLock.ReleaseAsync(contender, lockKey, CancellationToken.None);
-            Assert.True(releaseResult);
+            await Assert.That(releaseResult).IsTrue();
         }
         finally
         {

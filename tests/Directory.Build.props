@@ -1,10 +1,15 @@
 <Project>
   <PropertyGroup>
     <IsPackable>false</IsPackable>
+    <ImplicitUsings>enable</ImplicitUsings>
     <BrighterTestTargetFrameworks>net9.0;net10.0</BrighterTestTargetFrameworks>
     <BrighterTestNineOnlyTargetFrameworks>net9.0</BrighterTestNineOnlyTargetFrameworks>
     <DisableMsCoverageReferencedPathMaps Condition="'$(CollectCoverage)' != 'true'">true</DisableMsCoverageReferencedPathMaps>
     <EnableSourceLink>false</EnableSourceLink>
     <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Testing.Extensions.HangDump" />
+    <Compile Include="$(MSBuildThisFileDirectory)TestExceptionRecorder.cs" Link="TestExceptionRecorder.cs" />
+  </ItemGroup>
 </Project>

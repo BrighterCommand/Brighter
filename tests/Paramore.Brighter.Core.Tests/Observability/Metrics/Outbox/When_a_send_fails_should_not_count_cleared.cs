@@ -31,7 +31,6 @@ using Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics.Outbox;
 
@@ -39,7 +38,7 @@ public class When_a_send_fails_should_not_count_cleared
 {
     private readonly FakeTimeProvider _timeProvider = new();
 
-    [Fact]
+    [Test]
     public async Task Async_send_throws_cleared_stays_empty()
     {
         var topic = new RoutingKey("order.async-fail");
@@ -66,16 +65,16 @@ public class When_a_send_fails_should_not_count_cleared
             new MessageBody("{}"));
 
         await mediator.AddToOutboxAsync(msg, ctx);
-        Assert.Single(meter.Added);
+        await Assert.That(meter.Added).HasSingleItem();
 
         await mediator.ClearOutboxAsync([msg.Id], ctx);
 
-        Assert.Empty(meter.Cleared);
-        Assert.Empty(meter.Durations);
+        await Assert.That(meter.Cleared).IsEmpty();
+        await Assert.That(meter.Durations).IsEmpty();
     }
 
-    [Fact]
-    public void Sync_send_throws_cleared_stays_empty()
+    [Test]
+    public async Task Sync_send_throws_cleared_stays_empty()
     {
         var topic = new RoutingKey("order.sync-fail");
         var meter = new SpyOutboxMeter();
@@ -101,12 +100,12 @@ public class When_a_send_fails_should_not_count_cleared
             new MessageBody("{}"));
 
         mediator.AddToOutbox(msg, ctx);
-        Assert.Single(meter.Added);
+        await Assert.That(meter.Added).HasSingleItem();
 
         mediator.ClearOutbox([msg.Id], ctx);
 
-        Assert.Empty(meter.Cleared);
-        Assert.Empty(meter.Durations);
+        await Assert.That(meter.Cleared).IsEmpty();
+        await Assert.That(meter.Durations).IsEmpty();
     }
 
     private sealed class ThrowingSyncProducer : IAmAMessageProducerSync

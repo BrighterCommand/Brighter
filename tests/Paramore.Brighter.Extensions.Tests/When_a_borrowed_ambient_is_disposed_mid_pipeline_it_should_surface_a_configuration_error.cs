@@ -32,7 +32,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -44,8 +44,8 @@ namespace Paramore.Brighter.Extensions.Tests;
 // resolution path every container-backed factory shares.
 public class BorrowedAmbientDisposedMidPipelineTests
 {
-    [Fact]
-    public void When_a_borrowed_ambient_is_disposed_mid_pipeline_a_send_should_surface_a_configuration_error()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_borrowed_ambient_is_disposed_mid_pipeline_a_send_should_surface_a_configuration_error()
     {
         // Arrange - a JoinAmbient host, all three lifetimes Scoped, whose ambient's own scope will be
         // disposed by its owner immediately after this pipeline's own usability probe passes
@@ -86,17 +86,17 @@ public class BorrowedAmbientDisposedMidPipelineTests
         scopeProvider.Establish(new AsyncLocalAmbientScope(new DisposeAfterProbeServiceProvider(ambientScope)));
 
         // Act
-        var exception = Assert.Throws<ConfigurationException>(() =>
-            commandProcessor.Send(new ScopedHandlerCommand()));
+        var exception = await Assert.That(() =>
+            commandProcessor.Send(new ScopedHandlerCommand())).ThrowsExactly<ConfigurationException>();
 
         scopeProvider.Clear();
 
         // Assert - thrown directly (PipelineBuilder's own catch filter excludes ConfigurationException),
         // naming the ambient's own provider implementation type, carrying the disposal fault as its
         // inner exception
-        Assert.Contains(nameof(AsyncLocalScopeProvider), exception.Message);
-        Assert.Contains("disposed while a pipeline was resolving from it", exception.Message);
-        Assert.IsType<ObjectDisposedException>(exception.InnerException);
+        await Assert.That(exception.Message).Contains(nameof(AsyncLocalScopeProvider));
+        await Assert.That(exception.Message).Contains("disposed while a pipeline was resolving from it");
+        await Assert.That(exception.InnerException).IsTypeOf<ObjectDisposedException>();
 
         // Assert - nothing was latched: this is a fault, not a declined adoption, so a later Send
         // against a fresh, healthy ambient adopts it normally rather than being forced onto its own scope
@@ -108,12 +108,12 @@ public class BorrowedAmbientDisposedMidPipelineTests
 
         scopeProvider.Clear();
 
-        var resolvedFromFreshAmbient = Assert.Single(recorder.Markers);
-        Assert.Same(freshMarker, resolvedFromFreshAmbient);
+        var resolvedFromFreshAmbient = await Assert.That(recorder.Markers).HasSingleItem();
+        await Assert.That(resolvedFromFreshAmbient).IsSameReferenceAs(freshMarker);
     }
 
-    [Fact]
-    public void When_a_borrowed_ambient_is_disposed_mid_pipeline_a_post_should_carry_it_as_the_inner_exception()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_borrowed_ambient_is_disposed_mid_pipeline_a_post_should_carry_it_as_the_inner_exception()
     {
         // Arrange - the same race, on the transform pipeline a Post builds
         var scopeProvider = new AsyncLocalScopeProvider();
@@ -170,16 +170,16 @@ public class BorrowedAmbientDisposedMidPipelineTests
         scopeProvider.Establish(new AsyncLocalAmbientScope(new DisposeAfterProbeServiceProvider(ambientScope)));
 
         // Act
-        var exception = Assert.Throws<ConfigurationException>(() =>
-            commandProcessor.Post(new MarkerCommand()));
+        var exception = await Assert.That(() =>
+            commandProcessor.Post(new MarkerCommand())).ThrowsExactly<ConfigurationException>();
 
         scopeProvider.Clear();
 
         // Assert - the transform builder's own catches carry no filter, so the translated exception
         // arrives wrapped, as the inner exception, rather than thrown directly as with Send
-        var inner = Assert.IsType<ConfigurationException>(exception.InnerException);
-        Assert.Contains(nameof(AsyncLocalScopeProvider), inner.Message);
-        Assert.Contains("disposed while a pipeline was resolving from it", inner.Message);
-        Assert.IsType<ObjectDisposedException>(inner.InnerException);
+        var inner = await Assert.That(exception.InnerException).IsTypeOf<ConfigurationException>();
+        await Assert.That(inner.Message).Contains(nameof(AsyncLocalScopeProvider));
+        await Assert.That(inner.Message).Contains("disposed while a pipeline was resolving from it");
+        await Assert.That(inner.InnerException).IsTypeOf<ObjectDisposedException>();
     }
 }

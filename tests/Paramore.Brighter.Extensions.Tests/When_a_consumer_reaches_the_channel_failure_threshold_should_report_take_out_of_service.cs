@@ -34,16 +34,15 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection(DispatcherHealthCheckCollection.NAME)]
+[NotInParallel]
 public class ConsumerTakeOutOfServiceChannelFailureTests
 {
     private static readonly TimeSpan s_guard = TimeSpan.FromSeconds(10);
 
-    [Fact]
+    [Test]
     public async Task When_a_consumer_reaches_the_channel_failure_threshold_should_report_take_out_of_service()
     {
         //Arrange
@@ -59,30 +58,30 @@ public class ConsumerTakeOutOfServiceChannelFailureTests
         var atResult = await atCheck.CheckHealthAsync(new HealthCheckContext());
 
         //Assert
-        Assert.Equal(HealthStatus.Healthy, belowResult.Status);
-        Assert.Contains("absent", belowResult.Description);
-        Assert.Equal("take_out_of_service", belowResult.Data["remedy_kind"]);
-        Assert.Empty(Assert.IsAssignableFrom<IEnumerable<string>>(belowResult.Data["conditions"]));
+        await Assert.That(belowResult.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(belowResult.Description).Contains("absent");
+        await Assert.That(belowResult.Data["remedy_kind"]).IsEqualTo("take_out_of_service");
+        await Assert.That((((IEnumerable<string>)(((IEnumerable<string>)(await Assert.That(belowResult.Data["conditions"]).IsAssignableTo<IEnumerable<string>>())))))).IsEmpty();
 
-        Assert.Equal(HealthStatus.Degraded, atResult.Status);
-        var failing = Assert.Single(at.Dispatcher.Consumers, consumer => consumer.Performer is IHaveAChannelFailureCount
+        await Assert.That(atResult.Status).IsEqualTo(HealthStatus.Degraded);
+        var failing = await Assert.That(System.Linq.Enumerable.Where(at.Dispatcher.Consumers, consumer => consumer.Performer is IHaveAChannelFailureCount
         {
             ConsecutiveChannelFailures: 3
-        });
-        Assert.Contains("orders", atResult.Description);
-        Assert.Contains(failing.Name.Value, atResult.Description);
-        Assert.Contains("3", atResult.Description);
-        Assert.Equal("take_out_of_service", atResult.Data["remedy_kind"]);
-        Assert.Equal(new[] { "persistent_channel_failures" }, Assert.IsAssignableFrom<IEnumerable<string>>(atResult.Data["conditions"]));
-        var condition = Assert.IsAssignableFrom<IDictionary<string, object>>(atResult.Data["persistent_channel_failures"]);
-        Assert.Equal(3, condition["threshold"]);
-        var consumer = Assert.Single(Assert.IsAssignableFrom<IEnumerable<IDictionary<string, object>>>(condition["consumers"]));
-        Assert.Equal("orders", consumer["subscription"]);
-        Assert.Equal(failing.Name.Value, consumer["consumer"]);
-        Assert.Equal(3, consumer["count"]);
+        })).HasSingleItem();
+        await Assert.That(atResult.Description).Contains("orders");
+        await Assert.That(atResult.Description).Contains(failing.Name.Value);
+        await Assert.That(atResult.Description).Contains("3");
+        await Assert.That(atResult.Data["remedy_kind"]).IsEqualTo("take_out_of_service");
+        await Assert.That((((IEnumerable<string>)(((IEnumerable<string>)(await Assert.That(atResult.Data["conditions"]).IsAssignableTo<IEnumerable<string>>())))))).IsEqualTo(new[] { "persistent_channel_failures" });
+        var condition = ((IDictionary<string, object>)(((IDictionary<string, object>)(await Assert.That(atResult.Data["persistent_channel_failures"]).IsAssignableTo<IDictionary<string, object>>()))));
+        await Assert.That(condition["threshold"]).IsEqualTo(3);
+        var consumer = await Assert.That((((IEnumerable<IDictionary<string, object>>)(((IEnumerable<IDictionary<string, object>>)(await Assert.That(condition["consumers"]).IsAssignableTo<IEnumerable<IDictionary<string, object>>>())))))).HasSingleItem();
+        await Assert.That(consumer["subscription"]).IsEqualTo("orders");
+        await Assert.That(consumer["consumer"]).IsEqualTo(failing.Name.Value);
+        await Assert.That(consumer["count"]).IsEqualTo(3);
     }
 
-    [Fact]
+    [Test]
     public async Task When_no_consumer_is_running_the_take_out_of_service_check_should_not_report_unhealthy()
     {
         //Arrange
@@ -93,8 +92,8 @@ public class ConsumerTakeOutOfServiceChannelFailureTests
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         //Assert
-        Assert.NotEqual(HealthStatus.Unhealthy, result.Status);
-        Assert.Equal("take_out_of_service", result.Data["remedy_kind"]);
+        await Assert.That(result.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+        await Assert.That(result.Data["remedy_kind"]).IsEqualTo("take_out_of_service");
     }
 
     private static MultiSubscriptionReceiveHealthTestHost StartedHost(int[] failures, out Task ready)

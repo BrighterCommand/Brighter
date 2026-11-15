@@ -8,7 +8,6 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.UnresolvableMapper;
 
@@ -65,13 +64,12 @@ public class MediatorUnresolvableMapperReplyTests
                 new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
     }
 
-    [Fact]
-    public void When_the_async_mapper_is_unresolvable_the_reply_does_not_fall_through_to_sync()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_async_mapper_is_unresolvable_the_reply_does_not_fall_through_to_sync()
     {
         var context = new InMemoryRequestContextFactory().Create();
 
-        Assert.Throws<ConfigurationException>(
-            () => _mediator.CreateRequestFromMessage<MyCommand>(_message, context, out _));
+        await Assert.That(() => _mediator.CreateRequestFromMessage<MyCommand>(_message, context, out _)).ThrowsExactly<ConfigurationException>();
     }
 
     private sealed class NullReturningMapperFactoryAsync : IAmAMessageMapperFactoryAsync

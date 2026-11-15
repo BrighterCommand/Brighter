@@ -19,22 +19,18 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class ValidatePipelinesThroughDiPathTests
 {
-    [Fact]
-    public void When_validator_resolved_from_di_should_validate_without_configuration_exception()
+    [Test]
+    public async Task When_validator_resolved_from_di_should_validate_without_configuration_exception()
     {
         // Arrange — wire up Brighter with a handler and ValidatePipelines through the builder
         var services = new ServiceCollection();
@@ -44,14 +40,11 @@ public class ValidatePipelinesThroughDiPathTests
         var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services);
         var builder = new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
         builder.ValidatePipelines();
-
         var provider = services.BuildServiceProvider();
-
         // Act — resolve the validator and run validation through the full DI path
         var validators = provider.GetServices<IAmAPipelineValidator>();
         var result = PipelineValidationResult.Combine(validators.Select(v => v.Validate()).ToArray());
-
         // Assert — validation completes without ConfigurationException; result is valid
-        Assert.True(result.IsValid);
+        await Assert.That(result.IsValid).IsTrue();
     }
 }

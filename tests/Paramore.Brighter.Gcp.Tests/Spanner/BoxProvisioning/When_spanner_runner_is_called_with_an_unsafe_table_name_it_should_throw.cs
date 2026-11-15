@@ -25,7 +25,6 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.Spanner;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
@@ -34,16 +33,16 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 /// <see cref="ConfigurationException"/> at entry, before any DDL or probe interpolates it; Spanner has no
 /// catalog, so the runner is the only guard (ADR 0057 §6; ADR 0058, Guards and contracts). No connection is opened.
 /// </summary>
-[Trait("Category", "Spanner")]
-[Collection("Spanner")]
+[Property("Category", "Spanner")]
+[NotInParallel]
 public class SpannerRunnerUnsafeIdentifierTests
 {
     private const string IgnoredConnectionString = "Data Source=ignored;";
 
-    [Theory]
-    [InlineData("O'Brien")]    // single quote — would break inlined predicates in information_schema probe
-    [InlineData("1Outbox")]    // leading digit — invalid as bare identifier
-    [InlineData("my-outbox")]  // hyphen — would need backtick-quoting to be legal
+    [Test]
+    [Arguments("O'Brien")]    // single quote — would break inlined predicates in information_schema probe
+    [Arguments("1Outbox")]    // leading digit — invalid as bare identifier
+    [Arguments("my-outbox")]  // hyphen — would need backtick-quoting to be legal
     public async Task When_spanner_runner_migrates_an_outbox_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
     {
         //Arrange
@@ -52,15 +51,15 @@ public class SpannerRunnerUnsafeIdentifierTests
         var tableState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act + Assert
-        var ex = await Assert.ThrowsAsync<ConfigurationException>(() => runner.MigrateAsync(
-            unsafeTable, schemaName: null, BoxType.Outbox, tableState));
-        Assert.Contains(unsafeTable, ex.Message);
+        var ex = await Assert.That(() => runner.MigrateAsync(
+            unsafeTable, schemaName: null, BoxType.Outbox, tableState)).ThrowsExactly<ConfigurationException>();
+        await Assert.That(ex.Message).Contains(unsafeTable);
     }
 
-    [Theory]
-    [InlineData("O'Brien")]
-    [InlineData("1Inbox")]
-    [InlineData("my-inbox")]
+    [Test]
+    [Arguments("O'Brien")]
+    [Arguments("1Inbox")]
+    [Arguments("my-inbox")]
     public async Task When_spanner_runner_migrates_an_inbox_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
     {
         //Arrange
@@ -69,8 +68,8 @@ public class SpannerRunnerUnsafeIdentifierTests
         var tableState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act + Assert
-        var ex = await Assert.ThrowsAsync<ConfigurationException>(() => runner.MigrateAsync(
-            unsafeTable, schemaName: null, BoxType.Inbox, tableState));
-        Assert.Contains(unsafeTable, ex.Message);
+        var ex = await Assert.That(() => runner.MigrateAsync(
+            unsafeTable, schemaName: null, BoxType.Inbox, tableState)).ThrowsExactly<ConfigurationException>();
+        await Assert.That(ex.Message).Contains(unsafeTable);
     }
 }

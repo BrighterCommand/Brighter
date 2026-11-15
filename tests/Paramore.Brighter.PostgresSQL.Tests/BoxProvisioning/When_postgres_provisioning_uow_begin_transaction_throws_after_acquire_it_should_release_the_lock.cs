@@ -30,7 +30,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -39,11 +38,13 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// rethrows the original exception unwrapped, so a BeginAsync that throws holds nothing (ADR 0058 §B.3). An outer transaction
 /// on the connection makes BeginTransactionAsync throw, as Npgsql does not support nested transactions.
 /// </summary>
-public class PostgreSqlProvisioningUnitOfWorkBeginTransactionThrowsTests : IAsyncLifetime
+public class PostgreSqlProvisioningUnitOfWorkBeginTransactionThrowsTests
 {
     private readonly NpgsqlConnection _connection = new(PostgreSqlSettings.TestsBrighterConnectionString);
     private readonly FakePostgreSqlAdvisoryLock _advisoryLock = new(releaseResult: true);
     private NpgsqlTransaction? _blockingTransaction;
+
+    [Before(HookType.Test)]
 
     public async Task InitializeAsync()
     {
@@ -51,13 +52,15 @@ public class PostgreSqlProvisioningUnitOfWorkBeginTransactionThrowsTests : IAsyn
         _blockingTransaction = await _connection.BeginTransactionAsync();
     }
 
+    [After(HookType.Test)]
+
     public async Task DisposeAsync()
     {
         if (_blockingTransaction is not null) await _blockingTransaction.DisposeAsync();
         await _connection.DisposeAsync();
     }
 
-    [Fact]
+    [Test]
     public async Task When_postgres_provisioning_uow_begin_transaction_throws_after_acquire_it_should_release_the_lock()
     {
         const string lockKey = "test_lock_resource_begintx_failure";
@@ -65,15 +68,15 @@ public class PostgreSqlProvisioningUnitOfWorkBeginTransactionThrowsTests : IAsyn
         await using var uow = new PostgreSqlProvisioningUnitOfWork(
             _connection, _advisoryLock, NullLogger.Instance);
 
-        var thrown = await Record.ExceptionAsync(() => uow.BeginAsync(
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => uow.BeginAsync(
             lockResource: lockKey,
             lockTimeout: TimeSpan.FromSeconds(5),
             cancellationToken: CancellationToken.None));
 
-        Assert.IsType<InvalidOperationException>(thrown);
+        await Assert.That(thrown).IsTypeOf<InvalidOperationException>();
 
-        Assert.Equal(lockKey, _advisoryLock.AcquiredKey);
+        await Assert.That(_advisoryLock.AcquiredKey).IsEqualTo(lockKey);
 
-        Assert.Equal(lockKey, _advisoryLock.ReleasedKey);
+        await Assert.That(_advisoryLock.ReleasedKey).IsEqualTo(lockKey);
     }
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Org.Apache.Rocketmq;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
@@ -8,7 +8,6 @@ using Paramore.Brighter.RocketMQ.Tests.Utils;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessageDispatch;
 
@@ -24,8 +23,8 @@ public class DispatchBuilderTestsAsync
             new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync()));
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
-        var connection = GatewayFactory.CreateConnection(); 
-        
+        var connection = GatewayFactory.CreateConnection();
+
         var consumerFactory = new RocketMessageConsumerFactory(connection);
         var container = new ServiceCollection();
 
@@ -65,17 +64,17 @@ public class DispatchBuilderTestsAsync
             ])
             .ConfigureInstrumentation(tracer, instrumentationOptions);
     }
-                
-    [Fact]
+
+    [Test]
     public async Task When_Building_A_Dispatcher_With_Async()
     {
         _dispatcher = _builder.Build();
 
-        Assert.NotNull(_dispatcher);
-        Assert.NotNull(GetConnection("foo"));
-        Assert.NotNull(GetConnection("bar"));
-        
-        Assert.Equal(DispatcherState.DS_AWAITING, _dispatcher.State);
+        await Assert.That(_dispatcher).IsNotNull();
+        await Assert.That(GetConnection("foo")).IsNotNull();
+        await Assert.That(GetConnection("bar")).IsNotNull();
+
+        await Assert.That(_dispatcher.State).IsEqualTo(DispatcherState.DS_AWAITING);
 
         await Task.Delay(1000);
 
@@ -83,7 +82,7 @@ public class DispatchBuilderTestsAsync
 
         await Task.Delay(1000);
 
-        Assert.Equal(DispatcherState.DS_RUNNING, _dispatcher.State);
+        await Assert.That(_dispatcher.State).IsEqualTo(DispatcherState.DS_RUNNING);
 
         await _dispatcher.End();
     }

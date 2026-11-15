@@ -28,8 +28,7 @@ using System.Net.Mime;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 
 /// <summary>
@@ -47,7 +46,7 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 /// the <c>rejectionReason</c> discriminator is present (AC-24) or the header property is simply
 /// read as today (AC-25) — it is published and read back through this gateway either way.
 /// </remarks>
-[Trait("Category", "RocketMQ")]
+[Property("Category", "RocketMQ")]
 public class RocketMqPublishWithStaleBagHandledCountTests : IDisposable
 {
     private const string Topic = "rmq_stale_hc_r";
@@ -86,8 +85,8 @@ public class RocketMqPublishWithStaleBagHandledCountTests : IDisposable
         _producer.Dispose();
     }
 
-    [Fact]
-    public void When_publishing_a_rocketmq_message_with_stale_bag_handled_count_should_send_header_value()
+    [Test]
+    public async Task When_publishing_a_rocketmq_message_with_stale_bag_handled_count_should_send_header_value()
     {
         // Arrange - a message shaped like a routed dead-letter copy: the header has already moved
         // on (HandledCount bumped, Subject/SpecVersion/Source changed) but the bag still carries
@@ -99,14 +98,14 @@ public class RocketMqPublishWithStaleBagHandledCountTests : IDisposable
         var received = ReceiveOurs(_consumer, message.Id, s_receiveCeiling);
 
         // Assert - HandledCount first, so a RED run fails on it specifically
-        Assert.NotNull(received);
-        Assert.Equal(3, received!.Header.HandledCount);
+        await Assert.That(received).IsNotNull();
+        await Assert.That(received!.Header.HandledCount).IsEqualTo(3);
 
         // Assert - other header-owned keys behave the same way: the header's value wins, not the
         // stale bag entry
-        Assert.Equal("real-subject", received.Header.Subject);
-        Assert.Equal("2.5", received.Header.SpecVersion);
-        Assert.Equal(new Uri("http://real-source.example"), received.Header.Source);
+        await Assert.That(received.Header.Subject).IsEqualTo("real-subject");
+        await Assert.That(received.Header.SpecVersion).IsEqualTo("2.5");
+        await Assert.That(received.Header.Source).IsEqualTo(new Uri("http://real-source.example"));
 
         _consumer.Acknowledge(received);
     }

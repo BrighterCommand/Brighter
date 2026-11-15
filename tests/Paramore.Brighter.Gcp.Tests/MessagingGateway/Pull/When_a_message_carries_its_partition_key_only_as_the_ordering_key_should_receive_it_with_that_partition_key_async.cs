@@ -29,7 +29,6 @@ using Google.Api.Gax;
 using Google.Cloud.PubSub.V1;
 using Google.Protobuf;
 using Paramore.Brighter.Gcp.Tests.Helper;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
@@ -37,11 +36,11 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// #4517 — a producer that predates the partition key attribute sends the partition key only as the Pub/Sub ordering
 /// key. A consumer must still read the partition key from it.
 /// </summary>
-[Trait("Category", "GcpPubSubPull")]
-[Collection("Pull")]
+[Property("Category", "GcpPubSubPull")]
+[NotInParallel("Pull")]
 public class GcpPartitionKeyFromOrderingKeyAsyncTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_message_carries_its_partition_key_only_as_the_ordering_key_should_receive_it_with_that_partition_key_async()
     {
         var provider = new GcpPullMessageGatewayProvider();
@@ -76,7 +75,7 @@ public class GcpPartitionKeyFromOrderingKeyAsyncTests
             await channel.AcknowledgeAsync(received);
 
             // Assert
-            Assert.Equal(new PartitionKey("customer-42"), received.Header.PartitionKey);
+            await Assert.That(received.Header.PartitionKey).IsEqualTo(new PartitionKey("customer-42"));
         }
         finally
         {

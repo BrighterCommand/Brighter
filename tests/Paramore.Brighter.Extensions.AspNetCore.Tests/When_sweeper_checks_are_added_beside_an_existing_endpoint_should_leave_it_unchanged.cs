@@ -35,7 +35,6 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -43,12 +42,12 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 /// Characterises that adding the sweeper checks beside an existing health endpoint that excludes the remedy tags leaves its status and body
 /// unchanged, and that the same endpoint mapped with no predicate selects the restart check.
 /// </summary>
-[Collection(DispatcherHealthCheckCollection.NAME)]
+[NotInParallel]
 public class ExistingEndpointUnchangedTests
 {
     private static readonly TimeSpan s_guard = TimeSpan.FromSeconds(10);
 
-    [Fact]
+    [Test]
     public async Task When_sweeper_checks_are_added_beside_an_existing_endpoint_should_leave_it_unchanged()
     {
         //Arrange
@@ -79,14 +78,14 @@ public class ExistingEndpointUnchangedTests
         var withBody = await withResponse.Content.ReadAsByteArrayAsync();
 
         //Assert
-        Assert.Equal(HealthStatus.Healthy, precondition.Status);
-        Assert.Equal("Healthy", System.Text.Encoding.UTF8.GetString(withoutBody));
-        Assert.Equal(HttpStatusCode.OK, withoutResponse.StatusCode);
-        Assert.Equal(withoutResponse.StatusCode, withResponse.StatusCode);
-        Assert.Equal(withoutBody, withBody);
+        await Assert.That(precondition.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(System.Text.Encoding.UTF8.GetString(withoutBody)).IsEqualTo("Healthy");
+        await Assert.That(withoutResponse.StatusCode).IsEqualTo(HttpStatusCode.OK);
+        await Assert.That(withResponse.StatusCode).IsEqualTo(withoutResponse.StatusCode);
+        await Assert.That(withBody).IsEqualTo(withoutBody);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_existing_endpoint_has_no_predicate_should_select_the_restart_check()
     {
         //Arrange
@@ -110,8 +109,8 @@ public class ExistingEndpointUnchangedTests
         var body = await response.Content.ReadAsStringAsync();
 
         //Assert
-        Assert.Equal(HealthStatus.Healthy, precondition.Status);
-        Assert.Equal("Degraded", body);
+        await Assert.That(precondition.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(body).IsEqualTo("Degraded");
     }
 
     private static HealthCheckRegistration ConsumerRegistration(MultiSubscriptionReceiveHealthTestHost host)

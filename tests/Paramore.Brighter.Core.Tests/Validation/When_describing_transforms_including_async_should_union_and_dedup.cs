@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
@@ -34,8 +34,8 @@ public class DescribeTransformsIncludingAsyncTests
         new SimpleMessageMapperFactory(_ => null!),
         new SimpleMessageMapperFactoryAsync(_ => null!));
 
-    [Fact]
-    public void When_describing_multiple_transforms_they_are_unioned_and_ordered_by_descending_step()
+    [Test]
+    public async Task When_describing_multiple_transforms_they_are_unioned_and_ordered_by_descending_step()
     {
         // Arrange — a mapper declaring two distinct wrap transforms: MyDescribableTransform at step 1 and
         // CompressPayloadTransformer at step 0. The union must keep both and order them by descending step.
@@ -48,16 +48,16 @@ public class DescribeTransformsIncludingAsyncTests
             registry, typeof(MyDescribableCommand), includeAsync: true);
 
         // Assert — both transforms present, highest step first
-        Assert.NotNull(description);
-        Assert.Equal(2, description!.WrapTransforms.Count);
-        Assert.Equal(typeof(MyDescribableTransform), description.WrapTransforms[0].TransformType);
-        Assert.Equal(1, description.WrapTransforms[0].Step);
-        Assert.Equal(typeof(CompressPayloadTransformer), description.WrapTransforms[1].TransformType);
-        Assert.Equal(0, description.WrapTransforms[1].Step);
+        await Assert.That(description).IsNotNull();
+        await Assert.That(description!.WrapTransforms.Count).IsEqualTo(2);
+        await Assert.That(description.WrapTransforms[0].TransformType).IsEqualTo(typeof(MyDescribableTransform));
+        await Assert.That(description.WrapTransforms[0].Step).IsEqualTo(1);
+        await Assert.That(description.WrapTransforms[1].TransformType).IsEqualTo(typeof(CompressPayloadTransformer));
+        await Assert.That(description.WrapTransforms[1].Step).IsEqualTo(0);
     }
 
-    [Fact]
-    public void When_describing_with_async_a_transform_declared_on_both_mappers_is_reported_once()
+    [Test]
+    public async Task When_describing_with_async_a_transform_declared_on_both_mappers_is_reported_once()
     {
         // Arrange — the same request type has a sync and an async mapper, each declaring the same wrap
         // transform (MyDescribableTransform at step 0). The union must de-duplicate by (transformer type, step).
@@ -71,13 +71,13 @@ public class DescribeTransformsIncludingAsyncTests
             registry, typeof(MyDescribableCommand), includeAsync: true);
 
         // Assert — sync ∪ async, de-duplicated to a single wrap transform
-        Assert.NotNull(description);
-        Assert.Single(description!.WrapTransforms);
-        Assert.Equal(typeof(MyDescribableTransform), description.WrapTransforms[0].TransformType);
+        await Assert.That(description).IsNotNull();
+        await Assert.That(description!.WrapTransforms).HasSingleItem();
+        await Assert.That(description.WrapTransforms[0].TransformType).IsEqualTo(typeof(MyDescribableTransform));
     }
 
-    [Fact]
-    public void When_describing_without_async_an_async_only_mapper_is_not_consulted()
+    [Test]
+    public async Task When_describing_without_async_an_async_only_mapper_is_not_consulted()
     {
         // Arrange — only an async mapper is registered; with includeAsync false only the sync registry is
         // consulted, which resolves no mapper (and no default), so the description is null.
@@ -90,6 +90,6 @@ public class DescribeTransformsIncludingAsyncTests
             registry, typeof(MyDescribableCommand), includeAsync: false);
 
         // Assert
-        Assert.Null(description);
+        await Assert.That(description).IsNull();
     }
 }

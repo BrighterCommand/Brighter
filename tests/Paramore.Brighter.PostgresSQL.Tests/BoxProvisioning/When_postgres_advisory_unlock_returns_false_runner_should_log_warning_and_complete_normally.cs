@@ -31,7 +31,6 @@ using Npgsql;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -39,12 +38,12 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// When pg_advisory_unlock returns false the chain has already committed, so the runner logs one Warning naming the table
 /// and the lock key, and completes normally (ADR 0057 §5b). A null schema name folds into the lock key as <c>public</c>.
 /// </summary>
-public class PostgreSqlAdvisoryUnlockReturnsFalseTests : IAsyncLifetime
+public class PostgreSqlAdvisoryUnlockReturnsFalseTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_postgres_advisory_unlock_returns_false_runner_should_log_warning_and_complete_normally()
     {
         //Arrange
@@ -64,18 +63,18 @@ public class PostgreSqlAdvisoryUnlockReturnsFalseTests : IAsyncLifetime
             _tableName, schemaName: null, BoxType.Outbox, freshHint);
 
         //Assert
-        Assert.Equal(1, await GetBoxTableCount());
-        Assert.True(await GetHistoryRowCount() >= 1);
+        await Assert.That(await GetBoxTableCount()).IsEqualTo(1);
+        await Assert.That(await GetHistoryRowCount() >= 1).IsTrue();
 
         var expectedLockKey = $"BrighterMigration_public.{_tableName}";
-        Assert.Equal(expectedLockKey, fakeLock.AcquiredKey);
-        Assert.Equal(expectedLockKey, fakeLock.ReleasedKey);
+        await Assert.That(fakeLock.AcquiredKey).IsEqualTo(expectedLockKey);
+        await Assert.That(fakeLock.ReleasedKey).IsEqualTo(expectedLockKey);
 
         var warnings = capturingLogger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        Assert.Single(warnings);
-        Assert.Contains(_tableName, warnings[0].Message, StringComparison.Ordinal);
-        Assert.Contains(expectedLockKey, warnings[0].Message, StringComparison.Ordinal);
-        Assert.Null(warnings[0].Exception);
+        await Assert.That(warnings).HasSingleItem();
+        await Assert.That(warnings[0].Message).Contains(_tableName);
+        await Assert.That(warnings[0].Message).Contains(expectedLockKey);
+        await Assert.That(warnings[0].Exception).IsNull();
     }
 
     private async Task<int> GetBoxTableCount()
@@ -102,7 +101,11 @@ WHERE ""BoxTableName"" = @TableName";
         return Convert.ToInt32(await command.ExecuteScalarAsync());
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

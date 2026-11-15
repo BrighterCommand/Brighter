@@ -35,13 +35,12 @@ using OpenTelemetry.Metrics;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
 public class UseOutboxSweeperRunningTimeGaugeTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_sweeper_is_registered_with_use_outbox_sweeper_should_report_its_running_time_gauge()
     {
         //Arrange
@@ -65,8 +64,8 @@ public class UseOutboxSweeperRunningTimeGaugeTests
             await Task.Run(recorded.Observe).WaitAsync(TimeSpan.FromSeconds(1));
 
             //Assert
-            Assert.True(reachedLock, "The sweep did not reach the lock");
-            Assert.Equal([31.0], recorded.Values);
+            await Assert.That(reachedLock).IsTrue().Because("The sweep did not reach the lock");
+            await Assert.That(recorded.Values).IsEqualTo([31.0]);
         }
         finally
         {

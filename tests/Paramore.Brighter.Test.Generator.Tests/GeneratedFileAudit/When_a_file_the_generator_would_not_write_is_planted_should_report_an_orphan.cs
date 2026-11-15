@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -29,7 +29,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.GeneratedFileAudit;
 
@@ -106,15 +106,15 @@ public class AuditCanaryTests : IDisposable
         Directory.CreateDirectory(_projectFolder);
     }
 
-    [Theory]
-    [InlineData(PLURAL_CONFIGURATION, "Sample")]
-    [InlineData(SINGULAR_CONFIGURATION, "")]
+    [Test]
+    [Arguments(PLURAL_CONFIGURATION, "Sample")]
+    [Arguments(SINGULAR_CONFIGURATION, "")]
     public async Task When_a_file_the_generator_would_not_write_is_planted_should_report_an_orphan(
         string configuration, string gatewayFolder)
     {
         // Arrange - a tree the generators have just written, which the audit agrees with
         await GenerateAsync(configuration);
-        Assert.Empty(GeneratedTreeAudit.Of(_testsRoot).Orphans);
+        await Assert.That(GeneratedTreeAudit.Of(_testsRoot).Orphans).IsEmpty();
 
         // Act - a file no template produces, in a directory the generator owns
         var planted = Path.Combine(_projectFolder, "MessagingGateway", gatewayFolder, "Generated",
@@ -123,19 +123,19 @@ public class AuditCanaryTests : IDisposable
         var audit = GeneratedTreeAudit.Of(_testsRoot);
 
         // Assert - the planted file, and only it, is reported
-        Assert.Equal([planted], audit.Orphans);
-        Assert.Empty(audit.Missing);
+        await Assert.That(audit.Orphans).IsEquivalentTo([planted], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+        await Assert.That(audit.Missing).IsEmpty();
     }
 
-    [Theory]
-    [InlineData(PLURAL_CONFIGURATION, "Sample")]
-    [InlineData(SINGULAR_CONFIGURATION, "")]
+    [Test]
+    [Arguments(PLURAL_CONFIGURATION, "Sample")]
+    [Arguments(SINGULAR_CONFIGURATION, "")]
     public async Task When_a_file_the_generator_would_write_is_deleted_should_report_it_missing(
         string configuration, string outboxFolder)
     {
         // Arrange - a tree the generators have just written, which the audit agrees with
         await GenerateAsync(configuration);
-        Assert.Empty(GeneratedTreeAudit.Of(_testsRoot).Missing);
+        await Assert.That(GeneratedTreeAudit.Of(_testsRoot).Missing).IsEmpty();
 
         // Act - one generated file goes away, as a dropped generation code path would leave it.
         // The Sync suite is the one #4300 dropped from the singular branch.
@@ -147,19 +147,19 @@ public class AuditCanaryTests : IDisposable
         var audit = GeneratedTreeAudit.Of(_testsRoot);
 
         // Assert - the deleted file, and only it, is reported
-        Assert.Equal([deleted], audit.Missing);
-        Assert.Empty(audit.Orphans);
+        await Assert.That(audit.Missing).IsEquivalentTo([deleted], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+        await Assert.That(audit.Orphans).IsEmpty();
     }
 
-    [Theory]
-    [InlineData(PLURAL_CONFIGURATION)]
-    [InlineData(SINGULAR_CONFIGURATION)]
+    [Test]
+    [Arguments(PLURAL_CONFIGURATION)]
+    [Arguments(SINGULAR_CONFIGURATION)]
     public async Task When_a_capability_flag_is_turned_off_should_report_the_skipped_files_as_orphans(
         string configuration)
     {
         // Arrange - a tree generated while the outbox still supported transactions
         await GenerateAsync(configuration);
-        Assert.Empty(GeneratedTreeAudit.Of(_testsRoot).Orphans);
+        await Assert.That(GeneratedTreeAudit.Of(_testsRoot).Orphans).IsEmpty();
 
         // Act - the flag goes off, which is the case #4305 is about: the generator writes files and
         // never removes one, so the templates it now skips stay on disk
@@ -167,15 +167,17 @@ public class AuditCanaryTests : IDisposable
         var audit = GeneratedTreeAudit.Of(_testsRoot);
 
         // Assert - the transaction tests are reported, and nothing is thought missing
-        Assert.NotEmpty(audit.Orphans);
-        Assert.All(audit.Orphans, orphan =>
-            Assert.Contains("Transaction", Path.GetFileName(orphan), StringComparison.InvariantCultureIgnoreCase));
-        Assert.Empty(audit.Missing);
+        await Assert.That(audit.Orphans).IsNotEmpty();
+        foreach (var orphan in audit.Orphans)
+{
+    await Assert.That(Path.GetFileName(orphan)).Contains("Transaction");
+}
+        await Assert.That(audit.Missing).IsEmpty();
     }
 
-    [Theory]
-    [InlineData(PLURAL_CONFIGURATION)]
-    [InlineData(SINGULAR_CONFIGURATION)]
+    [Test]
+    [Arguments(PLURAL_CONFIGURATION)]
+    [Arguments(SINGULAR_CONFIGURATION)]
     public async Task When_a_capability_flag_is_turned_on_should_report_the_new_files_as_missing(
         string configuration)
     {
@@ -184,7 +186,7 @@ public class AuditCanaryTests : IDisposable
         // only rule matching that substring: the dead-letter template's name also carries
         // "requeuing", so turning its own flag on would leave it skipped by a second rule.
         await GenerateAsync(configuration);
-        Assert.Empty(GeneratedTreeAudit.Of(_testsRoot).Missing);
+        await Assert.That(GeneratedTreeAudit.Of(_testsRoot).Missing).IsEmpty();
 
         // Act - the flag goes on. This is the other half of the same seam, and it is the direction
         // that runs the ignore predicate through Plan rather than through GenerateAsync.
@@ -192,22 +194,24 @@ public class AuditCanaryTests : IDisposable
         var audit = GeneratedTreeAudit.Of(_testsRoot);
 
         // Assert - the newly expected tests are reported, and nothing on disk is orphaned
-        Assert.NotEmpty(audit.Missing);
-        Assert.All(audit.Missing, file =>
-            Assert.Contains("confirming_posting", Path.GetFileName(file), StringComparison.Ordinal));
-        Assert.Empty(audit.Orphans);
+        await Assert.That(audit.Missing).IsNotEmpty();
+        foreach (var file in audit.Missing)
+{
+    await Assert.That(Path.GetFileName(file)).Contains("confirming_posting");
+}
+        await Assert.That(audit.Orphans).IsEmpty();
     }
 
-    [Theory]
-    [InlineData(PLURAL_CONFIGURATION)]
-    [InlineData(SINGULAR_CONFIGURATION)]
+    [Test]
+    [Arguments(PLURAL_CONFIGURATION)]
+    [Arguments(SINGULAR_CONFIGURATION)]
     public async Task When_a_configuration_is_deleted_should_report_its_whole_tree_as_orphans(
         string configuration)
     {
         // Arrange - a tree the generators have just written, which the audit agrees with
         await GenerateAsync(configuration);
         var generated = GeneratedTreeAudit.Of(_testsRoot).OnDisk;
-        Assert.NotEmpty(generated);
+        await Assert.That(generated).IsNotEmpty();
 
         // Act - the configuration goes away. GeneratedFilesUnder walks the whole tree rather than
         // only the projects that carry a configuration precisely so that this is reported, and
@@ -216,9 +220,9 @@ public class AuditCanaryTests : IDisposable
         var audit = GeneratedTreeAudit.Of(_testsRoot);
 
         // Assert - everything the generator had written is now owned by nothing
-        Assert.Empty(audit.Expected);
-        Assert.Equal(generated.OrderBy(file => file, StringComparer.Ordinal), audit.Orphans);
-        Assert.Empty(audit.Missing);
+        await Assert.That(audit.Expected).IsEmpty();
+        await Assert.That(audit.Orphans).IsEquivalentTo(generated.OrderBy(file => file, StringComparer.Ordinal), TUnit.Assertions.Enums.CollectionOrdering.Matching);
+        await Assert.That(audit.Missing).IsEmpty();
     }
 
     // The outbox's own flag, which gates every template whose name carries "Transaction".

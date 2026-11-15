@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -28,17 +28,16 @@ using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class AzureServiceBusRetrySchedulerConfigurationTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_global_retry_scheduling_has_no_compatible_scheduler_should_reject_configuration(
         bool synchronous, bool ordinaryScheduler)
     {
@@ -62,7 +61,7 @@ public class AzureServiceBusRetrySchedulerConfigurationTests
             subscriptionConfiguration: new AzureServiceBusSubscriptionConfiguration { UseServiceBusQueue = true });
 
         // Act
-        var error = await Record.ExceptionAsync(async () =>
+        var error = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             if (synchronous)
             {
@@ -75,13 +74,12 @@ public class AzureServiceBusRetrySchedulerConfigurationTests
         });
 
         // Assert
-        var configurationError = Assert.IsType<ConfigurationException>(error);
+        var configurationError = await Assert.That(error).IsTypeOf<ConfigurationException>();
         if (!ordinaryScheduler)
-            Assert.Contains("No scheduler is configured for RequeueSchedulerMode.Global", configurationError.Message);
+            await Assert.That(configurationError.Message).Contains("No scheduler is configured for RequeueSchedulerMode.Global");
         else
-            Assert.Contains(synchronous ? "IAmAMessageRequeueSchedulerSync" : "IAmAMessageRequeueSchedulerAsync",
-                configurationError.Message);
-        Assert.Empty(client.Scheduled);
-        Assert.Equal(0, client.Receiver.CompletionAttempts);
+            await Assert.That(configurationError.Message).Contains(synchronous ? "IAmAMessageRequeueSchedulerSync" : "IAmAMessageRequeueSchedulerAsync");
+        await Assert.That(client.Scheduled).IsEmpty();
+        await Assert.That(client.Receiver.CompletionAttempts).IsEqualTo(0);
     }
 }

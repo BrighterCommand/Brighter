@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.CircuitBreaker;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker;
 
@@ -16,8 +15,8 @@ public class InMemoryTripRacesEndingCallTests
     private const int RACING_COOLDOWNS = 2;
     private static readonly TimeSpan s_maximumTripDuration = TimeSpan.FromMinutes(5);
 
-    [Fact]
-    public void When_a_trip_races_the_ending_call_should_restart_the_cooldown_at_the_trip()
+    [Test]
+    public async Task When_a_trip_races_the_ending_call_should_restart_the_cooldown_at_the_trip()
     {
         // Arrange
         var orders = new RoutingKey("orders");
@@ -30,17 +29,17 @@ public class InMemoryTripRacesEndingCallTests
             var exceptions = RaceATripAgainstTheEndingCalls(breaker, orders);
 
             // Assert
-            Assert.Empty(exceptions);
-            Assert.Contains(orders, breaker.TrippedTopics);
+            await Assert.That(exceptions).IsEmpty();
+            await Assert.That(breaker.TrippedTopics).Contains(orders);
 
             var callsThatLeaveItListed = CountCoolDownsThatLeaveTheTopicListed(breaker, orders);
-            Assert.InRange(callsThatLeaveItListed, COOLDOWN_COUNT - RACING_COOLDOWNS, COOLDOWN_COUNT);
-            Assert.DoesNotContain(orders, breaker.TrippedTopics);
+            await Assert.That(callsThatLeaveItListed >= COOLDOWN_COUNT - RACING_COOLDOWNS && callsThatLeaveItListed <= COOLDOWN_COUNT).IsTrue();
+            await Assert.That(breaker.TrippedTopics).DoesNotContain(orders);
         }
     }
 
-    [Fact]
-    public void When_a_trip_has_raced_the_ending_call_should_end_at_the_maximum_trip_duration()
+    [Test]
+    public async Task When_a_trip_has_raced_the_ending_call_should_end_at_the_maximum_trip_duration()
     {
         // Arrange
         var orders = new RoutingKey("orders");
@@ -51,7 +50,7 @@ public class InMemoryTripRacesEndingCallTests
         clock.Advance(s_maximumTripDuration);
 
         // Assert
-        Assert.DoesNotContain(orders, breaker.TrippedTopics);
+        await Assert.That(breaker.TrippedTopics).DoesNotContain(orders);
     }
 
     private static (InMemoryOutboxCircuitBreaker Breaker, FakeTimeProvider Clock) BuildBreakerWithTopicAboutToEnd(RoutingKey topic)

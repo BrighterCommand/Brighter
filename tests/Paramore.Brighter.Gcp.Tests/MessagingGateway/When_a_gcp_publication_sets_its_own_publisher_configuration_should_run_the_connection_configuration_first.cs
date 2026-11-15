@@ -25,13 +25,12 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Grpc.Core;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 
 public class GcpPublisherConfigurationCompositionTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_gcp_publication_sets_its_own_publisher_configuration_should_run_the_connection_configuration_first()
     {
         // Arrange
@@ -63,7 +62,7 @@ public class GcpPublisherConfigurationCompositionTests
         var producers = await factory.CreateAsync();
 
         // Assert
-        Assert.Equal(["connection", "publication"], configurationsRun);
+        await Assert.That(configurationsRun).IsEqualTo(["connection", "publication"]);
 
         foreach (var producer in producers.Values)
         {

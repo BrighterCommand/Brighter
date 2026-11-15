@@ -31,7 +31,6 @@ using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -40,23 +39,27 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// another session) or NULL (no such lock) is logged as one Warning carrying that marker, and 1 logs
 /// nothing (ADR 0057 §5b, ADR 0058 §B.3).
 /// </summary>
-public class MySqlProvisioningUnitOfWorkRollbackTriStateTests : IAsyncLifetime
+public class MySqlProvisioningUnitOfWorkRollbackTriStateTests
 {
     private readonly MySqlConnection _connection = new(Const.DefaultConnectingString);
 
+    [Before(HookType.Test)]
+
     public async Task InitializeAsync() => await _connection.OpenAsync();
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_release_returns_true_it_should_complete_with_no_warning() =>
         await AssertRollbackBehavior(releaseResult: true, expectWarning: false, expectedMarker: null);
 
-    [Fact]
+    [Test]
     public async Task When_release_returns_false_it_should_log_warning_with_marker_zero() =>
         await AssertRollbackBehavior(releaseResult: false, expectWarning: true, expectedMarker: "0");
 
-    [Fact]
+    [Test]
     public async Task When_release_returns_null_it_should_log_warning_with_marker_null() =>
         await AssertRollbackBehavior(releaseResult: null, expectWarning: true, expectedMarker: "NULL");
 
@@ -73,23 +76,23 @@ public class MySqlProvisioningUnitOfWorkRollbackTriStateTests : IAsyncLifetime
             cancellationToken: CancellationToken.None);
 
         // Act
-        var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(CancellationToken.None));
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => uow.RollbackAsync(CancellationToken.None));
 
         // Assert
-        Assert.Null(thrown);
-        Assert.Equal("test_lock_resource", advisoryLock.ReleasedKey);
+        await Assert.That(thrown).IsNull();
+        await Assert.That(advisoryLock.ReleasedKey).IsEqualTo("test_lock_resource");
 
         var warnings = logger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
         if (expectWarning)
         {
-            Assert.Single(warnings);
-            Assert.Contains("test_lock_resource", warnings[0].Message, StringComparison.Ordinal);
-            Assert.Contains(expectedMarker!, warnings[0].Message, StringComparison.Ordinal);
-            Assert.Null(warnings[0].Exception);
+            await Assert.That(warnings).HasSingleItem();
+            await Assert.That(warnings[0].Message).Contains("test_lock_resource");
+            await Assert.That(warnings[0].Message).Contains(expectedMarker!);
+            await Assert.That(warnings[0].Exception).IsNull();
         }
         else
         {
-            Assert.Empty(warnings);
+            await Assert.That(warnings).IsEmpty();
         }
     }
 }

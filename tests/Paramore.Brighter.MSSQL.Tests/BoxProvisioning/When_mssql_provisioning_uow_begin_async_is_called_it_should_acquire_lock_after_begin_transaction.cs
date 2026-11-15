@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -30,7 +30,6 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -39,20 +38,22 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 /// <c>sp_getapplock @LockOwner='Transaction'</c> needs one (ADR 0058 §B.1). The acquire seeing the
 /// transaction the unit of work exposes shows the order.
 /// </summary>
-public class MsSqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
+public class MsSqlProvisioningUnitOfWorkBeginTests
 {
     private readonly SqlConnection _connection = new(Configuration.DefaultConnectingString);
     private readonly FakeMsSqlAdvisoryLock _advisoryLock = new(throwOnAcquire: null);
 
-    public async Task InitializeAsync()
+    [Before(HookType.Test)]public async Task InitializeAsync()
     {
         await Configuration.EnsureDatabaseExistsAsync(_connection.ConnectionString);
         await _connection.OpenAsync();
     }
 
+    [After(HookType.Test)]
+
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_mssql_provisioning_uow_begin_async_is_called_it_should_acquire_lock_after_begin_transaction()
     {
         // Arrange
@@ -65,8 +66,8 @@ public class MsSqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
             cancellationToken: CancellationToken.None);
 
         // Assert
-        Assert.NotNull(uow.Transaction);
-        Assert.NotNull(_advisoryLock.CapturedTransaction);
-        Assert.Same(uow.Transaction, _advisoryLock.CapturedTransaction);
+        await Assert.That(uow.Transaction).IsNotNull();
+        await Assert.That(_advisoryLock.CapturedTransaction).IsNotNull();
+        await Assert.That(_advisoryLock.CapturedTransaction).IsSameReferenceAs(uow.Transaction);
     }
 }

@@ -5,13 +5,14 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Assertions;
+using TUnit.Core;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.NativeClassic.Proactor;
 
-[Trait("Category", "RMQNativeDelay")]
-[Collection("RMQNativeDelay")]
-public class WhenPostingAMessageButNoBrokerCreatedShouldThrowExceptionAsync : IAsyncLifetime
+[Property("Category", "RMQNativeDelay")]
+[NotInParallel("RMQNativeDelay")]
+public class WhenPostingAMessageButNoBrokerCreatedShouldThrowExceptionAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -28,17 +29,21 @@ public class WhenPostingAMessageButNoBrokerCreatedShouldThrowExceptionAsync : IA
         _messageBuilder = new DefaultMessageBuilder();
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
+
+    [After(HookType.Test)]
 
     public Task DisposeAsync()
     {
         return Task.CompletedTask;
     }
 
-    [Fact]
+    [Test]
     public async Task When_posting_a_message_but_no_broker_created_should_throw_exception_async()
     {
         try
@@ -55,11 +60,10 @@ public class WhenPostingAMessageButNoBrokerCreatedShouldThrowExceptionAsync : IA
             await _producer.SendAsync(message);
 
             // Assert
-            Assert.Fail("We are expected to throw an exception");
+            Assert.Fail("Expected the operation to fail.");
         }
-        catch (Exception ex) when (ex is not Xunit.Sdk.XunitException)
+        catch (Exception ex) when (ex is not TUnit.Assertions.Exceptions.AssertionException)
         {
-            Assert.True(true);
+            await Assert.That(true).IsTrue();
         }
-    }
-}
+    }}

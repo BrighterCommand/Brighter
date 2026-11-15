@@ -30,7 +30,6 @@ using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SqsStandard;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Standard.Reactor;
 
@@ -46,8 +45,8 @@ namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Standard.Reactor;
 /// <c>[Theory]</c> over both message creators would double the runtime without adding coverage
 /// the AC-5 characterisation needs.
 /// </remarks>
-[Trait("Category", "AWS")]
-[Collection("SqsStandard")]
+[Property("Category", "AWS")]
+[NotInParallel("SqsStandard")]
 public class SqsBudgetMinusOneNeverRejectsReactorTests : IDisposable, IAsyncDisposable
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
@@ -66,7 +65,7 @@ public class SqsBudgetMinusOneNeverRejectsReactorTests : IDisposable, IAsyncDisp
     /// the pump runs for 60 s.  The dispatch count exceeds 3, no <c>DeliveryError</c> rejection
     /// is issued, and the Brighter DLQ is empty (R-6, AC-5).
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_sqs_budget_is_minus_one_should_never_reject()
     {
         // Arrange
@@ -150,13 +149,12 @@ public class SqsBudgetMinusOneNeverRejectsReactorTests : IDisposable, IAsyncDisp
         var dispatchCount = ConformanceDeferredPump.GetDispatchCount(key);
 
         // Assert — R-6 / AC-5: handler invoked more than 3 times with budget -1
-        Assert.True(dispatchCount > 3,
-            $"Expected dispatch count > 3 after 60 s with requeueCount: -1, but was {dispatchCount}");
+        await Assert.That(dispatchCount > 3).IsTrue().Because($"Expected dispatch count > 3 after 60 s with requeueCount: -1, but was {dispatchCount}");
 
         // No DeliveryError rejection was issued — the Brighter DLQ must be empty
         var dlqMessage = dlqChannel.Receive(TimeSpan.FromMilliseconds(5000));
 
-        Assert.Equal(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        await Assert.That(dlqMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
     }
 
     public void Dispose()

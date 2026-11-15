@@ -29,11 +29,10 @@ using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 using RabbitMQ.Client.Exceptions;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RMQ")]
+[Property("Category", "RMQ")]
 public class RmqSendFailsOnReplacedChannelAsyncTests : IAsyncDisposable
 {
     private readonly RoutingKey _routingKey = new(Guid.NewGuid().ToString());
@@ -58,7 +57,7 @@ public class RmqSendFailsOnReplacedChannelAsyncTests : IAsyncDisposable
             .GetResult();
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_send_fails_on_a_replaced_channel_should_not_remove_the_new_channels_confirmation()
     {
         //Arrange — a send is in flight on the first channel, which then closes under it
@@ -76,12 +75,12 @@ public class RmqSendFailsOnReplacedChannelAsyncTests : IAsyncDisposable
 
         //Act — the send on the old channel fails, then the send on the new channel publishes
         oldChannel.Release();
-        await Assert.ThrowsAsync<AlreadyClosedException>(() => oldChannelSend);
+        await Assert.That(() => oldChannelSend).ThrowsExactly<AlreadyClosedException>();
         newChannel.Release();
         await newChannelSend;
 
         //Assert — the message sent on the new channel is confirmed
-        Assert.Contains(_confirmed, result => result.MessageId == onNewChannel.Id && result.Success);
+        await Assert.That(System.Linq.Enumerable.Any(_confirmed, result => result.MessageId == onNewChannel.Id && result.Success)).IsTrue();
     }
 
     private Message NewMessage() => new(

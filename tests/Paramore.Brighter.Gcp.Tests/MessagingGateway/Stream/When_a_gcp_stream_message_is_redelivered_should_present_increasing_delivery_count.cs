@@ -29,7 +29,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 using StreamOrderingCommand = Paramore.Brighter.Gcp.Tests.MessagingGateway.StreamOrdering.ConformanceDeferredCommand;
 using StreamOrderingPump = Paramore.Brighter.Gcp.Tests.MessagingGateway.StreamOrdering.ConformanceDeferredPump;
 
@@ -44,8 +43,8 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 /// increasing <c>Header.HandledCount</c> across redeliveries, starting at <c>0</c>.
 /// </summary>
 /// <summary>Stream (unordered), Reactor variant.</summary>
-[Trait("Category", "GcpPubSubStream")]
-[Collection("Stream")]
+[Property("Category", "GcpPubSubStream")]
+[NotInParallel("Stream")]
 public class GcpStreamRedeliveryDeliveryCountReactorTests
 {
     /// <summary>
@@ -53,7 +52,7 @@ public class GcpStreamRedeliveryDeliveryCountReactorTests
     /// over a deferring handler presents a strictly increasing <c>HandledCount</c> on each
     /// redelivery, and the first delivery presents <c>0</c> (R-1, R-2, R-3, AC-1, AC-2).
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_a_gcp_stream_message_is_redelivered_should_present_increasing_delivery_count()
     {
         // Arrange
@@ -130,18 +129,15 @@ public class GcpStreamRedeliveryDeliveryCountReactorTests
 
             // Assert — read the HandledCount sequence after pump quit-and-await
             var counts = ConformanceDeferredPump.GetHandledCountLog(key);
-            Assert.True(counts.Count >= 3,
-                $"expected at least 3 deliveries but recorded {counts.Count}");
+            await Assert.That(counts.Count >= 3).IsTrue().Because($"expected at least 3 deliveries but recorded {counts.Count}");
 
             // R-2 / AC-2: the first delivery presents 0
-            Assert.Equal(0, counts[0]);
+            await Assert.That(counts[0]).IsEqualTo(0);
 
             // R-1 / AC-1 / R-3: every subsequent delivery presents a strictly greater count
             for (var i = 1; i < counts.Count; i++)
             {
-                Assert.True(counts[i] > counts[i - 1],
-                    $"R-1: delivery {i + 1} count {counts[i]} must be strictly greater than "
-                    + $"delivery {i} count {counts[i - 1]}");
+                await Assert.That(counts[i] > counts[i - 1]).IsTrue();
             }
         }
         finally
@@ -152,8 +148,8 @@ public class GcpStreamRedeliveryDeliveryCountReactorTests
 }
 
 /// <summary>StreamOrdering, Reactor variant — same clauses as the unordered Stream configuration.</summary>
-[Trait("Category", "GcpPubSubStreamOrdering")]
-[Collection("StreamOrdering")]
+[Property("Category", "GcpPubSubStreamOrdering")]
+[NotInParallel("StreamOrdering")]
 public class GcpStreamOrderingRedeliveryDeliveryCountReactorTests
 {
     /// <summary>
@@ -161,7 +157,7 @@ public class GcpStreamOrderingRedeliveryDeliveryCountReactorTests
     /// over a deferring handler presents a strictly increasing <c>HandledCount</c> on each
     /// redelivery, and the first delivery presents <c>0</c> (R-1, R-2, R-3, AC-1, AC-2).
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_a_gcp_stream_ordering_message_is_redelivered_should_present_increasing_delivery_count()
     {
         // Arrange
@@ -225,16 +221,13 @@ public class GcpStreamOrderingRedeliveryDeliveryCountReactorTests
             await pumping;
 
             var counts = StreamOrderingPump.GetHandledCountLog(key);
-            Assert.True(counts.Count >= 3,
-                $"expected at least 3 deliveries but recorded {counts.Count}");
+            await Assert.That(counts.Count >= 3).IsTrue().Because($"expected at least 3 deliveries but recorded {counts.Count}");
 
-            Assert.Equal(0, counts[0]);
+            await Assert.That(counts[0]).IsEqualTo(0);
 
             for (var i = 1; i < counts.Count; i++)
             {
-                Assert.True(counts[i] > counts[i - 1],
-                    $"R-1: delivery {i + 1} count {counts[i]} must be strictly greater than "
-                    + $"delivery {i} count {counts[i - 1]}");
+                await Assert.That(counts[i] > counts[i - 1]).IsTrue();
             }
         }
         finally

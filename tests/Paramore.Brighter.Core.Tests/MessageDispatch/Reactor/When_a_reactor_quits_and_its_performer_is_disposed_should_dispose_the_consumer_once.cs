@@ -4,7 +4,6 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor;
 
@@ -12,7 +11,7 @@ public class ReactorQuitConsumerDisposalTests
 {
     private readonly RoutingKey _routingKey = new("MyTopic");
 
-    [Fact]
+    [Test]
     public async Task When_a_reactor_quits_and_its_performer_is_disposed_should_dispose_the_consumer_once()
     {
         // Arrange
@@ -40,6 +39,6 @@ public class ReactorQuitConsumerDisposalTests
         performer.Dispose();
 
         // Assert
-        Assert.Equal(1, consumer.DisposeCount);
+        await Assert.That(consumer.DisposeCount).IsEqualTo(1);
     }
 }

@@ -1,6 +1,5 @@
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.MQTT;
-using Xunit;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway;
 
@@ -31,48 +30,48 @@ public class When_mqtt_channel_factory_creates_channel_should_use_consumer_facto
         _channelFactory = new ChannelFactory(_consumerFactory);
     }
 
-    [Fact]
-    public void Should_create_sync_channel()
+    [Test]
+    public async Task Should_create_sync_channel()
     {
         // Act
         var channel = _channelFactory.CreateSyncChannel(_subscription);
 
         // Assert
-        Assert.NotNull(channel);
-        Assert.IsType<Channel>(channel);
+        await Assert.That(channel).IsNotNull();
+        await Assert.That(channel).IsTypeOf<Channel>();
     }
 
-    [Fact]
-    public void Should_create_async_channel()
+    [Test]
+    public async Task Should_create_async_channel()
     {
         // Act
-        var channel = _channelFactory.CreateAsyncChannel(_subscription);
+        var channel = await _channelFactory.CreateAsyncChannelAsync(_subscription);
 
         // Assert
-        Assert.NotNull(channel);
-        Assert.IsType<ChannelAsync>(channel);
+        await Assert.That(channel).IsNotNull();
+        await Assert.That(channel).IsTypeOf<ChannelAsync>();
     }
 
-    [Fact]
+    [Test]
     public async Task Should_create_async_channel_async()
     {
         // Act
         var channel = await _channelFactory.CreateAsyncChannelAsync(_subscription);
 
         // Assert
-        Assert.NotNull(channel);
-        Assert.IsType<ChannelAsync>(channel);
+        await Assert.That(channel).IsNotNull();
+        await Assert.That(channel).IsTypeOf<ChannelAsync>();
     }
 
-    [Fact]
-    public void Should_implement_channel_factory_with_scheduler()
+    [Test]
+    public async Task Should_implement_channel_factory_with_scheduler()
     {
         // Assert
-        Assert.IsAssignableFrom<IAmAChannelFactoryWithScheduler>(_channelFactory);
+        await Assert.That(_channelFactory).IsAssignableTo<IAmAChannelFactoryWithScheduler>();
     }
 
-    [Fact]
-    public void Should_accept_scheduler_property()
+    [Test]
+    public async Task Should_accept_scheduler_property()
     {
         // Arrange
         var scheduler = new StubMessageScheduler();
@@ -81,7 +80,7 @@ public class When_mqtt_channel_factory_creates_channel_should_use_consumer_facto
         ((IAmAChannelFactoryWithScheduler)_channelFactory).Scheduler = scheduler;
 
         // Assert
-        Assert.Equal(scheduler, ((IAmAChannelFactoryWithScheduler)_channelFactory).Scheduler);
+        await Assert.That(((IAmAChannelFactoryWithScheduler)_channelFactory).Scheduler).IsEqualTo(scheduler);
     }
 
     private class StubMessageScheduler : IAmAMessageScheduler;

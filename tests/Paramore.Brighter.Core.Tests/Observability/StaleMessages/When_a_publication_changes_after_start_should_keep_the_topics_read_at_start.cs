@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,7 +34,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -42,7 +41,7 @@ public class TopicsReadAtStartTests
 {
     private readonly TimerCountingTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Fact]
+    [Test]
     public async Task When_a_publication_changes_after_start_should_keep_the_topics_read_at_start()
     {
         //Arrange
@@ -72,32 +71,33 @@ public class TopicsReadAtStartTests
 
         //Act
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromMinutes(1));
         WaitForPerTopicCompletions(readings, 1);
-        WaitUntilTheMonitorWaits(2);
+        await WaitUntilTheMonitorWaits(2);
         _clock.Advance(TimeSpan.FromSeconds(30));
         orders.Publication.Topic = new RoutingKey("payments");
         orders.Publication.StaleMessageAge = TimeSpan.FromMinutes(4);
         _clock.Advance(TimeSpan.FromSeconds(30));
         WaitForPerTopicCompletions(readings, 2);
-        WaitUntilTheMonitorWaits(3);
+        await WaitUntilTheMonitorWaits(3);
         _clock.Advance(TimeSpan.FromMinutes(1));
         WaitForPerTopicCompletions(readings, 3);
 
         //Assert
         var calls = outbox.TopicCountCalls.ToArray();
-        Assert.Equal(3, calls.Length);
-        Assert.All(calls, call => Assert.Equal(
-            new Dictionary<RoutingKey, TimeSpan> { [new RoutingKey("orders")] = TimeSpan.FromMinutes(2) },
-            call.DispatchedSinceByTopic));
+        await Assert.That(calls.Length).IsEqualTo(3);
+        foreach (var call in calls)
+{
+    await Assert.That(call.DispatchedSinceByTopic).IsEqualTo(new Dictionary<RoutingKey, TimeSpan> { [new RoutingKey("orders")] = TimeSpan.FromMinutes(2) });
+}
     }
 
-    private static void WaitForPerTopicCompletions(OutboxStaleMessageReadings readings, long completions) =>
-        Assert.True(SpinWait.SpinUntil(
+    private static async Task WaitForPerTopicCompletions(OutboxStaleMessageReadings readings, long completions) =>
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Completed) >= completions,
-            TimeSpan.FromSeconds(5)));
+            TimeSpan.FromSeconds(5))).IsTrue();
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

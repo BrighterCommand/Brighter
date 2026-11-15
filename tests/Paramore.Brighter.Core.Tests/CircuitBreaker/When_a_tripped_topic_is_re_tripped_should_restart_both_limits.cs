@@ -1,14 +1,13 @@
 using System;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.CircuitBreaker;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker;
 
 public class InMemoryReTripRestartsBothLimitsTests
 {
-    [Fact]
-    public void When_a_tripped_topic_is_re_tripped_should_restart_the_maximum_trip_duration()
+    [Test]
+    public async Task When_a_tripped_topic_is_re_tripped_should_restart_the_maximum_trip_duration()
     {
         // Arrange
         var orders = new RoutingKey("orders");
@@ -24,14 +23,14 @@ public class InMemoryReTripRestartsBothLimitsTests
 
         // Assert
         clock.Advance(TimeSpan.FromMinutes(4) + TimeSpan.FromSeconds(59));
-        Assert.Contains(orders, breaker.TrippedTopics);
+        await Assert.That(breaker.TrippedTopics).Contains(orders);
 
         clock.Advance(TimeSpan.FromSeconds(1));
-        Assert.DoesNotContain(orders, breaker.TrippedTopics);
+        await Assert.That(breaker.TrippedTopics).DoesNotContain(orders);
     }
 
-    [Fact]
-    public void When_a_tripped_topic_is_re_tripped_should_restart_the_cooldown_count()
+    [Test]
+    public async Task When_a_tripped_topic_is_re_tripped_should_restart_the_cooldown_count()
     {
         // Arrange
         var orders = new RoutingKey("orders");
@@ -48,9 +47,9 @@ public class InMemoryReTripRestartsBothLimitsTests
         breaker.CoolDown();
 
         // Assert
-        Assert.Contains(orders, breaker.TrippedTopics);
+        await Assert.That(breaker.TrippedTopics).Contains(orders);
 
         breaker.CoolDown();
-        Assert.DoesNotContain(orders, breaker.TrippedTopics);
+        await Assert.That(breaker.TrippedTopics).DoesNotContain(orders);
     }
 }

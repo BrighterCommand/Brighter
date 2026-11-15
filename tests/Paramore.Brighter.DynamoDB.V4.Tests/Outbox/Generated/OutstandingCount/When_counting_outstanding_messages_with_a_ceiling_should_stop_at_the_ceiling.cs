@@ -7,23 +7,15 @@
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.Outbox;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.DynamoDB.V4.Tests.Outbox.OutstandingCount;
 
-[Trait("Category", "DynamoDB")]
-[Collection("DynamoDBOutbox")]
+[Property("Category", "DynamoDB")]
+[NotInParallel("DynamoDBOutbox")]
 public class WhenCountingOutstandingMessagesWithACeilingShouldStopAtTheCeiling : OutstandingCountOutboxBaseTests<Amazon.DynamoDBv2.Model.TransactWriteItemsRequest>
 {
     private readonly IAmAnOutstandingCountOutboxProvider _outboxProvider = new Paramore.Brighter.DynamoDB.V4.Tests.Outbox.DynamoDBOutboxProvider();
     private IAmAnOutboxAsync<Message, Amazon.DynamoDBv2.Model.TransactWriteItemsRequest>? _outbox;
-    private readonly ITestOutputHelper _output;
-
-    public WhenCountingOutstandingMessagesWithACeilingShouldStopAtTheCeiling(ITestOutputHelper output)
-    {
-        _output = output;
-    }
 
     protected override IAmAnOutboxAsync<Message, Amazon.DynamoDBv2.Model.TransactWriteItemsRequest> Outbox => _outbox!;
 
@@ -44,27 +36,26 @@ public class WhenCountingOutstandingMessagesWithACeilingShouldStopAtTheCeiling :
         await Outbox.AddAsync(aged, new RequestContext());
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_outstanding_messages_with_a_ceiling_of_three_should_return_three()
     {
         await AssertCeilingOfThreeAsync();
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_outstanding_messages_with_a_ceiling_of_five_should_return_five()
     {
         await AssertCeilingOfFiveAsync();
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_outstanding_messages_with_a_ceiling_of_one_should_report_the_count()
     {
-        _output.WriteLine(await ObserveCountAsync(1));
+        Console.WriteLine(await ObserveCountAsync(1));
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_outstanding_messages_with_a_ceiling_of_two_should_report_the_count()
     {
-        _output.WriteLine(await ObserveCountAsync(2));
-    }
-}
+        Console.WriteLine(await ObserveCountAsync(2));
+    }}

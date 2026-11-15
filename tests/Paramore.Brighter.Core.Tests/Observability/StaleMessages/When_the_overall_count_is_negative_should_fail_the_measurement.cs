@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,7 +34,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -45,7 +44,7 @@ public class NegativeOverallCountTests
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
     private readonly TimerCountingTimeProvider _clock = new(s_start);
 
-    [Fact]
+    [Test]
     public async Task When_the_overall_count_is_negative_should_fail_the_measurement()
     {
         //Arrange
@@ -72,7 +71,7 @@ public class NegativeOverallCountTests
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         var readings = metrics.Services.GetRequiredService<OutboxStaleMessageReadings>();
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromSeconds(59));
 
         var dueTime = s_start.AddMinutes(1);
@@ -105,13 +104,13 @@ public class NegativeOverallCountTests
                 afterTheDueTime = observed;
         }
 
-        var stopping = await Record.ExceptionAsync(() => monitor.StopAsync(default).WaitAsync(TimeSpan.FromSeconds(5)));
+        var stopping = await TestExceptionRecorder.CaptureAsync(() => monitor.StopAsync(default).WaitAsync(TimeSpan.FromSeconds(5)));
 
         //Assert
-        Assert.Null(heldAt);
-        Assert.Equal(1, Measured(afterTheDueTime, "overall", "failed"));
-        Assert.DoesNotContain(fromTheDueTime, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES);
-        Assert.Null(stopping);
+        await Assert.That(heldAt).IsNull();
+        await Assert.That(Measured(afterTheDueTime, "overall", "failed")).IsEqualTo(1);
+        await Assert.That(System.Linq.Enumerable.Any(fromTheDueTime, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)).IsFalse();
+        await Assert.That(stopping).IsNull();
     }
 
     private static long Measured(IEnumerable<StaleMeasurement> measurements, string count, string outcome) =>
@@ -130,6 +129,6 @@ public class NegativeOverallCountTests
         return SpinWait.SpinUntil(() => advance.IsCompleted, TimeSpan.FromSeconds(5));
     }
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

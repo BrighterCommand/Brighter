@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -28,14 +28,13 @@ using System;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleMessageMonitorConstructionValidationTests
 {
-    [Fact]
-    public void When_the_monitor_is_constructed_with_invalid_options_should_throw_a_configuration_exception()
+    [Test]
+    public async Task When_the_monitor_is_constructed_with_invalid_options_should_throw_a_configuration_exception()
     {
         //Arrange
         var scopeFactory = new ServiceCollection().BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
@@ -43,11 +42,11 @@ public class StaleMessageMonitorConstructionValidationTests
         options.MeasurementTimeout = options.MeasurementInterval;
 
         //Act
-        var exception = Assert.Throws<ConfigurationException>(() =>
-            new TimedOutboxStaleMessageMonitor(scopeFactory, new OutboxStaleMessageReadings(), options));
+        var exception = (await Assert.That(() =>
+            new TimedOutboxStaleMessageMonitor(scopeFactory, new OutboxStaleMessageReadings(), options)).ThrowsExactly<ConfigurationException>());
 
         //Assert
-        Assert.Contains(nameof(TimedOutboxStaleMessageMonitorOptions.MeasurementTimeout), exception.Message);
-        Assert.Contains(options.MeasurementTimeout.ToString(), exception.Message);
+        await Assert.That(exception.Message).Contains(nameof(TimedOutboxStaleMessageMonitorOptions.MeasurementTimeout));
+        await Assert.That(exception.Message).Contains(options.MeasurementTimeout.ToString());
     }
 }

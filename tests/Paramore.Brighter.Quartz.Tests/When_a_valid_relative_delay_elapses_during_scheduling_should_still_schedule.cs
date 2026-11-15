@@ -29,12 +29,11 @@ using Paramore.Brighter;
 using Paramore.Brighter.Scheduler;
 using Paramore.Brighter.MessageScheduler.Quartz;
 using ParamoreBrighter.Quartz.Tests.TestDoubles;
-using Assert = Xunit.Assert;
-
+using System.Threading.Tasks;
 namespace ParamoreBrighter.Quartz.Tests;
 
-[Xunit.Collection("Scheduler")]
-public class QuartzSchedulerDeadlineTests : Xunit.IAsyncLifetime
+[NotInParallel("Scheduler")]
+public class QuartzSchedulerDeadlineTests
 {
     private readonly AdvancingDeadlineTimeProvider _clock = new();
     private readonly Message _message = new(
@@ -46,34 +45,35 @@ public class QuartzSchedulerDeadlineTests : Xunit.IAsyncLifetime
     private QuartzScheduler _scheduler = null!;
     private const string GROUP = "deadline";
 
+    [Before(HookType.Test)]
     public async Task InitializeAsync()
     {
         _backend = await SchedulerBuilder.Create(new NameValueCollection
-            { ["quartz.scheduler.instanceName"] = $"deadline-{Guid.NewGuid():N}" })
+        { ["quartz.scheduler.instanceName"] = $"deadline-{Guid.NewGuid():N}" })
             .Build().GetScheduler();
         _scheduler = new QuartzScheduler(_backend, GROUP, _clock, _ => "deadline-id", _ => "deadline-id");
         _context.Bag[RequestContextBagNames.PartitionKey] = new PartitionKey("deadline-partition");
     }
 
-    public Task DisposeAsync() => _backend.Shutdown();
+    [After(HookType.Test)] public Task DisposeAsync() => _backend.Shutdown();
 
-    [Xunit.Theory]
-    [Xunit.InlineData("message", false, 0)]
-    [Xunit.InlineData("message", false, 1)]
-    [Xunit.InlineData("message", true, 0)]
-    [Xunit.InlineData("message", true, 1)]
-    [Xunit.InlineData("request", false, 0)]
-    [Xunit.InlineData("request", false, 1)]
-    [Xunit.InlineData("request", true, 0)]
-    [Xunit.InlineData("request", true, 1)]
-    [Xunit.InlineData("request-context", false, 0)]
-    [Xunit.InlineData("request-context", false, 1)]
-    [Xunit.InlineData("request-context", true, 0)]
-    [Xunit.InlineData("request-context", true, 1)]
-    [Xunit.InlineData("reschedule", false, 0)]
-    [Xunit.InlineData("reschedule", false, 1)]
-    [Xunit.InlineData("reschedule", true, 0)]
-    [Xunit.InlineData("reschedule", true, 1)]
+    [Test]
+    [Arguments("message", false, 0)]
+    [Arguments("message", false, 1)]
+    [Arguments("message", true, 0)]
+    [Arguments("message", true, 1)]
+    [Arguments("request", false, 0)]
+    [Arguments("request", false, 1)]
+    [Arguments("request", true, 0)]
+    [Arguments("request", true, 1)]
+    [Arguments("request-context", false, 0)]
+    [Arguments("request-context", false, 1)]
+    [Arguments("request-context", true, 0)]
+    [Arguments("request-context", true, 1)]
+    [Arguments("reschedule", false, 0)]
+    [Arguments("reschedule", false, 1)]
+    [Arguments("reschedule", true, 0)]
+    [Arguments("reschedule", true, 1)]
     public async Task When_a_valid_relative_delay_elapses_during_scheduling_should_still_schedule(
         string operation, bool isAsync, int delaySeconds)
     {
@@ -85,36 +85,36 @@ public class QuartzSchedulerDeadlineTests : Xunit.IAsyncLifetime
         var result = await InvokeAsync(operation, isAsync, delay);
 
         //Assert
-        Assert.Equal(operation == "reschedule" ? bool.TrueString : "deadline-id", result);
+        await Assert.That(result).IsEqualTo(operation == "reschedule" ? bool.TrueString : "deadline-id");
         var trigger = await _backend.GetTrigger(new TriggerKey("deadline-id-trigger", GROUP));
-        Assert.NotNull(trigger);
-        Assert.Equal(_clock.InitialUtcNow.Add(delay), trigger.StartTimeUtc);
+        await Assert.That(trigger).IsNotNull();
+        await Assert.That(trigger.StartTimeUtc).IsEqualTo(_clock.InitialUtcNow.Add(delay));
         if (operation == "request-context")
         {
             var job = await _backend.GetJobDetail(new JobKey("deadline-id", GROUP));
             var envelope = System.Text.Json.JsonSerializer.Deserialize<Paramore.Brighter.Scheduler.Events.FireSchedulerRequest>(
                 job!.JobDataMap.GetString("request")!, Paramore.Brighter.JsonConverters.JsonSerialisationOptions.Options)!;
-            Assert.Contains("deadline-partition", envelope.RequestContextData!);
+            await Assert.That(envelope.RequestContextData!).Contains("deadline-partition");
         }
     }
 
-    [Xunit.Theory]
-    [Xunit.InlineData("message", false, "negative-delay")]
-    [Xunit.InlineData("message", false, "past-date")]
-    [Xunit.InlineData("message", true, "negative-delay")]
-    [Xunit.InlineData("message", true, "past-date")]
-    [Xunit.InlineData("request", false, "negative-delay")]
-    [Xunit.InlineData("request", false, "past-date")]
-    [Xunit.InlineData("request", true, "negative-delay")]
-    [Xunit.InlineData("request", true, "past-date")]
-    [Xunit.InlineData("request-context", false, "negative-delay")]
-    [Xunit.InlineData("request-context", false, "past-date")]
-    [Xunit.InlineData("request-context", true, "negative-delay")]
-    [Xunit.InlineData("request-context", true, "past-date")]
-    [Xunit.InlineData("reschedule", false, "negative-delay")]
-    [Xunit.InlineData("reschedule", false, "past-date")]
-    [Xunit.InlineData("reschedule", true, "negative-delay")]
-    [Xunit.InlineData("reschedule", true, "past-date")]
+    [Test]
+    [Arguments("message", false, "negative-delay")]
+    [Arguments("message", false, "past-date")]
+    [Arguments("message", true, "negative-delay")]
+    [Arguments("message", true, "past-date")]
+    [Arguments("request", false, "negative-delay")]
+    [Arguments("request", false, "past-date")]
+    [Arguments("request", true, "negative-delay")]
+    [Arguments("request", true, "past-date")]
+    [Arguments("request-context", false, "negative-delay")]
+    [Arguments("request-context", false, "past-date")]
+    [Arguments("request-context", true, "negative-delay")]
+    [Arguments("request-context", true, "past-date")]
+    [Arguments("reschedule", false, "negative-delay")]
+    [Arguments("reschedule", false, "past-date")]
+    [Arguments("reschedule", true, "negative-delay")]
+    [Arguments("reschedule", true, "past-date")]
     public async Task When_a_schedule_has_invalid_timing_should_reject_it_before_calling_the_backend(
         string operation, bool isAsync, string invalidTiming)
     {
@@ -123,16 +123,16 @@ public class QuartzSchedulerDeadlineTests : Xunit.IAsyncLifetime
         TimeSpan? delay = invalidTiming == "negative-delay" ? TimeSpan.FromSeconds(-1) : null;
 
         //Act
-        var exception = await Xunit.Record.ExceptionAsync(() => InvokeAsync(operation, isAsync, delay));
+        var exception = await TestExceptionRecorder.CaptureAsync(() => InvokeAsync(operation, isAsync, delay));
 
         //Assert
-        var invalid = Assert.IsType<ArgumentOutOfRangeException>(exception);
-        Assert.Equal(delay.HasValue ? "delay" : "at", invalid.ParamName);
+        var invalid = await Assert.That(exception).IsTypeOf<ArgumentOutOfRangeException>();
+        await Assert.That(invalid.ParamName).IsEqualTo(delay.HasValue ? "delay" : "at");
         var trigger = await _backend.GetTrigger(new TriggerKey("deadline-id-trigger", GROUP));
         if (operation == "reschedule")
-            Assert.Equal(_clock.InitialUtcNow.AddHours(1), trigger!.StartTimeUtc);
+            await Assert.That(trigger!.StartTimeUtc).IsEqualTo(_clock.InitialUtcNow.AddHours(1));
         else
-            Assert.Null(trigger);
+            await Assert.That(trigger).IsNull();
     }
 
     private async Task PrepareAsync(string operation)

@@ -29,7 +29,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -40,7 +39,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// </summary>
 public class SqlBoxMigrationRunnerHookOrderTests
 {
-    [Fact]
+    [Test]
     public async Task When_table_does_not_exist_migrate_should_invoke_hooks_in_fresh_path_order()
     {
         //Arrange
@@ -59,8 +58,7 @@ public class SqlBoxMigrationRunnerHookOrderTests
             tableState: new BoxTableState(false, false, 0));
 
         //Assert
-        Assert.Equal(
-            new[]
+        await Assert.That(unitOfWork.Log).IsEquivalentTo(new[]
             {
                 "OpenConnection",
                 "CreateUnitOfWork",
@@ -70,11 +68,10 @@ public class SqlBoxMigrationRunnerHookOrderTests
                 "RunFreshPath",
                 "CommitAsync",
                 "DisposeAsync"
-            },
-            unitOfWork.Log);
+            }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
-    [Fact]
+    [Test]
     public async Task When_table_exists_without_history_migrate_should_invoke_hooks_in_bootstrap_path_order()
     {
         //Arrange
@@ -93,8 +90,7 @@ public class SqlBoxMigrationRunnerHookOrderTests
             tableState: new BoxTableState(true, false, 0));
 
         //Assert
-        Assert.Equal(
-            new[]
+        await Assert.That(unitOfWork.Log).IsEquivalentTo(new[]
             {
                 "OpenConnection",
                 "CreateUnitOfWork",
@@ -104,11 +100,10 @@ public class SqlBoxMigrationRunnerHookOrderTests
                 "RunBootstrapPath",
                 "CommitAsync",
                 "DisposeAsync"
-            },
-            unitOfWork.Log);
+            }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
-    [Fact]
+    [Test]
     public async Task When_table_exists_with_history_migrate_should_invoke_hooks_in_normal_path_order()
     {
         //Arrange
@@ -127,8 +122,7 @@ public class SqlBoxMigrationRunnerHookOrderTests
             tableState: new BoxTableState(true, true, 0));
 
         //Assert
-        Assert.Equal(
-            new[]
+        await Assert.That(unitOfWork.Log).IsEquivalentTo(new[]
             {
                 "OpenConnection",
                 "CreateUnitOfWork",
@@ -138,8 +132,7 @@ public class SqlBoxMigrationRunnerHookOrderTests
                 "RunNormalPath",
                 "CommitAsync",
                 "DisposeAsync"
-            },
-            unitOfWork.Log);
+            }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
     // Overrides RedetectStateAsync so the order under test does not depend on the detection helper.

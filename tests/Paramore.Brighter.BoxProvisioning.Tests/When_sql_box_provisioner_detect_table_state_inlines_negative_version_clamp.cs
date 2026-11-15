@@ -28,7 +28,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -39,7 +38,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// </summary>
 public class SqlBoxProvisionerNegativeVersionClampTests
 {
-    [Fact]
+    [Test]
     public async Task When_detect_table_state_sees_negative_detected_version_it_should_clamp_to_zero()
     {
         //Arrange
@@ -53,11 +52,11 @@ public class SqlBoxProvisionerNegativeVersionClampTests
         await provisioner.ProvisionAsync();
 
         //Assert
-        Assert.NotNull(migrationRunner.CapturedTableState);
-        Assert.Equal(0, migrationRunner.CapturedTableState!.CurrentVersion);
+        await Assert.That(migrationRunner.CapturedTableState).IsNotNull();
+        await Assert.That(migrationRunner.CapturedTableState!.CurrentVersion).IsEqualTo(0);
     }
 
-    [Fact]
+    [Test]
     public async Task When_detect_table_state_sees_positive_detected_version_it_should_pass_through_unchanged()
     {
         //Arrange
@@ -71,8 +70,8 @@ public class SqlBoxProvisionerNegativeVersionClampTests
         await provisioner.ProvisionAsync();
 
         //Assert
-        Assert.NotNull(migrationRunner.CapturedTableState);
-        Assert.Equal(3, migrationRunner.CapturedTableState!.CurrentVersion);
+        await Assert.That(migrationRunner.CapturedTableState).IsNotNull();
+        await Assert.That(migrationRunner.CapturedTableState!.CurrentVersion).IsEqualTo(3);
     }
 
     private sealed class TestSqlBoxProvisioner : SqlBoxProvisioner<FakeDbConnection, FakeDbTransaction>

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -41,10 +40,10 @@ public class MsSqlRunnerLockResourceSchemaQualificationTests
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
 
-    [Theory]
-    [InlineData(null, "dbo")]
-    [InlineData("dbo", "dbo")]
-    [InlineData("billing", "billing")]
+    [Test]
+    [Arguments(null, "dbo")]
+    [Arguments("dbo", "dbo")]
+    [Arguments("billing", "billing")]
     public async Task When_mssql_runner_acquires_lock_resource_should_be_qualified_by_schema(
         string? configuredSchema, string expectedSchemaInLockResource)
     {
@@ -62,13 +61,11 @@ public class MsSqlRunnerLockResourceSchemaQualificationTests
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.That(() =>
             runner.MigrateAsync(
-                tableName, configuredSchema, BoxType.Outbox, freshHint));
+                tableName, configuredSchema, BoxType.Outbox, freshHint)).ThrowsExactly<InvalidOperationException>();
 
         //Assert
-        Assert.Equal(
-            $"BrighterMigration_{expectedSchemaInLockResource}.{tableName}",
-            fakeLock.AcquiredResource);
+        await Assert.That(fakeLock.AcquiredResource).IsEqualTo($"BrighterMigration_{expectedSchemaInLockResource}.{tableName}");
     }
 }

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -36,10 +36,11 @@ namespace Paramore.Brighter.Azure.Tests.Scheduler;
 
 public class AzureScheduledRequestContextTests
 {
-    [TestCase(false, false)]
-    [TestCase(false, true)]
-    [TestCase(true, false)]
-    [TestCase(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_scheduling_a_request_should_preserve_its_context_data(bool isAsync, bool useDateTime)
     {
         //Arrange
@@ -74,9 +75,9 @@ public class AzureScheduledRequestContextTests
         var snapshot = JsonSerializer.Deserialize<ScheduledRequestContext>(envelope.RequestContextData!, JsonSerialisationOptions.Options)!;
 
         //Assert
-        Assert.That(envelope.SchedulerType, Is.EqualTo(RequestSchedulerType.Post));
-        Assert.That(snapshot.TraceParent, Is.EqualTo(parent.Id));
-        Assert.That(snapshot.PartitionKey!.Value, Is.EqualTo("partition-1"));
-        Assert.That(snapshot.Headers!["x-attempt"], Is.EqualTo(3));
+        await Assert.That(envelope.SchedulerType).IsEqualTo(RequestSchedulerType.Post);
+        await Assert.That(snapshot.TraceParent).IsEqualTo(parent.Id);
+        await Assert.That(snapshot.PartitionKey!.Value).IsEqualTo("partition-1");
+        await Assert.That(snapshot.Headers!["x-attempt"]).IsEqualTo(3);
     }
 }

@@ -22,7 +22,6 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -98,7 +97,7 @@ public class WhenGeneratingDeferredPumpShouldEmitDispatchCountKeyedByOriginalMes
     ///   <item>FR-23 Proactor constructor calls ConformanceDeferredPump.ResetDispatchCount()</item>
     /// </list>
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_generating_deferred_pump_should_emit_dispatch_count_keyed_by_original_message_id()
     {
         // Arrange
@@ -111,36 +110,33 @@ public class WhenGeneratingDeferredPumpShouldEmitDispatchCountKeyedByOriginalMes
 
         // Assert — shared pump: static thread-safe counter
         var pump = await File.ReadAllTextAsync(PumpPath());
-        Assert.Contains(CONCURRENT_DICTIONARY, pump);
+        await Assert.That(pump).Contains(CONCURRENT_DICTIONARY);
 
         // Assert — shared pump: key derivation uses x-original-message-id, falls back to MessageId
-        Assert.Contains(ORIGINAL_MESSAGE_ID_HEADER, pump);
-        Assert.Contains(HEADER_MESSAGE_ID_FALLBACK, pump);
+        await Assert.That(pump).Contains(ORIGINAL_MESSAGE_ID_HEADER);
+        await Assert.That(pump).Contains(HEADER_MESSAGE_ID_FALLBACK);
 
         // Assert — shared pump: both handlers read Context.OriginatingMessage before throwing
         // (must appear at least twice — once in the sync handler, once in the async handler)
         var originatingMessageCount = CountOccurrences(pump, ORIGINATING_MESSAGE_ACCESS);
-        Assert.True(originatingMessageCount >= 2,
-            $"Expected Context.OriginatingMessage in at least 2 handler bodies, found {originatingMessageCount}");
+        await Assert.That(originatingMessageCount >= 2).IsTrue().Because($"Expected Context.OriginatingMessage in at least 2 handler bodies, found {originatingMessageCount}");
 
         // Assert — increment (via OriginatingMessage access) precedes the defer throw
         var accessIndex = pump.IndexOf(ORIGINATING_MESSAGE_ACCESS, StringComparison.Ordinal);
         var deferIndex = pump.IndexOf(DEFER_MESSAGE_ACTION, StringComparison.Ordinal);
-        Assert.True(accessIndex < deferIndex,
-            $"Context.OriginatingMessage access (at {accessIndex}) must precede " +
-            $"throw new DeferMessageAction() (at {deferIndex})");
+        await Assert.That(accessIndex < deferIndex).IsTrue();
 
         // Assert — reset and read-by-key entry points exist
-        Assert.Contains(RESET_METHOD, pump);
-        Assert.Contains(GET_DISPATCH_COUNT, pump);
+        await Assert.That(pump).Contains(RESET_METHOD);
+        await Assert.That(pump).Contains(GET_DISPATCH_COUNT);
 
         // Assert — FR-23 Reactor constructor calls ResetDispatchCount()
         var reactorFr23 = await File.ReadAllTextAsync(ReactorFr23Path());
-        AssertConstructorContainsReset(reactorFr23, "Reactor FR-23");
+        await AssertConstructorContainsReset(reactorFr23, "Reactor FR-23");
 
         // Assert — FR-23 Proactor constructor calls ResetDispatchCount()
         var proactorFr23 = await File.ReadAllTextAsync(ProactorFr23Path());
-        AssertConstructorContainsReset(proactorFr23, "Proactor FR-23");
+        await AssertConstructorContainsReset(proactorFr23, "Proactor FR-23");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -150,21 +146,18 @@ public class WhenGeneratingDeferredPumpShouldEmitDispatchCountKeyedByOriginalMes
     /// and that this call appears before the first [Fact] attribute (i.e., inside the constructor
     /// rather than a test method body).
     /// </summary>
-    private static void AssertConstructorContainsReset(string content, string label)
+    private static async Task AssertConstructorContainsReset(string content, string label)
     {
-        Assert.Contains(RESET_CALL_IN_CONSTRUCTOR, content);
+        await Assert.That(content).Contains(RESET_CALL_IN_CONSTRUCTOR);
 
         var resetIndex = content.IndexOf(RESET_CALL_IN_CONSTRUCTOR, StringComparison.Ordinal);
-        var firstFactIndex = content.IndexOf("[Fact", StringComparison.Ordinal);
+        var firstFactIndex = content.IndexOf("[Test", StringComparison.Ordinal);
 
-        Assert.True(resetIndex >= 0, $"{label}: ResetDispatchCount call not found");
+        await Assert.That(resetIndex >= 0).IsTrue().Because($"{label}: ResetDispatchCount call not found");
 
         if (firstFactIndex >= 0)
         {
-            Assert.True(resetIndex < firstFactIndex,
-                $"{label}: ConformanceDeferredPump.ResetDispatchCount() call (at {resetIndex}) " +
-                $"must appear before first [Fact] attribute (at {firstFactIndex}), " +
-                $"i.e. inside the constructor, not a test method");
+            await Assert.That(resetIndex < firstFactIndex).IsTrue();
         }
     }
 

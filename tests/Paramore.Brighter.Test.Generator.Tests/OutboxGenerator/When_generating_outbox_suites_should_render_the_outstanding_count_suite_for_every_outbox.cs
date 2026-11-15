@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -31,7 +31,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.OutboxGenerator;
 
@@ -39,7 +38,7 @@ public class OutstandingCountSuiteGenerationTests : IDisposable
 {
     private readonly string _testDirectory = Path.Combine(Path.GetTempPath(), $"OutboxGeneratorTests_{Guid.NewGuid()}");
 
-    [Fact]
+    [Test]
     public async Task When_generating_outbox_suites_should_render_the_outstanding_count_suite_for_every_outbox()
     {
         // Arrange
@@ -50,18 +49,18 @@ public class OutstandingCountSuiteGenerationTests : IDisposable
         await generator.GenerateAsync(configuration);
 
         // Assert
-        var templates = TemplateNames();
-        Assert.Contains("IAmAnOutstandingCountOutboxProvider.cs", templates);
-        Assert.Equal(4, templates.Length);
+        var templates = await TemplateNames();
+        await Assert.That(templates).Contains("IAmAnOutstandingCountOutboxProvider.cs");
+        await Assert.That(templates.Length).IsEqualTo(4);
         foreach (var folder in new[] { "Text", "Binary" })
         {
             var rendered = Directory.GetFiles(SuiteDirectory(folder), "*.cs").Select(Path.GetFileName).ToArray();
-            Assert.Equal(templates.OrderBy(name => name), rendered.OrderBy(name => name));
+            await Assert.That(rendered.OrderBy(name => name)).IsEqualTo(templates.OrderBy(name => name));
         }
     }
 
-    [Fact]
-    public void When_planning_outbox_suites_should_list_the_outstanding_count_suite_for_every_outbox()
+    [Test]
+    public async Task When_planning_outbox_suites_should_list_the_outstanding_count_suite_for_every_outbox()
     {
         // Arrange
         var configuration = Configure(supportsTransactions: false, category: null);
@@ -73,16 +72,16 @@ public class OutstandingCountSuiteGenerationTests : IDisposable
         // Assert
         foreach (var folder in new[] { "Text", "Binary" })
         {
-            var expected = TemplateNames().Select(name => Path.Combine(SuiteDirectory(folder), name));
+            var expected = (await TemplateNames()).Select(name => Path.Combine(SuiteDirectory(folder), name));
             var listed = planned.Select(file => file.DestinationPath)
                 .Where(path => string.Equals(Path.GetDirectoryName(path), SuiteDirectory(folder), StringComparison.Ordinal));
-            Assert.Equal(expected.OrderBy(path => path), listed.OrderBy(path => path));
+            await Assert.That(listed.OrderBy(path => path)).IsEqualTo(expected.OrderBy(path => path));
         }
     }
 
-    [Theory]
-    [InlineData("InMemoryCategory", true)]
-    [InlineData(null, false)]
+    [Test]
+    [Arguments("InMemoryCategory", true)]
+    [Arguments(null, false)]
     public async Task When_generating_outbox_suites_should_apply_the_category_to_every_outstanding_count_test_file(
         string? category, bool expectTrait)
     {
@@ -99,15 +98,15 @@ public class OutstandingCountSuiteGenerationTests : IDisposable
             var testFiles = Directory.GetFiles(SuiteDirectory(folder), "*.cs")
                 .Where(file => !Path.GetFileName(file).StartsWith("IAmAnOutstandingCountOutboxProvider", StringComparison.Ordinal))
                 .ToArray();
-            Assert.NotEmpty(testFiles);
-            Assert.All(testFiles, file =>
-            {
-                var source = File.ReadAllText(file);
-                if (expectTrait)
-                    Assert.Contains($"[Trait(\"Category\", \"{category}\")]", source);
-                else
-                    Assert.DoesNotContain("[Trait(", source);
-            });
+            await Assert.That(testFiles).IsNotEmpty();
+            foreach (var file in testFiles)
+{
+    var source = File.ReadAllText(file);
+    if (expectTrait)
+        await Assert.That(source).Contains($"[Property(\"Category\", \"{category}\")]");
+    else
+        await Assert.That(source).DoesNotContain("[Property(");
+}
         }
     }
 
@@ -141,10 +140,10 @@ public class OutstandingCountSuiteGenerationTests : IDisposable
     private string SuiteDirectory(string folder) =>
         Path.Combine(_testDirectory, "Outbox", folder, "Generated", "OutstandingCount");
 
-    private static string[] TemplateNames()
+    private static async Task<string[]> TemplateNames()
     {
         var folder = Path.Combine(AppContext.BaseDirectory, "Templates", "Outbox", "OutstandingCount");
-        Assert.True(Directory.Exists(folder), $"The suite's template folder {folder} does not exist");
+        await Assert.That(Directory.Exists(folder)).IsTrue().Because($"The suite's template folder {folder} does not exist");
         return Directory.GetFiles(folder, "*.liquid")
             .Select(file => Path.GetFileNameWithoutExtension(file))
             .ToArray();

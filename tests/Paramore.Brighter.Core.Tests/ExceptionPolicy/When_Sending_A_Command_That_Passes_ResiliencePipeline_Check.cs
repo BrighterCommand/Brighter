@@ -1,8 +1,7 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
-using Xunit;
 using Paramore.Brighter.Policies.Handlers;
 using Polly;
 using Polly.Registry;
@@ -11,52 +10,38 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Polly.Retry;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy;
-
 public class CommandProcessorWithExceptionResiliencePipelineNothingThrowTests
 {
     private readonly CommandProcessor _commandProcessor;
     private readonly MyCommand _myCommand = new MyCommand();
     private int _retryCount;
-
     public CommandProcessorWithExceptionResiliencePipelineNothingThrowTests()
     {
         var registry = new SubscriberRegistry();
         registry.Register<MyCommand, MyDoesNotFailResiliencePipelineHandler>();
-
         var container = new ServiceCollection();
         container.AddTransient<MyDoesNotFailResiliencePipelineHandler>();
         container.AddTransient<ResilienceExceptionPolicyHandler<MyCommand>>();
-        container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
-
+        container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
         var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            
         var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>();
-        resiliencePipelineRegistry.TryAddBuilder("MyDivideByZeroPolicy", 
-            (builder, _) => builder.AddRetry(new RetryStrategyOptions
-            {
-                BackoffType = DelayBackoffType.Linear,
-                Delay = TimeSpan.FromSeconds(1),
-                OnRetry = _ =>
-                {
-                    _retryCount++;
-                    return new ValueTask();
-                }
-            }));
-
+        resiliencePipelineRegistry.TryAddBuilder("MyDivideByZeroPolicy", (builder, _) => builder.AddRetry(new RetryStrategyOptions { BackoffType = DelayBackoffType.Linear, Delay = TimeSpan.FromSeconds(1), OnRetry = _ =>
+        {
+            _retryCount++;
+            return new ValueTask();
+        } }));
         MyDoesNotFailResiliencePipelineHandler.ReceivedCommand = false;
-
         _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), resiliencePipelineRegistry, new InMemorySchedulerFactory());
     }
 
     //We have to catch the final exception that bubbles out after retry
-    [Fact]
-    public void When_Sending_A_Command_That_Passes_Policy_Check()
+    [Test]
+    public async Task When_Sending_A_Command_That_Passes_Policy_Check()
     {
         _commandProcessor.Send(_myCommand);
-
         // Should send the command to the command handler
-        Assert.True(MyDoesNotFailResiliencePipelineHandler.Shouldreceive(_myCommand));
+        await Assert.That(MyDoesNotFailResiliencePipelineHandler.Shouldreceive(_myCommand)).IsTrue();
         // Should not retry
-        Assert.Equal(0, _retryCount);
+        await Assert.That(_retryCount).IsEqualTo(0);
     }
 }

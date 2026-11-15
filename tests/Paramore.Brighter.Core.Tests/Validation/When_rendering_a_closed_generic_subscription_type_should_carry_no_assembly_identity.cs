@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class RenderingClosedGenericSubscriptionTypeCarriesNoAssemblyIdentityTests
 {
-    [Fact]
-    public void When_rendering_a_closed_generic_subscription_type_should_carry_no_assembly_identity()
+    [Test]
+    public async System.Threading.Tasks.Task When_rendering_a_closed_generic_subscription_type_should_carry_no_assembly_identity()
     {
         // Arrange — the AC-1 configuration: a closed generic subscription type
         // (Subscription<FakeChannelFactoryRequest>) handed a channel factory it does not declare
@@ -48,11 +48,11 @@ public class RenderingClosedGenericSubscriptionTypeCarriesNoAssemblyIdentityTest
         var results = spec.Accept(collector).ToList();
 
         // Assert — the message carries no assembly identity or arity suffix for the closed generic type
-        var result = Assert.Single(results);
+        var result = await Assert.That(results).HasSingleItem();
         var message = result.Error!.Message;
-        Assert.DoesNotContain("Version=", message);
-        Assert.DoesNotContain("Culture=", message);
-        Assert.DoesNotContain("PublicKeyToken=", message);
-        Assert.DoesNotContain("`1", message);
+        await Assert.That(message).DoesNotContain("Version=");
+        await Assert.That(message).DoesNotContain("Culture=");
+        await Assert.That(message).DoesNotContain("PublicKeyToken=");
+        await Assert.That(message).DoesNotContain("`1");
     }
 }

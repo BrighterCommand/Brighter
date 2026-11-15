@@ -30,17 +30,16 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Sqlite;
 using Paramore.Brighter.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests.RelationalConfiguration;
 
 public class RelationalOutboxConfigurationFallbackTests
 {
-    [Theory]
-    [InlineData(ServiceLifetime.Transient)]
-    [InlineData(ServiceLifetime.Scoped)]
-    [InlineData(ServiceLifetime.Singleton)]
-    public void When_configuring_relational_producers_should_reuse_outbox_configuration(ServiceLifetime lifetime)
+    [Test]
+    [Arguments(ServiceLifetime.Transient)]
+    [Arguments(ServiceLifetime.Scoped)]
+    [Arguments(ServiceLifetime.Singleton)]
+    public async Task When_configuring_relational_producers_should_reuse_outbox_configuration(ServiceLifetime lifetime)
     {
         //Arrange
         var configuration = new RelationalDatabaseConfiguration("Data Source=:memory:");
@@ -60,12 +59,12 @@ public class RelationalOutboxConfigurationFallbackTests
         var resolvedConfiguration = firstScope.ServiceProvider.GetService<IAmARelationalDatabaseConfiguration>();
 
         //Assert
-        Assert.Same(configuration, resolvedConfiguration);
-        Assert.Same(configuration, secondScope.ServiceProvider.GetRequiredService<IAmARelationalDatabaseConfiguration>());
-        Assert.Same(outbox, provider.GetRequiredService<IAmAnOutbox>());
-        Assert.NotNull(provider.GetRequiredService<IAmACommandProcessor>());
-        Assert.IsType<SqliteTransactionProvider>(firstScope.ServiceProvider.GetRequiredService<IAmABoxTransactionProvider<DbTransaction>>());
-        Assert.IsType<SqliteTransactionProvider>(firstScope.ServiceProvider.GetRequiredService<IAmATransactionConnectionProvider>());
+        await Assert.That(resolvedConfiguration).IsSameReferenceAs(configuration);
+        await Assert.That(secondScope.ServiceProvider.GetRequiredService<IAmARelationalDatabaseConfiguration>()).IsSameReferenceAs(configuration);
+        await Assert.That(provider.GetRequiredService<IAmAnOutbox>()).IsSameReferenceAs(outbox);
+        await Assert.That(provider.GetRequiredService<IAmACommandProcessor>()).IsNotNull();
+        await Assert.That(firstScope.ServiceProvider.GetRequiredService<IAmABoxTransactionProvider<DbTransaction>>()).IsTypeOf<SqliteTransactionProvider>();
+        await Assert.That(firstScope.ServiceProvider.GetRequiredService<IAmATransactionConnectionProvider>()).IsTypeOf<SqliteTransactionProvider>();
 
         var firstTransaction = firstScope.ServiceProvider.GetRequiredService<IAmABoxTransactionProvider>();
         var repeatedTransaction = firstScope.ServiceProvider.GetRequiredService<IAmABoxTransactionProvider>();
@@ -73,29 +72,29 @@ public class RelationalOutboxConfigurationFallbackTests
         var firstConnection = firstScope.ServiceProvider.GetRequiredService<IAmARelationalDbConnectionProvider>();
         var repeatedConnection = firstScope.ServiceProvider.GetRequiredService<IAmARelationalDbConnectionProvider>();
         var secondConnection = secondScope.ServiceProvider.GetRequiredService<IAmARelationalDbConnectionProvider>();
-        Assert.IsType<SqliteTransactionProvider>(firstTransaction);
-        Assert.IsType<SqliteConnectionProvider>(firstConnection);
+        await Assert.That(firstTransaction).IsTypeOf<SqliteTransactionProvider>();
+        await Assert.That(firstConnection).IsTypeOf<SqliteConnectionProvider>();
 
         if (lifetime == ServiceLifetime.Transient)
         {
-            Assert.NotSame(firstTransaction, repeatedTransaction);
-            Assert.NotSame(firstConnection, repeatedConnection);
+            await Assert.That(repeatedTransaction).IsNotSameReferenceAs(firstTransaction);
+            await Assert.That(repeatedConnection).IsNotSameReferenceAs(firstConnection);
         }
         else
         {
-            Assert.Same(firstTransaction, repeatedTransaction);
-            Assert.Same(firstConnection, repeatedConnection);
+            await Assert.That(repeatedTransaction).IsSameReferenceAs(firstTransaction);
+            await Assert.That(repeatedConnection).IsSameReferenceAs(firstConnection);
         }
 
         if (lifetime == ServiceLifetime.Singleton)
         {
-            Assert.Same(firstTransaction, secondTransaction);
-            Assert.Same(firstConnection, secondConnection);
+            await Assert.That(secondTransaction).IsSameReferenceAs(firstTransaction);
+            await Assert.That(secondConnection).IsSameReferenceAs(firstConnection);
         }
         else
         {
-            Assert.NotSame(firstTransaction, secondTransaction);
-            Assert.NotSame(firstConnection, secondConnection);
+            await Assert.That(secondTransaction).IsNotSameReferenceAs(firstTransaction);
+            await Assert.That(secondConnection).IsNotSameReferenceAs(firstConnection);
         }
     }
 }

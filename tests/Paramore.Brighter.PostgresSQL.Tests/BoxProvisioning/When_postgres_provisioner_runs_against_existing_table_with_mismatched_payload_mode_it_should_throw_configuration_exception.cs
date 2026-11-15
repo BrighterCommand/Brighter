@@ -27,17 +27,16 @@ using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.Inbox.Postgres;
 using Paramore.Brighter.Outbox.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class PostgreSqlPayloadModeMismatchTests : IAsyncLifetime
+public class PostgreSqlPayloadModeMismatchTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _outboxTableName = $"test_outbox_{Guid.NewGuid():N}";
     private readonly string _inboxTableName = $"test_inbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_existing_outbox_body_is_text_and_provisioner_is_configured_for_binary_it_should_throw_configuration_exception()
     {
         //Arrange
@@ -56,11 +55,11 @@ public class PostgreSqlPayloadModeMismatchTests : IAsyncLifetime
             new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
         //Act & Assert
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
-        Assert.Contains("mismatch", exception.Message, StringComparison.OrdinalIgnoreCase);
+        var exception = await Assert.That(() => provisioner.ProvisionAsync()).ThrowsExactly<ConfigurationException>();
+        await Assert.That(exception.Message).Contains("mismatch");
     }
 
-    [Fact]
+    [Test]
     public async Task When_existing_outbox_body_is_bytea_and_provisioner_is_configured_for_text_it_should_throw_configuration_exception()
     {
         //Arrange
@@ -79,11 +78,11 @@ public class PostgreSqlPayloadModeMismatchTests : IAsyncLifetime
             new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
         //Act & Assert
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
-        Assert.Contains("mismatch", exception.Message, StringComparison.OrdinalIgnoreCase);
+        var exception = await Assert.That(() => provisioner.ProvisionAsync()).ThrowsExactly<ConfigurationException>();
+        await Assert.That(exception.Message).Contains("mismatch");
     }
 
-    [Fact]
+    [Test]
     public async Task When_existing_inbox_commandbody_is_text_and_provisioner_is_configured_for_binary_it_should_throw_configuration_exception()
     {
         //Arrange
@@ -102,11 +101,11 @@ public class PostgreSqlPayloadModeMismatchTests : IAsyncLifetime
             new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
         //Act & Assert
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
-        Assert.Contains("mismatch", exception.Message, StringComparison.OrdinalIgnoreCase);
+        var exception = await Assert.That(() => provisioner.ProvisionAsync()).ThrowsExactly<ConfigurationException>();
+        await Assert.That(exception.Message).Contains("mismatch");
     }
 
-    [Fact]
+    [Test]
     public async Task When_existing_inbox_commandbody_is_bytea_and_provisioner_is_configured_for_text_it_should_throw_configuration_exception()
     {
         //Arrange
@@ -125,8 +124,8 @@ public class PostgreSqlPayloadModeMismatchTests : IAsyncLifetime
             new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
         //Act & Assert
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
-        Assert.Contains("mismatch", exception.Message, StringComparison.OrdinalIgnoreCase);
+        var exception = await Assert.That(() => provisioner.ProvisionAsync()).ThrowsExactly<ConfigurationException>();
+        await Assert.That(exception.Message).Contains("mismatch");
     }
 
     private async Task CreateTable(string ddl)
@@ -138,8 +137,10 @@ public class PostgreSqlPayloadModeMismatchTests : IAsyncLifetime
         await command.ExecuteNonQueryAsync();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

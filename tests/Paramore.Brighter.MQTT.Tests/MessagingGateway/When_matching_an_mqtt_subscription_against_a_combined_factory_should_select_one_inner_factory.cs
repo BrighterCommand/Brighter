@@ -25,15 +25,15 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.MQTT;
 using Paramore.Brighter.MQTT.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway;
 
-[Trait("Category", "MQTT")]
+[Property("Category", "MQTT")]
 public class MqttCombinedChannelFactoryRoutingTests
 {
-    [Fact]
-    public void When_matching_an_mqtt_subscription_against_a_combined_factory_should_select_one_inner_factory()
+    [Test]
+    public async System.Threading.Tasks.Task When_matching_an_mqtt_subscription_against_a_combined_factory_should_select_one_inner_factory()
     {
         // Arrange — construction only, so no broker connection is made (NFR-3): the MQTT ChannelFactory
         // wraps a consumer factory that only dials the broker when Create/CreateAsync is called
@@ -57,6 +57,6 @@ public class MqttCombinedChannelFactoryRoutingTests
             .Count(factoryType => factoryType == subscription.ChannelFactoryType);
 
         // Assert
-        Assert.Equal(1, matchingInnerFactories);
+        await Assert.That(matchingInnerFactories).IsEqualTo(1);
     }
 }

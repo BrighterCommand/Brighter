@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,11 +34,11 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
-[Collection(StaleMessageLoggingCollection.Name)]
+[NotInParallel]
+[ClassDataSource<StaleMessageLoggingFixture>(Shared = SharedType.PerTestSession)]
 public class StoppingWithACountInProgressTests
 {
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
@@ -50,7 +50,7 @@ public class StoppingWithACountInProgressTests
         _logs = fixture.Logs;
     }
 
-    [Fact]
+    [Test]
     public async Task When_stopping_with_a_count_in_progress_should_cancel_it_and_return_within_the_timeout()
     {
         //Arrange
@@ -77,11 +77,11 @@ public class StoppingWithACountInProgressTests
         });
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromMinutes(1));
-        Assert.True(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5))).IsTrue();
         var token = outbox.CountCalls.Single().CancellationToken;
-        Assert.True(AdvanceReturns(TimeSpan.FromSeconds(5)));
+        await Assert.That(AdvanceReturns(TimeSpan.FromSeconds(5))).IsTrue();
 
         bool cancelled;
         bool waitsForTheTimeout;
@@ -105,14 +105,14 @@ public class StoppingWithACountInProgressTests
         }
 
         //Assert
-        Assert.True(cancelled);
-        Assert.True(waitsForTheTimeout);
-        Assert.True(timeoutReturned);
-        Assert.True(stopped);
-        Assert.True(laterReturned);
-        Assert.Equal([s_start.AddMinutes(1)], outbox.CountCalls.Select(call => call.CalledAt));
-        Assert.DoesNotContain(_logs.Entries, entry => entry.LogLevel >= LogLevel.Warning);
-        Assert.Single(_logs.Entries, entry => entry.LogLevel == LogLevel.Information && entry.Message.Contains("stopped"));
+        await Assert.That(cancelled).IsTrue();
+        await Assert.That(waitsForTheTimeout).IsTrue();
+        await Assert.That(timeoutReturned).IsTrue();
+        await Assert.That(stopped).IsTrue();
+        await Assert.That(laterReturned).IsTrue();
+        await Assert.That(outbox.CountCalls.Select(call => call.CalledAt)).IsEqualTo([s_start.AddMinutes(1)]);
+        await Assert.That(System.Linq.Enumerable.Any(_logs.Entries, entry => entry.LogLevel >= LogLevel.Warning)).IsFalse();
+        await Assert.That(System.Linq.Enumerable.Where(_logs.Entries, entry => entry.LogLevel == LogLevel.Information && entry.Message.Contains("stopped"))).HasSingleItem();
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
@@ -124,6 +124,6 @@ public class StoppingWithACountInProgressTests
         return SpinWait.SpinUntil(() => advance.IsCompleted, TimeSpan.FromSeconds(5));
     }
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

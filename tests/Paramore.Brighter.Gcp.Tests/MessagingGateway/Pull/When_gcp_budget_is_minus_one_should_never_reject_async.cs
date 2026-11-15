@@ -28,7 +28,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
@@ -41,8 +40,8 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// This is the "-1" clause of AC-35 and is unguarded — it holds regardless of R-13's branch,
 /// because the guard lives in the pump (<c>MessagePump.cs:171</c>), not in the GCP consumers.
 /// </summary>
-[Trait("Category", "GcpPubSubPull")]
-[Collection("Pull")]
+[Property("Category", "GcpPubSubPull")]
+[NotInParallel("Pull")]
 public class GcpPullBudgetMinusOneNeverRejectsProactorTests
 {
     /// <summary>
@@ -50,7 +49,7 @@ public class GcpPullBudgetMinusOneNeverRejectsProactorTests
     /// key, the pump runs for 60 s. The dispatch count exceeds 3, no <c>DeliveryError</c> rejection
     /// is issued, and the Brighter DLQ is empty (R-6, AC-5).
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_gcp_budget_is_minus_one_should_never_reject_async()
     {
         // Arrange
@@ -116,12 +115,11 @@ public class GcpPullBudgetMinusOneNeverRejectsProactorTests
             var dispatchCount = ConformanceDeferredPump.GetDispatchCount(key);
 
             // Assert — R-6 / AC-5: handler invoked more than 3 times with budget -1
-            Assert.True(dispatchCount > 3,
-                $"Expected dispatch count > 3 after 60 s with requeueCount: -1, but was {dispatchCount}");
+            await Assert.That(dispatchCount > 3).IsTrue().Because($"Expected dispatch count > 3 after 60 s with requeueCount: -1, but was {dispatchCount}");
 
             // No DeliveryError rejection was issued — the Brighter DLQ must be empty
             var dlqMessage = await provider.GetMessageFromDeadLetterQueueAsync(subscription);
-            Assert.Equal(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
         }
         finally
         {

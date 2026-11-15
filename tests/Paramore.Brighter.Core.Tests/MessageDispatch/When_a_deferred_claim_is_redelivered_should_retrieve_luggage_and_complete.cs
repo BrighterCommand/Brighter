@@ -27,18 +27,17 @@ using System;
 using Paramore.Brighter.Actions;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.MessageDispatch;
 
 public class ClaimCheckRedeliveryTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
-    public void When_a_deferred_claim_is_redelivered_should_retrieve_luggage_and_complete(bool useAsync, bool retain)
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
+    public async Task When_a_deferred_claim_is_redelivered_should_retrieve_luggage_and_complete(bool useAsync, bool retain)
     {
         //Arrange
         using var scenario = new ClaimCheckPumpScenario(useAsync, retain, dataRefOnly: true);
@@ -49,14 +48,17 @@ public class ClaimCheckRedeliveryTests
         scenario.Run();
 
         //Assert
-        Assert.Equal(new[] { scenario.Payload, scenario.Payload }, scenario.HandledPayloads);
-        Assert.Equal(1, scenario.Channel.RequeueCount);
-        Assert.Equal(scenario.ClaimBody, scenario.RequeuedBody);
-        Assert.True(scenario.LuggageAtRequeue);
-        Assert.Equal(1, scenario.Channel.AcknowledgeCount);
-        Assert.True(Assert.Single(scenario.LuggageAtAcknowledge));
-        Assert.Equal(retain, scenario.Storage.HasClaim(scenario.ClaimId));
-        Assert.Empty(scenario.Channel.Rejected);
-        Assert.All(scenario.ScopedStores, storage => Assert.True(storage.IsDisposed));
+        await Assert.That(scenario.HandledPayloads).IsEqualTo(new[] { scenario.Payload, scenario.Payload });
+        await Assert.That(scenario.Channel.RequeueCount).IsEqualTo(1);
+        await Assert.That(scenario.RequeuedBody).IsEqualTo(scenario.ClaimBody);
+        await Assert.That(scenario.LuggageAtRequeue).IsTrue();
+        await Assert.That(scenario.Channel.AcknowledgeCount).IsEqualTo(1);
+        await Assert.That((await Assert.That(scenario.LuggageAtAcknowledge).HasSingleItem())).IsTrue();
+        await Assert.That(scenario.Storage.HasClaim(scenario.ClaimId)).IsEqualTo(retain);
+        await Assert.That(scenario.Channel.Rejected).IsEmpty();
+        foreach (var storage in scenario.ScopedStores)
+{
+    await Assert.That(storage.IsDisposed).IsTrue();
+}
     }
 }

@@ -27,8 +27,7 @@ using System.Diagnostics;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 
 /// <summary>
@@ -42,7 +41,7 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 /// The failure is the client's own: once the consumer is disposed, the RocketMQ <c>SimpleConsumer</c>
 /// refuses the call because it is not running.
 /// </remarks>
-[Trait("Category", "RocketMQ")]
+[Property("Category", "RocketMQ")]
 public class RocketMqBrokerCallFailureTests : IDisposable
 {
     private const string Topic = "rmq_broker_call_fails_r";
@@ -85,37 +84,39 @@ public class RocketMqBrokerCallFailureTests : IDisposable
         _producer.Dispose();
     }
 
-    [Fact]
-    public void When_the_rocketmq_broker_call_behind_requeue_fails_should_return_true_and_leave_the_lease()
+    [Test]
+    public async Task When_the_rocketmq_broker_call_behind_requeue_fails_should_return_true_and_leave_the_lease()
     {
         // Arrange - a received message, then a consumer that can no longer reach the broker
-        var received = SendAndReceive();
+        var received = await SendAndReceive();
         DisposeConsumer();
 
         // Act
         var requeued = false;
-        var exception = Record.Exception(() => requeued = _consumer.Requeue(received, TimeSpan.Zero));
+        Exception? exception = null;
+        try { requeued = _consumer.Requeue(received, TimeSpan.Zero); } catch (Exception e) { exception = e; }
 
         // Assert
-        Assert.Null(exception);
-        Assert.True(requeued);
+        await Assert.That(exception).IsNull();
+        await Assert.That(requeued).IsTrue();
     }
 
-    [Fact]
-    public void When_the_rocketmq_broker_call_behind_nack_fails_should_not_throw()
+    [Test]
+    public async Task When_the_rocketmq_broker_call_behind_nack_fails_should_not_throw()
     {
         // Arrange - a received message, then a consumer that can no longer reach the broker
-        var received = SendAndReceive();
+        var received = await SendAndReceive();
         DisposeConsumer();
 
         // Act
-        var exception = Record.Exception(() => _consumer.Nack(received));
+        Exception? exception = null;
+        try { _consumer.Nack(received); } catch (Exception e) { exception = e; }
 
         // Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 
-    private Message SendAndReceive()
+    private async Task<Message> SendAndReceive()
     {
         var routingKey = new RoutingKey(Topic);
         var message = new Message(
@@ -124,7 +125,7 @@ public class RocketMqBrokerCallFailureTests : IDisposable
         _producer.Send(message);
 
         var received = ReceiveOurs(message.Id);
-        Assert.NotNull(received);
+        await Assert.That(received).IsNotNull();
         return received!;
     }
 

@@ -24,13 +24,14 @@ THE SOFTWARE. */
 
 using System.Reflection;
 using Paramore.Brighter.Logging;
-using Xunit.Sdk;
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
 
-internal sealed class ResetApplicationLoggingAttribute : BeforeAfterTestAttribute
+public static class ApplicationLoggingResetHooks
 {
-    public override void Before(MethodInfo methodUnderTest) => ApplicationLogging.LoggerFactory = Initializer.Factory;
+    [BeforeEvery(HookType.Test)]
+    public static void Before() => ApplicationLogging.LoggerFactory = Initializer.Factory;
 
-    public override void After(MethodInfo methodUnderTest) => ApplicationLogging.LoggerFactory = Initializer.Factory;
+    [AfterEvery(HookType.Test)]
+    public static void After() => ApplicationLogging.LoggerFactory = Initializer.Factory;
 }

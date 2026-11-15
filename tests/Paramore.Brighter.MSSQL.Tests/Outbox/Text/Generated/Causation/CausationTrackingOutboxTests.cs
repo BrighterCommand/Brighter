@@ -28,12 +28,13 @@ THE SOFTWARE. */
 // </auto-generated>
 
 using Paramore.Brighter.Base.Test.Outbox;
-using Xunit;
+using TUnit.Core;
+using TUnit.Assertions;
 
 namespace Paramore.Brighter.MSSQL.Tests.Outbox.Text.Causation;
 
-[Trait("Category", "MSSQL")]
-[Collection("MSSQLTextOutbox")]
+[Property("Category", "MSSQL")]
+[NotInParallel("MSSQLTextOutbox")]
 public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<System.Data.Common.DbTransaction>
 {
     private readonly MSSQLTextOutboxProvider _outboxProvider = new();
