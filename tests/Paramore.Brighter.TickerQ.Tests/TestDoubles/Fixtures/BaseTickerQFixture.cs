@@ -18,6 +18,7 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
         public IAmACommandProcessor Processor { get; }
         public InMemoryOutbox Outbox { get; }
         public InternalBus InternalBus { get; } = new();
+        public InMemoryMessageProducer MessageProducer { get; }
         public RoutingKey RoutingKey { get; }
         public TimeProvider TimeProvider { get; }
         private readonly IServiceCollection _serviceCollection;
@@ -44,9 +45,11 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
                     Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(1))
             };
 
+            MessageProducer = new InMemoryMessageProducer(InternalBus,
+                new Publication { Topic = RoutingKey, RequestType = typeof(MyEvent) });
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                [RoutingKey] = new InMemoryMessageProducer(InternalBus, new Publication { Topic = RoutingKey, RequestType = typeof(MyEvent) })
+                [RoutingKey] = MessageProducer
             });
 
             var messageMapperRegistry = GetMapperRegistery();
