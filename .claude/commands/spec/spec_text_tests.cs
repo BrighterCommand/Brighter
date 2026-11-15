@@ -26,7 +26,7 @@ var registry = new List<RoutingTextBlock>
     new("gate-run-contract", ".claude/commands/spec/README.md", []),
     new("sub-flow-instructions", ".claude/commands/spec/README.md", [".claude/commands/spec/approve.md"]),
     new("provenance-commands", ".claude/commands/spec/README.md", [".claude/commands/spec/approve.md"]),
-    new("installation-steps", ".claude/commands/spec/README.md", [".claude/commands/spec/route.md"]),
+    new("installation-steps", ".claude/commands/spec/README.md", [".claude/commands/spec/route.md", ".claude/commands/spec/new.md"]),
     new("write-order", ".claude/commands/spec/README.md", [".claude/commands/spec/route.md"])
 };
 
@@ -56,7 +56,7 @@ var templateRegistry = new List<TemplateExpectation>
     new(".claude/commands/spec/README.md", ".claude/commands/spec/tasks.md", ["Next-step line", "Not on the route", "Another producer"]),
     new(".claude/commands/spec/README.md", ".claude/commands/spec/approve.md", ["Next-step line", "Step not on the slip", "Another marker-writer", "Artefacts missing", "No usable entry", "Sub-flow failed, questions", "Sub-flow failed, actions", "Step approved"]),
     new(".claude/commands/spec/README.md", ".claude/commands/adr/adr.md", ["Next-step line", "No design step"]),
-    new(".claude/commands/spec/README.md", ".claude/commands/spec/new.md", ["Flow not usable"]),
+    new(".claude/commands/spec/README.md", ".claude/commands/spec/new.md", ["Flow not usable", "Next-step line", "New spec failed", "Start failed", "Spec name", "Spec exists", "Spec ignored", "Post-check"]),
     new(".claude/commands/spec/README.md", ".claude/commands/spec/route.md", ["Next-step line", "Route usage", "Route spec name", "Route target not usable", "Already on target", "No reason", "Route changed", "Installation failed", "Post-check"])
 };
 
