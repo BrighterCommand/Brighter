@@ -232,9 +232,9 @@ You can (and should) create multiple focused ADRs for different aspects of a req
 
 ---
 
-### `/spec:approve <phase> [adr-number]`
+### `/spec:approve <step> [selector]`
 
-Approve a specification phase or specific ADR.
+Approve a step on the spec's slip. The step must be on the slip and `/spec:approve` must be its marker-writer. The command looks up the step's artefact kind in the approval table, runs that kind's approval sub-flow (nothing for `requirements` and `tasks`, the `/adr:*` commands for `design`), and only when every sub-flow command has finished writes the step's marker with a provenance line. Words after the step name are passed to the sub-flow as selectors.
 
 **Approve Requirements:**
 ```bash
@@ -247,8 +247,8 @@ Approve a specification phase or specific ADR.
 ```bash
 /spec:approve design
 ```
-- Updates Status from "Proposed" to "Accepted" in ALL ADRs for current spec
-- Creates `.design-approved` marker
+- The `design` sub-flow runs `/adr:accept` (flips every ADR in `.adr-list` from "Proposed" to "Accepted"), `/adr:retire-superseded` (retires an older ADR an approved one supersedes), `/adr:regenerate-index` and `/adr:report-approval`
+- Writes `.design-approved` with a provenance line once the sub-flow completes
 - Points you at `/spec:tasks` — there is one task list and one route to it. Attended vs.
   unattended is not a fork here; it is a **gear** you pick (and change) at implementation time
   with `/spec:gear`.
@@ -257,9 +257,9 @@ Approve a specification phase or specific ADR.
 ```bash
 /spec:approve design 0043
 ```
-- Updates Status to "Accepted" only for ADR 0043
+- `0043` is a selector word: `/adr:accept` accepts only ADR 0043
 - Useful for incremental approval as ADRs are reviewed
-- Once all ADRs approved, can create `.design-approved` marker
+- The marker is written by the same run, once the sub-flow completes
 
 **Approve Tasks:**
 ```bash

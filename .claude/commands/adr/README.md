@@ -48,7 +48,7 @@ Every ADR carries a YAML **frontmatter** block (`id`, `title`, `status`, `author
 The schema, status vocabulary, tag taxonomy, and identity rule are defined once in
 [`.agent_instructions/adr_frontmatter.md`](../../../.agent_instructions/adr_frontmatter.md).
 
-Two skills manage it (both are invoked *by* `/adr`, `/spec:design`, and `/spec:approve`, but can be
+Two skills manage it (both are invoked *by* `/adr`, `/spec:design`, and the `design` sub-flow commands `/adr:accept` and `/adr:retire-superseded` that `/spec:approve` runs, but can be
 run directly):
 
 - **`read_adr_metadata`** (`read_adr_metadata.md`) — reads only the frontmatter of each ADR and
@@ -62,7 +62,7 @@ run directly):
 hint — parallel branches have collided on numbers and we do not renumber. Tooling keys off `id`.
 
 **Derived index** — `docs/adr/index.md` is a table generated *from* the frontmatter. It is a
-regenerable cache: **never hand-edit it**. `/adr` and `/spec:approve` refresh it automatically; to
+regenerable cache: **never hand-edit it**. `/adr` and `/adr:regenerate-index` (run by `/spec:approve design`) refresh it automatically; to
 regenerate by hand run the single canonical command:
 
 ```bash
@@ -191,7 +191,7 @@ To change status from "Proposed" to "Accepted":
 /spec:approve design
 ```
 
-This updates the Status field in the ADR from "Proposed" to "Accepted".
+This runs the `design` approval sub-flow, whose `/adr:accept` updates the Status field in each ADR from "Proposed" to "Accepted".
 
 ## Approval sub-flow commands
 
