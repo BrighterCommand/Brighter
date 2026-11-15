@@ -759,7 +759,8 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
             lock (Lock)
             {
                 DateTimeOffset? prior = _stamps.TryGetValue(topic, out var viewed) ? viewed : null;
-                _stamps[topic] = stamp;
+                if (prior is null || prior < stamp)
+                    _stamps[topic] = stamp;
                 return prior;
             }
         }
