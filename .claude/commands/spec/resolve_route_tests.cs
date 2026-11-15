@@ -50,6 +50,7 @@ if (ResolverRuns(repositoryRoot, reporter))
 }
 
 CheckShippedFlowDirectory(repositoryRoot, reporter);
+CheckDefinitionWithDefaultFlowsDirectory(repositoryRoot, reporter);
 CheckCreationRecords(repositoryRoot, reporter);
 CheckGeneratedTamperCases(repositoryRoot, reporter);
 
@@ -614,6 +615,23 @@ void CheckShippedFlowDirectory(string root, Reporter report)
         report.Fail("shipped flows", $"{ShippedFlows} does not hold {required}");
     foreach (var forbidden in new[] { "light.flow", "bugfix.flow" }.Where(names.Contains))
         report.Fail("shipped flows", $"{ShippedFlows} holds {forbidden}, which is fixture-only");
+}
+
+void CheckDefinitionWithDefaultFlowsDirectory(string root, Reporter report)
+{
+    const string check = "definition with the default flows directory";
+    report.Checked();
+    var result = RunProcess(root, "dotnet", ["run", ResolverScript, "--", FixtureSpecs, "--definition", "feature"]);
+    var line = SplitLines(result.Stdout).LastOrDefault(l => l.StartsWith(ReportPrefix, StringComparison.Ordinal));
+    if (result.ExitCode != 0 || line == null)
+    {
+        report.Fail(check, $"expected exit 0 and a report line, got exit {result.ExitCode}");
+        return;
+    }
+
+    var actual = JsonNode.Parse(line[ReportPrefix.Length..])!;
+    if (actual["valid"]?.GetValue<bool>() != true)
+        report.Fail(check, "expected the shipped feature definition to be valid");
 }
 
 void CheckCreationRecords(string root, Reporter report)
