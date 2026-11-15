@@ -51,7 +51,7 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     /// Creates a store over the trip table.
     /// </summary>
     /// <param name="connectionProvider">Provides the connection to the database that holds the trip table.</param>
-    /// <param name="tableName">The name of the trip table.</param>
+    /// <param name="tableName">The name of the trip table, at most 107 characters so that the index name <c>idx_{tableName}_EndedAt_TripTime</c> fits SQL Server's 128-character limit.</param>
     /// <param name="schemaName">The schema of the trip table, or null for the connection's default schema.</param>
     /// <param name="commandTimeout">
     /// How long a command may run, rounded up to whole seconds with a minimum of one. Null means 2 seconds, the default store timeout.
@@ -70,7 +70,7 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     /// </summary>
     /// <param name="configuration">Supplies the schema of the trip table when <paramref name="schemaName"/> is null.</param>
     /// <param name="connectionProvider">Provides the connection to the database that holds the trip table.</param>
-    /// <param name="tableName">The name of the trip table.</param>
+    /// <param name="tableName">The name of the trip table, at most 107 characters so that the index name <c>idx_{tableName}_EndedAt_TripTime</c> fits SQL Server's 128-character limit.</param>
     /// <param name="schemaName">The schema of the trip table, or null to use the configuration's schema.</param>
     /// <param name="commandTimeout">
     /// How long a command may run, rounded up to whole seconds with a minimum of one. Null means 2 seconds, the default store timeout.
@@ -92,7 +92,7 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     /// Brighter never runs this. Bind the parameter <c>@EndedBefore</c> to a UTC timestamp: only rows marked ended before it
     /// are deleted, and an unmarked row is never deleted.
     /// </remarks>
-    /// <param name="tableName">The name of the trip table.</param>
+    /// <param name="tableName">The name of the trip table, at most 107 characters so that the index name <c>idx_{tableName}_EndedAt_TripTime</c> fits SQL Server's 128-character limit.</param>
     /// <param name="schemaName">The schema of the trip table, or null for the connection's default schema.</param>
     /// <returns>The parameterised DELETE.</returns>
     public static string GetPurgeSql(string tableName, string? schemaName = null) =>
@@ -101,7 +101,7 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     /// <summary>
     /// Gets the SQL that creates the trip table and the secondary index that serves the read's ranged update.
     /// </summary>
-    /// <param name="tableName">The name of the trip table.</param>
+    /// <param name="tableName">The name of the trip table, at most 107 characters so that the index name <c>idx_{tableName}_EndedAt_TripTime</c> fits SQL Server's 128-character limit.</param>
     /// <param name="schemaName">The schema of the trip table, or null for the connection's default schema.</param>
     /// <returns>The DDL, safe to run more than once.</returns>
     public static string GetDDL(string tableName, string? schemaName = null)

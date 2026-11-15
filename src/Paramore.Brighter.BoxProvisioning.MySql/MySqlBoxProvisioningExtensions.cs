@@ -172,7 +172,7 @@ public static class MySqlBoxProvisioningExtensions
     /// </summary>
     /// <param name="options">The box provisioning options.</param>
     /// <param name="configuration">Supplies the connection string, and the schema when <paramref name="schemaName"/> is null.</param>
-    /// <param name="tableName">The trip table name.</param>
+    /// <param name="tableName">The name of the trip table, at most 43 characters so that the index name <c>idx_{tableName}_EndedAt_TripTime</c> fits MySQL's 64-character limit.</param>
     /// <param name="schemaName">The schema (database) holding the trip table, or null to use the configuration's schema.</param>
     public static BoxProvisioningOptions AddMySqlTrippedTopics(
         this BoxProvisioningOptions options,

@@ -149,7 +149,7 @@ public static class PostgreSqlBoxProvisioningExtensions
     /// </summary>
     /// <param name="options">The box provisioning options.</param>
     /// <param name="configuration">Supplies the connection string, and the schema when <paramref name="schemaName"/> is null.</param>
-    /// <param name="tableName">The trip table name.</param>
+    /// <param name="tableName">The name of the trip table, at most 40 characters so that the index name <c>idx_{tableName}_ended_at_trip_time</c> fits PostgreSQL's 63-character limit.</param>
     /// <param name="schemaName">The schema holding the trip table, or null to use the configuration's schema.</param>
     public static BoxProvisioningOptions AddPostgreSqlTrippedTopics(
         this BoxProvisioningOptions options,
