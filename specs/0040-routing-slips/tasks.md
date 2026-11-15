@@ -1161,7 +1161,7 @@ Depends on Phase 11.*
   - Acceptance: S1 green.
   - Traces to: 0091 step 5; FR-26, FR-17, FR-18; NFR-5. Depends on: T16.2.
 
-- [ ] **DOC: T16.4 — Document how to run the two routing test scripts and how a flow adds cases, and record FR-28's four migration differences**
+- [x] **DOC: T16.4 — Document how to run the two routing test scripts and how a flow adds cases, and record FR-28's four migration differences**
   - Do: in `.claude/commands/spec/README.md`:
     - In *Supporting scripts*, describe `resolve_route_tests.cs` and `spec_text_tests.cs`, how to run them, that they are not run in CI, the fixture tree, and how a flow adds cases and expectations without editing either script.
     - Add a section recording location, gating, commands and gate output as decisions for a later `/bugfix:*` migration.
