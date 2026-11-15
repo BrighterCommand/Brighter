@@ -1092,7 +1092,7 @@ Depends on Phase 11.*
   - Verify after: S1 green, including the provenance pattern. Behaviour: T17.1 (items 8–10 for provenance).
   - Traces to: 0090 steps 3 and 4, *The provenance line*; FR-12, FR-13, FR-29; AC-24, AC-25, AC-26, AC-27, AC-76, AC-77 (verified in T17.1). Depends on: T13.11.
 
-- [ ] **PROJECT: T14.2 — Verify that `/spec:approve` holds no ADR-specific instruction**
+- [x] **PROJECT: T14.2 — Verify that `/spec:approve` holds no ADR-specific instruction**
   - Do: run `grep -n -e write_adr_metadata -e supersede -e deprecate -e generate_adr_index -e index.md -e Accepted -e '\.adr-list' -e 'ADRs approved' .claude/commands/spec/approve.md`. It must match nothing (AC-79).
   - Traces to: 0090 step 6; FR-12, FR-29; AC-79. Depends on: T14.1.
 
