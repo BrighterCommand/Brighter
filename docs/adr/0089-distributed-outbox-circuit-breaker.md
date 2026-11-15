@@ -33,6 +33,8 @@ Amended 2026-11-15, after the code review, with the owner's approval: the three 
 
 Amended 2026-11-15, after the second code review: the store timeout is enforced by one timer, not two (see `IAmATrippedTopicStore`), and the Phase 2 *Ended rows are always announced* rule records the one case it does not cover, an `EndExpiredAsync` call that times out. No decision above changes.
 
+Amended 2026-11-15, after the third code review: `SqlBoxProvisioner`'s constructor throws `ArgumentOutOfRangeException` for a box type other than Outbox or Inbox. Its protected constructor used to accept any `BoxType` and its ternaries mapped every other value to the inbox table, so the new `BoxType.TrippedTopics` would have provisioned the wrong table. Trip tables are provisioned by `TrippedTopicsProvisioner`, not by this class. No decision above changes.
+
 ## Context
 
 The outbox sweeper leaves a circuit-broken topic out of its sweeps until the topic's cooldown ends. Today the cooldown is a count of sweeps, kept in each process, and it advances only on a sweep that obtained the distributed lock. An instance that stops obtaining the lock keeps its trips for ever, and when it next obtains the lock it holds back messages for a topic whose broker recovered long ago. No other instance can see or end those trips, and the health signals hide them rather than end them.
@@ -576,7 +578,7 @@ The following stay unchanged:
 - `OutboxSweeperState`, `RemedyCheckConvention` and `RemedyCondition`.
 - The `paramore.brighter.circuit_breaker.trips` counter and its attributes, and the positional members of `CircuitBreakerSpanInfo`.
 - The sync `Dispatch()` path, and the explicit path's choice not to consult tripped topics.
-- `SqlBoxProvisioner`, `SqlBoxMigrationRunner` and every outbox and inbox catalog.
+- `SqlBoxMigrationRunner` and every outbox and inbox catalog. `SqlBoxProvisioner` keeps its behaviour for an outbox or an inbox; see the 2026-11-15 amendment on its box type.
 - The control-bus breakers, which stay in-memory.
 
 ### Technology Choices
