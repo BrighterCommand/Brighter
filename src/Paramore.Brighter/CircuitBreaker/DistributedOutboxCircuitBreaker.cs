@@ -197,7 +197,6 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            _fallback.RecordTimeout();
             return null;
         }
     }
@@ -678,22 +677,22 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
                 return _unsharedTopics.Except(tripped).ToList();
         }
 
-        public void RecordTimeout()
-        {
-            lock (gate)
-                _lastFailure = TimeoutFailure;
-        }
-
         public void RecordReadTimeout()
         {
             lock (gate)
+            {
                 _isReadFailing = true;
+                _lastFailure = TimeoutFailure;
+            }
         }
 
         public void RecordWriteTimeout(IEnumerable<RoutingKey> topics)
         {
             lock (gate)
+            {
                 _unsharedTopics.UnionWith(topics);
+                _lastFailure = TimeoutFailure;
+            }
         }
 
         public void RecordWriteFailure(Exception failure, IEnumerable<RoutingKey> topics)
