@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AWSSDK.DynamoDBv2" />
     <PackageReference Include="FluentMigrator"/>
     <PackageReference Include="FluentMigrator.Runner"/>
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol"/>
