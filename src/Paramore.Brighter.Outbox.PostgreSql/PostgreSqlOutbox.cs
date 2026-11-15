@@ -66,10 +66,12 @@ public class PostgreSqlOutbox : RelationDatabaseOutbox
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Inserts handle message-ID conflicts in SQL. Any remaining error must propagate so a failed
+    /// write is not reported as successful, including violations of other unique constraints.
+    /// </remarks>
     protected override bool IsExceptionUniqueOrDuplicateIssue(Exception ex)
-    {
-        return ex is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation };
-    }
+        => false;
 
     /// <inheritdoc />
     protected override IDbDataParameter CreateSqlParameter(string parameterName, object? value)
