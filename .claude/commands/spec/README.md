@@ -158,10 +158,13 @@ Create a new specification for a feature.
 /spec:new kafka-dead-letter-queue
 ```
 
-Creates:
-- `specs/NNNN-kafka-dead-letter-queue/` directory
-- Updates `specs/.current-spec` to track active spec
-- Creates initial README.md in spec directory
+Always starts the `feature` flow. It first asks the resolver whether `feature` is usable, and creates nothing when it is not. Then it:
+- Refuses an empty name, or one containing `/`, `\`, `$`, a backtick or `"`, and a name git would ignore
+- Numbers the spec one higher than the highest `specs/NNNN-` directory, at least four digits (only whole directory names are unique)
+- Creates `specs/NNNN-kafka-dead-letter-queue/` with `mkdir` (no `-p`), so two starts cannot share a directory
+- Copies `feature.flow` to `.flow` in it, and writes `.flow.record` (the flow name, the slip's SHA-256 and the date), both tracked
+- Writes the initial `README.md`, then updates `specs/.current-spec` last, so the current spec changes only once the new spec is complete
+- Runs the resolver on the new spec and prints the result. There is no `--flow` option; another flow ships its own starter command
 
 ---
 
@@ -186,7 +189,8 @@ Create or update requirements specification for the current spec.
 - Optionally creates new GitHub issue
 
 **Features:**
-- Creates `specs/` directory if it doesn't exist
+- Needs a current spec: it stops, creating nothing, when `.current-spec` is missing, empty or stale (create one with `/spec:new`, or select one with `/spec:switch`)
+- Stops when `requirements` is not on the spec's route, or another command produces it
 - Shows next ADR number to use
 - Offers to create feature branch (or use current branch)
 - Template focuses on user requirements (technical details go in ADRs)
@@ -1173,6 +1177,8 @@ Brighter/
 │   └── 0001-feature-name/
 │       ├── .issue-number                  # GitHub issue number
 │       ├── .flow                          # The spec's routing slip (absent on legacy specs)
+│       ├── .flow.record                   # Creation record: flow name, slip hash, date — TRACKED
+│       ├── route-changes.md               # Log of /spec:route changes — TRACKED, created by the first change
 │       ├── .requirements-approved         # Approval marker
 │       ├── .design-approved               # Approval marker
 │       ├── .tasks-approved                # Approval marker
