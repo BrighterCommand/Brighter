@@ -694,6 +694,7 @@ internal static class SlipValidator
 
 internal static class DefinitionReport
 {
+    private const string DefaultFlowsDirectory = ".claude/flows";
     private const string FlowExtension = ".flow";
     private const string ApprovalTableFile = "approvals.md";
     private const string MalformedRule = "R0";
@@ -702,7 +703,7 @@ internal static class DefinitionReport
     public static JsonObject For(Invocation invocation)
     {
         var name = invocation.Target!;
-        var directory = invocation.FlowsDirectory!.TrimEnd('/');
+        var directory = (invocation.FlowsDirectory ?? DefaultFlowsDirectory).TrimEnd('/');
         if (!SlipSyntax.IsFlowName(name))
         {
             return Build(name, false, [Malformed("bad name", $"{name} is not a valid flow name.")], directory);
