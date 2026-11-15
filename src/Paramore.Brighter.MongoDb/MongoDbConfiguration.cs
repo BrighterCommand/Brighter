@@ -11,6 +11,9 @@ namespace Paramore.Brighter.MongoDb;
 /// </summary>
 public class MongoDbConfiguration : IAmAMongoDbConfiguration
 {
+    private static readonly TimeSpan s_maxOutstandingCountTimeout = TimeSpan.FromSeconds(int.MaxValue / 1000);
+    private TimeSpan? _outstandingCountTimeout;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDbConfiguration"/> class with a pre-configured
     /// MongoDB client and the database name.
@@ -57,4 +60,19 @@ public class MongoDbConfiguration : IAmAMongoDbConfiguration
 
     /// <inheritdoc />
     public MongoDbCollectionConfiguration? Locking { get; set; }
+
+    /// <inheritdoc />
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is not greater than zero or is more than 2147483 seconds.</exception>
+    public TimeSpan? OutstandingCountTimeout
+    {
+        get => _outstandingCountTimeout;
+        set
+        {
+            if (value <= TimeSpan.Zero || value > s_maxOutstandingCountTimeout)
+                throw new ArgumentOutOfRangeException(nameof(OutstandingCountTimeout), value,
+                    $"The outstanding count timeout must be greater than zero and no more than {s_maxOutstandingCountTimeout.TotalSeconds} seconds.");
+
+            _outstandingCountTimeout = value;
+        }
+    }
 }
