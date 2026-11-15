@@ -28,9 +28,7 @@ using System.Threading;
 
 namespace Paramore.Brighter.Outbox.Hosting;
 
-/// <summary>
-/// Asks a shared breaker to refresh its view on each sweeper tick, and from an overrun timer while a sweep is held
-/// </summary>
+// Asks a shared breaker to refresh its view on each sweeper tick, and from an overrun timer while a sweep is held
 internal sealed class SharedBreakerRefresh : IAmASharedBreakerRefresh
 {
     private readonly Action _startRefresh;
@@ -42,13 +40,7 @@ internal sealed class SharedBreakerRefresh : IAmASharedBreakerRefresh
     private TimeSpan? _lastRefreshRequest;
     private int _sweeping;
 
-    /// <summary>
-    /// Creates the refresh and its overrun timer, which stays disarmed until a sweep starts
-    /// </summary>
-    /// <param name="startRefresh">Asks the breaker to refresh its view; it must not throw</param>
-    /// <param name="interval">The sweeper's timer interval</param>
-    /// <param name="timeProvider">Creates the overrun timer</param>
-    /// <param name="elapsed">The time since the sweeper started, on the sweeper's clock</param>
+    // startRefresh must not throw
     public SharedBreakerRefresh(Action startRefresh, TimeSpan interval, TimeProvider timeProvider, Func<TimeSpan> elapsed)
     {
         _startRefresh = startRefresh;
@@ -58,7 +50,6 @@ internal sealed class SharedBreakerRefresh : IAmASharedBreakerRefresh
         _overrunTimer = timeProvider.CreateTimer(_ => RefreshWhileSweeping(), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
     }
 
-    /// <inheritdoc />
     public void RequestRefresh(TimeSpan now)
     {
         lock (_refreshLock)
@@ -72,7 +63,6 @@ internal sealed class SharedBreakerRefresh : IAmASharedBreakerRefresh
         _startRefresh();
     }
 
-    /// <inheritdoc />
     public IDisposable WhileSweeping()
     {
         Volatile.Write(ref _sweeping, 1);
@@ -80,7 +70,6 @@ internal sealed class SharedBreakerRefresh : IAmASharedBreakerRefresh
         return _sweepingScope;
     }
 
-    /// <inheritdoc />
     public void Dispose() => _overrunTimer.Dispose();
 
     private void EndSweeping()

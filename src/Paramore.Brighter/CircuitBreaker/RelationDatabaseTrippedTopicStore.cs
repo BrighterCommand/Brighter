@@ -133,15 +133,7 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
         IReadOnlyList<TopicTrip> trips,
         CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Runs an operation and, when it fails with a deadlock, runs it once more.
-    /// </summary>
-    /// <remarks>
-    /// The operation runs at most twice. A second failure, of any kind, reaches the caller.
-    /// </remarks>
-    /// <typeparam name="T">The type the operation returns.</typeparam>
-    /// <param name="operation">The operation, which must be safe to run again.</param>
-    /// <returns>What the operation returns.</returns>
+    // Runs the operation at most twice, the second time only after a deadlock; a second failure reaches the caller. The operation must be safe to run again.
     private async Task<T> RunWithDeadlockRetryAsync<T>(Func<Task<T>> operation)
     {
         try

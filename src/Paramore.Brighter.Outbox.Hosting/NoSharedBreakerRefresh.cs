@@ -27,24 +27,16 @@ using System;
 
 namespace Paramore.Brighter.Outbox.Hosting;
 
-/// <summary>
-/// The refresh of a sweeper whose breaker does not share trips: it requests nothing and creates no timer
-/// </summary>
+// The refresh of a sweeper whose breaker does not share trips: it requests nothing and creates no timer
 internal sealed class NoSharedBreakerRefresh : IAmASharedBreakerRefresh
 {
     private NoSharedBreakerRefresh() { }
 
-    /// <summary>
-    /// The only instance; it holds no state
-    /// </summary>
     public static NoSharedBreakerRefresh Instance { get; } = new();
 
-    /// <inheritdoc />
     public void RequestRefresh(TimeSpan now) { }
 
-    /// <inheritdoc />
     public IDisposable WhileSweeping() => this;
 
-    /// <inheritdoc />
     public void Dispose() { }
 }

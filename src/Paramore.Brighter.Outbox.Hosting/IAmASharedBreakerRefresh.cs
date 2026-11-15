@@ -27,20 +27,12 @@ using System;
 
 namespace Paramore.Brighter.Outbox.Hosting;
 
-/// <summary>
-/// Keeps a shared outbox circuit breaker's view fresh on behalf of the <see cref="TimedOutboxSweeper"/>
-/// </summary>
+// Keeps a shared outbox circuit breaker's view fresh on behalf of the TimedOutboxSweeper
 internal interface IAmASharedBreakerRefresh : IDisposable
 {
-    /// <summary>
-    /// Asks the breaker to refresh its view, unless a request was made less than half a timer interval before
-    /// </summary>
-    /// <param name="now">The time since the sweeper started, on the sweeper's clock</param>
+    // Asks the breaker to refresh its view, unless a request was made less than half a timer interval before; now is the time since the sweeper started
     void RequestRefresh(TimeSpan now);
 
-    /// <summary>
-    /// Keeps the view fresh until the returned scope is disposed, for a sweep that may outlast the timer interval
-    /// </summary>
-    /// <returns>A scope that ends the refresh when disposed</returns>
+    // Keeps the view fresh until the returned scope is disposed, for a sweep that may outlast the timer interval
     IDisposable WhileSweeping();
 }
