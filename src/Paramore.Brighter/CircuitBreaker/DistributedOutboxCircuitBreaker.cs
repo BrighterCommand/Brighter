@@ -374,16 +374,17 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
     private async Task WritePendingAsync(RoutingKey topic)
     {
+        var morePending = true;
         try
         {
-            while (await WriteNextPendingAsync(topic).ConfigureAwait(false))
-            {
-            }
+            while (morePending)
+                morePending = await WriteNextPendingAsync(topic).ConfigureAwait(false);
         }
         finally
         {
-            lock (_view.Lock)
-                _writesInFlight.Remove(topic);
+            if (morePending)
+                lock (_view.Lock)
+                    _writesInFlight.Remove(topic);
         }
     }
 
@@ -407,7 +408,13 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         }
 
         lock (_view.Lock)
-            return _pendingWrites.ContainsKey(topic);
+        {
+            if (_pendingWrites.ContainsKey(topic))
+                return true;
+
+            _writesInFlight.Remove(topic);
+            return false;
+        }
     }
 
     /// <inheritdoc />
