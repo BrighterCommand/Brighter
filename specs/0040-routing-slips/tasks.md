@@ -1211,7 +1211,7 @@ Depends on Phase 11.*
   - Traces to: 0092 step 10 items 1–5; FR-23, FR-24, FR-25, FR-28; AC-12, AC-16, AC-18, AC-45, AC-46, AC-47, AC-59. Depends on: T17.2.
   - Note: item 3 found that `gen-crlf` built its slip from CRLF text on a `core.autocrlf=true` checkout (`\r\r\n`), so the resolver crashed. Fixed in `c9e02743b` (generated cases start from LF text); both scripts then pass. `show_me_facts_tests.cs` still fails on byte counts on a CRLF checkout; it is unchanged from `$BASE` (AC-46) and out of scope. Item 5 ran `/spec:switch` and `/spec:requirements` as commands; `/spec:tasks` and `/spec:review` were checked against the resolver report and the command text.
 
-- [ ] **PROJECT: T17.4 — Final repository checks before the PR**
+- [x] **PROJECT: T17.4 — Final repository checks before the PR**
   - Do:
     - S1: all three scripts green. Read the timing line and record whether a `WARN` appeared and the duration (AC-51).
     - AC-6: `git diff --stat $BASE -- specs/ ':(exclude)specs/0040-routing-slips'` is empty.
@@ -1223,6 +1223,7 @@ Depends on Phase 11.*
     - `git ls-files -s` shows mode `100644` for `resolve_route.cs`, `resolve_route_tests.cs` and `spec_text_tests.cs`, and none starts with `#!`.
   - Acceptance: all hold. Do not add a release-notes task (spec 0037 precedent).
   - Traces to: 0089 *unchanged* list and step 10; 0091 and 0092 unchanged lists; NFR-2, NFR-4, NFR-6; AC-1, AC-6, AC-9, AC-40, AC-50, AC-51. Depends on: T17.3.
+  - Note (2026-11-15): all checks held. S1 green (114, 76, 27), no timing `WARN` (`--all` took 0.9 s). AC-40 matches are `spec/README.md` lines 167 and 797, both denying the option. One accepted exception to AC-6: `specs/.current-spec` differs from `$BASE` (`0038-add-sweeper-health-check` became `0040-routing-slips` in `fd3ed99d7`). It is the tracked current-spec pointer, spec 0038 is complete, and the owner chose not to restore it.
 
 ---
 
