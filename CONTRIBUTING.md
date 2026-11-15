@@ -444,6 +444,14 @@ with a comment explaining the exclusion. Remove the exclusion if the project is 
 Run `bash test_check_solution_projects.sh` to exercise the check in temporary Git repositories.
 The check uses Bash, Git, Python 3 (standard library only), and standard command-line tools.
 
+On a pull request, CI runs only the integration test jobs whose test projects your changes can affect.
+`affected_test_projects.sh` uses [dotnet-affected](https://dotnet-affected.com) to follow your changes
+through project references, imported `.props`/`.targets` files and package versions in
+`Directory.Packages.props`. A change to anything else outside `src/`, `tests/`, `tools/`, `samples/` and
+`benchmarks/` (the workflow, a docker-compose file, `global.json`) runs every job, and documentation-only
+changes run none. Pushes to `master` and release tags always run every job.
+Run `bash affected_test_projects.sh origin/master` locally to see what CI will select for your branch.
+
 ```bash
 # Build entire solution
 dotnet build Brighter.slnx
