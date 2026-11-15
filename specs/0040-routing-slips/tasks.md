@@ -1151,7 +1151,7 @@ Depends on Phase 11.*
   - Acceptance: S1 green.
   - Traces to: 0090 step 5; FR-26, FR-29. Depends on: T16.1.
 
-- [ ] **DOC: T16.3 — Document `/spec:new`, `/spec:requirements` and `/spec:route`, and the tracked routing files**
+- [x] **DOC: T16.3 — Document `/spec:new`, `/spec:requirements` and `/spec:route`, and the tracked routing files**
   - Do:
     - In `.claude/commands/spec/README.md`:
       - the `/spec:new` entry (`:151-163`);
