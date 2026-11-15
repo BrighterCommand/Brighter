@@ -29,6 +29,8 @@ Amended 2026-11-09, during Phase 2 implementation, with the owner's approval: th
 
 Amended 2026-11-14, during Phase 2 implementation, with the owner's approval: `EndExpiredAsync` and `ReadLiveAsync` take one `TripWindow` in place of the pair `(now, tripLength)`. A smells review found the pair a data clump that every store, and the breaker, carried together and combined the same way (`now - tripLength`). `TripWindow` is a public `readonly record struct TripWindow(DateTimeOffset Now, TimeSpan TripLength)` in `Paramore.Brighter.CircuitBreaker` with a computed `Cutoff`, which is `Now - TripLength`. The types are unreleased, so the signature changes before release. Behaviour is unchanged.
 
+Amended 2026-11-15, after the code review, with the owner's approval: the three trip stores gain a constructor that takes the `IAmARelationalDatabaseConfiguration` the trip table was provisioned with, and use its `SchemaName` when `schemaName` is null. `Add{Backend}TrippedTopics` already created the table in the configuration's schema when `schemaName` was null, so a store built without the configuration looked for it in the connection's default schema and every call failed. The existing constructor is unchanged.
+
 ## Context
 
 The outbox sweeper leaves a circuit-broken topic out of its sweeps until the topic's cooldown ends. Today the cooldown is a count of sweeps, kept in each process, and it advances only on a sweep that obtained the distributed lock. An instance that stops obtaining the lock keeps its trips for ever, and when it next obtains the lock it holds back messages for a topic whose broker recovered long ago. No other instance can see or end those trips, and the health signals hide them rather than end them.
@@ -527,10 +529,11 @@ Brighter adds no `AddDistributedOutboxCircuitBreaker` extension. Today the break
 | Type | Constructor | Notes |
 | --- | --- | --- |
 | `MsSqlTrippedTopicStore`, `PostgreSqlTrippedTopicStore`, `MySqlTrippedTopicStore` | `(IAmARelationalDbConnectionProvider connectionProvider, string tableName = "BrighterTrippedTopics", string? schemaName = null, TimeSpan? commandTimeout = null)` | `commandTimeout` defaults to 2 seconds, the default `StoreTimeout`. The store rounds it up to whole seconds, minimum one |
+| `MsSqlTrippedTopicStore`, `PostgreSqlTrippedTopicStore`, `MySqlTrippedTopicStore` | `(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, string tableName = "BrighterTrippedTopics", string? schemaName = null, TimeSpan? commandTimeout = null)` | The schema is `schemaName`, or the configuration's `SchemaName` when `schemaName` is null, the same rule `Add{Backend}TrippedTopics` applies. Use it when the configuration sets a schema |
 | `{Backend}TrippedTopicsMigrationCatalog` | `(string tableName, string? schemaName = null)` | Built by `Add{Backend}TrippedTopics`, once per registration. It is not a shared singleton, because the trip table's name is not in `IAmARelationalDatabaseConfiguration` |
 | `Add{Backend}TrippedTopics` | `(this BoxProvisioningOptions options, IAmARelationalDatabaseConfiguration configuration, string tableName = "BrighterTrippedTopics", string? schemaName = null)` | Registers the provisioner and a catalog for that table name |
 
-The user passes the same table name to the store and to the provisioning extension. The docs state this, and both default to the same name. A registration looks like this.
+The user passes the same table name to the store and to the provisioning extension, and builds the store from the same configuration when it sets a schema. The docs state this, and both default to the same name. A registration looks like this.
 
 ```csharp
 services.AddSingleton<IAmAnOutboxCircuitBreaker>(sp => new DistributedOutboxCircuitBreaker(
