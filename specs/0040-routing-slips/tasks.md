@@ -1078,7 +1078,7 @@ Depends on Phase 11.*
 
 *0090 steps 3 and 4 (merged, per O-3) and 6, with 0092 step 9's staged rows. Depends on Phase 13.*
 
-- [ ] **TEST + IMPLEMENT: T14.1 — `/spec:approve` runs the step's sub-flow from the table in two passes, writes no marker unless every command prints `sub-flow-done`, and appends one provenance line to the marker**
+- [x] **TEST + IMPLEMENT: T14.1 — `/spec:approve` runs the step's sub-flow from the table in two passes, writes no marker unless every command prints `sub-flow-done`, and appends one provenance line to the marker**
   - Merged per the O-3 ruling (0090 steps 3 and 4 in one commit). Provenance behaviour: keeps existing marker content; the sha is recorded as `unavailable` when HEAD cannot be resolved.
   - Verification rows (RED-first): `approve.md` must carry `sub-flow-instructions`, `provenance-commands`, and its templates: *No usable entry*, *Sub-flow failed, questions*, *Sub-flow failed, actions*, *Step approved*.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
