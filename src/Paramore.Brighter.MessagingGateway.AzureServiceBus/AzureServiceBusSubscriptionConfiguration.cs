@@ -58,6 +58,19 @@ public class AzureServiceBusSubscriptionConfiguration
     public TimeSpan MaxAutoLockRenewalDuration { get; set; } = TimeSpan.FromMinutes(5);
 
     /// <summary>
+    /// The number of messages the receiver asks the broker for in advance and holds in a local buffer. Defaults to
+    /// zero, which disables prefetching and fetches each batch on demand.
+    /// </summary>
+    /// <value>A count of zero or more. Zero disables prefetching. Negative values are invalid.</value>
+    /// <remarks>
+    /// Prefetch trades a larger local buffer for fewer round trips to the broker. With <c>PeekLock</c> the lock timer
+    /// starts when a message enters the buffer, so a large value holds locks longer than the handler takes to run and
+    /// can let them expire before dispatch. This is independent of the channel's buffer size, which only caps a single
+    /// receive call. A common starting point is a small multiple of the number of performers on the subscription.
+    /// </remarks>
+    public int PrefetchCount { get; set; } = 0;
+
+    /// <summary>
     /// How long messages sit in the queue before they expire
     /// </summary>
     public TimeSpan DefaultMessageTimeToLive { get; set; } = TimeSpan.FromDays(3);
