@@ -13,7 +13,7 @@ An outbox sweeper instance that stopped obtaining the distributed lock kept its 
 - The reset log message names its cause, so its text changes. *(behavioural)* Update any alert or query that matches the old message.
 - The `InMemoryOutboxCircuitBreaker` constructor gains a trailing optional `TimeProvider` parameter. *(binary)* Callers compiled against the old signature must be recompiled; source is unchanged.
 - The `TimedOutboxSweeper` constructor gains a trailing optional `IAmAnOutboxCircuitBreaker?` parameter. *(binary)* Callers compiled against the old signature must be recompiled; source is unchanged.
-- With a `DistributedOutboxCircuitBreaker`, a failed publish on `PostAsync` or `ClearOutboxAsync` waits for a trip write of up to `StoreTimeout`, one write per distinct topic per call. *(behavioural)* Keep `StoreTimeout` at or under half of `TimerInterval`.
+- With a `DistributedOutboxCircuitBreaker`, a failed publish on `PostAsync` or `ClearOutboxAsync` waits for a trip write of up to `StoreTimeout`: one batched write per call covers every distinct topic tripped in it. *(behavioural)* Keep `StoreTimeout` at or under half of `TimerInterval`.
 - `BoxType` gains the value `TrippedTopics`. *(behavioural)* Code outside Brighter that switches on `BoxType` without a default arm must handle it.
 - With a shared breaker, the `tripped_topics` gauge and check report on every running sweeper, not only the active one. *(behavioural)* Alert on the `max` across instances, not the `sum`.
 
