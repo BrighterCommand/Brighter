@@ -193,7 +193,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
         try
         {
-            return await task.WaitAsync(linked.Token).ConfigureAwait(false);
+            return await task.WaitAsync(Timeout.InfiniteTimeSpan, _timeProvider, linked.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
