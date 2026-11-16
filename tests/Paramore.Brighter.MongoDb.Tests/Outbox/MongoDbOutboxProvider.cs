@@ -45,15 +45,6 @@ public class MongoDbOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvide
         // The collection is created automatically when the first message is added.
     }
 
-    public Task AddMessageWithAgeAsync(Message message, TimeSpan age)
-    {
-        var header = new MessageHeader(message.Id, message.Header.Topic, MessageType.MT_DOCUMENT,
-            timeStamp: _timeProvider.GetUtcNow() - age);
-        foreach (var item in message.Header.Bag)
-            header.Bag.Add(item.Key, item.Value);
-        return CreateOutboxAsync().AddAsync(new Message(header, message.Body), new RequestContext());
-    }
-
     public Task CreateStoreAsync()
     {
         // The collection is created automatically when the first message is added.

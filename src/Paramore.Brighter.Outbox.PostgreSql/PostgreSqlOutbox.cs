@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql;
 /// <summary>
 /// Implements an outbox using PostgreSQL as a backing store
 /// </summary>
-public class PostgreSqlOutbox : RelationDatabaseOutbox
+public class PostgreSqlOutbox : RelationDatabaseOutbox, IAmATopicCountingOutbox
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="PostgreSqlOutbox" /> class.
