@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -47,6 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
 {
     private readonly IServiceBusSenderProvider _serviceBusSenderProvider;
+    private readonly ConcurrentDictionary<string, IServiceBusSenderWrapper> _senders = new();
     private readonly InstrumentationOptions _options;
     private AzureServiceBusPublication _publication;
     protected bool TopicCreated;
@@ -95,17 +97,20 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
     }
         
     /// <summary>
-    /// Dispose of the producer
+    /// Dispose of the producer, closing the senders held for reuse
     /// </summary>
-    public void Dispose() { }
+    public void Dispose() => BrighterAsyncContext.Run(() => DisposeAsync().AsTask());
         
     /// <summary>
-    /// Dispose of the producer
+    /// Dispose of the producer, closing the senders held for reuse
     /// </summary>
     /// <returns></returns>
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        return new ValueTask(Task.CompletedTask);
+        foreach (var sender in _senders.Values)
+            await sender.CloseAsync();
+
+        _senders.Clear();
     }
 
     /// <summary>
@@ -145,19 +150,12 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
         var azureServiceBusMessageBatches =
             new AzureServiceBusMessageBatches(serviceBusSenderWrapper, topic);
 
-        try
-        {
-            foreach (Message message in messages)
-                await azureServiceBusMessageBatches.AddMessageToBatchAsync(message, _publication.TimeToLive, cancellationToken);
+        foreach (Message message in messages)
+            await azureServiceBusMessageBatches.AddMessageToBatchAsync(message, _publication.TimeToLive, cancellationToken);
 
-            Log.SendingMessagesInBatches(Logger, topic, azureServiceBusMessageBatches.Batches.Count(), _bulkSendBatchSize);
+        Log.SendingMessagesInBatches(Logger, topic, azureServiceBusMessageBatches.Batches.Count(), _bulkSendBatchSize);
 
-            return azureServiceBusMessageBatches.Batches;
-        }
-        finally
-        {
-            await serviceBusSenderWrapper.CloseAsync();
-        }
+        return azureServiceBusMessageBatches.Batches;
     }
 
     /// <inheritdoc/>
@@ -170,24 +168,17 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
 
         Log.SendingBatch(Logger, messageCount, topic);
         
-        try
+        var sendTask = batch switch
         {
-            var sendTask = batch switch
-            {
-                AzureServiceBusSingleMessageBatch singleMessageBatch => serviceBusSenderWrapper.SendAsync(
-                    singleMessageBatch.Content, cancellationToken),
-                AzureServiceBusMessageBatch serviceBusMessageBatch => serviceBusSenderWrapper.SendAsync(
-                    serviceBusMessageBatch.Content, cancellationToken),
-                _ => throw new NotImplementedException(
-                    $"{nameof(SendAsync)} only supports ${typeof(AzureServiceBusSingleMessageBatch)} or ${typeof(AzureServiceBusMessageBatch)}")
-            };
+            AzureServiceBusSingleMessageBatch singleMessageBatch => serviceBusSenderWrapper.SendAsync(
+                singleMessageBatch.Content, cancellationToken),
+            AzureServiceBusMessageBatch serviceBusMessageBatch => serviceBusSenderWrapper.SendAsync(
+                serviceBusMessageBatch.Content, cancellationToken),
+            _ => throw new NotImplementedException(
+                $"{nameof(SendAsync)} only supports ${typeof(AzureServiceBusSingleMessageBatch)} or ${typeof(AzureServiceBusMessageBatch)}")
+        };
             
-            await sendTask;
-        }
-        finally
-        {
-            await serviceBusSenderWrapper.CloseAsync();
-        }
+        await sendTask;
     }
 
     /// <summary>
@@ -238,16 +229,16 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
             Log.FailedToPublishMessage(Logger, e, message.Header.Topic, message.Id.Value);
             throw new ChannelFailureException("Error talking to the broker, see inner exception for details", e);
         }
-        finally
-        {
-            await serviceBusSenderWrapper.CloseAsync();
-        }
     }
 
     private async Task<IServiceBusSenderWrapper> GetSenderAsync(string topic)
     {
+        if (_senders.TryGetValue(topic, out var cachedSender))
+            return cachedSender;
+
         await EnsureChannelExistsAsync(topic);
 
+        IServiceBusSenderWrapper createdSender;
         try
         {
             RetryPolicy policy = Policy
@@ -260,13 +251,19 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
                     }
                 );
 
-            return policy.Execute(() => _serviceBusSenderProvider.Get(topic));
+            createdSender = policy.Execute(() => _serviceBusSenderProvider.Get(topic));
         }
         catch (Exception e)
         {
             Log.FailedToConnectAborting(Logger, e, topic);
             throw;
         }
+
+        var sender = _senders.GetOrAdd(topic, createdSender);
+        if (!ReferenceEquals(sender, createdSender))
+            await createdSender.CloseAsync();
+
+        return sender;
     }
 
     protected abstract Task EnsureChannelExistsAsync(string channelName);

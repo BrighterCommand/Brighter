@@ -55,7 +55,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor
 
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
             Assert.Equal("MT_EVENT", sentMessage.ApplicationProperties["MessageType"]);
-            Assert.Equal(1, _topicClient.ClosedCount);
+            Assert.Equal(0, _topicClient.ClosedCount);
         }
 
         [Theory]
@@ -80,7 +80,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor
 
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
             Assert.Equal("MT_COMMAND", sentMessage.ApplicationProperties["MessageType"]);
-            Assert.Equal(1, _topicClient.ClosedCount);
+            Assert.Equal(0, _topicClient.ClosedCount);
         }
 
         [Theory]
@@ -107,7 +107,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public async Task When_a_message_is_send_and_an_exception_occurs_close_is_still_called(bool useQueues)
+        public async Task When_a_message_fails_to_send_the_sender_is_kept_for_reuse_and_closed_on_dispose(bool useQueues)
         {
             _nameSpaceManagerWrapper.ResetState();
             _nameSpaceManagerWrapper.Topics.Add("topic", []);
@@ -115,10 +115,10 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor
 
             _topicClient.SendException = new Exception("Failed");
 
+            var producer = useQueues ? _queueProducer : _producer;
+
             try
             {
-                var producer = useQueues ? _queueProducer : _producer;
-                
                 await producer.SendAsync(new Message(
                     new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_NONE), 
                     new MessageBody("Message", new ContentType(MediaTypeNames.Application.Json))));
@@ -127,6 +127,12 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor
             {
                 // ignored
             }
+
+            _topicClient.SendException = null;
+            Assert.Equal(0, _topicClient.ClosedCount);
+            Assert.Equal(1, _topicClientProvider.CreationCount);
+
+            await producer.DisposeAsync();
 
             Assert.Equal(1, _topicClient.ClosedCount);
         }
@@ -153,7 +159,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor
 
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
             Assert.Equal("MT_EVENT", sentMessage.ApplicationProperties["MessageType"]);
-            Assert.Equal(1, _topicClient.ClosedCount);
+            Assert.Equal(0, _topicClient.ClosedCount);
         }
 
         [Theory]
@@ -177,7 +183,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor
 
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
             Assert.Equal("MT_COMMAND", sentMessage.ApplicationProperties["MessageType"]);
-            Assert.Equal(1, _topicClient.ClosedCount);
+            Assert.Equal(0, _topicClient.ClosedCount);
         }
 
         [Theory]
@@ -200,7 +206,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor
             Assert.Equal(1, _nameSpaceManagerWrapper.CreateCount);
             
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
-            Assert.Equal(1, _topicClient.ClosedCount);
+            Assert.Equal(0, _topicClient.ClosedCount);
         }
 
         [Theory]
@@ -295,6 +301,35 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor
                     new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_NONE), 
                     new MessageBody(messageBody, new ContentType(MediaTypeNames.Application.Json))))
             );
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task When_sending_several_messages_to_one_entity_the_producer_reuses_one_sender(bool useQueues)
+        {
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", []);
+            _nameSpaceManagerWrapper.Topics.Add("other-topic", []);
+            _nameSpaceManagerWrapper.Queues.Add("topic");
+            _nameSpaceManagerWrapper.Queues.Add("other-topic");
+
+            var producer = useQueues ? _queueProducer : _producer;
+
+            for (var i = 0; i < 3; i++)
+                await producer.SendAsync(new Message(
+                    new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_EVENT),
+                    new MessageBody("Message", new ContentType(MediaTypeNames.Application.Json))));
+
+            Assert.Equal(1, _topicClientProvider.CreationCount);
+
+            await producer.SendAsync(new Message(
+                new MessageHeader(Id.Random(), new RoutingKey("other-topic"), MessageType.MT_EVENT),
+                new MessageBody("Message", new ContentType(MediaTypeNames.Application.Json))));
+
+            Assert.Equal(4, _topicClient.SentMessages.Count);
+            Assert.Equal(2, _topicClientProvider.CreationCount);
+            Assert.Equal(0, _topicClient.ClosedCount);
         }
     }
 }
