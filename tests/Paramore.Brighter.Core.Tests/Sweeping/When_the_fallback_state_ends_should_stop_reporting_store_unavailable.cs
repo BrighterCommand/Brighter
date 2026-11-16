@@ -38,7 +38,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
-public class When_the_fallback_state_ends_should_stop_reporting_store_unavailable_tests
+public class FallbackStateEndsTests
 {
     [Fact]
     public async Task When_the_fallback_state_ends_should_stop_reporting_store_unavailable()

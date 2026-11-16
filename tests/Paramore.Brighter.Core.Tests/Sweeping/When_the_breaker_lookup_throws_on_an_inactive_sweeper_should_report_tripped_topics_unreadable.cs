@@ -42,7 +42,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
-public class When_the_breaker_lookup_throws_on_an_inactive_sweeper_should_report_tripped_topics_unreadable_tests
+public class BreakerLookupThrowsOnInactiveSweeperTests
 {
     private const string TrippedTopics = "paramore.brighter.outbox_sweeper.tripped_topics";
 

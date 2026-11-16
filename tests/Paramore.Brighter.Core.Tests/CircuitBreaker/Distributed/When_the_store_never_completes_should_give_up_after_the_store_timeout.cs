@@ -34,7 +34,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed;
 
-public class When_the_store_never_completes_should_give_up_after_the_store_timeout
+public class StoreNeverCompletesTests
 {
     private static readonly TimeSpan s_storeTimeout = TimeSpan.FromSeconds(2);
     private readonly RoutingKey _orders = new("orders");

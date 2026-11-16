@@ -35,7 +35,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed;
 
-public class When_every_refresh_fails_should_keep_the_fallback_view_and_drop_the_trip_at_the_cooldown
+public class EveryRefreshFailsTests
 {
     private static readonly TimeSpan s_cooldown = TimeSpan.FromSeconds(50);
     private static readonly TimeSpan s_refreshInterval = TimeSpan.FromSeconds(5);

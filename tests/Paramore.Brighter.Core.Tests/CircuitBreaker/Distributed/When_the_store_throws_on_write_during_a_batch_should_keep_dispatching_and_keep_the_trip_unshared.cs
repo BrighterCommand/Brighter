@@ -44,7 +44,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed;
 
-public class When_the_store_throws_on_write_during_a_batch_should_keep_dispatching_and_keep_the_trip_unshared
+public class StoreThrowsOnWriteDuringBatchTests
 {
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
     private static readonly TimeSpan s_cooldown = TimeSpan.FromSeconds(50);

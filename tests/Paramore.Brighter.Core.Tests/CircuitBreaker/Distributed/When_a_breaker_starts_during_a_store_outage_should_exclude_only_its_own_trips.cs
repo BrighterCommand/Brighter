@@ -35,7 +35,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed;
 
-public class When_a_breaker_starts_during_a_store_outage_should_exclude_only_its_own_trips
+public class BreakerStartsDuringStoreOutageTests
 {
     private readonly RoutingKey _orders = new("orders");
     private readonly FakeTimeProvider _clock = new();

@@ -35,7 +35,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed;
 
-public class When_the_store_is_disposed_under_a_write_should_log_a_warning_and_throw_nothing
+public class StoreIsDisposedUnderWriteTests
 {
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
     private static readonly TimeSpan s_cooldown = TimeSpan.FromSeconds(50);

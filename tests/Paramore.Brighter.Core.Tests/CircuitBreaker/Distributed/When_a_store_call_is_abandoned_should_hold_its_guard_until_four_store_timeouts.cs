@@ -36,7 +36,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed;
 
-public class When_a_store_call_is_abandoned_should_hold_its_guard_until_four_store_timeouts
+public class StoreCallIsAbandonedTests
 {
     private static readonly TimeSpan s_storeTimeout = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan s_guardTimeout = TimeSpan.FromSeconds(8);

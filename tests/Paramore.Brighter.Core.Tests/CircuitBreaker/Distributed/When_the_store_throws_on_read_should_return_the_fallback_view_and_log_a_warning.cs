@@ -35,7 +35,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed;
 
-public class When_the_store_throws_on_read_should_return_the_fallback_view_and_log_a_warning
+public class StoreThrowsOnReadTests
 {
     private readonly RoutingKey _orders = new("orders");
 

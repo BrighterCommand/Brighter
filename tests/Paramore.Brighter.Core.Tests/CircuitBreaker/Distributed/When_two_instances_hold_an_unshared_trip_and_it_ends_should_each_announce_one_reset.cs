@@ -34,7 +34,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed;
 
-public class When_two_instances_hold_an_unshared_trip_and_it_ends_should_each_announce_one_reset
+public class TwoInstancesHoldUnsharedTripAndItEndsTests
 {
     private static readonly TimeSpan s_cooldown = TimeSpan.FromSeconds(50);
     private static readonly OutboxCircuitBreakerOptions s_options = new() { CooldownDuration = s_cooldown, ClockSkewLeeway = TimeSpan.Zero };
@@ -46,7 +46,7 @@ public class When_two_instances_hold_an_unshared_trip_and_it_ends_should_each_an
     private readonly DistributedOutboxCircuitBreaker _a;
     private readonly DistributedOutboxCircuitBreaker _b;
 
-    public When_two_instances_hold_an_unshared_trip_and_it_ends_should_each_announce_one_reset()
+    public TwoInstancesHoldUnsharedTripAndItEndsTests()
     {
         _storeA = new WritesFailingOnDemandTrippedTopicStore(_shared) { FailWrites = true };
         _storeB = new WritesFailingOnDemandTrippedTopicStore(_shared) { FailWrites = true };

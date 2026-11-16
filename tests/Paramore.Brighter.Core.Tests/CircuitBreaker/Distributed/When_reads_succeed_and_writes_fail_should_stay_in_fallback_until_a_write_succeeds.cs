@@ -32,7 +32,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed;
 
-public class When_reads_succeed_and_writes_fail_should_stay_in_fallback_until_a_write_succeeds
+public class ReadsSucceedAndWritesFailTests
 {
     private static readonly TimeSpan s_cooldown = TimeSpan.FromSeconds(50);
     private static readonly OutboxCircuitBreakerOptions s_options = new() { CooldownDuration = s_cooldown, ClockSkewLeeway = TimeSpan.Zero };
@@ -41,7 +41,7 @@ public class When_reads_succeed_and_writes_fail_should_stay_in_fallback_until_a_
     private readonly WritesFailingOnDemandTrippedTopicStore _store;
     private readonly DistributedOutboxCircuitBreaker _breaker;
 
-    public When_reads_succeed_and_writes_fail_should_stay_in_fallback_until_a_write_succeeds()
+    public ReadsSucceedAndWritesFailTests()
     {
         _store = new WritesFailingOnDemandTrippedTopicStore(new InMemoryTrippedTopicStore()) { FailWrites = true };
         _breaker = new DistributedOutboxCircuitBreaker(_store, s_options, timeProvider: _clock);

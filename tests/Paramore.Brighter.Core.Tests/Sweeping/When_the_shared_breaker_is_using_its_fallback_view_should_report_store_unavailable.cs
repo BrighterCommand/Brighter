@@ -38,7 +38,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
-public class When_the_shared_breaker_is_using_its_fallback_view_should_report_store_unavailable_tests
+public class SharedBreakerIsUsingItsFallbackViewTests
 {
     private static readonly TimeSpan s_storeTimeout = TimeSpan.FromSeconds(2);
 

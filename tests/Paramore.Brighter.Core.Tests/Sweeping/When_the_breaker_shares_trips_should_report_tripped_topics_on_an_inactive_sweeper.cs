@@ -35,7 +35,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
-public class When_the_breaker_shares_trips_should_report_tripped_topics_on_an_inactive_sweeper_tests
+public class BreakerSharesTripsTests
 {
     private static readonly OutboxCircuitBreakerOptions s_options = new() { CooldownDuration = TimeSpan.FromSeconds(50), ClockSkewLeeway = TimeSpan.Zero };
 

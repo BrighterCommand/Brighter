@@ -33,7 +33,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed;
 
-public class When_reads_and_writes_fail_and_recover_should_follow_the_fallback_rules
+public class ReadsAndWritesFailAndRecoverTests
 {
     private readonly RoutingKey _orders = new("orders");
     private readonly RoutingKey _payments = new("payments");

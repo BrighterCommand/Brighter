@@ -29,10 +29,10 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.BoxProvisioning;
 
-public class When_the_tripped_topics_provisioner_runs_it_should_invoke_the_migration_runner_for_the_trip_table
+public class TrippedTopicsProvisionerRunsTests
 {
     [Fact]
-    public async Task Should_call_the_runner_once_with_the_trip_table_the_schema_and_the_tripped_topics_box_type()
+    public async Task When_the_provisioner_runs_should_call_the_runner_once_with_the_trip_table_the_schema_and_the_tripped_topics_box_type()
     {
         //Arrange
         var runner = new SpyBoxMigrationRunner();
@@ -51,7 +51,7 @@ public class When_the_tripped_topics_provisioner_runs_it_should_invoke_the_migra
     }
 
     [Fact]
-    public async Task Should_call_the_runner_with_no_schema_when_none_is_configured()
+    public async Task When_no_schema_is_configured_should_call_the_runner_with_no_schema()
     {
         //Arrange
         var runner = new SpyBoxMigrationRunner();
@@ -69,7 +69,7 @@ public class When_the_tripped_topics_provisioner_runs_it_should_invoke_the_migra
     [InlineData("Trips; DROP TABLE Outbox", null)]
     [InlineData("1Trips", null)]
     [InlineData("BrighterTrippedTopics", "dbo; DROP TABLE Outbox")]
-    public async Task Should_reject_an_unsafe_table_or_schema_name_before_calling_the_runner(string tableName, string? schemaName)
+    public async Task When_a_table_or_schema_name_is_unsafe_should_reject_it_before_calling_the_runner(string tableName, string? schemaName)
     {
         //Arrange
         var runner = new SpyBoxMigrationRunner();

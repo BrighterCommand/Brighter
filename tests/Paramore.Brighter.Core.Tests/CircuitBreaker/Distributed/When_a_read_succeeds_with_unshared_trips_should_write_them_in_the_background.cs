@@ -33,7 +33,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed;
 
-public class When_a_read_succeeds_with_unshared_trips_should_write_them_in_the_background
+public class ReadSucceedsWithUnsharedTripsTests
 {
     private static readonly OutboxCircuitBreakerOptions s_options = new() { CooldownDuration = TimeSpan.FromSeconds(50), ClockSkewLeeway = TimeSpan.Zero };
     private static readonly TimeSpan s_patience = TimeSpan.FromSeconds(10);

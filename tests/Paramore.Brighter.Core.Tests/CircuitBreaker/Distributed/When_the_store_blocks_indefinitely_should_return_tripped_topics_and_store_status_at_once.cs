@@ -33,7 +33,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed;
 
-public class When_the_store_blocks_indefinitely_should_return_tripped_topics_and_store_status_at_once
+public class StoreBlocksIndefinitelyTests
 {
     private static readonly TimeSpan s_bound = TimeSpan.FromSeconds(1);
     private readonly RoutingKey _orders = new("orders");

@@ -38,7 +38,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
-public class When_reading_tripped_topics_throws_on_a_shared_breaker_in_fallback_should_report_unreadable_and_store_unavailable_tests
+public class ReadingTrippedTopicsThrowsOnSharedBreakerInFallbackTests
 {
     [Fact]
     public async Task When_reading_tripped_topics_throws_on_a_shared_breaker_in_fallback_should_report_unreadable_and_store_unavailable()

@@ -36,7 +36,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed;
 
-public class When_a_slow_refresh_completes_after_a_newer_read_should_discard_its_live_rows
+public class SlowRefreshCompletesAfterNewerReadTests
 {
     private static readonly OutboxCircuitBreakerOptions s_options = new() { CooldownDuration = TimeSpan.FromSeconds(50), ClockSkewLeeway = TimeSpan.Zero };
     private readonly RoutingKey _orders = new("orders");
@@ -46,7 +46,7 @@ public class When_a_slow_refresh_completes_after_a_newer_read_should_discard_its
     private readonly IndividuallyHeldReadsTrippedTopicStore _store = new(new InMemoryTrippedTopicStore());
     private readonly DistributedOutboxCircuitBreaker _breaker;
 
-    public When_a_slow_refresh_completes_after_a_newer_read_should_discard_its_live_rows()
+    public SlowRefreshCompletesAfterNewerReadTests()
     {
         _breaker = new DistributedOutboxCircuitBreaker(_store, s_options, timeProvider: _clock);
     }

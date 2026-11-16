@@ -39,7 +39,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed;
 
-public class When_a_request_only_instance_cannot_write_a_trip_should_log_a_warning_and_keep_the_message
+public class RequestOnlyInstanceCannotWriteTripTests
 {
     private static readonly TimeSpan s_patience = TimeSpan.FromSeconds(10);
     private static readonly OutboxCircuitBreakerOptions s_options = new() { CooldownDuration = TimeSpan.FromSeconds(50), ClockSkewLeeway = TimeSpan.Zero };

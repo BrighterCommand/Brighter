@@ -31,10 +31,10 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.BoxProvisioning;
 
-public class When_box_provisioning_hosted_service_starts_it_should_provision_tripped_topics_after_outbox_before_inbox
+public class BoxProvisioningHostedServiceStartsTests
 {
     [Fact]
-    public async Task Should_provision_outbox_then_tripped_topics_then_inbox()
+    public async Task When_the_hosted_service_starts_should_provision_outbox_then_tripped_topics_then_inbox()
     {
         //Arrange
         var callOrder = new List<BoxType>();
@@ -61,7 +61,7 @@ public class When_box_provisioning_hosted_service_starts_it_should_provision_tri
     }
 
     [Fact]
-    public void Should_keep_the_numbers_of_the_existing_box_types()
+    public void When_a_box_type_is_added_should_keep_the_numbers_of_the_existing_box_types()
     {
         //Assert
         Assert.Equal(0, (int)BoxType.Inbox);
