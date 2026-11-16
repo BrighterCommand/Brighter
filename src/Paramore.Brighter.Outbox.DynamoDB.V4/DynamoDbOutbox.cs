@@ -56,7 +56,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
     public class DynamoDbOutbox :
         IAmAnOutboxSync<Message, TransactWriteItemsRequest>,
         IAmAnOutboxAsync<Message, TransactWriteItemsRequest>,
-        IAmACausationTrackingOutbox
+        IAmACausationTrackingOutbox,
+        IAmATopicCountingOutbox
     {
         private readonly DynamoDbConfiguration _configuration;
         private readonly DynamoDBContext _context;
@@ -79,6 +80,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
 
         private readonly InstrumentationOptions _instrumentationOptions;
         private const string DYNAMO_DB_NAME = "outbox";
+        private const int MAX_TOPIC_AGE_DAYS = 365;
 
         public bool ContinueOnCapturedContext { get; set; }
         
@@ -937,6 +939,107 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             } while (lastEvaluatedKey != null && lastEvaluatedKey.Keys.Any() && segmentCount < maxCount);
 
             return segmentCount;
+        }
+
+        /// <inheritdoc/>
+        public async Task<IReadOnlyDictionary<RoutingKey, int>> GetOutstandingMessageCountsByTopicAsync(
+            IReadOnlyDictionary<RoutingKey, TimeSpan> dispatchedSinceByTopic,
+            RequestContext? requestContext,
+            int maxCountPerTopic,
+            Dictionary<string, object>? args = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (dispatchedSinceByTopic is null)
+                throw new ArgumentNullException(nameof(dispatchedSinceByTopic));
+            if (maxCountPerTopic < 1)
+                throw new ArgumentOutOfRangeException(nameof(maxCountPerTopic), maxCountPerTopic, "The ceiling per topic must be at least 1.");
+            CheckRequestedTopics(dispatchedSinceByTopic);
+
+            using var timeout = CreateTimeoutSource();
+            using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+            cancellationToken = linkedCancellation.Token;
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var counts = new Dictionary<RoutingKey, int>();
+            if (dispatchedSinceByTopic.Count == 0)
+                return counts;
+
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.OutStandingMessageCount, _configuration.TableName),
+                requestContext?.Span,
+                options: _instrumentationOptions);
+
+            try
+            {
+                var now = _timeProvider.GetUtcNow();
+                var numberOfShards = Math.Max(1, _configuration.NumberOfShards);
+                var lowestShard = -(numberOfShards - 1);
+                foreach (var request in dispatchedSinceByTopic)
+                {
+                    var olderThan = now - request.Value;
+                    var count = 0;
+                    for (var shard = lowestShard; shard < numberOfShards && count < maxCountPerTopic; shard++)
+                    {
+                        count += await CountOutstandingTopicShardAsync(
+                            $"{request.Key.Value}_{shard}", olderThan, maxCountPerTopic - count, cancellationToken);
+                    }
+
+                    counts.Add(request.Key, count);
+                }
+
+                span?.AddTag("db.response.returned_rows", counts.Count);
+                return counts;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
+        }
+
+        private async Task<int> CountOutstandingTopicShardAsync(string topicShard,
+            DateTimeOffset olderThan,
+            int maxCount,
+            CancellationToken cancellationToken)
+        {
+            var shardCount = 0;
+            Dictionary<string, AttributeValue>? lastEvaluatedKey = null;
+            do
+            {
+                var request = new QueryRequest
+                {
+                    TableName = _configuration.TableName,
+                    IndexName = _configuration.OutstandingIndexName,
+                    ConsistentRead = false,
+                    Limit = maxCount - shardCount,
+                    ExclusiveStartKey = lastEvaluatedKey,
+                    Select = Select.COUNT,
+                    KeyConditionExpression = "TopicShard = :topicShard and OutstandingCreatedTime <= :olderThan",
+                    ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                    {
+                        {":topicShard", new AttributeValue { S = topicShard } },
+                        {":olderThan", new AttributeValue { N = olderThan.Ticks.ToString() } }
+                    }
+                };
+                var response = await _client.QueryAsync(request, cancellationToken);
+
+                lastEvaluatedKey = response.LastEvaluatedKey;
+                shardCount += response.Count ?? 0;
+            } while (lastEvaluatedKey != null && lastEvaluatedKey.Keys.Any() && shardCount < maxCount);
+
+            return shardCount;
+        }
+
+        private static void CheckRequestedTopics(IReadOnlyDictionary<RoutingKey, TimeSpan> dispatchedSinceByTopic)
+        {
+            foreach (var request in dispatchedSinceByTopic)
+            {
+                if (RoutingKey.IsNullOrEmpty(request.Key))
+                    throw new ArgumentException("A requested topic is null or empty.", nameof(dispatchedSinceByTopic));
+                if (request.Value <= TimeSpan.Zero || request.Value > TimeSpan.FromDays(MAX_TOPIC_AGE_DAYS))
+                    throw new ArgumentException(
+                        $"The age requested for topic {request.Key} must be greater than zero and no greater than {MAX_TOPIC_AGE_DAYS} days.",
+                        nameof(dispatchedSinceByTopic));
+            }
         }
 
         private async Task<IEnumerable<Message>> OutstandingMessagesForAllTopicsAsync(TimeSpan dispatchedSince, int pageSize, int pageNumber,

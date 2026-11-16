@@ -75,6 +75,8 @@ A value equal to the ceiling means the ceiling or more. A `completed` total that
 
 `Publication.StaleMessageAge` sets the age for one topic, and a topic with several publications uses the smallest. `IAmATopicCountingOutbox` is the optional capability that counts several topics in one call. `InMemoryOutbox` implements it, and so do `MongoDbOutbox` (#4687), `SqliteOutbox`, `MsSqlOutbox`, `PostgreSqlOutbox`, `MySqlOutbox` and `SpannerOutbox` (#4686). They match the topic exactly, as `RoutingKey` does, except that `MsSqlOutbox` ignores trailing spaces and `MySqlOutbox` does not match a topic with non-ASCII characters in a `latin1` column. Other outboxes report the overall count only until they add it, and the monitor logs that once at start.
 
+`DynamoDbOutbox` implements `IAmATopicCountingOutbox` too, in `Paramore.Brighter.Outbox.DynamoDB` and `Paramore.Brighter.Outbox.DynamoDB.V4` (#4688). It counts each topic with a query per shard on the `Outstanding` index, so it reads only the stale messages of that topic.
+
 New public types and members, all additive: `TimedOutboxStaleMessageMonitor` and `TimedOutboxStaleMessageMonitorOptions` in `Paramore.Brighter.Outbox.Hosting`; `OutboxStaleMessageMeter`, `OutboxStaleMessageReadings`, `StaleMessageCount` and `StaleMeasurementOutcome` in `Paramore.Brighter.Observability`; `IAmATopicCountingOutbox`; and `Publication.StaleMessageAge`.
 
 The telemetry page of the documentation covers the settings, the alerts and the known limitations of each outbox.
