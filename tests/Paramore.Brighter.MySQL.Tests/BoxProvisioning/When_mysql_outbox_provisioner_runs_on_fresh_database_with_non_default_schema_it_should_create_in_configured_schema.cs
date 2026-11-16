@@ -31,17 +31,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-// Per PR #4039 reviewer item M4-1 (F1c): on MySQL, "schema" is synonymous with "database".
-// The pre-F1c code path emitted unqualified `CREATE TABLE IF NOT EXISTS {table}` which
-// landed the table in the connection's bound database (DATABASE()) regardless of the
-// configured SchemaName. V2..V7 ALTERs used unqualified `{table}` and
-// `information_schema.columns WHERE table_schema = DATABASE()`, while the detection
-// helper looked in the configured SchemaName — so SchemaName != connection.Database
-// produced a silent split: detection says "no table" but creation re-attempts the
-// CREATE TABLE in DATABASE() which already has it.
-//
-// This test pre-creates a non-default MySQL database (the MySQL analogue of a schema),
-// configures SchemaName to that database name, and asserts the table lands there.
+/// <summary>
+/// On MySQL a schema is a database: with <c>SchemaName</c> set to a database other than the connection's,
+/// a fresh install creates the outbox there rather than in the connection's database, and a second run is
+/// a no-op (ADR 0057 §3, ADR 0060). The test creates that database: the runner does not create box schemas.
+/// </summary>
 public class MySqlOutboxNonDefaultSchemaTests : IAsyncLifetime
 {
     private readonly string _baseConnectionString = Const.DefaultConnectingString;
@@ -53,10 +47,6 @@ public class MySqlOutboxNonDefaultSchemaTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await EnsureDatabaseExistsAsync(_nonDefaultDatabase);
-        // The provisioner's runner connects to the connection-string's Database
-        // (BrighterTests) and emits schema-qualified DDL referencing _nonDefaultDatabase.
-        // This separation pins the contract: SchemaName drives placement, not the
-        // connection's bound database.
         _connectionInDefaultDb = _baseConnectionString;
 
         var config = new RelationalDatabaseConfiguration(
@@ -79,10 +69,10 @@ public class MySqlOutboxNonDefaultSchemaTests : IAsyncLifetime
         await DropAnyExistingTableAsync(_tableName, _nonDefaultDatabase);
         await DropAnyExistingTableAsync(_tableName, "BrighterTests");
 
-        //Act — first fresh-install run
+        //Act
         var firstException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
 
-        //Assert — table lives in the configured database (not the connection's bound DB)
+        //Assert
         Assert.Null(firstException);
         Assert.True(
             await TableExistsInDatabaseAsync(_tableName, _nonDefaultDatabase),
@@ -92,7 +82,7 @@ public class MySqlOutboxNonDefaultSchemaTests : IAsyncLifetime
             $"Outbox table '{_tableName}' must NOT exist in BrighterTests (connection's default DB) when SchemaName='{_nonDefaultDatabase}' is configured.");
         Assert.Equal(1, await GetHistoryRowCountAsync(_nonDefaultDatabase, _tableName));
 
-        //Act — idempotent second run
+        //Act
         var secondException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
 
         //Assert
@@ -145,8 +135,6 @@ WHERE table_schema = @SchemaName AND table_name = @TableName";
 
     private async Task<long> GetHistoryRowCountAsync(string schemaName, string tableName)
     {
-        // History table lives in the connection's bound database (BrighterTests) per
-        // existing ADR contract — only the box table is in the configured schema.
         await using var connection = new MySqlConnection(_baseConnectionString);
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();

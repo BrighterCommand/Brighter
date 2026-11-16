@@ -30,6 +30,11 @@ using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
+/// <summary>
+/// Two Spanner provisioners installing the same absent outbox race on the table DDL and the history insert;
+/// the loser's <c>AlreadyExists</c> is absorbed, so neither throws and exactly one history row is stamped at
+/// V_latest (ADR 0057 §3, §6).
+/// </summary>
 [Trait("Category", "Spanner")]
 [Collection("Spanner")]
 [Trait("Category", "Spanner")]
@@ -52,13 +57,7 @@ public class SpannerConcurrentFreshInstallTests : IAsyncLifetime
     [Fact]
     public async Task Should_not_throw_when_two_concurrent_fresh_installers_race_on_history_insert()
     {
-        //Arrange — two independent provisioners against the same empty table. Both will
-        //take the fresh-install path; both will run CREATE TABLE (Spanner's DDL is serialised
-        //internally — ExecuteCreateTableIfNotExistsSafeAsync swallows the loser's AlreadyExists), then both
-        //will check IsMigrationAppliedAsync (which can read at a snapshot before the winner's
-        //history-row commit timestamp lands), and both will attempt InsertHistoryRowAsync —
-        //the loser hits a Spanner AlreadyExists on the PK (BoxTableName, MigrationVersion)
-        //which currently surfaces as an unrecoverable startup error.
+        //Arrange
         var provisionerA = new SpannerOutboxProvisioner(
             new SpannerBoxDetectionHelper(),
             new SpannerPayloadModeValidator(),
@@ -76,11 +75,9 @@ public class SpannerConcurrentFreshInstallTests : IAsyncLifetime
             provisionerB.ProvisionAsync());
         var ex = await Record.ExceptionAsync(act);
 
-        //Assert — neither replica should surface the benign-race AlreadyExists.
+        //Assert
         Assert.Null(ex);
 
-        //Assert — exactly one history row was stamped at V_latest (proves the loser's
-        //insert was absorbed cleanly, not silently double-stamped).
         using var connection = CreateConnection();
         await connection.OpenAsync();
         var historyCount = await ReadHistoryCountAsync(connection, _tableName);

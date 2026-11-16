@@ -32,6 +32,10 @@ using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
+/// <summary>
+/// A Spanner outbox that exists without history is stamped at V_latest with the bootstrap description when it
+/// has the <c>HeaderBag</c> discriminator, and rejected as not a Brighter box when it does not (ADR 0057 §6).
+/// </summary>
 [Trait("Category", "Spanner")]
 [Collection("Spanner")]
 [Trait("Category", "Spanner")]
@@ -63,7 +67,7 @@ public class SpannerOutboxBootstrapDiscriminatorTests : IAsyncLifetime
     [Fact]
     public async Task Should_stamp_v_latest_with_bootstrap_description_when_headerbag_present()
     {
-        // Arrange — a Brighter-shaped outbox already exists (HeaderBag present), no history yet
+        // Arrange
         using (var setup = CreateConnection())
         {
             await setup.OpenAsync();
@@ -74,7 +78,7 @@ public class SpannerOutboxBootstrapDiscriminatorTests : IAsyncLifetime
         // Act
         await _provisioner.ProvisionAsync();
 
-        // Assert — exactly one history row at V_latest, description matches ADR §6 verbatim
+        // Assert
         using var connection = CreateConnection();
         await connection.OpenAsync();
 
@@ -88,7 +92,7 @@ public class SpannerOutboxBootstrapDiscriminatorTests : IAsyncLifetime
     [Fact]
     public async Task Should_throw_configuration_exception_when_headerbag_absent()
     {
-        // Arrange — a foreign table without the outbox discriminator HeaderBag
+        // Arrange
         using (var setup = CreateConnection())
         {
             await setup.OpenAsync();
@@ -155,6 +159,10 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @Version",
     }
 }
 
+/// <summary>
+/// A Spanner inbox that exists without history is stamped at V_latest with the bootstrap description when it
+/// has the <c>CommandBody</c> discriminator, and rejected as not a Brighter box when it does not (ADR 0057 §6).
+/// </summary>
 [Trait("Category", "Spanner")]
 [Collection("Spanner")]
 [Trait("Category", "Spanner")]
@@ -186,7 +194,7 @@ public class SpannerInboxBootstrapDiscriminatorTests : IAsyncLifetime
     [Fact]
     public async Task Should_stamp_v_latest_with_bootstrap_description_when_commandbody_present()
     {
-        // Arrange — a Brighter-shaped inbox already exists (CommandBody present), no history yet
+        // Arrange
         using (var setup = CreateConnection())
         {
             await setup.OpenAsync();
@@ -197,7 +205,7 @@ public class SpannerInboxBootstrapDiscriminatorTests : IAsyncLifetime
         // Act
         await _provisioner.ProvisionAsync();
 
-        // Assert — exactly one history row at V_latest, description matches ADR §6 verbatim
+        // Assert
         using var connection = CreateConnection();
         await connection.OpenAsync();
 
@@ -211,7 +219,7 @@ public class SpannerInboxBootstrapDiscriminatorTests : IAsyncLifetime
     [Fact]
     public async Task Should_throw_configuration_exception_when_commandbody_absent()
     {
-        // Arrange — a foreign table without the inbox discriminator CommandBody
+        // Arrange
         using (var setup = CreateConnection())
         {
             await setup.OpenAsync();

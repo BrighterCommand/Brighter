@@ -33,6 +33,8 @@ namespace Paramore.Brighter
         private readonly int _outstandingCountTimeoutSeconds = RelationalDatabaseConfiguration.ToOutstandingCountTimeoutSeconds(
             configuration.OutstandingCountTimeout, nameof(configuration));
 
+        private const int MAX_TOPIC_AGE_DAYS = 365;
+
         protected IAmARelationalDbConnectionProvider ConnectionProvider { get; } = connectionProvider;
 
         protected IRelationDatabaseOutboxQueries Queries => queries;
@@ -51,6 +53,10 @@ namespace Paramore.Brighter
         // Never invalidated: a store constructed before provisioning caches "absent", so a mid-process
         // migration requires a restart.
         private bool? _causationColumnExists;
+
+        private IRelationalDatabaseOutboxDataRefQueries? DataRefQueries => queries as IRelationalDatabaseOutboxDataRefQueries;
+        private bool? _dataRefColumnExists;
+        private bool IncludeDataRef => _dataRefColumnExists == true;
 
         /// <summary>
         ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
@@ -97,6 +103,7 @@ namespace Paramore.Brighter
 
             try
             {
+                var includeDataRef = DataRefColumnExists();
                 var parameters = InitAddDbParameters(message);
                 var includeCausation = CausationColumnExists();
                 if (includeCausation)
@@ -104,7 +111,7 @@ namespace Paramore.Brighter
                     parameters = [.. parameters, CreateSqlParameter("@CausationId", DbType.String, ReadCausationId(requestContext))];
                 }
 
-                WriteToStore(transactionProvider, connection => InitAddDbCommand(connection, parameters, includeCausation), () =>
+                WriteToStore(transactionProvider, connection => InitAddDbCommand(connection, parameters, includeDataRef, includeCausation), () =>
                 {
                     logger.LogWarning(
                         "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
@@ -147,13 +154,12 @@ namespace Paramore.Brighter
 
             try
             {
-                // Gate the bulk write on the same memoized probe as the single Add so a batch deposited under
-                // [UseInbox] persists its CausationId; an un-migrated table keeps the plain bulk insert (AC10).
+                var includeDataRef = DataRefColumnExists();
                 var includeCausation = CausationColumnExists();
                 var causationId = includeCausation ? ReadCausationId(requestContext) : null;
 
                 WriteToStore(transactionProvider,
-                    connection => InitBulkAddDbCommand(messages.ToList(), connection, includeCausation, causationId),
+                    connection => InitBulkAddDbCommand(messages.ToList(), connection, includeDataRef, includeCausation, causationId),
                     () => logger.LogWarning("Outbox: At least one message already exists in the outbox"));
             }
             finally
@@ -193,6 +199,8 @@ namespace Paramore.Brighter
 
             try
             {
+                var includeDataRef = await DataRefColumnExistsAsync(cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
                 var parameters = InitAddDbParameters(message);
                 var includeCausation = await CausationColumnExistsAsync(cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
@@ -202,7 +210,7 @@ namespace Paramore.Brighter
                 }
 
                 await WriteToStoreAsync(transactionProvider,
-                    connection => InitAddDbCommand(connection, parameters, includeCausation), () =>
+                    connection => InitAddDbCommand(connection, parameters, includeDataRef, includeCausation), () =>
                     {
                         logger.LogWarning(
                             "A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
@@ -246,14 +254,14 @@ namespace Paramore.Brighter
 
             try
             {
-                // Gate the bulk write on the same memoized probe as the single AddAsync so a batch deposited under
-                // [UseInbox] persists its CausationId; an un-migrated table keeps the plain bulk insert (AC10).
+                var includeDataRef = await DataRefColumnExistsAsync(cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
                 var includeCausation = await CausationColumnExistsAsync(cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
                 var causationId = includeCausation ? ReadCausationId(requestContext) : null;
 
                 await WriteToStoreAsync(transactionProvider,
-                    connection => InitBulkAddDbCommand(messages.ToList(), connection, includeCausation, causationId),
+                    connection => InitBulkAddDbCommand(messages.ToList(), connection, includeDataRef, includeCausation, causationId),
                     () => logger.LogWarning("MsSqlOutbox: At least one message already exists in the outbox"),
                     cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
@@ -1012,14 +1020,118 @@ namespace Paramore.Brighter
         /// <inheritdoc/>
         public int GetOutstandingMessageCount(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null)
         {
-            return ReadOutstandingMessages(dispatchedSince, requestContext, maxCount, 1, null, _outstandingCountTimeoutSeconds).Count();
+            if (queries is not IRelationalDatabaseOutboxCountQueries countQueries)
+                return ReadOutstandingMessages(dispatchedSince, requestContext, maxCount, 1, null, _outstandingCountTimeoutSeconds).Count();
+
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                { "db.operation.name", ExtractSqlOperationName(countQueries.GetOutstandingMessageCountCommand) },
+                { "db.query.text", countQueries.GetOutstandingMessageCountCommand }
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.OutStandingMessages, DatabaseConfiguration.OutBoxTableName,
+                    dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var count = ReadFromStore(
+                    connection => CreateOutstandingCountCommand(connection, countQueries, dispatchedSince, maxCount),
+                    MapOutstandingCount);
+                span?.AddTag("db.response.returned_rows", 1);
+                return count;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <inheritdoc/>
         public async Task<int> GetOutstandingMessageCountAsync(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         {
-            return (await ReadOutstandingMessagesAsync(dispatchedSince, requestContext, maxCount, 1, null, _outstandingCountTimeoutSeconds, cancellationToken))
-                .Count();
+            if (queries is not IRelationalDatabaseOutboxCountQueries countQueries)
+                return (await ReadOutstandingMessagesAsync(dispatchedSince, requestContext, maxCount, 1, null, _outstandingCountTimeoutSeconds, cancellationToken)).Count();
+
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                { "db.operation.name", ExtractSqlOperationName(countQueries.GetOutstandingMessageCountCommand) },
+                { "db.query.text", countQueries.GetOutstandingMessageCountCommand }
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.OutStandingMessages, DatabaseConfiguration.OutBoxTableName,
+                    dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var count = await ReadFromStoreAsync(
+                    connection => CreateOutstandingCountCommand(connection, countQueries, dispatchedSince, maxCount),
+                    dr => MapOutstandingCountAsync(dr, cancellationToken), cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
+                span?.AddTag("db.response.returned_rows", 1);
+                return count;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
+        }
+
+        /// <inheritdoc cref="IAmATopicCountingOutbox.GetOutstandingMessageCountsByTopicAsync"/>
+        /// <exception cref="NotSupportedException">
+        /// The outbox queries do not implement <see cref="IRelationalDatabaseOutboxTopicCountQueries"/>.
+        /// </exception>
+        public async Task<IReadOnlyDictionary<RoutingKey, int>> GetOutstandingMessageCountsByTopicAsync(
+            IReadOnlyDictionary<RoutingKey, TimeSpan> dispatchedSinceByTopic,
+            RequestContext? requestContext,
+            int maxCountPerTopic,
+            Dictionary<string, object>? args = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (dispatchedSinceByTopic is null)
+                throw new ArgumentNullException(nameof(dispatchedSinceByTopic));
+            if (maxCountPerTopic < 1)
+                throw new ArgumentOutOfRangeException(nameof(maxCountPerTopic), maxCountPerTopic, "The ceiling per topic must be at least 1.");
+            CheckRequestedTopics(dispatchedSinceByTopic);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (queries is not IRelationalDatabaseOutboxTopicCountQueries topicCountQueries)
+                throw new NotSupportedException(
+                    $"The outbox queries do not implement {nameof(IRelationalDatabaseOutboxTopicCountQueries)}.");
+
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                { "db.operation.name", ExtractSqlOperationName(topicCountQueries.GetOutstandingMessageCountByTopicCommand) },
+                { "db.query.text", topicCountQueries.GetOutstandingMessageCountByTopicCommand }
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.OutStandingMessageCount, DatabaseConfiguration.OutBoxTableName,
+                    dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var counts = new Dictionary<RoutingKey, int>();
+                foreach (var request in dispatchedSinceByTopic)
+                {
+                    var count = await ReadFromStoreAsync(
+                        connection => CreateOutstandingCountByTopicCommand(connection, topicCountQueries, request.Key, request.Value, maxCountPerTopic),
+                        dr => MapOutstandingCountAsync(dr, cancellationToken), cancellationToken)
+                        .ConfigureAwait(ContinueOnCapturedContext);
+                    counts.Add(request.Key, count);
+                }
+
+                span?.AddTag("db.response.returned_rows", counts.Count);
+                return counts;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <inheritdoc />
@@ -1028,6 +1140,49 @@ namespace Paramore.Brighter
         /// <inheritdoc />
         public Task<bool> SupportsCausationTrackingAsync(CancellationToken cancellationToken = default)
             => CausationColumnExistsAsync(cancellationToken);
+
+        // Schema support is cached for this outbox instance; recreate it after migrating the table.
+        private bool DataRefColumnExists()
+        {
+            if (DataRefQueries is null)
+                return false;
+
+            return _dataRefColumnExists ??= ReadFromStore(
+                connection => CreateCommand(connection, GenerateSqlText(DataRefQueries.DataRefColumnExistsCommand), -1),
+                MapBoolFunction);
+        }
+
+        private async Task<bool> DataRefColumnExistsAsync(CancellationToken cancellationToken)
+        {
+            if (DataRefQueries is null)
+                return false;
+
+            if (_dataRefColumnExists is { } cached)
+                return cached;
+
+            var exists = await ReadFromStoreAsync(
+                connection => CreateCommand(connection, GenerateSqlText(DataRefQueries.DataRefColumnExistsCommand), -1),
+                dr => MapBoolFunctionAsync(dr, cancellationToken),
+                cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            _dataRefColumnExists = exists;
+            return exists;
+        }
+
+        private string AddCommand(bool includeDataRef, bool includeCausation)
+        {
+            if (includeDataRef)
+                return includeCausation ? DataRefQueries!.AddDataRefCausationCommand : DataRefQueries!.AddDataRefCommand;
+
+            return includeCausation ? CausationQueries!.AddCausationCommand : queries.AddCommand;
+        }
+
+        private string BulkAddCommand(bool includeDataRef, bool includeCausation)
+        {
+            if (includeDataRef)
+                return includeCausation ? DataRefQueries!.BulkAddDataRefCausationCommand : DataRefQueries!.BulkAddDataRefCommand;
+
+            return includeCausation ? CausationQueries!.BulkAddCausationCommand : queries.BulkAddCommand;
+        }
 
         // Memoized live-schema probe shared by SupportsCausationTracking[Async] and the Add gate.
         private bool CausationColumnExists()
@@ -1338,29 +1493,52 @@ namespace Paramore.Brighter
             return (inClauseSql, inClause.parameters);
         }
 
+        private DbCommand CreateOutstandingCountCommand(DbConnection connection,
+            IRelationalDatabaseOutboxCountQueries countQueries, TimeSpan dispatchedSince, int maxCount)
+            => CreateCommand(connection, GenerateSqlText(countQueries.GetOutstandingMessageCountCommand),
+                _outstandingCountTimeoutSeconds, CreatePagedOutstandingParameters(dispatchedSince, maxCount, 1, []));
+
+        private DbCommand CreateOutstandingCountByTopicCommand(DbConnection connection,
+            IRelationalDatabaseOutboxTopicCountQueries topicCountQueries, RoutingKey topic, TimeSpan dispatchedSince, int maxCount)
+            => CreateCommand(connection, GenerateSqlText(topicCountQueries.GetOutstandingMessageCountByTopicCommand),
+                _outstandingCountTimeoutSeconds,
+                CreatePagedOutstandingParameters(dispatchedSince, maxCount, 1, [CreateSqlParameter("@Topic", DbType.String, topic.Value)]));
+
+        private static void CheckRequestedTopics(IReadOnlyDictionary<RoutingKey, TimeSpan> dispatchedSinceByTopic)
+        {
+            foreach (var request in dispatchedSinceByTopic)
+            {
+                if (RoutingKey.IsNullOrEmpty(request.Key))
+                    throw new ArgumentException("A requested topic is null or empty.", nameof(dispatchedSinceByTopic));
+                if (request.Value <= TimeSpan.Zero || request.Value > TimeSpan.FromDays(MAX_TOPIC_AGE_DAYS))
+                    throw new ArgumentException(
+                        $"The age requested for topic {request.Key} must be greater than zero and no greater than {MAX_TOPIC_AGE_DAYS} days.",
+                        nameof(dispatchedSinceByTopic));
+            }
+        }
+
         private DbCommand CreateRemainingOutstandingCommand(DbConnection connection)
             => CreateCommand(connection, GenerateSqlText(queries.GetNumberOfOutstandingMessagesCommand), 0);
 
         private DbCommand InitAddDbCommand(
             DbConnection connection,
             IDbDataParameter[] parameters,
+            bool includeDataRef,
             bool includeCausation
         )
-            // The caller threads in the result of its own CausationColumnExists[Async]() probe, so the
-            // SQL choice and the parameter list are decided from a single read; absent column → plain AddCommand.
             => CreateCommand(connection,
-                GenerateSqlText(includeCausation ? CausationQueries!.AddCausationCommand : queries.AddCommand),
+                GenerateSqlText(AddCommand(includeDataRef, includeCausation)),
                 0, parameters);
 
         private DbCommand InitReplayCausationCommand(DbConnection connection, string causationId)
             => CreateCommand(connection, GenerateSqlText(CausationQueries!.ReplayCausationCommand), 0,
                 CreateSqlParameter("@CausationId", DbType.String, causationId));
 
-        private DbCommand InitBulkAddDbCommand(List<Message> messages, DbConnection connection, bool includeCausation,
-            string? causationId)
+        private DbCommand InitBulkAddDbCommand(List<Message> messages, DbConnection connection, bool includeDataRef,
+            bool includeCausation, string? causationId)
         {
             var insertClause = GenerateBulkInsert(messages, includeCausation, causationId);
-            var addCommand = includeCausation ? CausationQueries!.BulkAddCausationCommand : queries.BulkAddCommand;
+            var addCommand = BulkAddCommand(includeDataRef, includeCausation);
             return CreateCommand(connection, GenerateSqlText(addCommand, insertClause.insertClause), 0,
                 insertClause.parameters);
         }
@@ -1458,7 +1636,7 @@ namespace Paramore.Brighter
                 CreateSqlParameter($"@{prefix}Body", DbType.Binary, message.Body.ToByteArray())
                 : CreateSqlParameter($"@{prefix}Body", DbType.String, message.Body.Value);
 
-            return
+            IDbDataParameter[] parameters =
             [
                 body,
                 CreateSqlParameter($"@{prefix}MessageId", DbType.String, message.Id.Value),
@@ -1482,6 +1660,10 @@ namespace Paramore.Brighter
                 CreateSqlParameter($"@{prefix}WorkflowId", DbType.String, message.Header.WorkflowId?.Value),
                 CreateSqlParameter($"@{prefix}JobId", DbType.String, message.Header.JobId?.Value),
             ];
+
+            return IncludeDataRef
+                ? [.. parameters, CreateSqlParameter($"@{prefix}DataRef", DbType.String, message.Header.DataRef)]
+                : parameters;
         }
 
         protected virtual Message MapFunction(DbDataReader dr)
@@ -1635,6 +1817,9 @@ namespace Paramore.Brighter
                     $"@p{i}_ReplyTo, @p{i}_ContentType, @p{i}_PartitionKey, @p{i}_HeaderBag, @p{i}_Body, " +
                     $"@p{i}_Source, @p{i}_Type, @p{i}_DataSchema, @p{i}_Subject, @p{i}_TraceParent, @p{i}_TraceState, " +
                     $"@p{i}_Baggage, @p{i}_WorkflowId, @p{i}_JobId";
+
+                if (IncludeDataRef)
+                    rowColumns += $", @p{i}_DataRef";
 
                 // The bulk causation insert appends a trailing CausationId column; bind one per-row parameter so each
                 // batched message carries the same causation id as the single Add path would.

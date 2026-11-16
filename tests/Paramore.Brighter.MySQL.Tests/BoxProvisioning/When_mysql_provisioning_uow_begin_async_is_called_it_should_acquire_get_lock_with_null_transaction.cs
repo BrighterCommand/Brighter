@@ -34,29 +34,12 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// <c>BeginAsync</c> acquires <c>GET_LOCK</c> and opens no transaction: MySQL DDL commits implicitly,
+/// so the UoW's <c>Transaction</c> stays null (ADR 0057 §5a, ADR 0058 §B.1).
+/// </summary>
 public class MySqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
 {
-    // Per ADR 0057 §5a / ADR 0058 §B.1: MySQL is the transactionless backend in the relational
-    // family — DDL statements implicitly commit the surrounding transaction, so wrapping a
-    // multi-statement migration in BEGIN/COMMIT yields nothing useful. The MySQL UoW therefore
-    // never opens a transaction; it only acquires the session-level GET_LOCK that serialises
-    // concurrent runners. This is the load-bearing shape difference vs MSSQL/Postgres UoWs.
-    //
-    // The interface IAmAProvisioningUnitOfWork<TTransaction> is generic over the backend's
-    // transaction subtype; MySqlProvisioningUnitOfWork instantiates TTransaction = MySqlTransaction
-    // for symmetry but always returns null from the Transaction property — see XML-doc on
-    // IAmAProvisioningUnitOfWork.Transaction (line 57-62) which spells out this contract.
-    //
-    // BeginAsync's contract is therefore:
-    //   1. Invoke advisoryLock.AcquireAsync (the spy's AcquiredKey becomes non-null).
-    //   2. Do NOT open a transaction — Transaction stays null.
-    //
-    // Pinning these two facts requires no further spy on the connection: any implementation
-    // that called connection.BeginTransaction would be required to assign the result somewhere,
-    // and the only valid sink that survives BeginAsync is the Transaction property (because
-    // a stack-local would be lost). So `Assert.Null(uow.Transaction)` is the structural pin
-    // for "did not open a transaction".
-
     private readonly MySqlConnection _connection = new(Const.DefaultConnectingString);
     private readonly FakeMySqlAdvisoryLock _advisoryLock = new(releaseResult: true);
 
@@ -77,10 +60,8 @@ public class MySqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
             lockTimeout: TimeSpan.FromSeconds(5),
             cancellationToken: CancellationToken.None);
 
-        // Assert: GET_LOCK was acquired with the lock resource the runner asked for.
+        // Assert
         Assert.Equal("test_lock_resource", _advisoryLock.AcquiredKey);
-        // Assert: no transaction was opened — MySQL DDL auto-commits, so a wrapping tx serves
-        // no purpose and would be misleading. Per ADR 0057 §5a / ADR 0058 §B.1.
         Assert.Null(uow.Transaction);
     }
 }

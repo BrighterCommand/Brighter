@@ -1,6 +1,6 @@
 ﻿namespace Paramore.Brighter.Outbox.Spanner;
 
-public class SpannerQueries : IRelationDatabaseOutboxQueries, IRelationalDatabaseOutboxCausationQueries
+public class SpannerQueries : IRelationDatabaseOutboxQueries, IRelationalDatabaseOutboxCountQueries, IRelationalDatabaseOutboxTopicCountQueries, IRelationalDatabaseOutboxCausationQueries, IRelationalDatabaseOutboxDataRefQueries
 {
     /// <inheritdoc />
     public string PagedDispatchedCommand => "SELECT * FROM `{0}` WHERE `Dispatched` IS NOT NULL AND `Dispatched` < @DispatchedSince ORDER BY `Timestamp` DESC LIMIT @Take OFFSET @Skip";
@@ -44,6 +44,12 @@ public class SpannerQueries : IRelationDatabaseOutboxQueries, IRelationalDatabas
     public string DeleteMessagesCommand => "DELETE FROM `{0}` WHERE `MessageId` IN ( {1} )";
 
     /// <inheritdoc />
+    public string GetOutstandingMessageCountCommand => "SELECT COUNT(1) FROM (SELECT 1 FROM `{0}` WHERE `Dispatched` IS NULL AND `Timestamp` < @TimestampSince LIMIT @Take) AS OutstandingMessages";
+
+    /// <inheritdoc />
+    public string GetOutstandingMessageCountByTopicCommand => "SELECT COUNT(1) FROM (SELECT 1 FROM `{0}` WHERE `Dispatched` IS NULL AND `Timestamp` < @TimestampSince AND `Topic` = @Topic LIMIT @Take) AS OutstandingMessages";
+
+    /// <inheritdoc />
     public string GetNumberOfOutstandingMessagesCommand => "SELECT COUNT(1) FROM `{0}` WHERE `Dispatched` IS NULL";
 
     /// <inheritdoc />
@@ -66,4 +72,37 @@ public class SpannerQueries : IRelationDatabaseOutboxQueries, IRelationalDatabas
 
     /// <inheritdoc />
     public string CausationColumnExistsCommand => "SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{0}' AND COLUMN_NAME = 'CausationId'";
+
+    /// <inheritdoc />
+    public string AddDataRefCommand =>
+        "INSERT INTO `{0}` " +
+        "(`MessageId`,`MessageType`,`Topic`,`Timestamp`,`CorrelationId`,`ReplyTo`,`ContentType`,`PartitionKey`,`HeaderBag`,`Body`" +
+        ",`Source`,`Type`,`DataSchema`,`Subject`,`TraceParent`,`TraceState`,`Baggage`, `WorkflowId`, `JobId`, `DataRef`) " +
+        "VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @CorrelationId, @ReplyTo, @ContentType, @PartitionKey, @HeaderBag, @Body, " +
+            "@Source, @Type, @DataSchema, @Subject, @TraceParent, @TraceState, @Baggage, @WorkflowId, @JobId, @DataRef)";
+
+    /// <inheritdoc />
+    public string BulkAddDataRefCommand =>
+        "INSERT INTO `{0}` " +
+        "(`MessageId`,`MessageType`,`Topic`,`Timestamp`,`CorrelationId`,`ReplyTo`,`ContentType`,`PartitionKey`,`HeaderBag`,`Body`" +
+        ",`Source`,`Type`,`DataSchema`,`Subject`,`TraceParent`,`TraceState`,`Baggage`, `WorkflowId`, `JobId`, `DataRef`) " +
+        "VALUES {1}";
+
+    /// <inheritdoc />
+    public string AddDataRefCausationCommand =>
+        "INSERT INTO `{0}` " +
+        "(`MessageId`,`MessageType`,`Topic`,`Timestamp`,`CorrelationId`,`ReplyTo`,`ContentType`,`PartitionKey`,`HeaderBag`,`Body`" +
+        ",`Source`,`Type`,`DataSchema`,`Subject`,`TraceParent`,`TraceState`,`Baggage`, `WorkflowId`, `JobId`, `DataRef`, `CausationId`) " +
+        "VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @CorrelationId, @ReplyTo, @ContentType, @PartitionKey, @HeaderBag, @Body, " +
+            "@Source, @Type, @DataSchema, @Subject, @TraceParent, @TraceState, @Baggage, @WorkflowId, @JobId, @DataRef, @CausationId)";
+
+    /// <inheritdoc />
+    public string BulkAddDataRefCausationCommand =>
+        "INSERT INTO `{0}` " +
+        "(`MessageId`,`MessageType`,`Topic`,`Timestamp`,`CorrelationId`,`ReplyTo`,`ContentType`,`PartitionKey`,`HeaderBag`,`Body`" +
+        ",`Source`,`Type`,`DataSchema`,`Subject`,`TraceParent`,`TraceState`,`Baggage`, `WorkflowId`, `JobId`, `DataRef`, `CausationId`) " +
+        "VALUES {1}";
+
+    /// <inheritdoc />
+    public string DataRefColumnExistsCommand => "SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{0}' AND COLUMN_NAME = 'DataRef'";
 }

@@ -36,6 +36,8 @@ namespace Paramore.Brighter.Outbox.Firestore;
 /// </remarks>
 public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, IAmAnOutboxAsync<Message, FirestoreTransaction>, IAmACausationTrackingOutbox
 {
+    private static readonly TimeSpan s_defaultOutstandingCountTimeout = TimeSpan.FromSeconds(15);
+
     private readonly IAmAFirestoreConnectionProvider _connectionProvider;
     private readonly FirestoreConfiguration _configuration;
     private readonly FirestoreCollection _outboxCollection;
@@ -448,7 +450,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
            };
         
            var client = _connectionProvider.GetFirestoreClient();
-           var response = client.RunAggregationQuery(request);
+           var response = client.RunAggregationQuery(request, CallSettings.FromExpiration(OutstandingCountExpiration()));
            return BrighterAsyncContext.Run(async () =>
            {
                await foreach (var resp in response.GetResponseStream())
@@ -1200,6 +1202,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
 
        try
        {
+           var timeStamp = _configuration.TimeProvider.GetUtcNow().Subtract(dispatchedSince);
            var structuredAggregationQuery = new StructuredAggregationQuery
            {
                StructuredQuery = new StructuredQuery
@@ -1210,13 +1213,41 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
                    },
                    Where = new StructuredQuery.Types.Filter
                    {
-                       FieldFilter = new StructuredQuery.Types.FieldFilter
+                       CompositeFilter = new StructuredQuery.Types.CompositeFilter
                        {
-                           Field = new StructuredQuery.Types.FieldReference { FieldPath = IsDispatched },
-                           Op = StructuredQuery.Types.FieldFilter.Types.Operator.Equal,
-                           Value = new Value { BooleanValue = false }
+                           Op = StructuredQuery.Types.CompositeFilter.Types.Operator.And,
+                           Filters =
+                           {
+                               new StructuredQuery.Types.Filter
+                               {
+                                   FieldFilter = new StructuredQuery.Types.FieldFilter
+                                   {
+                                       Field = new StructuredQuery.Types.FieldReference { FieldPath = IsDispatched },
+                                       Op = StructuredQuery.Types.FieldFilter.Types.Operator.Equal,
+                                       Value = new Value { BooleanValue = false }
+                                   }
+                               },
+                               new StructuredQuery.Types.Filter
+                               {
+                                   FieldFilter = new StructuredQuery.Types.FieldFilter
+                                   {
+                                       Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.TimeStamp) },
+                                       Op = StructuredQuery.Types.FieldFilter.Types.Operator.LessThan,
+                                       Value = new Value { TimestampValue = Timestamp.FromDateTimeOffset(timeStamp) }
+                                   }
+                               }
+                           }
                        }
-                   }
+                   },
+                   OrderBy =
+                   {
+                       new StructuredQuery.Types.Order
+                       {
+                           Field = new StructuredQuery.Types.FieldReference { FieldPath = nameof(MessageHeader.TimeStamp) },
+                           Direction = StructuredQuery.Types.Direction.Descending
+                       }
+                   },
+                   Limit = maxCount
                },
                Aggregations =
                {
@@ -1235,8 +1266,9 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
            };
         
            var client = await _connectionProvider.GetFirestoreClientAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-           var response = client.RunAggregationQuery(request);
-           await foreach (var resp in response.GetResponseStream())
+           var response = client.RunAggregationQuery(request,
+               CallSettings.FromCancellationToken(cancellationToken).WithExpiration(OutstandingCountExpiration()));
+           await foreach (var resp in response.GetResponseStream().WithCancellation(cancellationToken))
            {
                if (resp.Result.AggregateFields.TryGetValue("total_count", out var value))
                {
@@ -1252,6 +1284,9 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
            Tracer?.EndSpan(span);
        }
     }
+
+    private Expiration OutstandingCountExpiration()
+        => Expiration.FromTimeout(_configuration.OutstandingCountTimeout ?? s_defaultOutstandingCountTimeout);
 
     private static Expiration? ToExpiration(int outboxTimeout)
         => outboxTimeout == -1 ? null : Expiration.FromTimeout(TimeSpan.FromMilliseconds(outboxTimeout));

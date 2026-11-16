@@ -30,10 +30,10 @@ using Xunit;
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
 /// <summary>
-/// SQLite's outbox catalog: V1 is the live builder DDL; V2..V8 are plain <c>ALTER TABLE ADD COLUMN</c>
+/// SQLite's outbox catalog: V1 is the historical baseline DDL; V2..V8 are plain <c>ALTER TABLE ADD COLUMN</c>
 /// statements paired with a <c>pragma_table_info</c> IdempotencyCheckSql, because SQLite has no
 /// <c>ADD COLUMN IF NOT EXISTS</c> (ADR 0057 §5). V8 also creates the CausationId index, so it is
-/// checked apart from the plain ALTERs.
+/// checked apart from the plain ALTERs. V9 adds MessageId uniqueness without adding columns.
 /// </summary>
 public class SqliteOutboxMigrationsTests
 {
@@ -55,7 +55,7 @@ public class SqliteOutboxMigrationsTests
     private static readonly string[] s_v8Added = ["CausationId"];
 
     [Fact]
-    public void When_sqlite_outbox_migrations_are_listed_it_should_return_v1_through_v8_with_idempotency_check_sql_and_plain_alter_upscripts()
+    public void When_sqlite_outbox_migrations_are_listed_it_should_return_v1_through_v9_with_idempotency_check_sql_and_plain_alter_upscripts()
     {
         //Arrange
         var config = new RelationalDatabaseConfiguration(
@@ -67,13 +67,13 @@ public class SqliteOutboxMigrationsTests
         var migrations = new SqliteOutboxMigrationCatalog().All(config);
 
         //Assert
-        Assert.Equal(8, migrations.Count);
+        Assert.Equal(9, migrations.Count);
         for (var i = 0; i < migrations.Count; i++)
         {
             Assert.Equal(i + 1, migrations[i].Version.Value);
         }
 
-        for (var v = 1; v <= 8; v++)
+        for (var v = 1; v <= 9; v++)
         {
             var migration = migrations[v - 1];
             var expected = expectedPerVersion[v];
@@ -134,6 +134,9 @@ public class SqliteOutboxMigrationsTests
                 $"V{v} must have a non-empty SourceReference (archaeology pointer)");
         }
 
+        Assert.Contains("CREATE UNIQUE INDEX", migrations[8].UpScript, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[MessageId] COLLATE NOCASE", migrations[8].UpScript, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("pragma_index_list", migrations[8].IdempotencyCheckSql, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("1cdc04b60 / #2560", migrations[3].SourceReference);
     }
 
@@ -150,6 +153,8 @@ public class SqliteOutboxMigrationsTests
         cumulative.UnionWith(s_v6Added); byVersion[6] = new HashSet<string>(cumulative, StringComparer.OrdinalIgnoreCase);
         cumulative.UnionWith(s_v7Added); byVersion[7] = new HashSet<string>(cumulative, StringComparer.OrdinalIgnoreCase);
         cumulative.UnionWith(s_v8Added); byVersion[8] = new HashSet<string>(cumulative, StringComparer.OrdinalIgnoreCase);
+
+        byVersion[9] = new HashSet<string>(cumulative, StringComparer.OrdinalIgnoreCase);
 
         return byVersion;
     }

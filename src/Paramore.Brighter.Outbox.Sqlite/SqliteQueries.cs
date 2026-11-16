@@ -1,6 +1,6 @@
 ﻿namespace Paramore.Brighter.Outbox.Sqlite
 {
-    public class SqliteQueries : IRelationDatabaseOutboxQueries, IRelationalDatabaseOutboxCausationQueries
+    public class SqliteQueries : IRelationDatabaseOutboxQueries, IRelationalDatabaseOutboxCountQueries, IRelationalDatabaseOutboxTopicCountQueries, IRelationalDatabaseOutboxCausationQueries, IRelationalDatabaseOutboxDataRefQueries
     {
         public string PagedDispatchedCommand { get; } = "SELECT * FROM {0} WHERE [Dispatched] IS NOT NULL AND [Dispatched] < @DispatchedSince ORDER BY [Timestamp] DESC LIMIT @Take OFFSET @Skip";
         public string PagedReadCommand { get; } = "SELECT * FROM {0} ORDER BY [Timestamp] ASC LIMIT @Take OFFSET @Skip";
@@ -14,12 +14,19 @@
         public string BulkAddCommand { get; } =
             "INSERT INTO {0} " +
             "(MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, PartitionKey,  HeaderBag, Body, Source, Type, DataSchema, Subject, TraceParent, TraceState, Baggage, WorkflowId, JobId) " +
-            "VALUES {1}"; 
+            "VALUES {1} ON CONFLICT DO NOTHING";
         public string MarkDispatchedCommand { get; } = "UPDATE {0} SET [Dispatched] = @DispatchedAt WHERE [MessageId] = @MessageId";
         public string MarkMultipleDispatchedCommand { get; } = "UPDATE {0} SET [Dispatched] = @DispatchedAt WHERE [MessageId] IN ( {1} )";
         public string GetMessageCommand { get; } = "SELECT * FROM {0} WHERE [MessageId] = @MessageId";
         public string GetMessagesCommand { get; } = "SELECT * FROM {0} WHERE [MessageId] IN ( {1} ) ORDER BY [Timestamp] ASC";
         public string DeleteMessagesCommand { get; } = "DELETE FROM {0} WHERE [MessageId] IN ( {1} )";
+
+        /// <inheritdoc />
+        public string GetOutstandingMessageCountCommand => "SELECT COUNT(1) FROM (SELECT 1 FROM {0} WHERE [Dispatched] IS NULL AND [Timestamp] < @TimestampSince LIMIT @Take) AS OutstandingMessages";
+
+        /// <inheritdoc />
+        public string GetOutstandingMessageCountByTopicCommand => "SELECT COUNT(1) FROM (SELECT 1 FROM {0} WHERE [Dispatched] IS NULL AND [Timestamp] < @TimestampSince AND [Topic] = @Topic LIMIT @Take) AS OutstandingMessages";
+
         public string GetNumberOfOutstandingMessagesCommand { get; } = "SELECT COUNT(1) FROM {0} WHERE [Dispatched] IS NULL";
 
         public string AddCausationCommand { get; } =
@@ -29,8 +36,35 @@
         public string BulkAddCausationCommand { get; } =
             "INSERT INTO {0} " +
             "(MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, PartitionKey, HeaderBag, Body, Source, Type, DataSchema, Subject, TraceParent, TraceState, Baggage, WorkflowId, JobId, CausationId) " +
-            "VALUES {1}";
+            "VALUES {1} ON CONFLICT DO NOTHING";
         public string ReplayCausationCommand { get; } = "UPDATE {0} SET [Dispatched] = NULL WHERE [CausationId] = @CausationId";
         public string CausationColumnExistsCommand { get; } = "SELECT 1 FROM pragma_table_info('{0}') WHERE name = 'CausationId'";
+
+        /// <inheritdoc />
+        public string AddDataRefCommand { get; } =
+            "INSERT INTO {0} " +
+            "(MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, PartitionKey, HeaderBag, Body, Source, Type, DataSchema, Subject, TraceParent, TraceState, Baggage, WorkflowId, JobId, DataRef) " +
+            "VALUES (@MessageId, @MessageType, @Topic,  @Timestamp, @CorrelationId, @ReplyTo, @ContentType, @PartitionKey,  @HeaderBag, @Body, @Source, @Type, @DataSchema, @Subject, @TraceParent, @TraceState, @Baggage, @WorkflowId, @JobId, @DataRef)";
+
+        /// <inheritdoc />
+        public string BulkAddDataRefCommand { get; } =
+            "INSERT INTO {0} " +
+            "(MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, PartitionKey,  HeaderBag, Body, Source, Type, DataSchema, Subject, TraceParent, TraceState, Baggage, WorkflowId, JobId, DataRef) " +
+            "VALUES {1} ON CONFLICT DO NOTHING";
+
+        /// <inheritdoc />
+        public string AddDataRefCausationCommand { get; } =
+            "INSERT INTO {0} " +
+            "(MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, PartitionKey, HeaderBag, Body, Source, Type, DataSchema, Subject, TraceParent, TraceState, Baggage, WorkflowId, JobId, DataRef, CausationId) " +
+            "VALUES (@MessageId, @MessageType, @Topic,  @Timestamp, @CorrelationId, @ReplyTo, @ContentType, @PartitionKey,  @HeaderBag, @Body, @Source, @Type, @DataSchema, @Subject, @TraceParent, @TraceState, @Baggage, @WorkflowId, @JobId, @DataRef, @CausationId)";
+
+        /// <inheritdoc />
+        public string BulkAddDataRefCausationCommand { get; } =
+            "INSERT INTO {0} " +
+            "(MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, PartitionKey, HeaderBag, Body, Source, Type, DataSchema, Subject, TraceParent, TraceState, Baggage, WorkflowId, JobId, DataRef, CausationId) " +
+            "VALUES {1} ON CONFLICT DO NOTHING";
+
+        /// <inheritdoc />
+        public string DataRefColumnExistsCommand { get; } = "SELECT 1 FROM pragma_table_info('{0}') WHERE name = 'DataRef'";
     }
 }
