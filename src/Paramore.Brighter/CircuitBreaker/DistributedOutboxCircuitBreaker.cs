@@ -527,11 +527,21 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
     private void MergeLive(IReadOnlyCollection<TopicTrip> live)
     {
+        var latestPlausibleStamp = _timeProvider.GetUtcNow() + _clockSkewLeeway;
+        var skewed = new List<TopicTrip>();
         lock (_view.Lock)
         {
             foreach (var trip in live)
-                _view.Raise(trip.Topic, trip.TripTime);
+            {
+                if (trip.TripTime > latestPlausibleStamp)
+                    skewed.Add(trip);
+                else
+                    _view.Raise(trip.Topic, trip.TripTime);
+            }
         }
+
+        foreach (var trip in skewed)
+            Log.StampedInTheFuture(s_logger, trip.Topic.ToString(), trip.TripTime);
     }
 
     /// <inheritdoc />
@@ -842,6 +852,9 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
         [LoggerMessage(LogLevel.Warning, "Writing trips to the store ran into the store timeout; the trips stay unshared on this instance")]
         public static partial void WriteTimedOut(ILogger logger);
+
+        [LoggerMessage(LogLevel.Warning, "The stored trip for topic {Topic} is stamped {Stamp}, later than this instance's clock plus the clock skew leeway; ignoring it as skewed")]
+        public static partial void StampedInTheFuture(ILogger logger, string topic, DateTimeOffset stamp);
 
         [LoggerMessage(LogLevel.Warning, "A store call is still running after {Seconds} seconds; no longer holding its in-flight guard")]
         public static partial void InFlightGuardReleased(ILogger logger, double seconds);

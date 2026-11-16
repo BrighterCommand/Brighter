@@ -45,7 +45,7 @@ public class LocalTripKeepsLaterStoreStampTests
     {
         // Arrange
         var inner = new InMemoryTrippedTopicStore();
-        var options = new OutboxCircuitBreakerOptions { CooldownDuration = s_cooldown };
+        var options = new OutboxCircuitBreakerOptions { CooldownDuration = s_cooldown, ClockSkewLeeway = s_aheadBy };
         var aheadClock = new FakeTimeProvider(s_start + s_aheadBy);
         var ahead = new DistributedOutboxCircuitBreaker(inner, options, timeProvider: aheadClock);
         var aheadBatch = ahead.BeginTripBatch();
