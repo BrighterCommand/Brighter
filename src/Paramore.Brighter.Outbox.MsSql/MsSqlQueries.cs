@@ -1,6 +1,6 @@
 ﻿namespace Paramore.Brighter.Outbox.MsSql
 {
-    public class MsSqlQueries : IRelationDatabaseOutboxQueries, IRelationalDatabaseOutboxCountQueries, IRelationalDatabaseOutboxCausationQueries, IRelationalDatabaseOutboxDataRefQueries
+    public class MsSqlQueries : IRelationDatabaseOutboxQueries, IRelationalDatabaseOutboxCountQueries, IRelationalDatabaseOutboxTopicCountQueries, IRelationalDatabaseOutboxCausationQueries, IRelationalDatabaseOutboxDataRefQueries
     {
         public string PagedDispatchedCommand { get; } = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY [Timestamp] DESC) AS NUMBER, * FROM {0} WHERE [Dispatched] IS NOT NULL AND [Dispatched] < @DispatchedSince) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY [Timestamp] DESC";
         public string PagedReadCommand { get; } = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY [Timestamp] DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
@@ -26,6 +26,9 @@
 
         /// <inheritdoc />
         public string GetOutstandingMessageCountCommand => "SELECT COUNT(1) FROM (SELECT TOP (@PageSize) 1 AS Outstanding FROM {0} WHERE [Dispatched] IS NULL AND [Timestamp] < @DispatchedSince) AS OutstandingMessages";
+
+        /// <inheritdoc />
+        public string GetOutstandingMessageCountByTopicCommand => "SELECT COUNT(1) FROM (SELECT TOP (@PageSize) 1 AS Outstanding FROM {0} WHERE [Dispatched] IS NULL AND [Timestamp] < @DispatchedSince AND [Topic] = @Topic COLLATE Latin1_General_100_BIN2) AS OutstandingMessages";
 
         public string GetNumberOfOutstandingMessagesCommand { get; } = "SELECT COUNT(1) FROM {0} WHERE [Dispatched] IS NULL";
 

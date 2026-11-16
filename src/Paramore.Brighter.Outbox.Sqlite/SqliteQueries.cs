@@ -1,6 +1,6 @@
 ﻿namespace Paramore.Brighter.Outbox.Sqlite
 {
-    public class SqliteQueries : IRelationDatabaseOutboxQueries, IRelationalDatabaseOutboxCountQueries, IRelationalDatabaseOutboxCausationQueries, IRelationalDatabaseOutboxDataRefQueries
+    public class SqliteQueries : IRelationDatabaseOutboxQueries, IRelationalDatabaseOutboxCountQueries, IRelationalDatabaseOutboxTopicCountQueries, IRelationalDatabaseOutboxCausationQueries, IRelationalDatabaseOutboxDataRefQueries
     {
         public string PagedDispatchedCommand { get; } = "SELECT * FROM {0} WHERE [Dispatched] IS NOT NULL AND [Dispatched] < @DispatchedSince ORDER BY [Timestamp] DESC LIMIT @Take OFFSET @Skip";
         public string PagedReadCommand { get; } = "SELECT * FROM {0} ORDER BY [Timestamp] ASC LIMIT @Take OFFSET @Skip";
@@ -23,6 +23,9 @@
 
         /// <inheritdoc />
         public string GetOutstandingMessageCountCommand => "SELECT COUNT(1) FROM (SELECT 1 FROM {0} WHERE [Dispatched] IS NULL AND [Timestamp] < @TimestampSince LIMIT @Take) AS OutstandingMessages";
+
+        /// <inheritdoc />
+        public string GetOutstandingMessageCountByTopicCommand => "SELECT COUNT(1) FROM (SELECT 1 FROM {0} WHERE [Dispatched] IS NULL AND [Timestamp] < @TimestampSince AND [Topic] = @Topic LIMIT @Take) AS OutstandingMessages";
 
         public string GetNumberOfOutstandingMessagesCommand { get; } = "SELECT COUNT(1) FROM {0} WHERE [Dispatched] IS NULL";
 
