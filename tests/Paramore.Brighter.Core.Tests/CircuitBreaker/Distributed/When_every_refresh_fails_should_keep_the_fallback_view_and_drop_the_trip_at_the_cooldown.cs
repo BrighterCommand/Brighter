@@ -58,11 +58,14 @@ public class EveryRefreshFailsTests
         return !condition();
     }
 
+    private static int RefreshFailureLogCount()
+        => TestCorrelator.GetLogEventsFromCurrentContext().Count(e => e.RenderMessage().StartsWith("Reading tripped topics from the store"));
+
     private static int WarningCount()
         => TestCorrelator.GetLogEventsFromCurrentContext().Count(e => e.Level == LogEventLevel.Warning);
 
     [Fact]
-    public async Task When_every_refresh_fails_should_list_the_trip_until_the_cooldown_and_warn_once_per_refresh()
+    public async Task When_every_refresh_fails_should_list_the_trip_until_the_cooldown_and_log_the_failure_once_per_refresh()
     {
         // Arrange
         using var context = TestCorrelator.CreateContext();
@@ -71,7 +74,7 @@ public class EveryRefreshFailsTests
         var options = new OutboxCircuitBreakerOptions { CooldownDuration = s_cooldown, ClockSkewLeeway = TimeSpan.Zero };
         var breaker = new DistributedOutboxCircuitBreaker(store, options, timeProvider: clock);
         breaker.TripTopic(_orders);
-        await BecomesTrueAsync(() => WarningCount() >= 2);
+        await BecomesTrueAsync(() => RefreshFailureLogCount() >= 2);
         var elapsed = TimeSpan.Zero;
         var refreshes = 0;
 
@@ -80,13 +83,13 @@ public class EveryRefreshFailsTests
         {
             clock.Advance(s_refreshInterval);
             elapsed += s_refreshInterval;
-            var warningsBefore = WarningCount();
+            var warningsBefore = RefreshFailureLogCount();
             breaker.StartRefresh();
             refreshes++;
-            await BecomesTrueAsync(() => WarningCount() > warningsBefore);
-            await StaysFalseAsync(() => WarningCount() > warningsBefore + 1);
+            await BecomesTrueAsync(() => RefreshFailureLogCount() > warningsBefore);
+            await StaysFalseAsync(() => RefreshFailureLogCount() > warningsBefore + 1);
             Assert.Equal(refreshes, store.ReadCount);
-            Assert.Equal(warningsBefore + 1, WarningCount());
+            Assert.Equal(warningsBefore + 1, RefreshFailureLogCount());
             Assert.Equal([_orders], breaker.TrippedTopics.ToArray());
         }
 

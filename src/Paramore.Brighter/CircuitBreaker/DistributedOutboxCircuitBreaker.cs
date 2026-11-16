@@ -146,8 +146,11 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
     private void RecordReadFailure(Exception failure)
     {
-        _fallback.RecordReadFailure(failure);
-        Log.ReadFailed(s_logger, failure, failure.GetType().Name);
+        var failureType = failure.GetType().Name;
+        if (_fallback.RecordReadFailure(failureType))
+            Log.ReadFailed(s_logger, failure, failureType);
+        else
+            Log.ReadStillFailing(s_logger, failureType);
     }
 
     private async Task SettleAsync(Task call)
@@ -723,12 +726,14 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
             }
         }
 
-        public void RecordReadFailure(Exception failure)
+        public bool RecordReadFailure(string failureType)
         {
             lock (gate)
             {
+                var isNewFailure = _lastFailure != failureType;
                 _isReadFailing = true;
-                _lastFailure = failure.GetType().Name;
+                _lastFailure = failureType;
+                return isNewFailure;
             }
         }
 
@@ -843,6 +848,9 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
         [LoggerMessage(LogLevel.Warning, "Reading tripped topics from the store failed with {FailureType}; using this instance's own view")]
         public static partial void ReadFailed(ILogger logger, Exception exception, string failureType);
+
+        [LoggerMessage(LogLevel.Debug, "Reading tripped topics from the store is still failing with {FailureType}; using this instance's own view")]
+        public static partial void ReadStillFailing(ILogger logger, string failureType);
 
         [LoggerMessage(LogLevel.Warning, "Writing trips to the store failed with {FailureType}; the trips stay unshared on this instance")]
         public static partial void WriteFailed(ILogger logger, Exception exception, string failureType);
