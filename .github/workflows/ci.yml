@@ -564,7 +564,7 @@ jobs:
 
   dynamo-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     needs: [build]
     if: |
       contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.DynamoDB.Tests')

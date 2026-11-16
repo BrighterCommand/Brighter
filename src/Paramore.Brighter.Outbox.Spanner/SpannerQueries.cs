@@ -1,6 +1,6 @@
 ﻿namespace Paramore.Brighter.Outbox.Spanner;
 
-public class SpannerQueries : IRelationDatabaseOutboxQueries, IRelationalDatabaseOutboxCountQueries, IRelationalDatabaseOutboxCausationQueries, IRelationalDatabaseOutboxDataRefQueries
+public class SpannerQueries : IRelationDatabaseOutboxQueries, IRelationalDatabaseOutboxCountQueries, IRelationalDatabaseOutboxTopicCountQueries, IRelationalDatabaseOutboxCausationQueries, IRelationalDatabaseOutboxDataRefQueries
 {
     /// <inheritdoc />
     public string PagedDispatchedCommand => "SELECT * FROM `{0}` WHERE `Dispatched` IS NOT NULL AND `Dispatched` < @DispatchedSince ORDER BY `Timestamp` DESC LIMIT @Take OFFSET @Skip";
@@ -45,6 +45,9 @@ public class SpannerQueries : IRelationDatabaseOutboxQueries, IRelationalDatabas
 
     /// <inheritdoc />
     public string GetOutstandingMessageCountCommand => "SELECT COUNT(1) FROM (SELECT 1 FROM `{0}` WHERE `Dispatched` IS NULL AND `Timestamp` < @TimestampSince LIMIT @Take) AS OutstandingMessages";
+
+    /// <inheritdoc />
+    public string GetOutstandingMessageCountByTopicCommand => "SELECT COUNT(1) FROM (SELECT 1 FROM `{0}` WHERE `Dispatched` IS NULL AND `Timestamp` < @TimestampSince AND `Topic` = @Topic LIMIT @Take) AS OutstandingMessages";
 
     /// <inheritdoc />
     public string GetNumberOfOutstandingMessagesCommand => "SELECT COUNT(1) FROM `{0}` WHERE `Dispatched` IS NULL";
