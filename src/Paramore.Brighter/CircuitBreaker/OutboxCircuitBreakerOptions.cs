@@ -1,4 +1,4 @@
-﻿#region License
+﻿﻿#region License
 
 /* The MIT License (MIT)
 Copyright © 2025 Michael Freeman <mike.c.freeman@gmail.com>
@@ -31,32 +31,42 @@ namespace Paramore.Brighter.CircuitBreaker
     /// <summary>
     /// The configuration options for <see cref="IAmAnOutboxCircuitBreaker"/>
     /// </summary>
+    /// <remarks>
+    /// <see cref="CooldownCount"/> and <see cref="MaximumTripDuration"/> are read only by <see cref="InMemoryOutboxCircuitBreaker"/>.
+    /// <see cref="CooldownDuration"/>, <see cref="ClockSkewLeeway"/> and <see cref="StoreTimeout"/> are read only by <see cref="DistributedOutboxCircuitBreaker"/>.
+    /// A breaker ignores the options it does not read, and does not reject them.
+    /// </remarks>
     public class OutboxCircuitBreakerOptions
     {
         /// <value>
-        /// Circuit break unhealthy topics for a specific cooldown period in ticks (on clear outbox)
+        /// Circuit break unhealthy topics for a specific cooldown period in ticks (on clear outbox).
+        /// Read only by <see cref="InMemoryOutboxCircuitBreaker"/>.
         /// </value>
         public int CooldownCount { get; set; } = 10;
 
         /// <value>
         /// The longest a topic stays tripped, whatever the cooldown count. Must be greater than zero and at
         /// most 24 hours. Defaults to 5 minutes.
+        /// Read only by <see cref="InMemoryOutboxCircuitBreaker"/>.
         /// </value>
         public TimeSpan MaximumTripDuration { get; set; } = TimeSpan.FromMinutes(5);
 
         /// <value>
         /// How long a trip shared through a store lasts, before the clock skew leeway is added. Defaults to 50 seconds.
+        /// Read only by <see cref="DistributedOutboxCircuitBreaker"/>.
         /// </value>
         public TimeSpan CooldownDuration { get; set; } = TimeSpan.FromSeconds(50);
 
         /// <value>
         /// The allowance for clock skew between instances, added to <see cref="CooldownDuration"/> to give the trip
         /// length of a shared trip. Defaults to zero.
+        /// Read only by <see cref="DistributedOutboxCircuitBreaker"/>.
         /// </value>
         public TimeSpan ClockSkewLeeway { get; set; } = TimeSpan.Zero;
 
         /// <value>
         /// The longest a read or write of the trip store may take. Defaults to 2 seconds.
+        /// Read only by <see cref="DistributedOutboxCircuitBreaker"/>.
         /// </value>
         public TimeSpan StoreTimeout { get; set; } = TimeSpan.FromSeconds(2);
     }
