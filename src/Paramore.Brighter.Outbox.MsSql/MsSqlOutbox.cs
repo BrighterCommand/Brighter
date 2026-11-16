@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Outbox.MsSql;
 /// <summary>
 /// Implements an Outbox using MSSQL as a backing store 
 /// </summary>
-public class MsSqlOutbox : RelationDatabaseOutbox
+public class MsSqlOutbox : RelationDatabaseOutbox, IAmATopicCountingOutbox
 {
     private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
     private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
