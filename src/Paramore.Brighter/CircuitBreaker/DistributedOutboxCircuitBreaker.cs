@@ -44,7 +44,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private static readonly TimeSpan s_longestPermittedDuration = TimeSpan.FromHours(24);
     private static readonly TimeSpan s_shortestPermittedStoreTimeout = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan s_longestPermittedStoreTimeout = TimeSpan.FromSeconds(60);
-    private const int InFlightGuardTimeouts = 4;
+    private const int IN_FLIGHT_GUARD_TIMEOUTS = 4;
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<DistributedOutboxCircuitBreaker>();
 
     private readonly IAmATrippedTopicStore _store;
@@ -154,11 +154,11 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     {
         try
         {
-            await call.WaitAsync(TimeSpan.FromTicks(_storeTimeout.Ticks * InFlightGuardTimeouts), _timeProvider).ConfigureAwait(false);
+            await call.WaitAsync(TimeSpan.FromTicks(_storeTimeout.Ticks * IN_FLIGHT_GUARD_TIMEOUTS), _timeProvider).ConfigureAwait(false);
         }
         catch (TimeoutException)
         {
-            Log.InFlightGuardReleased(s_logger, _storeTimeout.TotalSeconds * InFlightGuardTimeouts);
+            Log.InFlightGuardReleased(s_logger, _storeTimeout.TotalSeconds * IN_FLIGHT_GUARD_TIMEOUTS);
         }
         catch (Exception)
         {
@@ -348,8 +348,8 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
     private CircuitBreakerSpanInfo CreateSpanInfo(CircuitBreakerSpanOperation operation, RoutingKey topic)
     {
-        const int noCooldownCount = 0;
-        return new CircuitBreakerSpanInfo(operation, topic, noCooldownCount) { CooldownDuration = _cooldownDuration };
+        const int NO_COOLDOWN_COUNT = 0;
+        return new CircuitBreakerSpanInfo(operation, topic, NO_COOLDOWN_COUNT) { CooldownDuration = _cooldownDuration };
     }
 
     private void Announce(CircuitBreakerSpanOperation operation, RoutingKey topic)
@@ -625,7 +625,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
     private sealed class FallbackState(object gate, Func<DateTimeOffset> now, Func<RoutingKey, DateTimeOffset, bool> hasLiveTripAt)
     {
-        private const string TimeoutFailure = "timeout";
+        private const string TIMEOUT_FAILURE = "timeout";
 
         private readonly HashSet<RoutingKey> _unsharedTopics = new();
         private readonly HashSet<RoutingKey> _announcedUnshared = new();
@@ -682,7 +682,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
             lock (gate)
             {
                 _isReadFailing = true;
-                _lastFailure = TimeoutFailure;
+                _lastFailure = TIMEOUT_FAILURE;
             }
         }
 
@@ -691,7 +691,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
             lock (gate)
             {
                 _unsharedTopics.UnionWith(topics);
-                _lastFailure = TimeoutFailure;
+                _lastFailure = TIMEOUT_FAILURE;
             }
         }
 
