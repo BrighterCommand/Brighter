@@ -82,6 +82,10 @@ The templates this command prints:
 
 <!-- routing-text:templates:end -->
 
+## Amending an approved tasks.md
+
+`.tasks-approved` freezes the **content** of `tasks.md` against unreviewed change. Checkbox state (`[ ]` → `[x]`/`[!]`) is progress bookkeeping and both drivers write it. Rewording, adding, removing or reordering tasks after approval needs the owner's approval of that specific amendment, expected when implementation, a refactoring or a review shows the list is wrong. Draft the amendment, get approval, and say in the amending commit that the owner approved it; `.tasks-approved` stays. A large rework still warrants a fresh `/spec:review tasks`. An unattended `/spec:ralph-implement` run never amends the list: it marks a wrong task `[!]`.
+
 ## Examples
 
 ```bash
