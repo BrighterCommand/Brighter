@@ -1,0 +1,19 @@
+{
+  "run": ["--definition", "r14-hand-off-not-implement"],
+  "flows": "flows-rules",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "r14-hand-off-not-implement", "source": "definition", "definition_present": true },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R14",
+        "code": "hand-off-not-implement",
+        "step": null,
+        "message": "The hand-off is /spec:ralph-implement, not /spec:implement."
+      }
+    ]
+  }
+}

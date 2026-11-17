@@ -1,0 +1,27 @@
+{
+  "run": [
+    "--spec",
+    "spike-gate-also-approved"
+  ],
+  "flows": "flows-spike-entry",
+  "exit": 0,
+  "report": {
+    "valid": true,
+    "violations": [],
+    "steps": [
+      {
+        "name": "spike",
+        "approved": true
+      },
+      {
+        "name": "tasks",
+        "gate": {
+          "command": "/refactor:tidy-first",
+          "approves": "spike",
+          "previous_approved": true,
+          "also_approves_produced": true
+        }
+      }
+    ]
+  }
+}

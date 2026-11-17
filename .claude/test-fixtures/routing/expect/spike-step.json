@@ -1,0 +1,29 @@
+{
+  "run": [
+    "--spec",
+    "spike-step"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R12",
+        "code": "approval-entry",
+        "step": "spike",
+        "message": "Step spike is of kind spike, which has no entry in .claude/test-fixtures/routing/flows/approvals.md."
+      }
+    ],
+    "steps": [
+      {
+        "name": "spike",
+        "approval_subflow": null
+      },
+      {
+        "name": "tasks",
+        "approval_subflow": []
+      }
+    ]
+  }
+}

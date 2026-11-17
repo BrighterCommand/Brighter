@@ -1,0 +1,19 @@
+{
+  "run": ["--definition", "r00-malformed"],
+  "flows": "flows-rules",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "r00-malformed", "source": "definition", "definition_present": true },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R0",
+        "code": "malformed",
+        "step": null,
+        "message": ".claude/test-fixtures/routing/flows-rules/r00-malformed.flow line 9 is not valid slip syntax: unexpected text."
+      }
+    ]
+  }
+}

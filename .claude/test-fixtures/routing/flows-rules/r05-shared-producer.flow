@@ -1,0 +1,9 @@
+# flow: r05-shared-producer
+
+| Step | Kind | Producer | Artefacts | Marker | Marker-writer |
+| --- | --- | --- | --- | --- | --- |
+| requirements | requirements | /spec:requirements | requirements.md | .requirements-approved | /spec:approve requirements |
+| design | design | /spec:design | .adr-list | .design-approved | /spec:approve design |
+| tasks | tasks | /spec:design | tasks.md | .tasks-approved | /spec:approve tasks |
+
+hand-off: /spec:implement

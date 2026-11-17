@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cat:*), Bash(grep:*), Bash(test:*), Bash(find:*), Bash(touch:*), Bash(ls:*),  Bash(echo:*), Read, Write, Glob, Agent, AskUserQuestion
+allowed-tools: Bash(dotnet run .claude/commands/spec/resolve_route.cs -- specs/:*), Bash(cat:*), Bash(grep:*), Bash(test:*), Bash(find:*), Bash(touch:*), Bash(ls:*),  Bash(echo:*), Read, Write, Glob, Agent, AskUserQuestion
 description: Create implementation task list
 ---
 
@@ -18,17 +18,28 @@ RETURNS the task list as text. The main agent validates coverage and writes `tas
 
 ## Your Task
 
-### Step 1: Gather Context
+### Step 1: Resolve the Route and Gather Context
 
-1. Read `specs/.current-spec` to determine the active specification directory.
-2. Verify design is approved: check for `.design-approved` in the spec directory. If
-   missing, tell the user to run `/spec:approve design` first and exit.
-3. Read `specs/{current-spec}/requirements.md` (the FRs/ACs the tasks must cover).
-4. Read `specs/{current-spec}/.adr-list` and each ADR from `docs/adr/` (the design
-   decisions the tasks must implement).
+Resolve the route first, before reading inputs or launching any sub-agent. `{command}` is `/spec:tasks`.
 
-If `requirements.md` or any listed ADR is missing, stop and tell the user. Do NOT launch
-the sub-agent with missing inputs.
+<!-- routing-text:route-instructions:begin -->
+Run `dotnet run .claude/commands/spec/resolve_route.cs -- specs/ --current`. If the exit status is not `0`, or standard output has no line beginning `route-report: `, or the JSON after that prefix on the last such line does not parse, stop. Print `{command} could not run the route resolver (.claude/commands/spec/resolve_route.cs): {state}. This is a tooling fault, not a fault in the spec — re-run after restoring the script.` Create or modify no file. Otherwise hold that JSON object as the route report. If `stop` is not `null`, print `stop.message` and stop, creating or modifying no file.
+<!-- routing-text:route-instructions:end -->
+
+The active specification directory is the report's `spec`. Never read the approval marker files
+yourself: the route report is the only source of the spec's flow, steps and next step.
+
+- If `known_kinds.tasks` is `null`, stop and create or modify no file. Print the Not on the route template.
+- If `known_kinds.tasks.producer` is not `/spec:tasks`, stop and create or modify no file. Print the Another producer template, with `{step}` as `known_kinds.tasks.step` and `{producer}` as `known_kinds.tasks.producer`.
+- Otherwise read the `steps` entry named `known_kinds.tasks.step`. If its `precondition.holds` is false, print its `precondition.message` and stop, creating or modifying no file.
+
+Then read the inputs the tasks must cover:
+
+- If `known_kinds.requirements` is not `null`, read `specs/{current-spec}/requirements.md` (the FRs/ACs the tasks must cover).
+- If `known_kinds.design` is not `null`, read `specs/{current-spec}/.adr-list` and each ADR from `docs/adr/` (the design
+  decisions the tasks must implement).
+
+If an input the route names is missing, stop and tell the user. Do NOT launch the sub-agent with missing inputs.
 
 ### Step 2: Launch Sub-Agent to Draft the Task List
 
@@ -43,8 +54,8 @@ interaction stays in the main agent — never the sub-agent.
 Launch an `Agent` with `subagent_type: "Plan"` and **`model: "opus"`**. The
 prompt MUST include:
 
-1. The full text of `requirements.md`.
-2. The full text of each ADR (or their paths to read).
+1. The full text of `requirements.md`, only when `known_kinds.requirements` is not `null`.
+2. The full text of each ADR (or their paths to read), only when `known_kinds.design` is not `null`.
 3. The task-drafting rules and the **mandatory TDD task template** below.
 4. An explicit instruction: **RETURN the complete task list as markdown text. Do NOT write
    any file.** The sub-agent may use Read/Glob/Grep to verify only the **existing** paths it
@@ -169,9 +180,10 @@ This drifts from the tag-first form above. `/spec:show-me` does not recognise it
 
 #### Coverage cross-reference (include in the sub-agent prompt)
 
-- Map EVERY functional requirement (FR-N) from `requirements.md` to at least one task.
-  List any FR with no task.
-- Map EVERY ADR decision to at least one task. List any decision with no task.
+- When `known_kinds.requirements` is not `null`: map EVERY functional requirement (FR-N) from
+  `requirements.md` to at least one task. List any FR with no task.
+- When `known_kinds.design` is not `null`: map EVERY ADR decision to at least one task. List any
+  decision with no task. When there is no `requirements` step, check coverage against these ADR decisions only.
 - Flag any task that does not trace back to a requirement or ADR decision (scope creep).
 
 ### Step 3: Validate Coverage and Write the File
@@ -200,10 +212,22 @@ After the sub-agent returns:
 
 ### Step 4: Next Steps
 
-Remind the user to:
-- Review `tasks.md`
-- Run `/spec:review tasks` for an adversarial coverage review, then
-- `/spec:approve tasks` when ready to begin implementation.
+Tell the user to review `tasks.md`.
+
+<!-- routing-text:closing-instructions:begin -->
+After your last write, run `dotnet run .claude/commands/spec/resolve_route.cs -- specs/ --current` again, and apply the same test for a tooling fault as above. If it passes, print the next-step line, built from `next` in this second report. If it fails, print the tooling-fault message in place of the next-step line. Undo no write.
+<!-- routing-text:closing-instructions:end -->
+
+The templates this command prints:
+
+<!-- routing-text:templates:begin -->
+| Template | Printed by | Text |
+| --- | --- | --- |
+| Next-step line | the closing instructions, `/spec:status`, `/spec:switch`, `/spec:review`'s closing reminder, the route-changed template (0091), `/spec:new`'s post-check (0091), and the three templates below that end in it | ``Next: {next.commands joined with " then "}.``, or ``No next step: the slip is invalid (see violations).`` when `next.commands` is empty. Then ``Unattended: {next.unattended_driver}.`` when it is not `null`, and one ``Optional: {detour.command}, then return to {detour.return_to}.`` for each entry of `next.detours`, in order, all on the same line. With empty `next.commands` there is no driver and no detour |
+| Not on the route | the producing commands | ``{command} is not on flow `{flow}`'s route.`` followed by the next-step line |
+| Another producer | the producing commands | ``Step `{step}` on flow `{flow}` is produced by `{producer}`, not {command}. Run `{producer}`.`` |
+
+<!-- routing-text:templates:end -->
 
 `tasks.md` is the **single** task list, and both drivers run it:
 - `/spec:implement` — one task at a time, approval gate armed by default.

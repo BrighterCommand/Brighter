@@ -1,0 +1,20 @@
+{
+  "run": ["--definition", "Bad_Name"],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "Bad_Name", "source": "definition" },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R0",
+        "code": "malformed",
+        "step": null,
+        "detail": "bad name",
+        "message": "Bad_Name is not a valid flow name."
+      }
+    ]
+  }
+}

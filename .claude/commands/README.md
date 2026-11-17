@@ -166,6 +166,7 @@ Skills are invoked using slash commands in Claude Code:
 - **`/spec:status`** - Show spec status
 - **`/spec:approve`** - Approve phases
 - **`/spec:review`** - Review phases
+- **`/spec:route`** - Change or repair the current spec's route
 
 📖 **Documentation**: [.claude/commands/spec/README.md](spec/README.md)
 

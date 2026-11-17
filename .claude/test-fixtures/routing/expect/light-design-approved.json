@@ -1,0 +1,43 @@
+{
+  "run": [
+    "--spec",
+    "light-design-approved"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "valid": true,
+    "steps": [
+      {
+        "name": "design",
+        "approved": true
+      },
+      {
+        "name": "tasks",
+        "precondition": {
+          "holds": true
+        }
+      }
+    ],
+    "next": {
+      "commands": [
+        "/spec:tasks"
+      ]
+    },
+    "known_kinds": {
+      "requirements": null
+    },
+    "hand_off": {
+      "precondition": {
+        "holds": false,
+        "unapproved": [
+          {
+            "step": "tasks",
+            "marker_writer": "/spec:approve tasks"
+          }
+        ],
+        "message": "Implementation needs every step approved \u2014 unapproved: `tasks` (run `/spec:approve tasks`)."
+      }
+    }
+  }
+}
