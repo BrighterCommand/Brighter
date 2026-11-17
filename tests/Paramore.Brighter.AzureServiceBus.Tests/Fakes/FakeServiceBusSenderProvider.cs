@@ -8,7 +8,13 @@ public class FakeServiceBusSenderProvider(IServiceBusSenderWrapper sender) : ISe
     public int CreationCount { get; private set; } = 0;
 
     public Exception SingleThrowGetException { get; set; } = null;
-    
+
+    /// <summary>
+    /// Returns a sender for the requested topic instead of the single sender given to the constructor, so
+    /// a test can give each cached destination its own fake.
+    /// </summary>
+    public Func<string, IServiceBusSenderWrapper> SenderFactory { get; set; } = null;
+
     public IServiceBusSenderWrapper Get(string topicOrQueueName)
     {
         if (SingleThrowGetException != null)
@@ -18,6 +24,6 @@ public class FakeServiceBusSenderProvider(IServiceBusSenderWrapper sender) : ISe
             throw ex;
         }
         CreationCount++;
-        return sender;
+        return SenderFactory != null ? SenderFactory(topicOrQueueName) : sender;
     }
 }

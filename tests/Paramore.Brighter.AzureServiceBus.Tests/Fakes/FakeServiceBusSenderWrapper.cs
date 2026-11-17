@@ -19,6 +19,10 @@ public class FakeServiceBusSenderWrapper : IServiceBusSenderWrapper
     
     public int ClosedCount { get; private set; } = 0;
 
+    public int CloseAttempts { get; private set; } = 0;
+
+    public Exception CloseException { get; set; } = null;
+
     public Exception SendException { get; set; } = null;
 
     public Func<ServiceBusMessage, bool>? TryAddMessageCallBack { get; set; }
@@ -72,6 +76,10 @@ public class FakeServiceBusSenderWrapper : IServiceBusSenderWrapper
 
     public Task CloseAsync()
     {
+        CloseAttempts++;
+        if (CloseException != null)
+            throw CloseException;
+
         ClosedCount++;
         return Task.CompletedTask;
     }
