@@ -1,0 +1,19 @@
+{
+  "run": ["--definition", "r15-detour-command"],
+  "flows": "flows-rules",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "r15-detour-command", "source": "definition", "definition_present": true },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R15",
+        "code": "bad-detour",
+        "step": null,
+        "message": "Detour /refactor:no-such-command at line 10: command is unknown."
+      }
+    ]
+  }
+}

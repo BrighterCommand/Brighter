@@ -1,0 +1,8 @@
+# flow: spike
+
+| Step | Kind | Producer | Artefacts | Marker | Marker-writer |
+| --- | --- | --- | --- | --- | --- |
+| spike | spike | /refactor:smells | spike.md | .spike-approved | /refactor:tidy-first |
+| tasks | tasks | /refactor:tidy-first | tasks.md | .tasks-approved | /refactor:tidy-first |
+
+hand-off: /spec:implement

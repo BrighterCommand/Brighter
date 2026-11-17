@@ -1,0 +1,19 @@
+{
+  "run": ["--definition", "r08-duplicate-known-kind"],
+  "flows": "flows-rules",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "r08-duplicate-known-kind", "source": "definition", "definition_present": true },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R8",
+        "code": "duplicate-known-kind",
+        "step": null,
+        "message": "More than one step is of kind requirements (intake, requirements)."
+      }
+    ]
+  }
+}

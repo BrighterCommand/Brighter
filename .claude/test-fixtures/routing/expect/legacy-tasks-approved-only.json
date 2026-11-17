@@ -1,0 +1,31 @@
+{
+  "run": [
+    "--spec",
+    "legacy-tasks-approved-only"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "out_of_order": [
+      {
+        "approved": "tasks",
+        "earlier_unapproved": [
+          "design"
+        ]
+      }
+    ],
+    "next": {
+      "step": "design",
+      "kind": "design",
+      "commands": [
+        "/spec:review design",
+        "/spec:approve design"
+      ]
+    },
+    "approve_steps": [
+      "requirements",
+      "design",
+      "tasks"
+    ]
+  }
+}

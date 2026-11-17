@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(git:*), Bash(awk:*), Bash(date:*), Bash(basename:*), Bash(grep:*), Bash(mkdir:*), Bash(npx:*), Bash(python3:*), Read, Write, Edit, Glob, Agent, AskUserQuestion, Skill
+allowed-tools: Bash(dotnet run .claude/commands/spec/resolve_route.cs -- specs/:*), Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(git:*), Bash(awk:*), Bash(date:*), Bash(basename:*), Bash(grep:*), Bash(mkdir:*), Bash(npx:*), Bash(python3:*), Read, Write, Edit, Glob, Agent, AskUserQuestion, Skill
 description: Create technical design specification (ADR)
 argument-hint: [adr-focus-area]
 ---
@@ -28,13 +28,24 @@ bookkeeping. See `.claude/commands/spec/README.md` → "Sub-agents & model polic
 
 ## Your Task
 
-### Step 1: Verify Requirements Approved
+### Step 1: Resolve the Route
 
-1. Read `specs/.current-spec` to determine the active specification directory
-2. Check for `.requirements-approved` file in the spec directory
-3. If not approved:
-   - Inform user to complete requirements first using `/spec:approve requirements`
-   - Exit
+Resolve the route first, before reading inputs or launching any sub-agent. `{command}` is `/spec:design`.
+
+<!-- routing-text:route-instructions:begin -->
+Run `dotnet run .claude/commands/spec/resolve_route.cs -- specs/ --current`. If the exit status is not `0`, or standard output has no line beginning `route-report: `, or the JSON after that prefix on the last such line does not parse, stop. Print `{command} could not run the route resolver (.claude/commands/spec/resolve_route.cs): {state}. This is a tooling fault, not a fault in the spec — re-run after restoring the script.` Create or modify no file. Otherwise hold that JSON object as the route report. If `stop` is not `null`, print `stop.message` and stop, creating or modifying no file.
+<!-- routing-text:route-instructions:end -->
+
+The active specification directory is the report's `spec`. Never read the approval marker files
+yourself: the route report is the only source of the spec's flow, steps and next step.
+
+- If `known_kinds.design` is `null`, stop and create or modify no file. Print the Not on the route template.
+- If `known_kinds.design.producer` is not `/spec:design`, stop and create or modify no file. Print the Another producer template, with `{step}` as `known_kinds.design.step` and `{producer}` as `known_kinds.design.producer`.
+- Otherwise read the `steps` entry named `known_kinds.design.step`. If its `precondition.holds` is false, print its `precondition.message` and stop, creating or modifying no file.
+
+The ADR's parent: if `known_kinds.requirements` is not `null`, the parent is
+`specs/{current-spec}/requirements.md`. Otherwise the parent is `specs/{current-spec}/.issue-number` if that
+file exists (the issue it names), else `specs/{current-spec}/README.md`.
 
 ### Step 2: Check Existing ADRs for this Spec
 
@@ -94,7 +105,7 @@ If no prior art is found, note that and proceed.
 The sub-agent starts with a clean context — it only knows what you put in its prompt.
 Gather (read) the inputs it needs so you can pass their text or paths:
 
-- `specs/{current-spec}/requirements.md` — the parent requirement the ADR must address.
+- The parent chosen in Step 1 — `specs/{current-spec}/requirements.md` when `known_kinds.requirements` is not `null`, else the issue named in `.issue-number` if present, else `specs/{current-spec}/README.md`. The ADR must address it.
 - Each existing ADR listed in `specs/{current-spec}/.adr-list` (read from `docs/adr/`) —
   so the new ADR stays focused on a *distinct* decision and references siblings correctly.
 - The **prior-art candidates from Step 4** (`id` + `title` + `summary`) — so the sub-agent
@@ -105,7 +116,7 @@ Gather (read) the inputs it needs so you can pass their text or paths:
 - `.agent_instructions/adr_frontmatter.md` — pass the path; the sub-agent reads the tag taxonomy
   from it to propose `tags`.
 
-If any required document is missing (e.g. no `requirements.md`), stop and tell the user to
+If any required document is missing (e.g. the parent), stop and tell the user to
 run the appropriate command first. Do NOT launch the sub-agent with missing inputs.
 
 ### Step 6: Launch Sub-Agent to Draft the ADR
@@ -121,7 +132,7 @@ user interaction stays in the main agent — never the sub-agent.
 Launch an `Agent` with `subagent_type: "Plan"` and **`model: "opus"`**. The
 prompt MUST include all of the following:
 
-1. The full text of `requirements.md` (or its path if too large to inline).
+1. The full text of the parent (or its path if too large to inline).
 2. The full text of each existing ADR for this spec (or their paths), and an instruction
    that the new ADR addresses a DISTINCT decision: **{focus-area}**. Also pass **one line per
    sibling ADR stating the single thing it decides** — the sub-agent needs those to build the
@@ -161,9 +172,9 @@ Proposed
 matters. Do NOT open by naming four interfaces — a reader cannot hold type names before they
 know what the problem is. Name the defect in terms a user would recognise.}
 
-**Parent Requirement**: [specs/{spec-dir}/requirements.md](../../specs/{spec-dir}/requirements.md)
+**Parent Requirement**: {the parent from Step 1: [specs/{spec-dir}/requirements.md](../../specs/{spec-dir}/requirements.md), else the issue from `.issue-number`, else [specs/{spec-dir}/README.md](../../specs/{spec-dir}/README.md)}
 
-**Scope**: This ADR decides one thing — {the decision, in one bold clause}. It discharges {FR/NFR/constraint ids}.
+**Scope**: This ADR decides one thing — {the decision, in one bold clause}. It discharges {FR/NFR/constraint ids — only when `known_kinds.requirements` is not `null`; otherwise claim no FR ids}.
 
 {What this ADR deliberately does NOT decide, and which sibling ADR decides each of those things.}
 
@@ -270,7 +281,7 @@ behavioural ones per Tidy First.}
 
 ## References
 
-- Requirements: [specs/{spec-dir}/requirements.md](../../specs/{spec-dir}/requirements.md)
+- Parent: {as in Parent Requirement above}
 - Related ADRs: {List related ADRs, especially others for the same requirement}
 - External references: {Links to relevant documentation, articles, etc.}
 ```
@@ -421,4 +432,19 @@ After the sub-agent returns:
 2. Multiple ADRs:
    - If requirement needs more architectural decisions, run `/spec:design [another-focus-area]` again
    - Each ADR should address a distinct architectural concern
-3. When all ADRs are complete: `/spec:approve design` to proceed to tasks phase
+3. When all ADRs are complete, tell the user they are ready for review.
+
+<!-- routing-text:closing-instructions:begin -->
+After your last write, run `dotnet run .claude/commands/spec/resolve_route.cs -- specs/ --current` again, and apply the same test for a tooling fault as above. If it passes, print the next-step line, built from `next` in this second report. If it fails, print the tooling-fault message in place of the next-step line. Undo no write.
+<!-- routing-text:closing-instructions:end -->
+
+The templates this command prints:
+
+<!-- routing-text:templates:begin -->
+| Template | Printed by | Text |
+| --- | --- | --- |
+| Next-step line | the closing instructions, `/spec:status`, `/spec:switch`, `/spec:review`'s closing reminder, the route-changed template (0091), `/spec:new`'s post-check (0091), and the three templates below that end in it | ``Next: {next.commands joined with " then "}.``, or ``No next step: the slip is invalid (see violations).`` when `next.commands` is empty. Then ``Unattended: {next.unattended_driver}.`` when it is not `null`, and one ``Optional: {detour.command}, then return to {detour.return_to}.`` for each entry of `next.detours`, in order, all on the same line. With empty `next.commands` there is no driver and no detour |
+| Not on the route | the producing commands | ``{command} is not on flow `{flow}`'s route.`` followed by the next-step line |
+| Another producer | the producing commands | ``Step `{step}` on flow `{flow}` is produced by `{producer}`, not {command}. Run `{producer}`.`` |
+
+<!-- routing-text:templates:end -->

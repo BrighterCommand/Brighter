@@ -1,0 +1,24 @@
+{
+  "run": [
+    "--spec",
+    "legacy-all-approved"
+  ],
+  "flows": "flows-edited",
+  "exit": 0,
+  "report": {
+    "valid": true,
+    "violations": [],
+    "next": {
+      "step": null,
+      "commands": [
+        "/spec:implement"
+      ],
+      "detours": [
+        {
+          "command": "/refactor:smells",
+          "return_to": "hand-off"
+        }
+      ]
+    }
+  }
+}

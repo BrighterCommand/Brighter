@@ -1,0 +1,41 @@
+{
+  "run": [
+    "--spec",
+    "spike-gate-also"
+  ],
+  "flows": "flows-spike-entry",
+  "exit": 0,
+  "report": {
+    "valid": true,
+    "violations": [],
+    "steps": [
+      {
+        "name": "spike"
+      },
+      {
+        "name": "tasks",
+        "gate": {
+          "command": "/refactor:tidy-first",
+          "approves": "spike",
+          "previous_approved": false,
+          "also_approves_produced": true
+        }
+      }
+    ],
+    "gates": [
+      {
+        "command": "/refactor:tidy-first",
+        "approves": "spike",
+        "produces": "tasks",
+        "also_approves_produced": true
+      }
+    ],
+    "approve_steps": [],
+    "known_kinds": {
+      "tasks": {
+        "step": "tasks",
+        "producer": "/refactor:tidy-first"
+      }
+    }
+  }
+}

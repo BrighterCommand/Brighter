@@ -1,0 +1,19 @@
+{
+  "run": [
+    "--spec",
+    "light-adr-list"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "valid": true,
+    "next": {
+      "step": "design",
+      "kind": "design",
+      "commands": [
+        "/spec:review design",
+        "/spec:approve design"
+      ]
+    }
+  }
+}

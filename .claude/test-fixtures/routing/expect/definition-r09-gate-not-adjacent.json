@@ -1,0 +1,19 @@
+{
+  "run": ["--definition", "r09-gate-not-adjacent"],
+  "flows": "flows-rules",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "r09-gate-not-adjacent", "source": "definition", "definition_present": true },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R9",
+        "code": "gate-not-adjacent",
+        "step": null,
+        "message": "/spec:approve requirements approves step requirements but produces step tasks, which does not immediately follow it."
+      }
+    ]
+  }
+}

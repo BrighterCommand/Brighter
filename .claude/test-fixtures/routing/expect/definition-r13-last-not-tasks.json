@@ -1,0 +1,19 @@
+{
+  "run": ["--definition", "r13-last-not-tasks"],
+  "flows": "flows-rules",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "r13-last-not-tasks", "source": "definition", "definition_present": true },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R13",
+        "code": "last-step-not-tasks",
+        "step": "design",
+        "message": "The last step, design, is not the tasks step (kind tasks, tasks.md, .tasks-approved)."
+      }
+    ]
+  }
+}

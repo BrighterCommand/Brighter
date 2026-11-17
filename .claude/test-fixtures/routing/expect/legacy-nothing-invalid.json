@@ -1,0 +1,35 @@
+{
+  "run": [
+    "--spec",
+    "legacy-nothing"
+  ],
+  "flows": "flows-invalid",
+  "exit": 0,
+  "report": {
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R4",
+        "code": "unknown-command",
+        "step": "design",
+        "message": "Step design names a command that does not exist, /spec:designx."
+      },
+      {
+        "rule": "R12",
+        "code": "approval-entry",
+        "step": null,
+        "message": ".claude/test-fixtures/routing/flows-invalid/approvals.md has more than one entry for kind tasks."
+      },
+      {
+        "rule": "R12",
+        "code": "approval-entry",
+        "step": null,
+        "message": ".claude/test-fixtures/routing/flows-invalid/approvals.md is unreadable or names a command that does not exist: /adr:acceptx."
+      }
+    ],
+    "stop": {
+      "reason": "invalid",
+      "message": "The route is invalid: Step design names a command that does not exist, /spec:designx. Fix .claude/test-fixtures/routing/flows-invalid/feature.flow or .claude/test-fixtures/routing/flows-invalid/approvals.md; no re-copy is needed."
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "run": [
+    "--spec",
+    "light-nothing"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "flow": {
+      "name": "light",
+      "source": "slip",
+      "definition_present": true
+    },
+    "valid": true,
+    "steps": [
+      {
+        "name": "design",
+        "precondition": {
+          "holds": true
+        }
+      },
+      {
+        "name": "tasks"
+      }
+    ],
+    "next": {
+      "step": "design",
+      "commands": [
+        "/spec:design"
+      ]
+    },
+    "known_kinds": {
+      "requirements": null
+    },
+    "approve_steps": [
+      "design",
+      "tasks"
+    ]
+  }
+}

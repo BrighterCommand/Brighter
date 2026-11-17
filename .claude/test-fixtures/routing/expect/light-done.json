@@ -1,0 +1,29 @@
+{
+  "run": [
+    "--spec",
+    "light-done"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "valid": true,
+    "hand_off": {
+      "precondition": {
+        "holds": true
+      }
+    },
+    "next": {
+      "step": null,
+      "commands": [
+        "/spec:implement"
+      ],
+      "unattended_driver": "/spec:ralph-implement",
+      "detours": [
+        {
+          "command": "/refactor:smells",
+          "return_to": "hand-off"
+        }
+      ]
+    }
+  }
+}

@@ -113,7 +113,7 @@ If any check fails, fix it (or ask) — do not leave the file in an inconsistent
 
 Tell the caller what changed: the file, the operation, the resulting `status`, and (for supersession)
 the recorded reference. Keep it to a couple of lines — this skill is usually invoked *by* another
-command (`/adr`, `/spec:design`, `/spec:approve`), so the output feeds that caller.
+command (`/adr`, `/spec:design`, `/adr:accept`, `/adr:retire-superseded`), so the output feeds that caller.
 
 > The derived `docs/adr/index.md` is regenerated separately from frontmatter; this skill does not
 > maintain it.
