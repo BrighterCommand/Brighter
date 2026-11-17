@@ -1,0 +1,26 @@
+{
+  "run": [
+    "--spec",
+    "legacy-all-approved"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "next": {
+      "step": null,
+      "kind": null,
+      "commands": [
+        "/spec:implement"
+      ],
+      "unattended_driver": "/spec:ralph-implement",
+      "detours": []
+    },
+    "hand_off": {
+      "precondition": {
+        "holds": true,
+        "unapproved": [],
+        "message": null
+      }
+    }
+  }
+}

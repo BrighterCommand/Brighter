@@ -1,0 +1,19 @@
+{
+  "run": ["--definition", "r01-no-steps"],
+  "flows": "flows-rules",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "r01-no-steps", "source": "definition", "definition_present": true },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R1",
+        "code": "no-steps",
+        "step": null,
+        "message": "Flow r01-no-steps has no steps."
+      }
+    ]
+  }
+}

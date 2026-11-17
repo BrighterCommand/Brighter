@@ -1,0 +1,20 @@
+{
+  "run": ["--definition", "nosuch"],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "nosuch", "source": "definition", "definition_present": false },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R0",
+        "code": "malformed",
+        "step": null,
+        "detail": "definition missing",
+        "message": "Flow nosuch has no definition at .claude/test-fixtures/routing/flows/nosuch.flow."
+      }
+    ]
+  }
+}

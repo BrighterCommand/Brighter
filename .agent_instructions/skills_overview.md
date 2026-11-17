@@ -44,6 +44,7 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
 | `/spec:review` | Review phases | `/spec:review [phase] [adr-number]` |
 | `/spec:switch` | Switch to different spec | `/spec:switch <spec-name>` |
 | `/spec:gear` | Report or shift the TDD review gear | `/spec:gear [review-before\|review-after] ["phase"]` |
+| `/spec:route` | Change or repair the current spec's route | `/spec:route {flow} [reason]` |
 | `/spec:ralph-implement` | Unattended TDD loop over the same `tasks.md` | `/spec:ralph-implement [count]` |
 
 ## Quick Reference Card

@@ -146,16 +146,23 @@ Status: STOPPED | DOWNSHIFTED
 Then STOP immediately. On `DOWNSHIFTED`, also print the next unchecked task and the exact
 `/spec:implement` command to resume with.
 
-### Step 2: Gather Context
+### Step 2: Resolve the Route and Gather Context
 
-1. Read `specs/.current-spec` to determine the active specification directory
-2. Verify **all three** approval markers exist in that directory: `.requirements-approved`,
-   `.design-approved`, `.tasks-approved`. This loop runs an **approved** task list; if
-   `.tasks-approved` is missing, tell the user to run `/spec:review tasks` then
-   `/spec:approve tasks` first, and exit.
-3. Read `specs/{current-spec}/tasks.md` — the task list. There is no `ralph-tasks.md`; do not
+Resolve the route first, before reading anything else. `{command}` is `/spec:ralph-implement`.
+
+<!-- routing-text:route-instructions:begin -->
+Run `dotnet run .claude/commands/spec/resolve_route.cs -- specs/ --current`. If the exit status is not `0`, or standard output has no line beginning `route-report: `, or the JSON after that prefix on the last such line does not parse, stop. Print `{command} could not run the route resolver (.claude/commands/spec/resolve_route.cs): {state}. This is a tooling fault, not a fault in the spec — re-run after restoring the script.` Create or modify no file. Otherwise hold that JSON object as the route report. If `stop` is not `null`, print `stop.message` and stop, creating or modifying no file.
+<!-- routing-text:route-instructions:end -->
+
+The active specification directory is the report's `spec`. Never read the approval marker files
+yourself: the route report is the only source of whether the loop may start.
+
+1. If `hand_off.precondition.holds` is false, print `hand_off.precondition.message` and exit,
+   creating or modifying no file.
+2. Read `specs/{current-spec}/tasks.md` — the task list. There is no `ralph-tasks.md`; do not
    create one.
-4. Read `specs/{current-spec}/.adr-list` — the ADR paths to hand to each sub-agent.
+3. If `known_kinds.design` is not `null`, read `specs/{current-spec}/.adr-list` — the ADR paths to
+   hand to each sub-agent. With no `design` step on the slip, there are no ADR paths to hand over.
 
 The main agent does **not** read the ADR bodies here — that is deliberate. Its role in this
 command is bookkeeping (task selection, commits, marking, count); the per-task TDD context
@@ -219,8 +226,8 @@ prompt MUST include:
    section it sits under.
 2. The context the task does not carry itself — because `tasks.md` tasks were written for an
    interactive session, they assume conversation context a fresh sub-agent does not have. Pass:
-   - `specs/{current-spec}/requirements.md`
-   - every ADR path from `.adr-list`
+   - `specs/{current-spec}/requirements.md`, only if `known_kinds.requirements` is not `null`
+   - every ADR path from `.adr-list`, only if `known_kinds.design` is not `null`
    - `.agent_instructions/testing.md` and `.agent_instructions/code_style.md`
    with an instruction to **read them before writing code**.
 3. The **verify command(s)** to use. If the task text states its own commands (a `GENERATE` task
@@ -238,7 +245,7 @@ push, or touch the task list.
 
 #### TDD Cycle for the sub-agent (include in the prompt)
 
-**Before starting**: Read the requirements, the ADRs, `.agent_instructions/testing.md` and
+**Before starting**: Read the requirements and the ADRs (those passed to you), `.agent_instructions/testing.md` and
 `.agent_instructions/code_style.md`. This provides the context a fresh session would otherwise get
 from conversation.
 

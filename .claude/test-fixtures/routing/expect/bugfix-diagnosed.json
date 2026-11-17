@@ -1,0 +1,35 @@
+{
+  "run": [
+    "--spec",
+    "bugfix-diagnosed"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "valid": true,
+    "violations": [],
+    "next": {
+      "commands": [
+        "/bugfix:confirm"
+      ]
+    },
+    "steps": [
+      {
+        "name": "diagnosis"
+      },
+      {
+        "name": "tasks",
+        "precondition": {
+          "holds": false,
+          "unapproved": [
+            {
+              "step": "diagnosis",
+              "marker_writer": "/bugfix:confirm"
+            }
+          ],
+          "message": "`/bugfix:confirm` needs step `diagnosis` approved \u2014 run `/bugfix:confirm`."
+        }
+      }
+    ]
+  }
+}

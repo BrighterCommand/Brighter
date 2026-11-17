@@ -1,0 +1,19 @@
+{
+  "run": ["--definition", "r16-name-mismatch"],
+  "flows": "flows-rules",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "r16-name-mismatch", "source": "definition", "definition_present": true },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R16",
+        "code": "name-mismatch",
+        "step": null,
+        "message": ".claude/test-fixtures/routing/flows-rules/r16-name-mismatch.flow declares flow some-other-flow, which differs from its filename."
+      }
+    ]
+  }
+}

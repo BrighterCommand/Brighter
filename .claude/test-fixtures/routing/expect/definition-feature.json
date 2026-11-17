@@ -1,0 +1,13 @@
+{
+  "run": ["--definition", "feature"],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "feature", "source": "definition", "definition_present": true },
+    "valid": true,
+    "violations": [],
+    "stop": null
+  }
+}

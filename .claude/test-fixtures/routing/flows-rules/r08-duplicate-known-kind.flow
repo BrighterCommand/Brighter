@@ -1,0 +1,10 @@
+# flow: r08-duplicate-known-kind
+
+| Step | Kind | Producer | Artefacts | Marker | Marker-writer |
+| --- | --- | --- | --- | --- | --- |
+| intake | requirements | /spec:new | requirements.md | .intake-approved | /spec:approve intake |
+| requirements | requirements | /spec:requirements | requirements.md | .requirements-approved | /spec:approve requirements |
+| design | design | /spec:design | .adr-list | .design-approved | /spec:approve design |
+| tasks | tasks | /spec:tasks | tasks.md | .tasks-approved | /spec:approve tasks |
+
+hand-off: /spec:implement

@@ -1,0 +1,31 @@
+{
+  "run": [
+    "--spec",
+    "legacy-nothing"
+  ],
+  "flows": "flows-name-mismatch",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "spec",
+    "spec": ".claude/test-fixtures/routing/specs/legacy-nothing",
+    "flow": {
+      "name": "feature",
+      "source": "default",
+      "definition_present": true
+    },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R16",
+        "code": "name-mismatch",
+        "step": null,
+        "message": ".claude/test-fixtures/routing/flows-name-mismatch/feature.flow declares flow some-other-flow, which differs from its filename."
+      }
+    ],
+    "stop": {
+      "reason": "invalid",
+      "message": "The route is invalid: .claude/test-fixtures/routing/flows-name-mismatch/feature.flow declares flow some-other-flow, which differs from its filename. Fix .claude/test-fixtures/routing/flows-name-mismatch/feature.flow or .claude/test-fixtures/routing/flows-name-mismatch/approvals.md; no re-copy is needed."
+    }
+  }
+}
