@@ -44,6 +44,9 @@ public class ValidatePipelinesZeroBudgetTests
     {
         // Arrange — subscription with requeueCount: 0; handler registered so no "no handler" error obscures the test
         var services = new ServiceCollection();
+        var registry = new SubscriberRegistry();
+        registry.Register<TestEvent, TestEventHandler>();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(registry);
         services
             .AddConsumers(options =>
             {

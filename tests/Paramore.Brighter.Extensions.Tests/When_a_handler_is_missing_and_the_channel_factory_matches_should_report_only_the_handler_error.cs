@@ -40,6 +40,7 @@ public class HandlerMissingWithMatchedChannelFactoryTests
         // Arrange — a subscription whose RequestType has no registered handler and whose channel
         // factory is correctly matched (its own ChannelFactory is exactly the type it declares)
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddConsumers(options =>
             {
                 options.Subscriptions =

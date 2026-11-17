@@ -32,6 +32,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// The MSSQL inbox catalog stays in step with <c>SqlInboxBuilder</c>: V_latest's columns plus the
+/// housekeeping columns equal the builder's, <c>FreshInstallDdl</c> is the builder's DDL, and V1 is
+/// the pre-<c>ContextKey</c> historical baseline (ADR 0057 §3).
+/// </summary>
 public class MsSqlInboxBuilderDriftTests
 {
     [Theory]
@@ -40,9 +45,7 @@ public class MsSqlInboxBuilderDriftTests
     public void When_mssql_inbox_builder_is_compared_to_v3_migration_columns_it_should_have_identical_expected_column_set(
         bool hasBinaryMessagePayload)
     {
-        //Arrange — drive the builder DDL and the V_latest LogicalColumns from the same config
-        //so any developer change to one without the other surfaces here. Connection string is
-        //unused: All() only reads InBoxTableName and BinaryMessagePayload to render V1's UpScript.
+        //Arrange
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Server=ignored;Database=ignored;",
@@ -96,10 +99,6 @@ public class MsSqlInboxBuilderDriftTests
     public void When_mssql_inbox_fresh_install_ddl_is_inspected_it_should_match_live_builder(
         bool hasBinaryMessagePayload)
     {
-        //Spec 0027 R1 Part 1 contract: FreshInstallDdl on the catalog is the canonical source
-        //for the fresh-install fast path (ADR 0057 §3), distinct from V1.UpScript which now
-        //carries the historical baseline (Part 4). This tripwire holds the fast-path DDL
-        //identical to the live builder so the two cannot diverge silently.
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Server=ignored;Database=ignored;",

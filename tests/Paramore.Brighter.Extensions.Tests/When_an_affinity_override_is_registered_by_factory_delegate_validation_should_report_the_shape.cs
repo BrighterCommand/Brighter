@@ -49,6 +49,7 @@ public class UnreadableOverrideValidationTests
         // since ScopeAffinityOverride is public in the DI package; all three lifetimes Scoped
         var capturingProvider = new CapturingLoggerProvider();
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddLogging(logging => logging.AddProvider(capturingProvider));
         services.AddSingleton(_ => new ScopeAffinityOverride(ScopeAffinity.JoinAmbient));
         var builder = services.AddBrighter(options =>
@@ -87,6 +88,7 @@ public class UnreadableOverrideValidationTests
         // set, so only one distinct value is visible to that rule - the silence this rule exists to break
         var capturingProvider = new CapturingLoggerProvider();
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddLogging(logging => logging.AddProvider(capturingProvider));
         services.AddSingleton(new ScopeAffinityOverride(ScopeAffinity.AlwaysNew));
         services.AddSingleton(_ => new ScopeAffinityOverride(ScopeAffinity.JoinAmbient));
@@ -118,6 +120,7 @@ public class UnreadableOverrideValidationTests
         // of an override
         var capturingProvider = new CapturingLoggerProvider();
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddLogging(logging => logging.AddProvider(capturingProvider));
         services.AddSingleton(new ScopeAffinityOverride(ScopeAffinity.JoinAmbient));
         var builder = services.AddBrighter(options =>

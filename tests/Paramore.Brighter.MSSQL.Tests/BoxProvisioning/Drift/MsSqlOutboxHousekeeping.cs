@@ -26,22 +26,10 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning.Drift;
 
-/// <summary>
-/// Backend-specific housekeeping columns for the MSSQL outbox table — columns that exist on
-/// every version of the schema but never appear in any migration's <c>LogicalColumns</c>
-/// because they are not part of the cross-backend logical schema (per ADR 0057 §1).
-/// </summary>
-/// <remarks>
-/// Used by drift tests to reconstruct the full builder column set as
-/// <c>V_latest.LogicalColumns ∪ Housekeeping</c>, asserting that the live
-/// <c>SqlOutboxBuilder</c> DDL has not drifted away from the migration chain.
-/// </remarks>
+// MSSQL outbox columns outside the cross-backend logical schema, so in no migration's LogicalColumns
+// (ADR 0057 §1); drift tests add them to V_latest's columns to rebuild the builder's column set.
 internal static class MsSqlOutboxHousekeeping
 {
-    /// <summary>
-    /// Housekeeping columns present on the MSSQL outbox table since V1 — currently the
-    /// identity primary key column.
-    /// </summary>
     public static readonly ISet<string> V1 = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "Id"

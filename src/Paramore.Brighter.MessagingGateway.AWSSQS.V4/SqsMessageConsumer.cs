@@ -374,15 +374,25 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
         }
     }
 
+    /// <summary>Re-queues the specified message.</summary>
+    /// <param name="message">The message.</param>
+    /// <param name="delay">A delay from zero to 12 hours, rounded to the nearest whole second. Null means zero.</param>
+    /// <returns>True if the message was requeued successfully.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">The delay is negative or exceeds 12 hours.</exception>
+    /// <remarks>Uses visibility timeout on the existing message, preserving FIFO group ordering.
+    /// AWS can reject a delay exceeding the remaining visibility allowance; this returns false.</remarks>
     public bool Requeue(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(() => RequeueAsync(message, delay));
 
     /// <summary>
     /// Re-queues the specified message.
     /// </summary>
     /// <param name="message">The message.</param>
-    /// <param name="delay">Time to delay delivery of the message. AWS uses seconds. 0s is immediate requeue. Default is 0ms</param>
+    /// <param name="delay">A delay from zero to 12 hours, rounded to the nearest whole second. Null means zero.</param>
     /// <param name="cancellationToken">Cancels the requeue</param>
     /// <returns>True if the message was requeued successfully</returns>
+    /// <exception cref="ArgumentOutOfRangeException">The delay is negative or exceeds 12 hours.</exception>
+    /// <remarks>Uses visibility timeout on the existing message, preserving FIFO group ordering.
+    /// AWS can reject a delay exceeding the remaining visibility allowance; this returns false.</remarks>
     public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null,
         CancellationToken cancellationToken = default(CancellationToken))
     {
@@ -390,6 +400,9 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
             return false;
 
         delay ??= TimeSpan.Zero;
+
+        if (delay.Value < TimeSpan.Zero || delay.Value > TimeSpan.FromHours(12))
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "The SQS requeue delay must be between zero and 12 hours.");
 
         var receiptHandle = value.ToString();
 

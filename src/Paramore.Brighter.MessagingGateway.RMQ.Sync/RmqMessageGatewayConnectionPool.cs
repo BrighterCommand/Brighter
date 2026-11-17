@@ -33,8 +33,13 @@ using RabbitMQ.Client.Exceptions;
 namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 {
     /// <summary>
-    /// Class MessageGatewayConnectionPool.
+    /// Shares RabbitMQ connections across gateways using the same broker credentials and virtual host.
     /// </summary>
+    /// <remarks>
+    /// Shutdown notifications do not evict connections, allowing client automatic recovery to run.
+    /// A lookup that finds a closed connection disposes it and creates a replacement instead of waiting
+    /// for recovery. Reset, removal and release of the last gateway reference also dispose connections.
+    /// </remarks>
     public partial class RmqMessageGatewayConnectionPool
     {
         private readonly string _connectionName;
@@ -51,13 +56,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         }
         
         /// <summary>
-        /// Return matching RabbitMQ subscription if exist (match by amqp scheme)
-        /// or create new subscription to RabbitMQ (thread-safe)
+        /// Returns an open pooled connection or replaces a closed or missing connection (thread-safe).
         /// </summary>
-        /// <param name="connectionFactory"></param>
-        /// <returns></returns>
+        /// <param name="connectionFactory">The factory identifying the broker connection and used to create it.</param>
+        /// <returns>The pooled connection.</returns>
         /// <remarks>The returned connection is borrowed and does not acquire a gateway reference.
-        /// Pool reset, removal or gateway disposal can close it.</remarks>
+        /// Pool reset, removal or gateway disposal can close it. Replacement of a closed connection
+        /// cancels any automatic recovery in progress on that connection.</remarks>
         public IConnection? GetConnection(ConnectionFactory connectionFactory) => GetConnection(connectionFactory, false);
 
         internal IConnection? AcquireConnection(ConnectionFactory connectionFactory) => GetConnection(connectionFactory, true);
@@ -130,24 +135,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             Log.NewConnectedToAddedToPool(s_logger, connection.Endpoint, connection.ClientProvidedName);
 
-
-            void ShutdownHandler(object? sender, ShutdownEventArgs e)
-            {
-                Log.SubscriptionHasBeenShutdown(s_logger, connection.Endpoint, e.ToString());
-
-                lock (s_lock)
-                {
-                    if (s_connectionPool.TryGetValue(connectionId, out var pooled)
-                        && ReferenceEquals(pooled.Connection, sender))
-                    {
-                        TryRemoveConnection(connectionId);
-                    }
-                }
-            }
-
-            connection.ConnectionShutdown += ShutdownHandler;
-
-            var pooledConnection = new PooledConnection{Connection = connection, ShutdownHandler = ShutdownHandler};
+            var pooledConnection = new PooledConnection { Connection = connection };
 
             s_connectionPool.Add(connectionId, pooledConnection);
 
@@ -160,8 +148,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             s_connectionPool.Remove(connectionId);
             //netstandard20 issue, if connectionfound is true, pooledConnection is not null
-            pooledConnection.Connection!.ConnectionShutdown -= pooledConnection.ShutdownHandler;
-            pooledConnection.Connection.Dispose();
+            pooledConnection.Connection!.Dispose();
         }
 
         private string GetConnectionId(ConnectionFactory connectionFactory)
@@ -179,7 +166,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
             public int ReferenceCount { get; set; }
             public IConnection? Connection { get; set; }
-            public EventHandler<ShutdownEventArgs>? ShutdownHandler { get; set; }
         }
 
         public void RemoveConnection(ConnectionFactory connectionFactory)
@@ -202,9 +188,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             [LoggerMessage(LogLevel.Debug, "RmqMessageGatewayConnectionPool: new connected to {Url} added to pool named {ProviderName}")]
             public static partial void NewConnectedToAddedToPool(ILogger logger, AmqpTcpEndpoint url, string providerName);
-
-            [LoggerMessage(LogLevel.Warning, "RmqMessageGatewayConnectionPool: The subscription {Url} has been shutdown due to {ErrorMessage}")]
-            public static partial void SubscriptionHasBeenShutdown(ILogger logger, AmqpTcpEndpoint url, string errorMessage);
         }
     }
 }

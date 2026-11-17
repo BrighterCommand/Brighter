@@ -57,19 +57,16 @@ public class SuccessfulSendPipelineScopeDisposalLoggingTests
         });
         var commandProcessor = services.BuildServiceProvider().GetRequiredService<IAmACommandProcessor>();
 
-        var loggerProvider = new CapturingLoggerProvider();
-        Initializer.Factory.AddProvider(loggerProvider);
+        using var logs = new InMemoryLogCapture();
 
         // Act — the first Send completes despite its owned pipeline scope's disposal throwing
         commandProcessor.Send(new PoisonedScopeCompletingHandlerCommand());
 
         // Assert — the handler ran to completion, unaffected by the disposal failure, and the failure
         // was logged at Error. Filtered by CategoryName as well as EventId.Name: HandlerLifetimeScope and
-        // TransformPipelineDrain both log a "FailedToDisposePipelineScope" event, and xUnit may run this
-        // test concurrently with one that exercises the other, against the same shared static logger
-        // factory (Initializer.Factory) — CategoryName is what tells them apart.
+        // TransformPipelineDrain both log a "FailedToDisposePipelineScope" event.
         Assert.Equal(1, recorder.Completions);
-        var disposalFailure = Assert.Single(loggerProvider.Entries.Where(IsHandlerScopeDisposalFailure));
+        var disposalFailure = Assert.Single(logs.Entries.Where(IsHandlerScopeDisposalFailure));
         Assert.Equal(LogLevel.Error, disposalFailure.Level);
 
         // Act — a second Send in the same host
@@ -77,7 +74,7 @@ public class SuccessfulSendPipelineScopeDisposalLoggingTests
 
         // Assert — not latched: the handler completed again and a second, separate Error was logged
         Assert.Equal(2, recorder.Completions);
-        var disposalFailures = loggerProvider.Entries.Where(IsHandlerScopeDisposalFailure).ToList();
+        var disposalFailures = logs.Entries.Where(IsHandlerScopeDisposalFailure).ToList();
         Assert.Equal(2, disposalFailures.Count);
         Assert.All(disposalFailures, e => Assert.Equal(LogLevel.Error, e.Level));
     }

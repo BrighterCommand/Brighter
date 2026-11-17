@@ -49,11 +49,11 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
     /// specify.
     /// </para>
     /// <para>
-    /// This behaviour drives a real Brighter pump rather than calling Requeue on the channel. The
-    /// budget is enforced in the pump - it calls UpdateHandledCount, tests
-    /// HandledCountReached(RequeueCount), and rejects with DeliveryError when spent - and nowhere
-    /// else. A test that requeues the channel directly never reaches that code and so cannot answer
-    /// the question it is named for, however green it goes.
+    /// Drives a real Brighter pump, which enforces the budget and nothing else does (ADR 0066). The
+    /// subscription needs a positive <c>RequeueCount</c>: <c>-1</c> requeues for ever, so the pump
+    /// would never reject. The dispatch count is read once the pump has quit, where the observation
+    /// window closes, and the dead-lettered copy reports at least <c>RequeueCount - 1</c> deliveries
+    /// (ADR 0077, What the FR-23 harness can assert).
     /// </para>
     /// </remarks>
     [Fact(Skip = "Deferred: #4240 — requeue budget exhausted to DLQ not yet conformant for AzureServiceBus / AzureServiceBusMessagingGateway (maintainer sign-off)")]
@@ -69,8 +69,6 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
         _producer = _messageGatewayProvider.CreateProducer(_publication);
         _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-        // A budget the pump can exhaust. -1 means "requeue for ever" and the pump would never
-        // reject, so the behaviour is untestable rather than failing.
         Assert.True(_subscription.RequeueCount > 0,
             "FR-23 needs a positive RequeueCount on the subscription; the provider declares none.");
 
@@ -83,13 +81,13 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
 
         _producer.Send(message);
 
-        // Act — the production pump owns the budget; the handler defers every time
+        // Act
         var pump = ConformanceDeferredPump.CreateReactor(_channel, _subscription.RequeueCount,
             TimeSpan.FromMilliseconds(5000));
 
         var pumping = Task.Factory.StartNew(() => pump.Run(), TaskCreationOptions.LongRunning);
 
-        // Assert — the message reaches the dead-letter queue: poll every 500 ms, give up after 60 s
+        // Assert
         var dlqMessage = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(60))
@@ -105,9 +103,6 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
         _channel.Enqueue(MessageFactory.CreateQuitMessage(_subscription.RoutingKey));
         await pumping;
 
-        // R-27(c)(4): the dispatch count after quit-and-await must not exceed the budget. The
-        // observation window closes here — if the budget did not hold, the pump would have kept
-        // redelivering between the poll break and the await, and the count would be larger.
         var dispatchCount = ConformanceDeferredPump.GetDispatchCount(ConformanceDeferredPump.KeyOf(message));
         Assert.True(dispatchCount <= _subscription.RequeueCount,
             $"expected at most {_subscription.RequeueCount} dispatches (RequeueCount), "
@@ -115,30 +110,13 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
 
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
 
-        // Identity, asserted here rather than through IAmAMessageAssertion: the shared assertion
-        // compares HandledCount, and for this behaviour it necessarily differs - the pump stamps
-        // each delivery on the way past. That difference is the evidence, not a mismatch.
         ConformanceDeferredPump.AssertIsTheMessageSent(message, dlqMessage);
 
-        // The pump spent the budget, and nothing else routed the message: it arrives carrying the
-        // deliveries it took to exhaust it.
-        //
-        // Why RequeueCount - 1 and not RequeueCount. The pump increments the count and only then
-        // tests it, so the delivery that exhausts the budget is the one that is never republished.
-        // Where the harness puts the message on the DLQ itself it sends that final in-memory
-        // header, and the count reads RequeueCount. Where the broker dead-letters natively - RMQ
-        // rejects onto a DLX, and the broker moves the copy it already holds - the stored copy was
-        // written by the last republish, so it reads one less. Both spent the same budget; they
-        // differ only in which copy gets recorded. RequeueCount - 1 is the strongest bound true of
-        // both, and still fails anything dead-lettered before the budget ran down.
-        var deliveriesExpected = _subscription.RequeueCount - 1;
+        var deliveriesExpected = MinimumRecordedDeliveries(_subscription.RequeueCount);
         Assert.True(dlqMessage.Header.HandledCount >= deliveriesExpected,
             $"expected at least {deliveriesExpected} deliveries before dead-lettering, "
             + $"but the dead-lettered message reports {dlqMessage.Header.HandledCount}");
 
-        // R-5: when the provider's gateway stamps Brighter rejection metadata, the dead-letter
-        // copy must carry rejectionReason == "DeliveryError". This proves the Brighter budget
-        // route was taken and not a native redrive that bypasses the pump entirely.
         var keys = _messageGatewayProvider.RejectionMetadataKeys;
         if (keys.StampsRejectionMetadata)
         {
@@ -147,4 +125,8 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
             Assert.Equal("DeliveryError", dlqMessage.Header.Bag[keys.RejectionReason].ToString());
         }
     }
+
+    // One less than the budget: a broker that dead-letters natively keeps the last republished copy,
+    // not the final in-memory header (ADR 0077, What the FR-23 harness can assert).
+    private static int MinimumRecordedDeliveries(int requeueCount) => requeueCount - 1;
 }

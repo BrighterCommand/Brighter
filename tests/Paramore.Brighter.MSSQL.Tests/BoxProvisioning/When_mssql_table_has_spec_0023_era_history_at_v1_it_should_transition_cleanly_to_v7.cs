@@ -31,6 +31,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// A current outbox whose history holds only the V1 row an earlier single-version provisioner wrote
+/// keeps that row and gains a row per later version, without its shape changing: the conditional
+/// ALTERs are no-ops (ADR 0057 §5).
+/// </summary>
 public class MsSqlSpec0023EraHistoryTransitionTests : IAsyncLifetime
 {
     private const string Spec0023EraDescription = "spec 0023 fresh install";
@@ -41,7 +46,7 @@ public class MsSqlSpec0023EraHistoryTransitionTests : IAsyncLifetime
     [Fact]
     public async Task When_mssql_table_has_spec_0023_era_history_at_v1_it_should_transition_cleanly_to_v7()
     {
-        //Arrange — V7-shaped outbox via the live builder DDL + spec-0023-era history at V1.
+        //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
         ExecuteDdl(SqlOutboxBuilder.GetDDL(_tableName, hasBinaryMessagePayload: false));
         EnsureHistoryTable();
@@ -60,10 +65,9 @@ public class MsSqlSpec0023EraHistoryTransitionTests : IAsyncLifetime
         //Act
         await provisioner.ProvisionAsync();
 
-        //Assert — table shape unchanged (idempotent IF COL_LENGTH ALTERs were no-ops).
+        //Assert
         Assert.Equal(columnsBefore, GetTableColumns());
 
-        //Assert — V1 row preserved with original spec-0023-era description; V2..V7 inserted normally.
         var rowsByVersion = GetHistoryRowsByVersion();
         Assert.Equal(ExpectedMigrationVersions.OutboxLatest, rowsByVersion.Count);
         Assert.Equal(Spec0023EraDescription, rowsByVersion[1]);

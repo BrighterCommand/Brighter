@@ -29,21 +29,18 @@ public class MsSqlInboxPayloadModeMismatchTests : IAsyncLifetime
         //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
 
-        // Create a text-mode inbox table
-        var ddl = SqlInboxBuilder.GetDDL(_tableName, binaryMessagePayload: false);
-        Configuration.CreateTable(_connectionString, ddl);
+        CreateTextModeInbox();
 
-        // Configure provisioner with binary mode (mismatch)
-        var config = new RelationalDatabaseConfiguration(
+        var binaryModeConfig = new RelationalDatabaseConfiguration(
             _connectionString,
             inboxTableName: _tableName,
             binaryMessagePayload: true);
-        var runner = new MsSqlBoxMigrationRunner(new MsSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
+        var runner = new MsSqlBoxMigrationRunner(new MsSqlInboxMigrationCatalog(), binaryModeConfig, TimeSpan.FromSeconds(30));
         var provisioner = new MsSqlInboxProvisioner(
             new MsSqlBoxDetectionHelper(),
             new MsSqlInboxMigrationCatalog(),
             new MsSqlPayloadModeValidator(),
-            config,
+            binaryModeConfig,
             runner);
 
         //Act & Assert
@@ -52,6 +49,9 @@ public class MsSqlInboxPayloadModeMismatchTests : IAsyncLifetime
 
         Assert.Contains("mismatch", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
+
+    private void CreateTextModeInbox() =>
+        Configuration.CreateTable(_connectionString, SqlInboxBuilder.GetDDL(_tableName, binaryMessagePayload: false));
 
     public Task InitializeAsync() => Task.CompletedTask;
 

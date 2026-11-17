@@ -1,4 +1,5 @@
 using System;
+using Grpc.Core;
 using Paramore.Brighter.Firestore;
 using Paramore.Brighter.Gcp.Tests.Helper;
 
@@ -19,14 +20,15 @@ public static class Configuration
         };
     }
     
-    public static FirestoreConfiguration CreateOutbox()
+    public static FirestoreConfiguration CreateOutbox(string? collection = null)
     {
         return new FirestoreConfiguration(GatewayFactory.GetProjectId(), DatabaseName)
         {
             Credential = GatewayFactory.GetCredential(),
+            Configure = ConfigureEmulator,
             Outbox = new FirestoreCollection
             {
-                Name = OutboxCollection,
+                Name = collection ?? OutboxCollection,
                 Ttl = TimeSpan.FromMinutes(5)
             } 
         };
@@ -43,6 +45,19 @@ public static class Configuration
                 Ttl = TimeSpan.FromMinutes(5)
             } 
         };
+    }
+
+    private static void ConfigureEmulator(Google.Cloud.Firestore.V1.FirestoreClientBuilder builder)
+    {
+        var emulatorHost = Environment.GetEnvironmentVariable("FIRESTORE_EMULATOR_HOST");
+        if (string.IsNullOrEmpty(emulatorHost))
+        {
+            return;
+        }
+
+        builder.Credential = null;
+        builder.Endpoint = emulatorHost;
+        builder.ChannelCredentials = ChannelCredentials.Insecure;
     }
 
     private const string DatabaseName = "brighter-firestore-database";

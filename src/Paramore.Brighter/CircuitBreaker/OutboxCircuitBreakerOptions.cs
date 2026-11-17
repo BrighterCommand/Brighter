@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 # endregion
 
+using System;
+
 namespace Paramore.Brighter.CircuitBreaker
 {
 
@@ -35,5 +37,11 @@ namespace Paramore.Brighter.CircuitBreaker
         /// Circuit break unhealthy topics for a specific cooldown period in ticks (on clear outbox)
         /// </value>
         public int CooldownCount { get; set; } = 10;
+
+        /// <value>
+        /// The longest a topic stays tripped, whatever the cooldown count. Must be greater than zero and at
+        /// most 24 hours. Defaults to 5 minutes.
+        /// </value>
+        public TimeSpan MaximumTripDuration { get; set; } = TimeSpan.FromMinutes(5);
     }
 }

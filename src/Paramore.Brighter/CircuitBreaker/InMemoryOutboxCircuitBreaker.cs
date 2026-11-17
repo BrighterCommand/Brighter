@@ -25,8 +25,10 @@ THE SOFTWARE. */
 
 
 using System.Collections.Concurrent;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
@@ -38,24 +40,89 @@ namespace Paramore.Brighter.CircuitBreaker;
 /// if a topic is marked as tripped, record that topic as a failure and cooldown by decrementing
 /// cool down count.
 /// </summary>
-/// <param name="options"></param>
-/// <param name="tracer">Optional tracer used to export a span for each trip/re-trip/reset transition</param>
-/// <param name="instrumentationOptions">How verbose should the exported spans be</param>
-public partial class InMemoryOutboxCircuitBreaker(
-    OutboxCircuitBreakerOptions? options = null,
-    IAmABrighterTracer? tracer = null,
-    InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) : IAmAnOutboxCircuitBreaker
+public partial class InMemoryOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 {
+    private const string COOLDOWN_CAUSE = "cooldown";
+    private const string MAXIMUM_TRIP_DURATION_CAUSE = "maximum trip duration";
+    private static readonly TimeSpan s_longestPermittedTripDuration = TimeSpan.FromHours(24);
+
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<InMemoryOutboxCircuitBreaker>();
 
-    private readonly OutboxCircuitBreakerOptions _outboxCircuitBreakerOptions = options ?? new OutboxCircuitBreakerOptions();
+    private readonly OutboxCircuitBreakerOptions _outboxCircuitBreakerOptions;
+    private readonly TimeSpan _maximumTripDuration;
+    private readonly IAmABrighterTracer? _tracer;
+    private readonly InstrumentationOptions _instrumentationOptions;
+    private readonly TimeProvider _timeProvider;
 
-    private readonly ConcurrentDictionary<RoutingKey, int> _trippedTopics = new();
+    private readonly ConcurrentDictionary<RoutingKey, TripEntry> _trippedTopics = new();
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InMemoryOutboxCircuitBreaker"/> class.
+    /// </summary>
+    /// <param name="options">The cooldown and maximum trip duration; defaults are used when null</param>
+    /// <param name="tracer">Optional tracer used to export a span for each trip/re-trip/reset transition</param>
+    /// <param name="instrumentationOptions">How verbose should the exported spans be</param>
+    /// <param name="timeProvider">The clock used to timestamp trips; defaults to <see cref="TimeProvider.System"/></param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when MaximumTripDuration is not greater than zero and at most 24 hours</exception>
+    public InMemoryOutboxCircuitBreaker(
+        OutboxCircuitBreakerOptions? options = null,
+        IAmABrighterTracer? tracer = null,
+        InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
+        TimeProvider? timeProvider = null)
+    {
+        _outboxCircuitBreakerOptions = options ?? new OutboxCircuitBreakerOptions();
+        _maximumTripDuration = ValidatedMaximumTripDuration(_outboxCircuitBreakerOptions);
+        _tracer = tracer;
+        _instrumentationOptions = instrumentationOptions;
+        _timeProvider = timeProvider ?? TimeProvider.System;
+    }
+
+    private static TimeSpan ValidatedMaximumTripDuration(OutboxCircuitBreakerOptions options)
+    {
+        var maximumTripDuration = options.MaximumTripDuration;
+        if (maximumTripDuration <= TimeSpan.Zero || maximumTripDuration > s_longestPermittedTripDuration)
+            throw new ArgumentOutOfRangeException(nameof(options), maximumTripDuration,
+                "MaximumTripDuration must be greater than zero and at most 24 hours");
+
+        return maximumTripDuration;
+    }
+
+    private sealed record TripEntry(int Count, long Timestamp)
+    {
+        public bool Equals(TripEntry? other) => ReferenceEquals(this, other);
+
+        public override int GetHashCode() => RuntimeHelpers.GetHashCode(this);
+    }
 
     /// <summary>
     /// A collection of tripped topics.
     /// </summary>
-    public IEnumerable<RoutingKey> TrippedTopics => _trippedTopics.Keys.ToArray();
+    public IEnumerable<RoutingKey> TrippedTopics
+    {
+        get
+        {
+            EndExpiredTrips();
+            return ListLiveTopics();
+        }
+    }
+
+    private void EndExpiredTrips()
+    {
+        foreach (var trip in _trippedTopics.ToArray())
+        {
+            if (HasExpired(trip.Value))
+                RemoveAndAnnounceReset(trip.Key, trip.Value, MAXIMUM_TRIP_DURATION_CAUSE);
+        }
+    }
+
+    private RoutingKey[] ListLiveTopics() =>
+        _trippedTopics.Where(trip => !HasExpired(trip.Value)).Select(trip => trip.Key).ToArray();
+
+    private bool HasExpired(TripEntry entry) => _timeProvider.GetElapsedTime(entry.Timestamp) >= _maximumTripDuration;
+
+    private bool RemoveEntry(RoutingKey topic, TripEntry entry) =>
+        ((ICollection<KeyValuePair<RoutingKey, TripEntry>>)_trippedTopics)
+            .Remove(new KeyValuePair<RoutingKey, TripEntry>(topic, entry));
 
 
     /// <summary>
@@ -65,36 +132,45 @@ public partial class InMemoryOutboxCircuitBreaker(
     /// </summary>
     public void CoolDown()
     {
+        EndExpiredTrips();
+
         foreach (var trippedTopicsKey in _trippedTopics.Keys)
         {
-            // Atomic decrement: AddOrUpdate's compare-and-swap retries against any concurrent TripTopic
-            // reset, so a freshly tripped topic is never clobbered by a stale read-modify-write. The
-            // returned post-decrement value drives the eviction decision — re-reading the indexer here
-            // (as the previous code did) would throw KeyNotFoundException if another CoolDown had already
-            // removed the key.
-            var cooled = _trippedTopics.AddOrUpdate(trippedTopicsKey, -1, (_, count) => count - 1);
-
-            TryEvictAndAnnounceReset(trippedTopicsKey, cooled);
+            if (TryDecrement(trippedTopicsKey, out var cooled))
+                TryEvictAndAnnounceReset(trippedTopicsKey, cooled);
         }
     }
 
-    private void TryEvictAndAnnounceReset(RoutingKey topic, int cooledValue)
+    private bool TryDecrement(RoutingKey topic, out TripEntry cooled)
     {
-        if (cooledValue >= 0)
+        while (_trippedTopics.TryGetValue(topic, out var observed))
+        {
+            cooled = observed with { Count = observed.Count - 1 };
+            if (_trippedTopics.TryUpdate(topic, cooled, observed))
+                return true;
+        }
+
+        cooled = null!;
+        return false;
+    }
+
+    private void TryEvictAndAnnounceReset(RoutingKey topic, TripEntry cooled)
+    {
+        if (cooled.Count >= 0)
             return;
 
-        // Conditional remove: only evict while the value is still the cooled value we computed. An
-        // interleaved TripTopic re-trip changes it, and the remove then leaves the fresh trip in place.
-        var removed = ((ICollection<KeyValuePair<RoutingKey, int>>)_trippedTopics)
-            .Remove(new KeyValuePair<RoutingKey, int>(topic, cooledValue));
+        RemoveAndAnnounceReset(topic, cooled, COOLDOWN_CAUSE);
+    }
 
-        if (!removed)
+    private void RemoveAndAnnounceReset(RoutingKey topic, TripEntry entry, string resetCause)
+    {
+        if (!RemoveEntry(topic, entry))
             return;
 
-        var span = tracer?.CreateCircuitBreakerSpan(new CircuitBreakerSpanInfo(CircuitBreakerSpanOperation.Reset, topic, 0), instrumentationOptions);
-        tracer?.EndSpan(span);
+        var span = _tracer?.CreateCircuitBreakerSpan(new CircuitBreakerSpanInfo(CircuitBreakerSpanOperation.Reset, topic, 0), _instrumentationOptions);
+        _tracer?.EndSpan(span);
 
-        Log.Reset(s_logger, topic.Value);
+        Log.Reset(s_logger, topic.Value, resetCause);
     }
 
     /// <summary>
@@ -103,20 +179,24 @@ public partial class InMemoryOutboxCircuitBreaker(
     /// <param name="topic">Name of the entity to circuit break</param>
     public void TripTopic(RoutingKey topic)
     {
+        EndExpiredTrips();
+
         var cooldownCount = _outboxCircuitBreakerOptions.CooldownCount;
         var isReTrip = false;
 
+        var entry = new TripEntry(cooldownCount, _timeProvider.GetTimestamp());
+
         _trippedTopics.AddOrUpdate(topic,
-            addValueFactory: _ => cooldownCount,
+            addValueFactory: _ => entry,
             updateValueFactory: (_, _) =>
             {
                 isReTrip = true;
-                return cooldownCount;
+                return entry;
             });
 
         var operation = isReTrip ? CircuitBreakerSpanOperation.ReTrip : CircuitBreakerSpanOperation.Trip;
-        var span = tracer?.CreateCircuitBreakerSpan(new CircuitBreakerSpanInfo(operation, topic, cooldownCount), instrumentationOptions);
-        tracer?.EndSpan(span);
+        var span = _tracer?.CreateCircuitBreakerSpan(new CircuitBreakerSpanInfo(operation, topic, cooldownCount), _instrumentationOptions);
+        _tracer?.EndSpan(span);
 
         if (isReTrip)
             Log.ReTripped(s_logger, topic.Value, cooldownCount);
@@ -132,8 +212,8 @@ public partial class InMemoryOutboxCircuitBreaker(
         [LoggerMessage(LogLevel.Debug, "Circuit breaker re-tripped for topic {Topic}; cooldown extended to {CooldownCount} cycle(s)")]
         public static partial void ReTripped(ILogger logger, string topic, int cooldownCount);
 
-        [LoggerMessage(LogLevel.Information, "Circuit breaker reset for topic {Topic}; publish suppression lifted")]
-        public static partial void Reset(ILogger logger, string topic);
+        [LoggerMessage(LogLevel.Information, "Circuit breaker reset for topic {Topic} ({ResetCause}); publish suppression lifted")]
+        public static partial void Reset(ILogger logger, string topic, string resetCause);
     }
 }
 

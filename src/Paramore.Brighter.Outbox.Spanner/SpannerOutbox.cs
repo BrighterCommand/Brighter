@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Outbox.Spanner;
 /// </para>
 /// </remarks>
 public class SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider) 
-    : RelationDatabaseOutbox(DbSystem.Spanner, configuration, connectionProvider, new SpannerQueries(), s_logger)
+    : RelationDatabaseOutbox(DbSystem.Spanner, configuration, connectionProvider, new SpannerQueries(), s_logger), IAmATopicCountingOutbox
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SpannerOutbox>();
     

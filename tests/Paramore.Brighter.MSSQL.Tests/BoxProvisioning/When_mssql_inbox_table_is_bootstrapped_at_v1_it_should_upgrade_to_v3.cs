@@ -31,6 +31,10 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// A V1 inbox with no history is bootstrapped to V3: the history gets a synthetic V1 row and applied
+/// V2 and V3 rows, and existing rows survive with a null <c>ContextKey</c>.
+/// </summary>
 public class MsSqlInboxV1ToV3UpgradeTests : IAsyncLifetime
 {
     private static readonly string[] s_v3ExpectedColumns =
@@ -46,7 +50,7 @@ public class MsSqlInboxV1ToV3UpgradeTests : IAsyncLifetime
     [Fact]
     public async Task When_mssql_inbox_table_is_bootstrapped_at_v1_it_should_upgrade_to_v3()
     {
-        //Arrange — seed a V1 inbox (no ContextKey, no history) plus a marker command row.
+        //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
         MsSqlInboxLegacySeeder.SeedAtV1(_connectionString, _tableName);
         SeedMarkerRow();
@@ -63,14 +67,13 @@ public class MsSqlInboxV1ToV3UpgradeTests : IAsyncLifetime
         //Act
         await provisioner.ProvisionAsync();
 
-        //Assert — the table now has the V3 column set (ContextKey + CausationId ALTERs applied)
+        //Assert
         var actualColumns = GetTableColumns();
         foreach (var expected in s_v3ExpectedColumns)
         {
             Assert.Contains(expected, actualColumns);
         }
 
-        //Assert — history rows: one synthetic at V1 + one applied at V2 + one applied at V3
         var rowsByVersion = GetHistoryRowsByVersion();
         Assert.Equal(3, rowsByVersion.Count);
 
@@ -89,7 +92,6 @@ public class MsSqlInboxV1ToV3UpgradeTests : IAsyncLifetime
             $"V3 should be an applied migration row, not a synthetic bootstrap row " +
             $"(description was: '{appliedV3Description}')");
 
-        //Assert — the seeded marker row survived with NULL ContextKey on the new column
         Assert.True(MarkerRowExistsWithNullContextKey());
     }
 

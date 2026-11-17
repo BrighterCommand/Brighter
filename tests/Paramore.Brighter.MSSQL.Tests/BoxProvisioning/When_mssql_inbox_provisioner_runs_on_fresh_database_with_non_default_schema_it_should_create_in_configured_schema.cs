@@ -29,10 +29,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-// Inbox companion to When_mssql_outbox_provisioner_runs_on_fresh_database_with_non_default_schema_*.
-// Per PR #4039 reviewer item M4-1 (F1a): SqlInboxBuilder.GetDDL is now schema-aware via an
-// optional schemaName parameter, and MsSqlInboxMigrationCatalog.FreshInstallDdl threads
-// configuration.SchemaName through to it. This test pins the inbox half of the contract.
+/// <summary>
+/// On a fresh database the inbox provisioner creates the table in the configured schema, not
+/// <c>dbo</c>, and a second run changes nothing. The schema must already exist; the runner does not
+/// create schemas.
+/// </summary>
 public class MsSqlInboxNonDefaultSchemaTests : IAsyncLifetime
 {
     private const string NonDefaultSchema = "billing_for_inbox_schema_test";
@@ -58,22 +59,22 @@ public class MsSqlInboxNonDefaultSchemaTests : IAsyncLifetime
     [Fact]
     public async Task When_mssql_inbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema()
     {
-        //Arrange — operator pre-creates the schema; runner does not create schemas itself.
+        //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
         EnsureSchemaExists(NonDefaultSchema);
         DropAnyExistingTable(_tableName, NonDefaultSchema);
         DropAnyExistingTable(_tableName, "dbo");
 
-        //Act — first fresh-install run
+        //Act
         var firstException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
 
-        //Assert — table lives in configured schema, NOT dbo
+        //Assert
         Assert.Null(firstException);
         Assert.True(TableExistsInSchema(_tableName, NonDefaultSchema));
         Assert.False(TableExistsInSchema(_tableName, "dbo"));
         Assert.Equal(1, GetHistoryRowCount(NonDefaultSchema, _tableName));
 
-        //Act — second run idempotency
+        //Act
         var secondException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
 
         //Assert

@@ -30,6 +30,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// A null <c>schemaName</c> passed to the MySQL payload validator is substituted with
+/// <c>connection.Database</c>, so a payload-mode mismatch still throws; unsubstituted, the null binds as
+/// <c>DBNull</c>, the type query matches no rows and the mismatch passes silently (ADR 0058 §A.3).
+/// </summary>
 public class MySqlPayloadValidatorNullSchemaTests : IAsyncLifetime
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
@@ -38,16 +43,7 @@ public class MySqlPayloadValidatorNullSchemaTests : IAsyncLifetime
     [Fact]
     public async Task When_mysql_payload_validator_receives_null_schema_name_it_should_substitute_connection_database()
     {
-        // Arrange — two box-shaped tables in the connection's default database: one with a
-        // text payload column (LONGTEXT), one with a binary payload column (LONGBLOB). The
-        // validator's null-substitution rule (per ADR 0057 §A.1) must make a call with
-        // schemaName: null behave identically to a call with schemaName: connection.Database
-        // — MySQL has no separate schema concept, so the database name is the schema.
-        // Without substitution, MySqlConnector silently coerces a null Value to DBNull, so
-        // `WHERE TABLE_SCHEMA = NULL` matches no rows, dataType comes back null, and the
-        // mismatch arm silently returns — masking a real configuration error. The mismatch
-        // arm is the discriminator: with null + no substitution, no exception is thrown
-        // when ConfigurationException is expected.
+        // Arrange
         var textTable = TrackTable($"nullschema_text_{Guid.NewGuid():N}");
         await ExecuteDdl(
             $"CREATE TABLE `{textTable}` (`Id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, `Body` LONGTEXT NULL) ENGINE = InnoDB;");
@@ -62,15 +58,13 @@ public class MySqlPayloadValidatorNullSchemaTests : IAsyncLifetime
         await using var connection = new MySqlConnection(_connectionString);
         await connection.OpenAsync();
 
-        // Act + Assert — text column + text mode (no mismatch): both null and database-name return quietly.
+        // Act + Assert
         await validator.ValidateAsync(
             connection, textTable, databaseName, "Body", binaryMessagePayload: false, default);
         await validator.ValidateAsync(
             connection, textTable, schemaName: null, "Body", binaryMessagePayload: false, default);
 
-        // Act + Assert — longblob column + text mode (mismatch): both null and database-name throw.
-        // The null arm fails before substitution because the unsubstituted query matches no
-        // rows (MySqlConnector silently coerces null to DBNull) and the validator returns silently.
+        // Act + Assert
         await Assert.ThrowsAsync<ConfigurationException>(() =>
             validator.ValidateAsync(
                 connection, binaryTable, databaseName, "Body", binaryMessagePayload: false, default));

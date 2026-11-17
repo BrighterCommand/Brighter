@@ -26,16 +26,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-// Paramore.Brighter.Logging.ApplicationLogging.LoggerFactory is a process-wide mutable static that
-// AddConsumers/AddBrighter reassigns whenever logging is configured, and Brighter's internal loggers
-// (e.g. UseInboxHandlerAsync<T>.s_logger) are static fields bound once per closed generic type, for the
-// life of the process, to whichever factory was current at that moment. Under xUnit's default
-// parallelism, any test in this assembly that builds a host with its own logging provider and asserts
-// on captured log entries can have another concurrently-running test's log output routed into its
-// capture by this shared static, independent of whether the two tests are otherwise related. Every test
-// that captures log output for assertion, plus every test that deliberately logs at Warning or above
-// (the inbox dedup tests), belongs in this collection so none of them race the shared static against
-// each other.
+// Log capture tests replace the process-wide factory and must not overlap other tests.
 [CollectionDefinition(NAME, DisableParallelization = true)]
 public class LoggerCaptureCollection
 {

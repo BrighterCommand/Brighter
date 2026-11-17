@@ -29,21 +29,10 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-// REQUIRES SEQUENTIAL EXECUTION — temporarily creates a non-default schema and a per-test
-// outbox table inside it. DisposeAsync drops both even on test failure.
-//
-// Per PR #4039 reviewer item M4-1 (comment 4485697019): the SchemaName property formally
-// promises that tables live in the configured schema. The pre-F1 catalog path called
-// SqlOutboxBuilder.GetDDL(table, ...) which produced `CREATE TABLE Outbox` (unqualified)
-// — landing the table in the connection's default schema ([dbo]) regardless of the
-// SchemaName value. V2..V7 ALTER statements then targeted [{schema}].[Outbox] which did
-// not exist, and second-run detection (INFORMATION_SCHEMA.COLUMNS filtered by TABLE_SCHEMA)
-// looked in the configured schema, also missing the [dbo]-resident table.
-//
-// This integration test pins the post-F1 contract: on a fresh database with a non-default
-// SchemaName, the outbox table MUST land in the configured schema, AND a second
-// ProvisionAsync run MUST be a clean no-op (no error, history still has exactly one
-// V_latest row, table still resident in the configured schema).
+/// <summary>
+/// With a non-default <c>SchemaName</c>, a fresh install creates the outbox in that schema rather than
+/// <c>dbo</c>, and a second run is a no-op. The test creates the schema: the runner does not create box schemas.
+/// </summary>
 public class MsSqlOutboxNonDefaultSchemaTests : IAsyncLifetime
 {
     private const string NonDefaultSchema = "billing_for_schema_test";
@@ -53,8 +42,6 @@ public class MsSqlOutboxNonDefaultSchemaTests : IAsyncLifetime
 
     public MsSqlOutboxNonDefaultSchemaTests()
     {
-        // Configuration explicitly carries the non-default SchemaName so the catalog's
-        // FreshInstallDdl + V2..V7 ALTERs + detection helper all see the same target schema.
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             outBoxTableName: _tableName,
@@ -71,18 +58,16 @@ public class MsSqlOutboxNonDefaultSchemaTests : IAsyncLifetime
     [Fact]
     public async Task When_mssql_outbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema()
     {
-        //Arrange — the database exists and the non-default schema is pre-created. The MSSQL
-        //runner does not create the box schema itself; operators provision schemas via
-        //out-of-band DDL. Pre-creating [billing_for_schema_test] models that contract.
+        //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
         EnsureSchemaExists(NonDefaultSchema);
         DropAnyExistingTable(_tableName, NonDefaultSchema);
         DropAnyExistingTable(_tableName, "dbo");
 
-        //Act — first fresh-install run
+        //Act
         var firstException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
 
-        //Assert — first run succeeded, table lives in the configured schema (not dbo).
+        //Assert
         Assert.Null(firstException);
         Assert.True(
             TableExistsInSchema(_tableName, NonDefaultSchema),
@@ -91,16 +76,12 @@ public class MsSqlOutboxNonDefaultSchemaTests : IAsyncLifetime
             TableExistsInSchema(_tableName, "dbo"),
             $"Outbox table '{_tableName}' must NOT exist in [dbo] when SchemaName='{NonDefaultSchema}' is configured.");
 
-        // Migration history records a single V_latest row for the box, scoped to the
-        // configured SchemaName. (The history table itself is always in [dbo] per
-        // existing contract — see When_history_table_exists_in_a_non_dbo_schema_runner_*.)
         Assert.Equal(1, GetHistoryRowCount(NonDefaultSchema, _tableName));
 
-        //Act — second run on a provisioned database
+        //Act
         var secondException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
 
-        //Assert — second run is a clean no-op. Table is still in the configured schema, no
-        //second history row was inserted, no error was thrown.
+        //Assert
         Assert.Null(secondException);
         Assert.True(
             TableExistsInSchema(_tableName, NonDefaultSchema),

@@ -156,12 +156,12 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
     }
 
     /// <summary>
-    /// Detects the current logical schema version of a box table by inspecting its column set.
+    /// Detects the current logical schema version of a box table by inspecting its columns and MessageId uniqueness.
     /// Returns one of three values per ADR 0057 §3:
     /// <list type="bullet">
     ///   <item><description><c>-1</c> when the discriminator column is absent (the table is not a Brighter box).</description></item>
     ///   <item><description><c>0</c> when the discriminator is present but the V1 column set is incomplete (unknown schema).</description></item>
-    ///   <item><description><c>V &gt;= 1</c> for the highest version whose cumulative <c>LogicalColumns</c> is a subset of the actual columns.</description></item>
+    ///   <item><description><c>V &gt;= 1</c> for the highest version whose cumulative columns are present, with MessageId uniqueness required for outbox V9.</description></item>
     /// </list>
     /// </summary>
     /// <param name="boxType">Selects the discriminator: <c>HeaderBag</c> for outbox, <c>CommandBody</c> for inbox.</param>
@@ -187,9 +187,26 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
         {
             if (!actualColumns.IsSupersetOf(migrations[i].LogicalColumns))
                 break;
+            if (boxType == BoxType.Outbox && migrations[i].Version == MsSqlOutboxMigrationCatalog.MESSAGE_ID_UNIQUENESS_VERSION
+                && !await HasMessageIdIndexAsync(connection, tableName, schemaName, cancellationToken, transaction))
+                break;
             matched = migrations[i].Version;
         }
         return matched;
+    }
+
+    private static async Task<bool> HasMessageIdIndexAsync(
+        SqlConnection connection, string tableName, string? schemaName,
+        CancellationToken cancellationToken, SqlTransaction? transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        var query = MsSqlOutboxMigrationCatalog.MessageIdIndexQuery(
+            "OBJECT_ID(QUOTENAME(@SchemaName) + '.' + QUOTENAME(@TableName))");
+        command.CommandText = $"SELECT CASE WHEN EXISTS ({query}) THEN 1 ELSE 0 END";
+        command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);
+        command.Parameters.AddWithValue("@TableName", tableName);
+        return (int)(await command.ExecuteScalarAsync(cancellationToken))! == 1;
     }
 
     /// <summary>

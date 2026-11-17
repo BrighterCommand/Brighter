@@ -41,35 +41,43 @@ public class MsSqlInboxProvisionerBootstrapTests : IAsyncLifetime
         //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
 
-        // Create table directly via builder (simulating pre-migration install)
-        var ddl = SqlInboxBuilder.GetDDL(_tableName);
-        Configuration.CreateTable(_connectionString, ddl);
+        CreatePreMigrationInboxTable();
 
         //Act
         await _provisioner.ProvisionAsync();
 
         //Assert
+        Assert.Equal(1, GetHistoryRowCountAtInboxLatest());
+        Assert.Equal(1, GetInboxTableCountInDbo());
+    }
+
+    private void CreatePreMigrationInboxTable() =>
+        Configuration.CreateTable(_connectionString, SqlInboxBuilder.GetDDL(_tableName));
+
+    private int GetHistoryRowCountAtInboxLatest()
+    {
         using var connection = new SqlConnection(_connectionString);
         connection.Open();
-
         using var historyCheck = connection.CreateCommand();
         historyCheck.CommandText = @"
 SELECT COUNT(1) FROM [__BrighterMigrationHistory]
 WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = 'dbo' AND [MigrationVersion] = @ExpectedVersion";
         historyCheck.Parameters.AddWithValue("@BoxTableName", _tableName);
         historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.InboxLatest);
-        var historyCount = (int)historyCheck.ExecuteScalar()!;
-        Assert.Equal(1, historyCount);
+        return (int)historyCheck.ExecuteScalar()!;
+    }
 
-        // Verify the inbox table still exists (wasn't recreated)
+    private int GetInboxTableCountInDbo()
+    {
+        using var connection = new SqlConnection(_connectionString);
+        connection.Open();
         using var tableCheck = connection.CreateCommand();
         tableCheck.CommandText = @"
 SELECT COUNT(1) FROM sys.tables t
 INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
 WHERE t.name = @TableName AND s.name = 'dbo'";
         tableCheck.Parameters.AddWithValue("@TableName", _tableName);
-        var tableCount = (int)tableCheck.ExecuteScalar()!;
-        Assert.Equal(1, tableCount);
+        return (int)tableCheck.ExecuteScalar()!;
     }
 
     public Task InitializeAsync() => Task.CompletedTask;

@@ -1,14 +1,17 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Outbox.Sqlite;
+using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.Sqlite.Tests.Outbox.Binary.Async;
+using Paramore.Brighter.Sqlite.Tests.Outbox.Binary.OutstandingCount;
 using Paramore.Brighter.Sqlite.Tests.Outbox.Binary.Sync;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox.Binary;
 
-public class SqliteBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync
+public class SqliteBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync, IAmAnOutstandingCountOutboxProvider
 {
     private readonly RelationalDatabaseConfiguration _configuration = new(Configuration.ConnectionString,
         databaseName: "brightertests",
@@ -88,4 +91,24 @@ public class SqliteBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPr
         var outbox = new SqliteOutbox(_configuration);
         return await outbox.GetAsync(new RequestContext());
     }
+
+    public IAmAnOutboxAsync<Message, DbTransaction> CreateOutstandingCountStore()
+    {
+        CreateStore();
+        return new SqliteOutbox(_configuration);
+    }
+
+    public void DeleteOutstandingCountStore()
+    {
+        try
+        {
+            DeleteStore(Array.Empty<Message>());
+        }
+        catch (Exception)
+        {
+        }
+    }
+
+    public Task<OutstandingCountCancellationSetup<DbTransaction>> PrepareCancellationAsync(TimeSpan holdFor) =>
+        HeldSqliteOutstandingCountStore.PrepareAsync(binaryMessagePayload: true, holdFor);
 }

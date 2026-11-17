@@ -92,8 +92,21 @@ public class ConsumerOptionalInboxEventTests
 
         // Assert
         Assert.Equal(2, request.HandleCount);
-        Assert.Null(provider.GetService<InboxConfiguration>());
-        Assert.Null(provider.GetService<IAmAnInboxSync>());
-        Assert.Null(provider.GetService<IAmAnInboxAsync>());
+        Assert.Null(provider.GetRequiredService<IAmConsumerOptions>().InboxConfiguration);
+        if (useOptionsFactory)
+        {
+            Assert.Contains(nameof(InboxConfiguration), Assert.Throws<ConfigurationException>(
+                () => provider.GetService<InboxConfiguration>()).Message);
+            Assert.Contains(nameof(InboxConfiguration), Assert.Throws<ConfigurationException>(
+                () => provider.GetService<IAmAnInboxSync>()).Message);
+            Assert.Contains(nameof(InboxConfiguration), Assert.Throws<ConfigurationException>(
+                () => provider.GetService<IAmAnInboxAsync>()).Message);
+        }
+        else
+        {
+            Assert.Null(provider.GetService<InboxConfiguration>());
+            Assert.Null(provider.GetService<IAmAnInboxSync>());
+            Assert.Null(provider.GetService<IAmAnInboxAsync>());
+        }
     }
 }

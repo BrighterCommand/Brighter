@@ -54,8 +54,7 @@ public class HandlerFactoryReleaseFailureTests
         var registry = new SubscriberRegistry();
         registry.Register<HandlerReleaseThrowsCommand, RecordingRequestHandler>();
 
-        var loggerProvider = new CapturingLoggerProvider();
-        Initializer.Factory.AddProvider(loggerProvider);
+        using var logs = new InMemoryLogCapture();
 
         var commandProcessor = new CommandProcessor(
             registry, factory, new InMemoryRequestContextFactory(), new PolicyRegistry(),
@@ -66,7 +65,7 @@ public class HandlerFactoryReleaseFailureTests
 
         // Assert — the handler ran to completion, and the release failure was logged at Error
         Assert.True(handler.Completed);
-        var releaseFailure = Assert.Single(loggerProvider.Entries.Where(e => e.EventId.Name == "FailedToReleaseHandler"));
+        var releaseFailure = Assert.Single(logs.Entries.Where(e => e.EventId.Name == "FailedToReleaseHandler"));
         Assert.Equal(LogLevel.Error, releaseFailure.Level);
     }
 
@@ -83,8 +82,7 @@ public class HandlerFactoryReleaseFailureTests
         var registry = new SubscriberRegistry();
         registry.Register<HandlerReleaseThrowsCommand, RecordingRequestHandler>();
 
-        var loggerProvider = new CapturingLoggerProvider();
-        Initializer.Factory.AddProvider(loggerProvider);
+        using var logs = new InMemoryLogCapture();
 
         var commandProcessor = new CommandProcessor(
             registry, factory, new InMemoryRequestContextFactory(), new PolicyRegistry(),
@@ -96,7 +94,7 @@ public class HandlerFactoryReleaseFailureTests
         Assert.Equal("Handle failed.", exception.Message);
 
         // Assert — the release failure appears only in the log, at Error
-        var releaseFailure = Assert.Single(loggerProvider.Entries.Where(e => e.EventId.Name == "FailedToReleaseHandler"));
+        var releaseFailure = Assert.Single(logs.Entries.Where(e => e.EventId.Name == "FailedToReleaseHandler"));
         Assert.Equal(LogLevel.Error, releaseFailure.Level);
     }
 
@@ -114,8 +112,7 @@ public class HandlerFactoryReleaseFailureTests
         var third = new RecordingHandler("Third");
         factory.ThrowFor(first);
 
-        var loggerProvider = new CapturingLoggerProvider();
-        Initializer.Factory.AddProvider(loggerProvider);
+        using var logs = new InMemoryLogCapture();
 
         var lifetimeScope = new HandlerLifetimeScope(factory, pipelineScope);
         lifetimeScope.Add(first);
@@ -133,7 +130,7 @@ public class HandlerFactoryReleaseFailureTests
         Assert.Equal("ScopeDisposed", recorder.Events.Last());
 
         // Assert — exactly one Error record names the failing release
-        var releaseFailure = Assert.Single(loggerProvider.Entries.Where(e => e.EventId.Name == "FailedToReleaseHandler"));
+        var releaseFailure = Assert.Single(logs.Entries.Where(e => e.EventId.Name == "FailedToReleaseHandler"));
         Assert.Equal(LogLevel.Error, releaseFailure.Level);
         Assert.Contains("First", releaseFailure.Message);
     }
@@ -151,8 +148,7 @@ public class HandlerFactoryReleaseFailureTests
         var registry = new SubscriberRegistry();
         registry.Register<HandlerReleaseThrowsCommand, RecordingRequestHandler>();
 
-        var loggerProvider = new CapturingLoggerProvider();
-        Initializer.Factory.AddProvider(loggerProvider);
+        using var logs = new InMemoryLogCapture();
 
         var commandProcessor = new CommandProcessor(
             registry, factory, new InMemoryRequestContextFactory(), new PolicyRegistry(),
@@ -165,7 +161,7 @@ public class HandlerFactoryReleaseFailureTests
         commandProcessor.Send(new HandlerReleaseThrowsCommand());
 
         // Assert — both succeeded, and the failure was not latched: a second, separate Error was logged
-        var releaseFailures = loggerProvider.Entries.Where(e => e.EventId.Name == "FailedToReleaseHandler").ToList();
+        var releaseFailures = logs.Entries.Where(e => e.EventId.Name == "FailedToReleaseHandler").ToList();
         Assert.Equal(2, releaseFailures.Count);
         Assert.All(releaseFailures, e => Assert.Equal(LogLevel.Error, e.Level));
     }

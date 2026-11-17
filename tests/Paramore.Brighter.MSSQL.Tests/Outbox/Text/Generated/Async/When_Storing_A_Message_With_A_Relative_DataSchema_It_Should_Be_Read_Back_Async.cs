@@ -10,6 +10,11 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MSSQL.Tests.Outbox.Text.Async;
 
+/// <summary>
+/// A relative dataschema (CloudEvents allows a URI-reference) round-trips through the Outbox. The
+/// builder's default is absolute, so only an explicitly relative value reaches the reader's relative
+/// branch; a reader that parses absolute-only drops it silently to null.
+/// </summary>
 [Trait("Category", "MSSQL")]
 [Collection("MSSQLTextOutbox")]
 
@@ -39,9 +44,7 @@ public class WhenStoringAMessageWithARelativeDataSchemaItShouldBeReadBackAsync :
     [Fact]
     public async Task When_Storing_A_Message_With_A_Relative_DataSchema_It_Should_Be_Read_Back_Async()
     {
-        // Arrange — CloudEvents defines dataschema as a URI-reference, which MAY be relative.
-        // The builder's default dataschema is absolute, so only an explicitly relative value
-        // exercises the relative branch of the Outbox's reader.
+        // Arrange
         var context = new RequestContext();
         var relativeDataSchema = new Uri("/schemas/v1", UriKind.Relative);
 
@@ -57,7 +60,7 @@ public class WhenStoringAMessageWithARelativeDataSchemaItShouldBeReadBackAsync :
 
         var storedMessage = await outbox.GetAsync(message.Id, context);
 
-        // Assert — a reader that parses as absolute-only drops this silently to null
+        // Assert
         Assert.Equal(relativeDataSchema, storedMessage.Header.DataSchema);
         Assert.False(storedMessage.Header.DataSchema!.IsAbsoluteUri);
     }

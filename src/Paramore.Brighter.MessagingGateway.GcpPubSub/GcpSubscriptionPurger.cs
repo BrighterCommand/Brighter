@@ -38,7 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 
 internal static partial class GcpSubscriptionPurger
 {
-    private static readonly ILogger s_logger = ApplicationLogging.LoggerFactory.CreateLogger(typeof(GcpSubscriptionPurger));
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger(typeof(GcpSubscriptionPurger));
     private static readonly CallSettings s_cleanupSettings = CallSettings
         .FromExpiration(Expiration.FromTimeout(TimeSpan.FromSeconds(10)))
         .WithRetry(RetrySettings.FromExponentialBackoff(3, TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(1), 2,

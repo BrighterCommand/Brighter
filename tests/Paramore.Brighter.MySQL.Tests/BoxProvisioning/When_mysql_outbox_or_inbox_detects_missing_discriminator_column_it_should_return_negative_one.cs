@@ -31,6 +31,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// MySQL detection returns -1 when the outbox (<c>HeaderBag</c>) or inbox (<c>CommandBody</c>) discriminator
+/// is missing, 0 when the discriminator is present but the V1 columns are not, and otherwise the highest
+/// cumulative version; the provisioner refuses to touch a table detected as -1 or 0.
+/// </summary>
 public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
@@ -39,8 +44,7 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
     [Fact]
     public async Task When_mysql_outbox_detects_table_missing_headerbag_discriminator_it_should_return_negative_one()
     {
-        //Arrange — a foreign table with neither HeaderBag (outbox discriminator) nor V1
-        //columns. Helper must report -1; provisioner must refuse to touch a non-Brighter table.
+        //Arrange
         var tableName = TrackTable($"foreign_{Guid.NewGuid():N}");
         await ExecuteDdl(
             $"CREATE TABLE `{tableName}` (`CommandId` VARCHAR(255) NOT NULL, `Timestamp` TIMESTAMP NULL) ENGINE = InnoDB;");
@@ -48,7 +52,7 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: tableName);
         var migrations = new MySqlOutboxMigrationCatalog().All(config);
 
-        //Act — direct helper call.
+        //Act
         int detected;
         using (var connection = new MySqlConnection(_connectionString))
         {
@@ -57,10 +61,10 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
                 connection, tableName, DatabaseName(), BoxType.Outbox, migrations, default);
         }
 
-        //Assert — helper returns -1 (no discriminator).
+        //Assert
         Assert.Equal(-1, detected);
 
-        //Act — provisioner end-to-end.
+        //Act
         var runner = new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new MySqlOutboxProvisioner(
             new MySqlBoxDetectionHelper(),
@@ -70,7 +74,7 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
-        //Assert — message identifies this as not a Brighter outbox and names the discriminator.
+        //Assert
         Assert.Contains("not a Brighter outbox", ex.Message);
         Assert.Contains("HeaderBag", ex.Message);
     }
@@ -78,7 +82,7 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
     [Fact]
     public async Task When_mysql_inbox_detects_table_missing_commandbody_discriminator_it_should_return_negative_one()
     {
-        //Arrange — a foreign table without CommandBody (inbox discriminator).
+        //Arrange
         var tableName = TrackTable($"foreign_{Guid.NewGuid():N}");
         await ExecuteDdl(
             $"CREATE TABLE `{tableName}` (`Topic` VARCHAR(255) NULL, `Timestamp` TIMESTAMP NULL) ENGINE = InnoDB;");
@@ -86,7 +90,7 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName);
         var migrations = new MySqlInboxMigrationCatalog().All(config);
 
-        //Act — direct helper call.
+        //Act
         int detected;
         using (var connection = new MySqlConnection(_connectionString))
         {
@@ -95,10 +99,10 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
                 connection, tableName, DatabaseName(), BoxType.Inbox, migrations, default);
         }
 
-        //Assert — helper returns -1.
+        //Assert
         Assert.Equal(-1, detected);
 
-        //Act — provisioner end-to-end.
+        //Act
         var runner = new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new MySqlInboxProvisioner(
             new MySqlBoxDetectionHelper(),
@@ -108,7 +112,7 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
-        //Assert — message identifies this as not a Brighter inbox and names the discriminator.
+        //Assert
         Assert.Contains("not a Brighter inbox", ex.Message);
         Assert.Contains("CommandBody", ex.Message);
     }
@@ -116,8 +120,7 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
     [Fact]
     public async Task When_mysql_outbox_detects_headerbag_present_but_no_v1_columns_it_should_return_zero()
     {
-        //Arrange — table has HeaderBag (passes discriminator gate) but is missing other V1
-        //columns (MessageId, Topic, Body…). Helper must return 0; provisioner must throw.
+        //Arrange
         var tableName = TrackTable($"unknown_{Guid.NewGuid():N}");
         await ExecuteDdl(
             $"CREATE TABLE `{tableName}` (`Id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, `HeaderBag` TEXT NULL) ENGINE = InnoDB;");
@@ -125,7 +128,7 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: tableName);
         var migrations = new MySqlOutboxMigrationCatalog().All(config);
 
-        //Act — direct helper call.
+        //Act
         int detected;
         using (var connection = new MySqlConnection(_connectionString))
         {
@@ -134,10 +137,10 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
                 connection, tableName, DatabaseName(), BoxType.Outbox, migrations, default);
         }
 
-        //Assert — helper returns 0 (discriminator OK, but unknown schema).
+        //Assert
         Assert.Equal(0, detected);
 
-        //Act — provisioner end-to-end.
+        //Act
         var runner = new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new MySqlOutboxProvisioner(
             new MySqlBoxDetectionHelper(),
@@ -147,15 +150,14 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
-        //Assert — message identifies the table as not matching any known schema version.
+        //Assert
         Assert.Contains("does not match any known schema version", ex.Message);
     }
 
     [Fact]
     public async Task When_mysql_outbox_detects_v3_shaped_table_it_should_return_three()
     {
-        //Arrange — V3 columns: V1 baseline + V2 (Dispatched) + V3 (CorrelationId, ReplyTo,
-        //ContentType). Crucially, no PartitionKey (V4) so the helper must STOP at 3.
+        //Arrange
         var tableName = TrackTable($"v3_outbox_{Guid.NewGuid():N}");
         await ExecuteDdl(
             $@"CREATE TABLE `{tableName}` (
@@ -184,15 +186,14 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
                 connection, tableName, DatabaseName(), BoxType.Outbox, migrations, default);
         }
 
-        //Assert — V3 is the highest cumulative match (V4 column PartitionKey absent stops the walk).
+        //Assert
         Assert.Equal(3, detected);
     }
 
     [Fact]
     public async Task When_mysql_inbox_detects_v1_shaped_table_it_should_return_one()
     {
-        //Arrange — MySQL inbox V1 column set without ContextKey. Detection must stop at V1
-        //because V2 column (ContextKey) is absent.
+        //Arrange
         var tableName = TrackTable($"v1_inbox_{Guid.NewGuid():N}");
         await ExecuteDdl(
             $@"CREATE TABLE `{tableName}` (
@@ -215,7 +216,7 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
                 connection, tableName, DatabaseName(), BoxType.Inbox, migrations, default);
         }
 
-        //Assert — V1 matches (V2 column ContextKey absent stops the walk).
+        //Assert
         Assert.Equal(1, detected);
     }
 

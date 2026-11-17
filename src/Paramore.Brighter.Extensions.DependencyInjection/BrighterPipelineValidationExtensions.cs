@@ -49,6 +49,9 @@ public static class BrighterPipelineValidationExtensions
     /// transformer-resolvability probe are snapshotted from the service collection at this point, so anything
     /// registered after this call (e.g. a later <c>UseFluentValidation()</c> or <c>AutoFromAssemblies(...)</c>)
     /// would not be seen and could produce a spurious warning.
+    /// Inbox middleware is checked by resolving its required inbox service in a temporary scope
+    /// using the configured handler lifetime. Inbox factories may run during validation; handlers
+    /// are not instantiated and no inbox reads or writes are performed.
     /// </remarks>
     /// <param name="builder">The Brighter builder.</param>
     /// <param name="enabled">When false, the method is a no-op — no services are registered. Defaults to true.</param>
@@ -97,6 +100,9 @@ public static class BrighterPipelineValidationExtensions
                 pipelineBuilder, publications, subscriptions, consumerSpecList, inbox, outbox,
                 providerRegistrations, mapperRegistry.Factory, transformerProbe);
         });
+
+        builder.Services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IAmAPipelineValidator, InboxConfigurationValidator>());
 
         // ADR 0074's validator, registered beside the core one — AddSingleton, not TryAdd, because TryAdd
         // tests the service type and would never add a second implementation of it. The snapshot is

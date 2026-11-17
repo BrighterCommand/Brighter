@@ -27,22 +27,13 @@ using Microsoft.Data.SqlClient;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning.Legacy;
 
-/// <summary>
-/// Seeds an MSSQL outbox table at a historical logical version (V1..V7) using hand-rolled
-/// <c>CREATE TABLE</c> DDL per ADR 0057 §1 archaeology. Used by bootstrap-at-V_k tests so the
-/// runner exercises real legacy schemas — not migration UpScript round-trips.
-/// </summary>
-/// <remarks>
-/// Cumulative column sets match <c>MsSqlOutboxMigrationCatalog</c> LogicalColumns plus the V1 housekeeping
-/// <c>Id</c>. Column types align with the live <c>SqlOutboxBuilder</c> DDL so the V7 hand-rolled
-/// shape and the live builder shape are byte-equivalent.
-/// </remarks>
+// Creates an outbox at a historical version from hand-written DDL (ADR 0057 §1), so bootstrap tests run
+// against real legacy shapes rather than replayed UpScripts. Column types match SqlOutboxBuilder's.
 internal static class MsSqlOutboxLegacySeeder
 {
-    /// <summary>Hand-rolled cumulative column DDL fragments per logical version.</summary>
     private static readonly IReadOnlyDictionary<int, string[]> ColumnsByVersion = new Dictionary<int, string[]>
     {
-        // V1 baseline: PK + V1 logical columns. Matches archaeology — pre-2019 schema.
+        // V1: the identity key plus the V1 logical columns, pre-2019.
         [1] =
         [
             "[Id] BIGINT NOT NULL IDENTITY",
@@ -53,18 +44,18 @@ internal static class MsSqlOutboxLegacySeeder
             "[HeaderBag] NVARCHAR(MAX) NULL",
             "[Body] NVARCHAR(MAX) NULL"
         ],
-        // V2 adds: Dispatched (#3c30343fa, 2019-07).
+        // V2 adds Dispatched (3c30343fa, 2019-07).
         [2] = ["[Dispatched] DATETIME NULL"],
-        // V3 adds: CorrelationId, ReplyTo, ContentType (#79100f509 / PR #1401).
+        // V3 adds CorrelationId, ReplyTo, ContentType (79100f509).
         [3] =
         [
             "[CorrelationId] NVARCHAR(255) NULL",
             "[ReplyTo] NVARCHAR(255) NULL",
             "[ContentType] NVARCHAR(128) NULL"
         ],
-        // V4 adds: PartitionKey (#1cdc04b60 / PR #2560).
+        // V4 adds PartitionKey (1cdc04b60).
         [4] = ["[PartitionKey] NVARCHAR(255) NULL"],
-        // V5 adds: CloudEvents columns (#b740a68ed / PR #3633).
+        // V5 adds the CloudEvents columns (b740a68ed).
         [5] =
         [
             "[Source] NVARCHAR(255) NULL",
@@ -75,13 +66,13 @@ internal static class MsSqlOutboxLegacySeeder
             "[TraceState] NVARCHAR(255) NULL",
             "[Baggage] NVARCHAR(MAX) NULL"
         ],
-        // V6 adds: WorkflowId, JobId (#0e79332f1 / PR #3693).
+        // V6 adds WorkflowId, JobId (0e79332f1).
         [6] =
         [
             "[WorkflowId] NVARCHAR(255) NULL",
             "[JobId] NVARCHAR(255) NULL"
         ],
-        // V7 adds: DataRef, SpecVersion (#d67dac947 / PR #3790).
+        // V7 adds DataRef, SpecVersion (d67dac947).
         [7] =
         [
             "[DataRef] NVARCHAR(255) NULL",
@@ -89,10 +80,7 @@ internal static class MsSqlOutboxLegacySeeder
         ]
     };
 
-    /// <summary>
-    /// Creates an outbox table with the cumulative V_k column set. The history table is NOT
-    /// seeded — that is the test's responsibility, since the runner under test will stamp it.
-    /// </summary>
+    // Seeds no history: the runner under test writes it.
     public static void SeedAtV(int version, string connectionString, string tableName)
     {
         if (version < 1 || version > 7)

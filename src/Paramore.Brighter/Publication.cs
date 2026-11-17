@@ -96,6 +96,23 @@ namespace Paramore.Brighter
         public RoutingKey? Topic { get; set; }
 
         /// <summary>
+        /// The stale-message age this publication asks for on its <see cref="Topic"/>, for the per-topic count of the
+        /// outbox stale-message monitor
+        /// </summary>
+        /// <value>
+        /// A <see cref="TimeSpan"/> greater than zero and at most 365 days, or null for the monitor's own stale-message
+        /// age.
+        /// </value>
+        /// <remarks>
+        /// The setter does not check the value; the monitor checks it when measurement starts, and throws a
+        /// <see cref="ConfigurationException"/> if it is out of range. When several publications share a topic, the topic
+        /// uses the smallest of their ages, and a publication without an age contributes the monitor's age.
+        /// Only the stale-message monitor reads this property, and it reads it once, when measurement starts, so a later
+        /// change takes effect only after a restart.
+        /// </remarks>
+        public TimeSpan? StaleMessageAge { get; set; }
+
+        /// <summary>
         /// REQUIRED
         /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#context-attributes">Clode Events Spec</see>
         /// This attribute contains a value describing the type of event related to the originating occurrence.

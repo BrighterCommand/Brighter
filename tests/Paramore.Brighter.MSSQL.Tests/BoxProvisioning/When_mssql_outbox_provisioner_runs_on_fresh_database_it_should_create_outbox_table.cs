@@ -47,7 +47,6 @@ public class MsSqlOutboxProvisionerFreshDatabaseTests : IAsyncLifetime
         using var connection = new SqlConnection(_connectionString);
         connection.Open();
 
-        // Verify outbox table exists
         using var tableCheck = connection.CreateCommand();
         tableCheck.CommandText = @"
 SELECT COUNT(1) FROM sys.tables t
@@ -57,7 +56,6 @@ WHERE t.name = @TableName AND s.name = 'dbo'";
         var tableCount = (int)tableCheck.ExecuteScalar()!;
         Assert.Equal(1, tableCount);
 
-        // Verify migration history contains version 1
         using var historyCheck = connection.CreateCommand();
         historyCheck.CommandText = @"
 SELECT COUNT(1) FROM [__BrighterMigrationHistory]
