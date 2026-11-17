@@ -1,4 +1,4 @@
-﻿﻿#region License
+﻿#region License
 
 /* The MIT License (MIT)
 Copyright © 2025 Michael Freeman <mike.c.freeman@gmail.com>
