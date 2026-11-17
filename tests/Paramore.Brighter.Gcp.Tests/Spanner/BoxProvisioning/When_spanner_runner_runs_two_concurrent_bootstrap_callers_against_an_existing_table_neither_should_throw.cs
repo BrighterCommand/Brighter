@@ -31,6 +31,11 @@ using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
+/// <summary>
+/// Two Spanner provisioners bootstrapping the same existing outbox race on the history insert; the loser's
+/// <c>AlreadyExists</c> is absorbed, so neither throws and exactly one bootstrap row is stamped at V_latest
+/// (ADR 0057 §6).
+/// </summary>
 [Trait("Category", "Spanner")]
 [Collection("Spanner")]
 [Trait("Category", "Spanner")]
@@ -53,16 +58,7 @@ public class SpannerConcurrentBootstrapTests : IAsyncLifetime
     [Fact]
     public async Task Should_not_throw_when_two_concurrent_bootstrap_callers_race_on_history_insert()
     {
-        //Arrange — pre-create a Brighter-shaped outbox table without any history rows
-        //(simulates a spec-0023-era install). Both provisioners will detect
-        //TableExists=true / HistoryExists=false and route to BootstrapExistingTableAsync.
-        //Both will pass the discriminator gate (HeaderBag is present in V1Columns), both
-        //will call IsMigrationAppliedAsync(V_latest=7) which returns false because no
-        //history row exists yet (and Spanner uses CommitTimestamp for AppliedAt so the
-        //winner's row is invisible to the loser's read snapshot until commit), then both
-        //will attempt InsertHistoryRowAsync — the loser hits a Spanner AlreadyExists on
-        //the PK (BoxTableName, MigrationVersion) which currently surfaces as an
-        //unrecoverable startup error.
+        //Arrange
         using (var setupConnection = CreateConnection())
         {
             await setupConnection.OpenAsync();
@@ -88,13 +84,9 @@ public class SpannerConcurrentBootstrapTests : IAsyncLifetime
             provisionerB.ProvisionAsync());
         var ex = await Record.ExceptionAsync(act);
 
-        //Assert — neither replica should surface the benign-race AlreadyExists.
+        //Assert
         Assert.Null(ex);
 
-        //Assert — exactly one bootstrap row was stamped at V_latest with the bootstrap
-        //description (proves the loser's insert was absorbed cleanly, not silently
-        //double-stamped, and that this was the bootstrap path — not the fresh-install
-        //path covered by P-fresh).
         using var connection = CreateConnection();
         await connection.OpenAsync();
 

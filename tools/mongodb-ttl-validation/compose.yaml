@@ -1,0 +1,89 @@
+services:
+  mongo:
+    image: ${BRIGHTER_TTL_MONGO_IMAGE:-mongo:7}
+    network_mode: bridge
+    command: ["mongod", "--bind_ip", "127.0.0.1", "--setParameter", "ttlMonitorSleepSecs=1"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_INITDB_DATABASE: brighter
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test:
+        - CMD
+        - mongosh
+        - --quiet
+        - --username
+        - root
+        - --password
+        - example
+        - --authenticationDatabase
+        - admin
+        - --eval
+        - "quit(db.adminCommand({ping: 1}).ok === 1 ? 0 : 1)"
+      interval: 2s
+      timeout: 10s
+      retries: 60
+      start_period: 10s
+
+  mongo-transactions:
+    image: ${BRIGHTER_TTL_MONGO_IMAGE:-mongo:7}
+    network_mode: service:mongo
+    command: ["mongod", "--replSet", "rs0", "--bind_ip", "127.0.0.1", "--port", "27018"]
+    depends_on:
+      mongo:
+        condition: service_healthy
+    volumes:
+      - transaction-data:/data/db
+    healthcheck:
+      test:
+        - CMD
+        - mongosh
+        - --port
+        - "27018"
+        - --quiet
+        - --eval
+        - >-
+          try { rs.status(); } catch (error) {
+            if (error.code !== 94) throw error;
+            rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27018'}]});
+          }
+          quit(db.hello().isWritablePrimary ? 0 : 1);
+      interval: 2s
+      timeout: 10s
+      retries: 60
+
+  tests:
+    build:
+      context: .
+      args:
+        BRIGHTER_TTL_UID: ${BRIGHTER_TTL_UID:?Run run.sh}
+        BRIGHTER_TTL_GID: ${BRIGHTER_TTL_GID:?Run run.sh}
+    network_mode: service:mongo
+    init: true
+    user: "${BRIGHTER_TTL_UID:?Run run.sh}:${BRIGHTER_TTL_GID:?Run run.sh}"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      mongo-transactions:
+        condition: service_healthy
+    environment:
+      BRIGHTER_TTL_SCOPE: ${BRIGHTER_TTL_SCOPE:-full}
+      DOTNET_CLI_HOME: /tmp/dotnet-cli
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+      NUGET_PACKAGES: /tmp/nuget-packages
+      NUGET_XMLDOC_MODE: skip
+    volumes:
+      - type: bind
+        source: ${BRIGHTER_TTL_SOURCE:?Run run.sh}
+        target: /source
+        read_only: true
+      - type: bind
+        source: ${BRIGHTER_TTL_RESULTS:?Run run.sh}
+        target: /results
+
+volumes:
+  mongo-data:
+  transaction-data:

@@ -10,6 +10,10 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SqsFifo.Reactor;
 
+/// <summary>
+/// An unacceptable message goes to the invalid-message channel and not the dead-letter queue; the
+/// absence is checked with one bounded receive, since a poll could only wait out its ceiling.
+/// </summary>
 [Trait("Category", "Sqs")]
 [Collection("SqsFifo")]
 public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChannel : IDisposable
@@ -61,10 +65,10 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
 
         var rejected = _channel.Reject(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Test unacceptable message"));
 
-        // Assert — Reject returns true when the copy was routed
+        // Assert
         Assert.True(rejected, "Reject should return true when the message was routed");
 
-        // Assert — the message reaches the invalid-message channel: poll every 500 ms, give up after 60 s
+        // Assert
         var invalidMessage = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(60))
@@ -89,8 +93,7 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
             Assert.Equal(RejectionReason.Unacceptable.ToString(), invalidMessage.Header.Bag[keys.RejectionReason].ToString());
         }
 
-        // Assert — nothing reached the dead-letter queue. A single receive rather than a poll
-        // loop: the claim is that no message arrives, so polling could only wait out the ceiling.
+        // Assert
         var dlqMessage = _messageGatewayProvider.GetMessageFromDeadLetterQueue(_subscription);
         Assert.Equal(MessageType.MT_NONE, dlqMessage.Header.MessageType);
     }

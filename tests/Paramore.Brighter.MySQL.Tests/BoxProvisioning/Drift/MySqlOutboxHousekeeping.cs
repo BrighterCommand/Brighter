@@ -26,20 +26,10 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning.Drift;
 
-/// <summary>
-/// Backend-specific housekeeping columns present in the MySQL outbox builder DDL but excluded
-/// from logical-version <see cref="IAmABoxMigration.LogicalColumns"/>. Used by drift tests to
-/// bridge between the builder's actual column set and the cross-backend logical model.
-/// </summary>
-/// <remarks>
-/// MySQL housekeeping is `Created` (insert timestamp default) and `CreatedID` (unique
-/// auto-increment used as a clustering key — the actual <c>PRIMARY KEY</c> in MySQL is
-/// `MessageId` per the live builder, but `CreatedID` is `UNIQUE` and `AUTO_INCREMENT` so it
-/// behaves as the clustering identity column on InnoDB).
-/// </remarks>
+// MySQL outbox columns outside the cross-backend logical schema, so in no migration's LogicalColumns
+// (ADR 0057 §1); drift tests add them to V_latest's columns to rebuild the builder's column set.
 internal static class MySqlOutboxHousekeeping
 {
-    /// <summary>V1 baseline: <c>Created</c> insert timestamp + <c>CreatedID</c> unique auto-increment.</summary>
     public static readonly ISet<string> V1 = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "Created",

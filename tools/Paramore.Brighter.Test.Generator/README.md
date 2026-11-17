@@ -9,7 +9,7 @@ Two families are generated:
 | Family | What it covers | Test projects |
 |---|---|---|
 | **Messaging gateway** | Transport conformance — the twelve canonical behaviours below, in a Reactor (sync) and a Proactor (async) variant | 12 projects, **24 configurations** (e.g. `AWS.Tests` wires `SnsStandard`, `SnsFifo`, `SqsStandard`, `SqsFifo`) |
-| **Outbox** | Outbox store behaviour, sync/async/causation | 8 projects (MSSQL, PostgreSQL, MySQL, SQLite, DynamoDB ×2, MongoDB, GCP) |
+| **Outbox** | Outbox store behaviour, sync/async/causation, and the overall outstanding count | 8 projects (MSSQL, PostgreSQL, MySQL, SQLite, DynamoDB ×2, MongoDB, GCP) |
 
 ## ⛔ Never edit a generated test
 

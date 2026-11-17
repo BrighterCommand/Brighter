@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
@@ -33,7 +34,10 @@ public sealed record ScanResult(
 ///
 /// Scanned paths (in-tree only — no network, no subprocess):
 ///   tools/Paramore.Brighter.Test.Generator/Templates/MessagingGateway/**/*.cs.liquid
-///   tests/Paramore.Brighter.*.Tests/**/Generated/**/*.cs
+///   tests/Paramore.Brighter.*.Tests/**/MessagingGateway/**/Generated/**/*.cs
+///
+/// The generated outbox suites sit outside that scope: they defer through marks of their own,
+/// which the outbox generator renders.
 /// </summary>
 public static class GatewaySkipConventionAudit
 {
@@ -88,7 +92,8 @@ public static class GatewaySkipConventionAudit
 
     /// <summary>
     /// Enumerates every in-tree messaging-gateway artifact the conformance audits scan: the
-    /// gateway templates and every generated copy. This is the single definition of that scope —
+    /// gateway templates and every generated copy under a <c>MessagingGateway</c> folder. This is
+    /// the single definition of that scope —
     /// <see cref="LedgerSkipCrossCheckAudit"/> walks the same set through this method, so a change
     /// to the artifact layout cannot silently desync the two audits.
     /// </summary>
@@ -117,12 +122,20 @@ public static class GatewaySkipConventionAudit
             foreach (var generatedDir in Directory.EnumerateDirectories(
                          testProject, "Generated", SearchOption.AllDirectories))
             {
+                if (!IsUnderMessagingGateway(testProject, generatedDir))
+                    continue;
+
                 foreach (var file in Directory.EnumerateFiles(
                              generatedDir, "*.cs", SearchOption.AllDirectories))
                     yield return file;
             }
         }
     }
+
+    private static bool IsUnderMessagingGateway(string testProject, string generatedDir)
+        => Path.GetRelativePath(testProject, generatedDir)
+            .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            .Contains("MessagingGateway");
 
     /// <summary>
     /// Yields every real Skip value in <paramref name="filePath"/> as a 1-based line number and

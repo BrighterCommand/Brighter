@@ -35,32 +35,13 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// <c>RollbackAsync</c> always issues <c>RELEASE_LOCK</c> and never throws; a result of 0 (held by
+/// another session) or NULL (no such lock) is logged as one Warning carrying that marker, and 1 logs
+/// nothing (ADR 0057 §5b, ADR 0058 §B.3).
+/// </summary>
 public class MySqlProvisioningUnitOfWorkRollbackTriStateTests : IAsyncLifetime
 {
-    // Per spec 0027 Item M / ADR 0057 §5b / ADR 0058 §B.3: MySQL's RELEASE_LOCK has three
-    // outcomes — 1 (released by this session), 0 (lock held by another session — diagnostic
-    // anomaly because we just acquired it), NULL (lock did not exist — same anomaly). The UoW
-    // MUST preserve this distinction in a Warning-level log entry on Rollback (and Commit —
-    // same diagnostic per `tasks.md` line 394; that arm is exercised at runtime in 5.3.b's
-    // happy path but the Warning-emitting impl change for ALL non-true outcomes lands here).
-    //
-    // Equally important: RollbackAsync MUST NOT throw — disposal-style semantics (see
-    // IAmAProvisioningUnitOfWork.RollbackAsync XML-doc, lines 113-114). The runner reaches
-    // RollbackAsync from its catch path and must not have its unwind hijacked by a release
-    // diagnostic.
-    //
-    // The UoW only knows the lockResource (== lockKey — the runner derives it via
-    // MySqlMigrationLockName.For and passes it through BeginAsync), so the UoW-level Warning
-    // names lockResource rather than tableName; the runner can still emit a richer log entry
-    // with tableName context if it wants when Phase 7 rewires the runner onto the UoW. NF1 is
-    // satisfied at the system level: the marker convention ("NULL" vs "0") and the meaning
-    // text ("lock did not exist" vs "lock held by another session") are preserved verbatim
-    // from the existing runner emission at MySqlBoxMigrationRunner.cs:138-141.
-    //
-    // The current 5.3.a/5.3.b stub — `Task RollbackAsync(...) => Task.CompletedTask` —
-    // never calls ReleaseAsync, so all three arms fail RED on the ReleasedKey assertion
-    // before any Warning-content assertion can run.
-
     private readonly MySqlConnection _connection = new(Const.DefaultConnectingString);
 
     public async Task InitializeAsync() => await _connection.OpenAsync();
@@ -81,8 +62,7 @@ public class MySqlProvisioningUnitOfWorkRollbackTriStateTests : IAsyncLifetime
 
     private async Task AssertRollbackBehavior(bool? releaseResult, bool expectWarning, string? expectedMarker)
     {
-        // Arrange — fake lock returns the parameterised tri-state outcome from RELEASE_LOCK;
-        // capturing logger collects every entry so we can assert on level + message.
+        // Arrange
         var advisoryLock = new FakeMySqlAdvisoryLock(releaseResult);
         var logger = new CapturingLogger();
 
@@ -92,25 +72,16 @@ public class MySqlProvisioningUnitOfWorkRollbackTriStateTests : IAsyncLifetime
             lockTimeout: TimeSpan.FromSeconds(5),
             cancellationToken: CancellationToken.None);
 
-        // Act — RollbackAsync must complete normally for ALL three outcomes per the
-        // disposal-style "MUST NOT throw" contract on IAmAProvisioningUnitOfWork.RollbackAsync.
+        // Act
         var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(CancellationToken.None));
 
-        // Assert — RollbackAsync did not throw, regardless of release outcome.
+        // Assert
         Assert.Null(thrown);
-
-        // Assert — RollbackAsync ALWAYS calls ReleaseAsync (lock release is the unwind's
-        // primary purpose; the tri-state diagnostic is a side-channel observation on the
-        // result, not a gate on whether to release).
         Assert.Equal("test_lock_resource", advisoryLock.ReleasedKey);
 
-        // Assert — Warning emission matches the tri-state contract.
         var warnings = logger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
         if (expectWarning)
         {
-            // Exactly one Warning per non-true outcome, naming the lock resource and the
-            // marker that disambiguates "0" (lock held by another session) from "NULL"
-            // (lock did not exist) — preserving the spec 0027 Item M distinction.
             Assert.Single(warnings);
             Assert.Contains("test_lock_resource", warnings[0].Message, StringComparison.Ordinal);
             Assert.Contains(expectedMarker!, warnings[0].Message, StringComparison.Ordinal);
@@ -118,7 +89,6 @@ public class MySqlProvisioningUnitOfWorkRollbackTriStateTests : IAsyncLifetime
         }
         else
         {
-            // Happy-path RELEASE_LOCK = 1: no Warning entry — silence is the success signal.
             Assert.Empty(warnings);
         }
     }

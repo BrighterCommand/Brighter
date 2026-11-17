@@ -61,6 +61,12 @@ public class OutboxConfiguration
     public bool SupportsTransactions { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets whether to generate per-topic outstanding-count conformance and cancellation tests.
+    /// Defaults to false for outboxes that do not implement the optional topic-counting capability.
+    /// </summary>
+    public bool SupportsTopicCounting { get; set; }
+
+    /// <summary>
     /// Gets or sets the test category to apply to generated test classes.
     /// </summary>
     public string? Category { get; set; }
@@ -75,6 +81,39 @@ public class OutboxConfiguration
     /// Defaults to zero, requiring reads to reflect writes immediately.
     /// </summary>
     public int ReadConsistencyTimeoutInMilliseconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the polling timeout for the overall outstanding count in the outstanding-count tests.
+    /// Defaults to zero, requiring the count to reflect writes immediately. Independent of
+    /// <see cref="ReadConsistencyTimeoutInMilliseconds"/>.
+    /// </summary>
+    public int OutstandingCountReadConsistencyTimeoutInMilliseconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the store fans the overall count out over parallel
+    /// scans, so a ceiling below the scan concurrency can return more than the ceiling. When true,
+    /// the ceiling tests also render two facts that write the count observed for a ceiling of one
+    /// and of two to the test output and assert nothing.
+    /// </summary>
+    public bool OutstandingCountBelowScanConcurrency { get; set; }
+
+    /// <summary>
+    /// Gets or sets the issue number that tracks the store's gap in the age column of the overall
+    /// count. When set, the age fact renders with a deferred skip naming the issue.
+    /// </summary>
+    public int? OutstandingCountAgeGap { get; set; }
+
+    /// <summary>
+    /// Gets or sets the issue number that tracks the store's gap in the ceiling column of the overall
+    /// count. When set, the ceiling facts render with a deferred skip naming the issue.
+    /// </summary>
+    public int? OutstandingCountCeilingGap { get; set; }
+
+    /// <summary>
+    /// Gets or sets the issue number that tracks the store's gap in the cancellation column of the
+    /// overall count. When set, the cancellation fact renders with a deferred skip naming the issue.
+    /// </summary>
+    public int? OutstandingCountCancellationGap { get; set; }
 
     /// <summary>
     /// Returns a copy of this configuration carrying <paramref name="prefix"/>.

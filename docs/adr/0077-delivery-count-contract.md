@@ -347,6 +347,19 @@ AC-11's first branch applies, since GCP has a tripping shape on both R-13 branch
 
 No code. **Brighter does not assume it is the one that dead-letters.** Queues and subscriptions are often provisioned outside Brighter, so a native redrive policy (SQS `RedrivePolicy.maxReceiveCount`, Pub/Sub `DeadLetterPolicy.MaxDeliveryAttempts`) may move a message before the budget is spent, and that is a legitimate outcome. `min(R, M)` emerges because whichever threshold is reached first acts; Brighter neither suppresses nor stamps a native redrive (R-9), so a natively redriven message arrives without rejection metadata and presents the destination's own count. R-10 is the only Brighter-side expression of R-8, and it can fire only where `M` is visible to Brighter (a policy Brighter created); a policy configured outside Brighter is invisible and is not warned about.
 
+#### What the FR-23 harness can assert (R-27)
+
+- **The dispatch count is read after the pump has quit and been awaited.** That is where the
+  observation window closes: had the budget not held, the pump would have kept redelivering between
+  the dead-letter poll succeeding and the await, and the count would exceed `RequeueCount`.
+- **The dead-lettered copy reports at least `RequeueCount - 1` deliveries, not `RequeueCount`.** The
+  pump increments the count and only then tests it, so the delivery that exhausts the budget is never
+  republished. Where Brighter puts the message on the dead-letter queue it sends that final in-memory
+  header, which reads `RequeueCount`; where the broker dead-letters natively (RabbitMQ rejecting onto
+  a DLX) it moves the copy it already holds, written by the last republish, which reads one less. Both
+  spent the same budget. `RequeueCount - 1` is the strongest bound true of both, and still fails a
+  message dead-lettered before the budget ran down.
+
 ### Implementation Approach
 
 Structural and behavioural commits kept apart (Tidy First, C-10):

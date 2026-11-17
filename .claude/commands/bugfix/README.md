@@ -150,7 +150,9 @@ to the confirmed cause — no speculative edits, no default changes. If structur
 first, defers to `/refactor:tidy-first` (separate `refactor:` commit, then the `fix:` commit).
 
 ### `/bugfix:verify`
-Runs the regression test(s) and the broader suite; the regression test stays. Suggests a `fix:`
+Runs the regression test(s) and the broader suite; the regression test stays. Sizes the comments the
+fix added (`comment_census.cs`) and tidies any that break the comment rules — the root cause goes in
+the commit, not a comment. Suggests a `fix:`
 commit and PR body that capture the confirmed root cause and link the issue with `Fixes #N` —
 without closing the issue directly (merge closes it).
 

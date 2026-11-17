@@ -30,6 +30,10 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// A null <c>schemaName</c> passed to the MySQL detection helper is substituted with
+/// <c>connection.Database</c> by every query (ADR 0058 §A.1); <c>historySchema</c> is ignored on MySQL.
+/// </summary>
 public class MySqlDetectionHelperNullSchemaTests : IAsyncLifetime
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
@@ -38,11 +42,7 @@ public class MySqlDetectionHelperNullSchemaTests : IAsyncLifetime
     [Fact]
     public async Task When_mysql_detection_helper_receives_null_schema_name_it_should_substitute_connection_database()
     {
-        // Arrange — a box-shaped table in the connection's default database and a history row
-        // recorded against SchemaName=<connection.Database>. The helper's null-substitution rule
-        // (per ADR 0057 §A.1) must make a call with schemaName: null behave identically to a
-        // call with schemaName: connection.Database — MySQL has no separate schema concept, so
-        // the database name is the schema.
+        // Arrange
         var tableName = TrackTable($"nullschema_{Guid.NewGuid():N}");
         await ExecuteDdl(
             $"CREATE TABLE `{tableName}` (`Id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, `HeaderBag` TEXT NULL) ENGINE = InnoDB;");
@@ -56,26 +56,25 @@ public class MySqlDetectionHelperNullSchemaTests : IAsyncLifetime
         await using var connection = new MySqlConnection(_connectionString);
         await connection.OpenAsync();
 
-        // Act + Assert — DoesTableExistAsync: null and connection.Database must agree.
+        // Act + Assert
         var existsWithDatabase = await helper.DoesTableExistAsync(connection, tableName, databaseName);
         var existsWithNull = await helper.DoesTableExistAsync(connection, tableName, schemaName: null);
         Assert.True(existsWithDatabase);
         Assert.True(existsWithNull);
 
-        // Act + Assert — DoesHistoryExistAsync: null must locate the row recorded against the database.
-        // historySchema is ignored on MySQL (history lives in connection.Database); pass null.
+        // Act + Assert
         var historyWithDatabase = await helper.DoesHistoryExistAsync(connection, tableName, databaseName, historySchema: null);
         var historyWithNull = await helper.DoesHistoryExistAsync(connection, tableName, schemaName: null, historySchema: null);
         Assert.True(historyWithDatabase);
         Assert.True(historyWithNull);
 
-        // Act + Assert — GetMaxVersionAsync: null must read the same version recorded under the database.
+        // Act + Assert
         var maxWithDatabase = await helper.GetMaxVersionAsync(connection, tableName, databaseName, historySchema: null);
         var maxWithNull = await helper.GetMaxVersionAsync(connection, tableName, schemaName: null, historySchema: null);
         Assert.Equal(3, maxWithDatabase);
         Assert.Equal(3, maxWithNull);
 
-        // Act + Assert — GetTableColumnsAsync: null must return the same column set as the database.
+        // Act + Assert
         var colsWithDatabase = await helper.GetTableColumnsAsync(connection, tableName, databaseName);
         var colsWithNull = await helper.GetTableColumnsAsync(connection, tableName, schemaName: null);
         Assert.Contains("HeaderBag", colsWithDatabase);

@@ -32,6 +32,12 @@ public class AzureServiceBusScheduler(
             throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
+        return await ScheduleCoreAsync(message, at, cancellationToken);
+    }
+
+    private async Task<string> ScheduleCoreAsync(Message message, DateTimeOffset at,
+        CancellationToken cancellationToken)
+    {
         var seq = await sender.ScheduleMessageAsync(
             ConvertToServiceBusMessage(new Message
             {
@@ -55,7 +61,7 @@ public class AzureServiceBusScheduler(
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
-        return await ScheduleAsync(message, timeProvider.GetUtcNow().Add(delay), cancellationToken);
+        return await ScheduleCoreAsync(message, timeProvider.GetUtcNow().Add(delay), cancellationToken);
     }
 
     /// <inheritdoc />
@@ -73,6 +79,13 @@ public class AzureServiceBusScheduler(
             throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
+        return await ScheduleCoreAsync(request, type, at, requestContext, cancellationToken);
+    }
+
+    private async Task<string> ScheduleCoreAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+        IRequestContext? requestContext, CancellationToken cancellationToken)
+        where TRequest : class, IRequest
+    {
         var id = Id.Random();
         var seq = await sender.ScheduleMessageAsync(
             ConvertToServiceBusMessage(new Message
@@ -110,7 +123,7 @@ public class AzureServiceBusScheduler(
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
-        return await ScheduleAsync(request, type, timeProvider.GetUtcNow().Add(delay), requestContext, cancellationToken);
+        return await ScheduleCoreAsync(request, type, timeProvider.GetUtcNow().Add(delay), requestContext, cancellationToken);
     }
 
     /// <inheritdoc cref="IAmAMessageSchedulerAsync.ReSchedulerAsync(string,System.DateTimeOffset,System.Threading.CancellationToken)"/>
@@ -193,6 +206,11 @@ public class AzureServiceBusScheduler(
             throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
+        return ScheduleCore(message, at);
+    }
+
+    private string ScheduleCore(Message message, DateTimeOffset at)
+    {
         var seq = BrighterAsyncContext.Run(() => sender.ScheduleMessageAsync(
             ConvertToServiceBusMessage(new Message
             {
@@ -215,7 +233,7 @@ public class AzureServiceBusScheduler(
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
-        return Schedule(message, timeProvider.GetUtcNow().Add(delay));
+        return ScheduleCore(message, timeProvider.GetUtcNow().Add(delay));
     }
 
     /// <inheritdoc />
@@ -233,6 +251,13 @@ public class AzureServiceBusScheduler(
             throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
+        return ScheduleCore(request, type, at, requestContext);
+    }
+
+    private string ScheduleCore<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+        IRequestContext? requestContext)
+        where TRequest : class, IRequest
+    {
         var id = Id.Random();
         var seq = BrighterAsyncContext.Run(() => sender.ScheduleMessageAsync(
             ConvertToServiceBusMessage(new Message
@@ -269,7 +294,7 @@ public class AzureServiceBusScheduler(
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
-        return Schedule(request, type, timeProvider.GetUtcNow().Add(delay), requestContext);
+        return ScheduleCore(request, type, timeProvider.GetUtcNow().Add(delay), requestContext);
     }
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.DateTimeOffset)"/>

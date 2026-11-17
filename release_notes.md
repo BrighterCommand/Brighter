@@ -2,6 +2,168 @@
 
 ## Master
 
+### SQS requeue delay validation and FIFO ordering (#4691)
+
+The AWS SDK V3 and V4 SQS consumers now throw `ArgumentOutOfRangeException` for requeue
+delays below zero or above 12 hours when a receipt handle is present. Previously these
+values could be rounded into range, or rejected by AWS with `Requeue` returning false.
+This applies to both `Requeue` and `RequeueAsync`. Null still means zero, and valid delays
+retain their existing rounding to whole seconds. AWS may still reject a delay within
+this range if it exceeds the message's remaining visibility allowance; broker failures
+continue to return false.
+
+FIFO regression tests cover `DeferMessageAction` through Reactor and Proactor for both
+SDK versions. Deferral changes the existing message's visibility timeout, keeping later
+messages in its group behind it until the head is redelivered and acknowledged.
+### SQLite outbox message-ID uniqueness (#4676)
+
+New text and binary SQLite outbox tables enforce case-insensitive `MessageId` uniqueness.
+Duplicate writes retain the original message. Bulk writes skip duplicate rows while storing
+the other messages in the batch; non-uniqueness constraint errors still propagate.
+
+Existing databases need the SQLite outbox provisioner's V9 migration. Calling
+`SqliteOutboxBuilder.GetDDL` again does not alter an existing table's constraints.
+V9 accepts an existing, non-partial unique index on `MessageId` with `NOCASE` collation,
+or creates one. It does not change payloads, dispatch state, or existing index definitions.
+
+Before upgrading, pause writers and sweepers and back up the database. To identify duplicates,
+replace `Outbox` with your configured table name:
+
+```sql
+SELECT MessageId, COUNT(*) AS Copies
+FROM [Outbox]
+GROUP BY MessageId COLLATE NOCASE
+HAVING COUNT(*) > 1;
+```
+
+Review each group's payloads and dispatch state, archive the conflicting rows, and retain the
+intended record through an explicit operator decision. The migration never chooses a winner
+or deletes messages automatically. If duplicates remain, index creation fails and the migration
+transaction rolls back, including its history changes. Resolve the duplicates and retry provisioning.
+An incompatible index named `idx_<table>_MessageId` also requires operator resolution before retrying.
+
+For databases managed without Brighter provisioning, apply the equivalent index after resolving
+duplicates, in a transaction with writes paused:
+
+```sql
+BEGIN IMMEDIATE;
+CREATE UNIQUE INDEX [idx_Outbox_MessageId] ON [Outbox] ([MessageId] COLLATE NOCASE);
+COMMIT;
+```
+
+Roll back if index creation fails. If an equivalent index already exists, keep it; Brighter's
+provisioner recognizes equivalent indexes by their definition, regardless of name.
+
+### Measure how many outbox messages have gone stale, overall and per topic (spec 0038, #4489)
+<!-- spec: 0038-outbox-stale-message-telemetry -->
+
+Messages that stay undispatched in the outbox were invisible until someone queried the store. A new hosted service, `TimedOutboxStaleMessageMonitor`, now counts them on a timer and reports the result as OpenTelemetry metrics, so an alert can fire when messages get stuck. It is opt-in and works with any outbox that supports the async overall count.
+
+#### The monitor and its instruments
+
+`UseOutboxStaleMessageMonitor` on `IBrighterBuilder` registers the monitor, and needs the outbox and producer configuration that `AddProducers` registers. Its settings are `StaleMessageAge` (required, at most 365 days), `CountCeiling` (default 100, at most 1000), `MeasurementInterval` (default 1 minute) and `MeasurementTimeout` (default 10 seconds, below the interval). When the monitor is in use, `AddBrighterInstrumentation` registers three instruments on the Brighter meter. Every series carries `paramore.brighter.outbox.implementation`, the outbox's type name. The counter's count is in `paramore.brighter.outbox.stale.count` and its outcome in `paramore.brighter.outbox.stale.outcome`.
+
+| Instrument | Type | Unit | Reports |
+|---|---|---|---|
+| `paramore.brighter.outbox.stale.messages` | Observable gauge | `{message}` | Undispatched messages older than the age, up to the ceiling |
+| `paramore.brighter.outbox.stale.topic.messages` | Observable gauge | `{message}` | The same count for one topic, tagged `messaging.destination.name` |
+| `paramore.brighter.outbox.stale.measurements` | Observable counter | `{measurement}` | Measurements by count (`overall` or `per_topic`) and outcome (`completed`, `failed`, `abandoned`, `skipped`) |
+
+A value equal to the ceiling means the ceiling or more. A `completed` total that stops rising means there is no recent reading.
+
+#### Per-topic ages and the optional capability
+
+`Publication.StaleMessageAge` sets the age for one topic, and a topic with several publications uses the smallest. `IAmATopicCountingOutbox` is the optional capability that counts several topics in one call. `InMemoryOutbox` implements it, and so do `MongoDbOutbox` (#4687), `SqliteOutbox`, `MsSqlOutbox`, `PostgreSqlOutbox`, `MySqlOutbox` and `SpannerOutbox` (#4686). They match the topic exactly, as `RoutingKey` does, except that `MsSqlOutbox` ignores trailing spaces and `MySqlOutbox` does not match a topic with non-ASCII characters in a `latin1` column. Other outboxes report the overall count only until they add it, and the monitor logs that once at start.
+
+`DynamoDbOutbox` implements `IAmATopicCountingOutbox` too, in `Paramore.Brighter.Outbox.DynamoDB` and `Paramore.Brighter.Outbox.DynamoDB.V4` (#4688). It counts each topic with a query per shard on the `Outstanding` index, so it reads only the stale messages of that topic.
+
+New public types and members, all additive: `TimedOutboxStaleMessageMonitor` and `TimedOutboxStaleMessageMonitorOptions` in `Paramore.Brighter.Outbox.Hosting`; `OutboxStaleMessageMeter`, `OutboxStaleMessageReadings`, `StaleMessageCount` and `StaleMeasurementOutcome` in `Paramore.Brighter.Observability`; `IAmATopicCountingOutbox`; and `Publication.StaleMessageAge`.
+
+The telemetry page of the documentation covers the settings, the alerts and the known limitations of each outbox.
+
+#### Fixes to the overall count
+
+Three outboxes had an async overall count that did not follow the age, the ceiling or the cancellation token. This release fixes them:
+
+- `FirestoreOutbox.GetOutstandingMessageCountAsync` now counts only messages older than the age, stops at the ceiling and passes the token to the call. Before, it counted every undispatched message. With a token that is already cancelled, it ends with an `RpcException` whose status is `Cancelled`. The synchronous count is unchanged.
+- The DynamoDB and DynamoDB.V4 count could stop short of the ceiling, because it split the ceiling across the scan segments, and a ceiling below `ScanConcurrency` made it fail. Each segment now counts up to the whole ceiling, so the segments together can count up to `ScanConcurrency` times the ceiling, and the total is then capped at the ceiling. A ceiling of zero or less sends no Scan. The synchronous count calls the async one, so the producer's outstanding message check gets the same change.
+- When an async read of `SqliteOutbox` gets a token that can be cancelled, it now runs on a pool thread of its own, so the caller stops waiting once the token is cancelled, even while the store is locked. The abandoned read keeps that thread until it ends. A `GetOutstandingMessageCountAsync` call waiting on the lock ends when `OutstandingCountTimeout` passes, 15 seconds by default. The other reads have no command timeout by default. While the abandoned read runs, a later async read of the same `SqliteOutbox` with a token that can be cancelled waits for it, and ends with `OperationCanceledException` without reading if its own token is cancelled first. That includes the read `AddAsync` and `ReplayCausationAsync` make to find out whether the table has the causation column, until the outbox has read the answer once.
+
+#### Breaking changes
+
+No breaking changes.
+
+### SQL Server outbox MessageId uniqueness (#4677, #4711)
+
+New SQL Server outbox tables enforce uniqueness on `MessageId` for both text and binary payloads.
+Duplicate inserts preserve the existing message, and bulk inserts containing duplicate IDs still
+store the distinct messages in the batch. The unique index uses `IGNORE_DUP_KEY = ON`.
+
+**Existing databases require a schema migration.** Upgrading the Brighter packages alone does not
+change an existing outbox table. A V8 outbox remains usable, but without the unique index it can
+still store duplicate MessageIds and dispatch those messages more than once. V8 and V9 here refer
+to outbox schema versions, not Brighter package versions.
+
+For deployments using Brighter box provisioning, run the V9 outbox migration. It checks for existing
+duplicate IDs under an exclusive table lock before creating the index. If duplicates exist, the
+migration fails without removing messages or advancing migration history; resolve the conflicts
+and retry. Schedule the migration for an appropriate maintenance window on large or busy outboxes.
+
+If production schema changes are managed separately, apply the equivalent index change through
+your normal database migration process. Replace `[dbo].[Outbox]` below with your configured schema
+and table. First identify existing conflicts:
+
+```sql
+SELECT [MessageId], COUNT_BIG(*) AS [Copies]
+FROM [dbo].[Outbox]
+GROUP BY [MessageId]
+HAVING COUNT_BIG(*) > 1;
+```
+
+Review the payloads and dispatch state of conflicting rows before deciding which to retain; do not
+automatically discard duplicates. Inspect existing indexes before applying the change. If an enabled,
+unfiltered unique index on `MessageId` alone already has `IGNORE_DUP_KEY = ON`, no additional index
+is needed. If `UX_BrighterOutbox_MessageId` already exists with a different definition or is disabled,
+have your database migration process reconcile it first: both the V9 migration and the statement
+below otherwise fail on the index name collision. Do not drop an existing index without reviewing
+its purpose and dependencies.
+
+After resolving conflicts and checking existing indexes, create the index if needed:
+
+```sql
+CREATE UNIQUE INDEX [UX_BrighterOutbox_MessageId]
+    ON [dbo].[Outbox] ([MessageId]) WITH (IGNORE_DUP_KEY = ON);
+```
+
+Index creation takes locks and fails if duplicate IDs remain or are inserted after the preliminary
+check. Coordinate outbox writers during the migration and retry after resolving any new conflicts.
+`IGNORE_DUP_KEY = ON` applies to subsequent inserts; it does not remove existing duplicates.
+Verify that the resulting index is enabled, unfiltered, unique on `MessageId` alone, and has
+`IGNORE_DUP_KEY = ON` before treating the duplicate-insert fix as deployed. This enforces uniqueness
+only while a message remains in the outbox; consumers must still tolerate message redelivery.
+
+### MS SQL subscriber queues and consumer purge (#4665)
+
+`MsSqlPublication` opts into one copy per configured subscriber channel. Workers sharing a channel
+continue to compete. Subscriber retries return to the receiving queue. A per-message delay requested
+without a matching queue-targeted scheduler falls back to immediate requeue with a warning; a positive
+subscription requeue delay still requires that scheduler at startup.
+
+Set `MsSqlSubscription.IsIndependentSubscriber = true` for each fan-out receiver. Plain subscriptions
+retain topic-based delayed retries, including SQL-equivalent channel and topic spellings. Fan-out sends
+reject subscriber names equivalent to the logical topic under the queue column's collation.
+
+The producer snapshots routing and timeout settings when `Publication` is assigned. Later mutations
+require reassignment to take effect. `MsSqlPublication.SendTimeout` controls the fan-out command timeout;
+it defaults to 30 seconds, rounds positive fractions up, and accepts zero for an infinite timeout.
+
+`MsSqlMessageConsumer.Purge()` and `PurgeAsync()` now delete only the consumer's physical queue,
+including for plain publications. They previously cleared the entire queue table. Administrative
+callers that need to clear the table can use `MsSqlMessageQueue<T>.Purge()`.
+Consumer purge uses batches of up to 500 rows and preserves rows above its initial identity cutoff.
+Outside an ambient transaction, each batch commits independently; cancellation or failure can leave a
+partial purge. Ambient transactions retain locks until completion.
+
 ### Circuit-broken topics no longer stay tripped for ever (spec 0039, #4628)
 <!-- spec: 0039-circuit-breaker-stale-tripped-topics -->
 
@@ -1324,6 +1486,58 @@ default of 15 seconds. Code that only uses `RelationalDatabaseConfiguration` nee
 ```csharp
 // A custom IAmARelationalDatabaseConfiguration must add:
 public TimeSpan? OutstandingCountTimeout => null;
+```
+
+### Outbox: the MongoDb and Firestore outstanding counts give up after a configurable timeout, 15 seconds by default (#4584)
+
+The outstanding message count of `MongoDbOutbox` and `FirestoreOutbox` had no time bound of its own.
+When the server stopped replying, a MongoDb count waited until the driver gave up on the connection,
+and a Firestore count waited for the client library's default deadline of 300 seconds; if the
+server held only the count's reply and kept answering the driver's heartbeats, a MongoDb count had no
+limit at all, as the driver's socket timeout is 0 by default. Until the count ended, the mediator
+checked `MaxOutStandingMessages` against its last count. Both counts now give up after a timeout, 15
+seconds by default. As with any count that fails, the mediator logs the error and reads the count as
+0, so while the count keeps timing out, the limit does not stop posts. The mediator runs the count
+only when `MaxOutStandingMessages` is set. The stale message monitor also runs the async count and
+stops waiting for it after its `MeasurementTimeout`, 10 seconds by default; an
+`OutstandingCountTimeout` shorter than that makes the count fail first, and the monitor records it as
+failed. On Firestore the count the mediator runs ignores `maxCount` and counts every undispatched
+message, so an outbox large enough that the count takes longer than the timeout makes the limit
+fail open; set a longer `OutstandingCountTimeout` if that happens. The sweeper's read of
+outstanding messages is not bounded by it.
+
+To change it, set `OutstandingCountTimeout` on `MongoDbConfiguration` or `FirestoreConfiguration`; null
+keeps the 15 seconds. A timeout of zero or less, or of more than 2147483 seconds, throws an
+`ArgumentOutOfRangeException` when it is set. On MongoDb a count that times out throws an
+`OperationCanceledException`; on Firestore the timeout is the deadline of the call, so it throws an
+`RpcException` with `StatusCode.DeadlineExceeded`, and for the count it replaces any expiration set
+for `RunAggregationQuery` through `Configure`.
+
+```csharp
+var mongo = new MongoDbConfiguration(client, databaseName)
+{
+    OutstandingCountTimeout = TimeSpan.FromSeconds(30)
+};
+
+var firestore = new FirestoreConfiguration(projectId, database)
+{
+    OutstandingCountTimeout = TimeSpan.FromSeconds(30)
+};
+```
+
+#### Source-breaking change: `IAmAMongoDbConfiguration.OutstandingCountTimeout`
+
+`IAmAMongoDbConfiguration` gains a `TimeSpan? OutstandingCountTimeout { get; set; }` member with no
+default body, as `Paramore.Brighter.MongoDb` also targets `net472`, which does not support default
+interface members. A custom implementation of the interface must add it to compile; returning null
+keeps the default of 15 seconds. Unlike the relational outbox, `MongoDbOutbox` does not check the
+value a custom implementation returns: zero, or a negative value other than
+`Timeout.InfiniteTimeSpan`, makes every count fail, and `Timeout.InfiniteTimeSpan` leaves the count
+with no bound of its own. Code that only uses `MongoDbConfiguration` needs no source change.
+
+```csharp
+// A custom IAmAMongoDbConfiguration must add:
+public TimeSpan? OutstandingCountTimeout { get; set; }
 ```
 
 ## 10.7.0

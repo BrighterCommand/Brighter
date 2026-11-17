@@ -78,7 +78,7 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
 
     /// <summary>
     /// Describes every rendering this generator performs for <paramref name="configuration"/>:
-    /// the Sync, Async and Causation suites of each configured outbox.
+    /// the Sync, Async, Causation, OutstandingCount and optional TopicCounting suites of each configured outbox.
     /// </summary>
     /// <remarks>
     /// Both <see cref="GenerateAsync(TestConfiguration)"/> and <see cref="Plan(TestConfiguration)"/>
@@ -124,7 +124,7 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
     }
 
     /// <summary>
-    /// The three suites - Sync, Async and Causation - rendered for a single outbox.
+    /// The suites rendered for a single outbox, including its optional topic-counting capability.
     /// </summary>
     /// <param name="configuration">The root configuration the model inherits unset values from.</param>
     /// <param name="outboxConfiguration">The outbox whose suites are described.</param>
@@ -132,7 +132,7 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
     /// <param name="modelPrefix">The prefix the templates should read from the model.</param>
     /// <returns>The suites for the outbox.</returns>
     /// <remarks>
-    /// All three suites share one copy of the configuration, carrying the prefix the templates need
+    /// All suites share one copy of the configuration, carrying the prefix the templates need
     /// and the values inherited from the root. The caller's own configuration object is left alone,
     /// so describing the work does not perform part of it - and because the inheritance happens
     /// here, the model a plan reasons about is the model a generation renders.
@@ -150,6 +150,23 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
                 Path.Combine("Outbox", variant),
                 model,
                 filename => SkipTest(model, filename)
+            );
+        }
+
+        yield return new GenerationSuite(
+            Path.Combine("Outbox", folderName, "Generated", "OutstandingCount"),
+            Path.Combine("Outbox", "OutstandingCount"),
+            model,
+            _ => false
+        );
+
+        if (model.SupportsTopicCounting)
+        {
+            yield return new GenerationSuite(
+                Path.Combine("Outbox", folderName, "Generated", "TopicCounting"),
+                Path.Combine("Outbox", "TopicCounting"),
+                model,
+                _ => false
             );
         }
     }
