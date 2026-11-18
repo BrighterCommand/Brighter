@@ -141,8 +141,10 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
     private void RecordReadTimeout()
     {
-        _fallback.RecordReadTimeout();
-        Log.ReadTimedOut(s_logger);
+        if (_fallback.RecordReadTimeout())
+            Log.ReadTimedOut(s_logger);
+        else
+            Log.ReadStillFailing(s_logger, FallbackState.TIMEOUT_FAILURE);
     }
 
     private void RecordReadFailure(Exception failure)
@@ -661,7 +663,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
     private sealed class FallbackState(object gate, Func<DateTimeOffset> now, Func<RoutingKey, DateTimeOffset, bool> hasLiveTripAt)
     {
-        private const string TIMEOUT_FAILURE = "timeout";
+        public const string TIMEOUT_FAILURE = "timeout";
 
         private readonly HashSet<RoutingKey> _unsharedTopics = new();
         private readonly HashSet<RoutingKey> _announcedUnshared = new();
@@ -713,14 +715,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
                 return _unsharedTopics.Except(tripped).ToList();
         }
 
-        public void RecordReadTimeout()
-        {
-            lock (gate)
-            {
-                _isReadFailing = true;
-                _lastFailure = TIMEOUT_FAILURE;
-            }
-        }
+        public bool RecordReadTimeout() => RecordReadFailure(TIMEOUT_FAILURE);
 
         public void RecordWriteTimeout(IEnumerable<RoutingKey> topics)
         {
