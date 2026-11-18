@@ -1779,7 +1779,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2k - Dependency guard and Phase 2 verification
 
-- [!] **CHARACTERISE: T2.68 - A core-only project gains no new package** (DROPPED 2026-11-18, owner approved: the package-graph test is orthogonal to this work and was fragile; the test and `ExpectedCorePackages.txt` are removed, AC-38 stays a requirement without a test)
+- [!] **CHARACTERISE: T2.68 - A core-only project gains no new package** (DROPPED 2026-11-18, owner approved: the package-graph test is orthogonal to this work and was fragile; the test and `ExpectedCorePackages.txt` are removed, and AC-38 is dropped from requirements.md)
   - **USE COMMAND**: `/tdd:test-first when a project references only paramore brighter should have no new package in its dependency graph`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Architecture"
   - Test file: `When_a_project_references_only_core_should_have_no_new_package_dependency.cs`
@@ -1932,7 +1932,7 @@ Phase 2 (starts only after T1.15 has merged)
 | NFR-4 | T2.31, T2.35, T2.49, T2.56 |
 | NFR-5 | T1.1, T1.10, T1.11, T2.6, T2.7, T2.18, T2.31, T2.36, T2.57a, T2.58a, T2.59a, T2.60, T2.67 |
 | NFR-6 | T1.4, T2.5, T2.10, T2.14, T2.24 |
-| NFR-7 | T1.15, T2.57, T2.58, T2.59, T2.68 |
+| NFR-7 | T1.15, T2.57, T2.58, T2.59 |
 | NFR-8 | T1.1, T1.10, T1.11, T2.10, T2.36 |
 | NFR-9 | T2.25, T2.26, T2.27, T2.28, T2.28a, T2.38, T2.40, T2.41, T2.42, T2.43a, T2.60a-T2.60c, T2.69 |
 | AC-1 | T1.4 |
@@ -1972,7 +1972,6 @@ Phase 2 (starts only after T1.15 has merged)
 | AC-35 | T2.72 |
 | AC-36 | T2.12, T2.39a, T2.47 |
 | AC-37 | T1.11, T2.36 |
-| AC-38 | T1.15, T2.68 |
 | AC-39 | T2.41 |
 | AC-40 | T2.13, T2.45 |
 | AC-41 | T2.43 |
