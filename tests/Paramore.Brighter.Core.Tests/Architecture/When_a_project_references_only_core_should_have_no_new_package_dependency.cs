@@ -58,14 +58,25 @@ public class CorePackageGraphTests
     private static Dictionary<string, string[]> PackagesByFramework(string assetsJson)
     {
         using var document = JsonDocument.Parse(assetsJson);
-        return document.RootElement.GetProperty("targets").EnumerateObject()
+        var root = document.RootElement;
+        return root.GetProperty("targets").EnumerateObject()
             .ToDictionary(
                 target => target.Name,
                 target => target.Value.EnumerateObject()
                     .Where(entry => entry.Value.GetProperty("type").GetString() == "package")
-                    .Select(entry => entry.Name.Replace('/', ' '))
+                    .Select(entry => entry.Name.Split('/')[0])
+                    .Except(BuildOnlyPackages(root, target.Name))
                     .Order(StringComparer.Ordinal)
                     .ToArray());
+    }
+
+    private static IEnumerable<string> BuildOnlyPackages(JsonElement assets, string target)
+    {
+        var framework = target.Split('/')[0];
+        return assets.GetProperty("project").GetProperty("frameworks").GetProperty(framework).GetProperty("dependencies")
+            .EnumerateObject()
+            .Where(dependency => dependency.Value.TryGetProperty("suppressParent", out var suppressed) && suppressed.GetString() == "All")
+            .Select(dependency => dependency.Name);
     }
 
     private static Dictionary<string, string[]> ExpectedPackagesByFramework(string[] lines)

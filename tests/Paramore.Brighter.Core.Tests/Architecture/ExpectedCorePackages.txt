@@ -1,118 +1,117 @@
 [net10.0]
-Microsoft.Bcl.HashCode 6.0.0
-Microsoft.Bcl.TimeProvider 10.0.12
-Microsoft.Extensions.Configuration.Abstractions 10.0.0
-Microsoft.Extensions.Configuration.Binder 10.0.0
-Microsoft.Extensions.Configuration.EnvironmentVariables 10.0.0
-Microsoft.Extensions.Configuration 10.0.0
-Microsoft.Extensions.DependencyInjection.Abstractions 10.0.12
-Microsoft.Extensions.DependencyInjection 10.0.12
-Microsoft.Extensions.Diagnostics.Abstractions 10.0.0
-Microsoft.Extensions.Logging.Abstractions 10.0.12
-Microsoft.Extensions.Logging.Configuration 10.0.0
-Microsoft.Extensions.Logging 10.0.12
-Microsoft.Extensions.Options.ConfigurationExtensions 10.0.0
-Microsoft.Extensions.Options 10.0.12
-Microsoft.Extensions.Primitives 10.0.12
-NJsonSchema.Annotations 11.6.1
-NJsonSchema 11.6.1
-Namotion.Reflection 3.5.0
-Newtonsoft.Json 13.0.4
-OpenTelemetry.Api.ProviderBuilderExtensions 1.19.1
-OpenTelemetry.Api 1.19.1
-OpenTelemetry 1.19.1
-Polly.Core 8.8.0
-Polly 8.8.0
-System.Diagnostics.DiagnosticSource 10.0.12
+Microsoft.Bcl.HashCode
+Microsoft.Bcl.TimeProvider
+Microsoft.Extensions.Configuration.Abstractions
+Microsoft.Extensions.Configuration.Binder
+Microsoft.Extensions.Configuration.EnvironmentVariables
+Microsoft.Extensions.Configuration
+Microsoft.Extensions.DependencyInjection.Abstractions
+Microsoft.Extensions.DependencyInjection
+Microsoft.Extensions.Diagnostics.Abstractions
+Microsoft.Extensions.Logging.Abstractions
+Microsoft.Extensions.Logging.Configuration
+Microsoft.Extensions.Logging
+Microsoft.Extensions.Options.ConfigurationExtensions
+Microsoft.Extensions.Options
+Microsoft.Extensions.Primitives
+NJsonSchema.Annotations
+NJsonSchema
+Namotion.Reflection
+Newtonsoft.Json
+OpenTelemetry.Api.ProviderBuilderExtensions
+OpenTelemetry.Api
+OpenTelemetry
+Polly.Core
+Polly
+System.Diagnostics.DiagnosticSource
 [net8.0]
-Microsoft.Bcl.HashCode 6.0.0
-Microsoft.Bcl.TimeProvider 10.0.12
-Microsoft.Extensions.Configuration.Abstractions 8.0.0
-Microsoft.Extensions.Configuration.Binder 8.0.0
-Microsoft.Extensions.Configuration.EnvironmentVariables 8.0.0
-Microsoft.Extensions.Configuration 8.0.0
-Microsoft.Extensions.DependencyInjection.Abstractions 10.0.12
-Microsoft.Extensions.DependencyInjection 10.0.12
-Microsoft.Extensions.Diagnostics.Abstractions 8.0.0
-Microsoft.Extensions.Logging.Abstractions 10.0.12
-Microsoft.Extensions.Logging.Configuration 8.0.0
-Microsoft.Extensions.Logging 10.0.12
-Microsoft.Extensions.Options.ConfigurationExtensions 8.0.0
-Microsoft.Extensions.Options 10.0.12
-Microsoft.Extensions.Primitives 10.0.12
-NJsonSchema.Annotations 11.6.1
-NJsonSchema 11.6.1
-Namotion.Reflection 3.5.0
-Newtonsoft.Json 13.0.4
-OpenTelemetry.Api.ProviderBuilderExtensions 1.19.1
-OpenTelemetry.Api 1.19.1
-OpenTelemetry 1.19.1
-Polly.Core 8.8.0
-Polly 8.8.0
-System.Diagnostics.DiagnosticSource 10.0.12
+Microsoft.Bcl.HashCode
+Microsoft.Bcl.TimeProvider
+Microsoft.Extensions.Configuration.Abstractions
+Microsoft.Extensions.Configuration.Binder
+Microsoft.Extensions.Configuration.EnvironmentVariables
+Microsoft.Extensions.Configuration
+Microsoft.Extensions.DependencyInjection.Abstractions
+Microsoft.Extensions.DependencyInjection
+Microsoft.Extensions.Diagnostics.Abstractions
+Microsoft.Extensions.Logging.Abstractions
+Microsoft.Extensions.Logging.Configuration
+Microsoft.Extensions.Logging
+Microsoft.Extensions.Options.ConfigurationExtensions
+Microsoft.Extensions.Options
+Microsoft.Extensions.Primitives
+NJsonSchema.Annotations
+NJsonSchema
+Namotion.Reflection
+Newtonsoft.Json
+OpenTelemetry.Api.ProviderBuilderExtensions
+OpenTelemetry.Api
+OpenTelemetry
+Polly.Core
+Polly
+System.Diagnostics.DiagnosticSource
 [net9.0]
-Microsoft.Bcl.HashCode 6.0.0
-Microsoft.Bcl.TimeProvider 10.0.12
-Microsoft.Extensions.Configuration.Abstractions 9.0.0
-Microsoft.Extensions.Configuration.Binder 9.0.0
-Microsoft.Extensions.Configuration.EnvironmentVariables 9.0.0
-Microsoft.Extensions.Configuration 9.0.0
-Microsoft.Extensions.DependencyInjection.Abstractions 10.0.12
-Microsoft.Extensions.DependencyInjection 10.0.12
-Microsoft.Extensions.Diagnostics.Abstractions 9.0.0
-Microsoft.Extensions.Logging.Abstractions 10.0.12
-Microsoft.Extensions.Logging.Configuration 9.0.0
-Microsoft.Extensions.Logging 10.0.12
-Microsoft.Extensions.Options.ConfigurationExtensions 9.0.0
-Microsoft.Extensions.Options 10.0.12
-Microsoft.Extensions.Primitives 10.0.12
-NJsonSchema.Annotations 11.6.1
-NJsonSchema 11.6.1
-Namotion.Reflection 3.5.0
-Newtonsoft.Json 13.0.4
-OpenTelemetry.Api.ProviderBuilderExtensions 1.19.1
-OpenTelemetry.Api 1.19.1
-OpenTelemetry 1.19.1
-Polly.Core 8.8.0
-Polly 8.8.0
-System.Diagnostics.DiagnosticSource 10.0.12
+Microsoft.Bcl.HashCode
+Microsoft.Bcl.TimeProvider
+Microsoft.Extensions.Configuration.Abstractions
+Microsoft.Extensions.Configuration.Binder
+Microsoft.Extensions.Configuration.EnvironmentVariables
+Microsoft.Extensions.Configuration
+Microsoft.Extensions.DependencyInjection.Abstractions
+Microsoft.Extensions.DependencyInjection
+Microsoft.Extensions.Diagnostics.Abstractions
+Microsoft.Extensions.Logging.Abstractions
+Microsoft.Extensions.Logging.Configuration
+Microsoft.Extensions.Logging
+Microsoft.Extensions.Options.ConfigurationExtensions
+Microsoft.Extensions.Options
+Microsoft.Extensions.Primitives
+NJsonSchema.Annotations
+NJsonSchema
+Namotion.Reflection
+Newtonsoft.Json
+OpenTelemetry.Api.ProviderBuilderExtensions
+OpenTelemetry.Api
+OpenTelemetry
+Polly.Core
+Polly
+System.Diagnostics.DiagnosticSource
 [netstandard2.0]
-Microsoft.Bcl.AsyncInterfaces 10.0.12
-Microsoft.Bcl.HashCode 6.0.0
-Microsoft.Bcl.TimeProvider 10.0.12
-Microsoft.CSharp 4.7.0
-Microsoft.Extensions.Configuration.Abstractions 10.0.0
-Microsoft.Extensions.Configuration.Binder 10.0.0
-Microsoft.Extensions.Configuration.EnvironmentVariables 10.0.0
-Microsoft.Extensions.Configuration 10.0.0
-Microsoft.Extensions.DependencyInjection.Abstractions 10.0.12
-Microsoft.Extensions.DependencyInjection 10.0.12
-Microsoft.Extensions.Diagnostics.Abstractions 10.0.0
-Microsoft.Extensions.Logging.Abstractions 10.0.12
-Microsoft.Extensions.Logging.Configuration 10.0.0
-Microsoft.Extensions.Logging 10.0.12
-Microsoft.Extensions.Options.ConfigurationExtensions 10.0.0
-Microsoft.Extensions.Options 10.0.12
-Microsoft.Extensions.Primitives 10.0.12
-Microsoft.NETCore.Platforms 1.1.0
-NETStandard.Library 2.0.3
-NJsonSchema.Annotations 11.6.1
-NJsonSchema 11.6.1
-Namotion.Reflection 3.5.0
-Newtonsoft.Json 13.0.4
-OpenTelemetry.Api.ProviderBuilderExtensions 1.19.1
-OpenTelemetry.Api 1.19.1
-OpenTelemetry 1.19.1
-Polly.Core 8.8.0
-Polly 8.8.0
-System.Buffers 4.6.1
-System.ComponentModel.Annotations 5.0.0
-System.Diagnostics.DiagnosticSource 10.0.12
-System.IO.Pipelines 10.0.12
-System.Memory 4.6.3
-System.Numerics.Vectors 4.6.1
-System.Runtime.CompilerServices.Unsafe 6.1.2
-System.Text.Encodings.Web 10.0.12
-System.Text.Json 10.0.12
-System.Threading.Channels 10.0.12
-System.Threading.Tasks.Extensions 4.6.3
+Microsoft.Bcl.AsyncInterfaces
+Microsoft.Bcl.HashCode
+Microsoft.Bcl.TimeProvider
+Microsoft.CSharp
+Microsoft.Extensions.Configuration.Abstractions
+Microsoft.Extensions.Configuration.Binder
+Microsoft.Extensions.Configuration.EnvironmentVariables
+Microsoft.Extensions.Configuration
+Microsoft.Extensions.DependencyInjection.Abstractions
+Microsoft.Extensions.DependencyInjection
+Microsoft.Extensions.Diagnostics.Abstractions
+Microsoft.Extensions.Logging.Abstractions
+Microsoft.Extensions.Logging.Configuration
+Microsoft.Extensions.Logging
+Microsoft.Extensions.Options.ConfigurationExtensions
+Microsoft.Extensions.Options
+Microsoft.Extensions.Primitives
+Microsoft.NETCore.Platforms
+NJsonSchema.Annotations
+NJsonSchema
+Namotion.Reflection
+Newtonsoft.Json
+OpenTelemetry.Api.ProviderBuilderExtensions
+OpenTelemetry.Api
+OpenTelemetry
+Polly.Core
+Polly
+System.Buffers
+System.ComponentModel.Annotations
+System.Diagnostics.DiagnosticSource
+System.IO.Pipelines
+System.Memory
+System.Numerics.Vectors
+System.Runtime.CompilerServices.Unsafe
+System.Text.Encodings.Web
+System.Text.Json
+System.Threading.Channels
+System.Threading.Tasks.Extensions
