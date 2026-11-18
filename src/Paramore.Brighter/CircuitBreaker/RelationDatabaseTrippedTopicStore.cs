@@ -27,9 +27,9 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.BoxProvisioning;
 
 namespace Paramore.Brighter.CircuitBreaker;
 
@@ -44,7 +44,6 @@ namespace Paramore.Brighter.CircuitBreaker;
 public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
 {
     private static readonly TimeSpan s_defaultCommandTimeout = TimeSpan.FromSeconds(2);
-    private static readonly Regex s_safeIdentifier = new("^[A-Za-z][A-Za-z0-9_]*\\z", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private readonly int _commandTimeoutSeconds;
 
@@ -260,16 +259,9 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
         if (string.IsNullOrWhiteSpace(tableName))
             throw new ArgumentException("You must provide a table name for the trip table", nameof(tableName));
 
-        RequireSafeIdentifier(tableName, nameof(tableName));
+        Identifiers.AssertSafe(tableName, nameof(tableName));
         if (schemaName is not null)
-            RequireSafeIdentifier(schemaName, nameof(schemaName));
-    }
-
-    private static void RequireSafeIdentifier(string identifier, string parameterName)
-    {
-        if (!s_safeIdentifier.IsMatch(identifier))
-            throw new ConfigurationException(
-                $"Unsafe SQL identifier supplied for '{parameterName}': '{identifier}'. Identifiers must match the regex ^[A-Za-z][A-Za-z0-9_]*$.");
+            Identifiers.AssertSafe(schemaName, nameof(schemaName));
     }
 
     /// <summary>
