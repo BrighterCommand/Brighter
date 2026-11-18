@@ -44,6 +44,7 @@ public class OutOfOrderStampedWriteTests
 {
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
     private static readonly TimeSpan s_cooldown = TimeSpan.FromSeconds(50);
+    private static readonly TimeSpan s_leeway = TimeSpan.FromSeconds(20);
     private readonly RoutingKey _orders = new("orders");
 
     private sealed class Scenario
@@ -58,7 +59,7 @@ public class OutOfOrderStampedWriteTests
 
         public Scenario(RoutingKey topic, IAmABrighterTracer? tracer = null)
         {
-            var options = new OutboxCircuitBreakerOptions { CooldownDuration = s_cooldown };
+            var options = new OutboxCircuitBreakerOptions { CooldownDuration = s_cooldown, ClockSkewLeeway = s_leeway };
             BreakerA = new DistributedOutboxCircuitBreaker(Store, options, tracer, timeProvider: ClockA);
             BreakerB = new DistributedOutboxCircuitBreaker(Store, options, tracer, timeProvider: ClockB);
             BatchA = BreakerA.BeginTripBatch();
@@ -81,15 +82,15 @@ public class OutOfOrderStampedWriteTests
         await scenario.BatchA.WriteAsync();
 
         // Assert
-        scenario.ClockA.SetUtcNow(s_start + TimeSpan.FromSeconds(79.9));
-        scenario.ClockB.SetUtcNow(s_start + TimeSpan.FromSeconds(79.9));
-        var stored = await scenario.Store.ReadLiveAsync(new TripWindow(s_start + TimeSpan.FromSeconds(79.9), s_cooldown));
+        scenario.ClockA.SetUtcNow(s_start + TimeSpan.FromSeconds(99.9));
+        scenario.ClockB.SetUtcNow(s_start + TimeSpan.FromSeconds(99.9));
+        var stored = await scenario.Store.ReadLiveAsync(new TripWindow(s_start + TimeSpan.FromSeconds(99.9), s_cooldown + s_leeway));
         Assert.Equal([new TopicTrip(_orders, s_start + TimeSpan.FromSeconds(30))], stored);
         Assert.Equal([_orders], scenario.BreakerA.TrippedTopics);
         Assert.Equal([_orders], scenario.BreakerB.TrippedTopics);
 
-        scenario.ClockA.SetUtcNow(s_start + TimeSpan.FromSeconds(80));
-        scenario.ClockB.SetUtcNow(s_start + TimeSpan.FromSeconds(80));
+        scenario.ClockA.SetUtcNow(s_start + TimeSpan.FromSeconds(100));
+        scenario.ClockB.SetUtcNow(s_start + TimeSpan.FromSeconds(100));
         Assert.Empty(scenario.BreakerA.TrippedTopics);
         Assert.Empty(scenario.BreakerB.TrippedTopics);
     }

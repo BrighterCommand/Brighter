@@ -44,7 +44,9 @@ public class SynchronousTripWriteCompletionTests
 {
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
     private static readonly TimeSpan s_cooldown = TimeSpan.FromSeconds(50);
+    private static readonly TimeSpan s_leeway = TimeSpan.FromSeconds(20);
     private static readonly OutboxCircuitBreakerOptions s_options = new() { CooldownDuration = s_cooldown };
+    private static readonly OutboxCircuitBreakerOptions s_skewedOptions = new() { CooldownDuration = s_cooldown, ClockSkewLeeway = s_leeway };
     private static readonly TimeSpan s_patience = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan s_settle = TimeSpan.FromMilliseconds(150);
     private readonly RoutingKey _orders = new("orders");
@@ -112,7 +114,7 @@ public class SynchronousTripWriteCompletionTests
         await inner.WriteAsync([new TopicTrip(_orders, s_start + TimeSpan.FromSeconds(30))]);
         var store = new SignallingTrippedTopicStore(inner);
         var clock = new FakeTimeProvider(s_start + TimeSpan.FromSeconds(10));
-        var breaker = new DistributedOutboxCircuitBreaker(store, s_options, new BrighterTracer(), timeProvider: clock);
+        var breaker = new DistributedOutboxCircuitBreaker(store, s_skewedOptions, new BrighterTracer(), timeProvider: clock);
 
         // Act
         breaker.TripTopic(_orders);
@@ -120,9 +122,9 @@ public class SynchronousTripWriteCompletionTests
 
         // Assert
         Assert.Equal([Span(CircuitBreakerSpanOperation.ReTrip)], recorder.SpanNames());
-        clock.SetUtcNow(s_start + TimeSpan.FromSeconds(79.9));
+        clock.SetUtcNow(s_start + TimeSpan.FromSeconds(99.9));
         Assert.Equal([_orders], breaker.TrippedTopics);
-        clock.SetUtcNow(s_start + TimeSpan.FromSeconds(80));
+        clock.SetUtcNow(s_start + TimeSpan.FromSeconds(100));
         Assert.Empty(breaker.TrippedTopics);
     }
 
@@ -190,7 +192,7 @@ public class SynchronousTripWriteCompletionTests
             await inner.EndExpiredAsync(new TripWindow(s_start + TimeSpan.FromSeconds(80), s_cooldown));
             var store = new SignallingTrippedTopicStore(inner);
             var clock = new FakeTimeProvider(s_start + TimeSpan.FromSeconds(10));
-            var breaker = new DistributedOutboxCircuitBreaker(store, s_options, new BrighterTracer(), timeProvider: clock);
+            var breaker = new DistributedOutboxCircuitBreaker(store, s_skewedOptions, new BrighterTracer(), timeProvider: clock);
 
             // Act
             breaker.TripTopic(_orders);

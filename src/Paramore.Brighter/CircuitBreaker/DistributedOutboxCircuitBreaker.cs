@@ -241,19 +241,28 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         return now.AddTicks(-(now.Ticks % 10));
     }
 
-    private void ApplyWriteResults(IReadOnlyList<TripWriteResult> results)
+    private void ApplyWriteResults(IReadOnlyList<TopicTrip> written, IReadOnlyList<TripWriteResult> results)
     {
+        var latestPlausibleStamp = _timeProvider.GetUtcNow() + _clockSkewLeeway;
+        var writtenStamps = written.ToDictionary(trip => trip.Topic, trip => trip.TripTime);
         foreach (var result in results)
         {
             _fallback.RecordWriteSuccess(result.Topic);
             var alreadyAnnounced = _fallback.TakeAnnouncedFromView(result.Topic);
-            if (result.LeftEnded || (result.PriorTripTime is not null && HasRunOut(result.StoredTripTime)))
+            var stamp = result.StoredTripTime;
+            if (stamp > latestPlausibleStamp && writtenStamps.TryGetValue(result.Topic, out var ownStamp))
             {
-                _view.DropIfNotNewerThan(result.Topic, result.StoredTripTime);
+                Log.StampedInTheFuture(s_logger, result.Topic.ToString(), stamp);
+                stamp = ownStamp;
+            }
+
+            if (result.LeftEnded || (result.PriorTripTime is not null && HasRunOut(stamp)))
+            {
+                _view.DropIfNotNewerThan(result.Topic, stamp);
                 continue;
             }
 
-            _view.Raise(result.Topic, result.StoredTripTime);
+            _view.Raise(result.Topic, stamp);
 
             foreach (var operation in AnnouncementsFor(result, alreadyAnnounced))
                 Announce(operation, result.Topic);
@@ -299,7 +308,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         if (results is null)
             RecordWriteTimeout(trips.Select(trip => trip.Topic), live);
         else
-            ApplyWriteResults(results);
+            ApplyWriteResults(trips, results);
 
         return settled;
     }

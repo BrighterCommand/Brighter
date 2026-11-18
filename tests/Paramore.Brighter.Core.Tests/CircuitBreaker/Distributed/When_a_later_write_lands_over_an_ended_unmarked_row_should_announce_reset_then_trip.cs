@@ -46,6 +46,7 @@ public class WriteOverEndedRowTests
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
     private static readonly TimeSpan s_cooldown = TimeSpan.FromSeconds(50);
     private static readonly OutboxCircuitBreakerOptions s_options = new() { CooldownDuration = s_cooldown };
+    private static readonly OutboxCircuitBreakerOptions s_skewedOptions = new() { CooldownDuration = s_cooldown, ClockSkewLeeway = TimeSpan.FromSeconds(20) };
     private readonly RoutingKey _orders = new("orders");
 
     private static ActivityRecorder StartRecording(string service) => new(service);
@@ -118,7 +119,7 @@ public class WriteOverEndedRowTests
             await store.WriteAsync([new TopicTrip(_orders, s_start + TimeSpan.FromSeconds(30))]);
             await store.EndExpiredAsync(new TripWindow(s_start + TimeSpan.FromSeconds(80), s_cooldown));
             var clock = new FakeTimeProvider(s_start + TimeSpan.FromSeconds(10));
-            var breaker = new DistributedOutboxCircuitBreaker(store, s_options, new BrighterTracer(), timeProvider: clock);
+            var breaker = new DistributedOutboxCircuitBreaker(store, s_skewedOptions, new BrighterTracer(), timeProvider: clock);
             var batch = breaker.BeginTripBatch();
             batch.TripTopic(_orders);
 
