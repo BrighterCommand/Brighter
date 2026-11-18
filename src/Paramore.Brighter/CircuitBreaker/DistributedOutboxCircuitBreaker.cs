@@ -62,6 +62,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private readonly InFlightGuard _refreshGuard = new();
     private readonly InFlightGuard _recoveryGuard = new();
     private readonly FallbackState _fallback;
+    private readonly Dictionary<RoutingKey, DateTimeOffset> _loggedSkewedStamps = new();
     private long _readsStarted;
     private long _newestAppliedRead;
 
@@ -252,7 +253,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
             var stamp = result.StoredTripTime;
             if (stamp > latestPlausibleStamp && writtenStamps.TryGetValue(result.Topic, out var ownStamp))
             {
-                Log.StampedInTheFuture(s_logger, result.Topic.ToString(), stamp);
+                LogStampedInTheFuture(result.Topic, stamp);
                 stamp = ownStamp;
             }
 
@@ -537,6 +538,19 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
     private bool IsSuperseded(long readNumber) => readNumber < _newestAppliedRead;
 
+    private void LogStampedInTheFuture(RoutingKey topic, DateTimeOffset stamp)
+    {
+        lock (_loggedSkewedStamps)
+        {
+            if (_loggedSkewedStamps.TryGetValue(topic, out var logged) && logged == stamp)
+                return;
+
+            _loggedSkewedStamps[topic] = stamp;
+        }
+
+        Log.StampedInTheFuture(s_logger, topic.ToString(), stamp);
+    }
+
     private void MergeLive(IReadOnlyCollection<TopicTrip> live)
     {
         var latestPlausibleStamp = _timeProvider.GetUtcNow() + _clockSkewLeeway;
@@ -553,7 +567,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         }
 
         foreach (var trip in skewed)
-            Log.StampedInTheFuture(s_logger, trip.Topic.ToString(), trip.TripTime);
+            LogStampedInTheFuture(trip.Topic, trip.TripTime);
     }
 
     /// <inheritdoc />
