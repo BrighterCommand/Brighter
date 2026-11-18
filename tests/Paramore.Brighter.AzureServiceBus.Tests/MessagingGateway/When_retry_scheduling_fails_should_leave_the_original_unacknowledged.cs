@@ -70,8 +70,17 @@ public class AzureServiceBusScheduledRetryFailureTests
         Assert.Equal(0, client.Receiver.CompletionAttempts);
         Assert.Equal("original", message.Id.Value);
         Assert.Equal(originalBag, message.Header.Bag.ToArray());
-        Assert.All(client.Senders.Skip(1), sender => Assert.True(sender.Disposed));
-        if (cancel) Assert.Empty(client.Scheduled);
+        if (cancel)
+        {
+            //cancelled before the sender was needed, so none was opened
+            Assert.Empty(client.Senders.Skip(1));
+            Assert.Empty(client.Scheduled);
+        }
+        else
+        {
+            var retrySender = Assert.Single(client.Senders.Skip(1));
+            Assert.False(retrySender.Disposed);
+        }
     }
 
     [Theory]
@@ -111,7 +120,8 @@ public class AzureServiceBusScheduledRetryFailureTests
             Assert.Equal(new byte[] { 0, 255, 128, 1 }, scheduled.Message.Body.ToArray());
         });
         Assert.Equal(client.Scheduled[0].Message.MessageId, client.Scheduled[1].Message.MessageId);
-        Assert.All(client.Senders.Skip(1), sender => Assert.True(sender.Disposed));
+        var retrySender = Assert.Single(client.Senders.Skip(1));
+        Assert.False(retrySender.Disposed);
         Assert.Equal("original", message.Id.Value);
     }
 
