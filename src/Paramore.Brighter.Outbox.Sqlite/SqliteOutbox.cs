@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Outbox.Sqlite;
 /// <summary>
 /// Implements an outbox using Sqlite as a backing store
 /// </summary>
-public class SqliteOutbox : RelationDatabaseOutbox
+public class SqliteOutbox : RelationDatabaseOutbox, IAmATopicCountingOutbox
 {
     private const int SQLITE_DUPLICATE_KEY_ERROR = 1555;
     private const int SQLITE_UNIQUE_KEY_ERROR = 2067;

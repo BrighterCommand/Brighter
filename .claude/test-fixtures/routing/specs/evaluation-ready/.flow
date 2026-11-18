@@ -1,0 +1,8 @@
+# flow: evaluation
+
+| Step | Kind | Producer | Artefacts | Marker | Marker-writer |
+| --- | --- | --- | --- | --- | --- |
+| evaluation | evaluation | /refactor:smells | evaluation.md | .evaluation-approved | /spec:approve evaluation |
+| tasks | tasks | /spec:tasks | tasks.md | .tasks-approved | /spec:approve tasks |
+
+hand-off: /spec:implement

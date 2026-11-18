@@ -38,6 +38,7 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
         [TickerFunction(nameof(FireSchedulerMessageAsync))]
         public async Task FireSchedulerMessageAsync(TickerFunctionContext<string> tickerContext, CancellationToken cancellationToken)
         {
+            await WaitUntilScheduledTimeAsync(tickerContext.ScheduledFor, cancellationToken);
             var schedulerRequest = JsonSerializer.Deserialize<FireSchedulerMessage>(tickerContext.Request, JsonSerialisationOptions.Options)!;
             await processor.SendAsync(schedulerRequest);
         }
@@ -45,8 +46,19 @@ namespace Paramore.Brighter.MessageScheduler.TickerQ
         [TickerFunction(nameof(FireSchedulerRequestAsync))]
         public async Task FireSchedulerRequestAsync(TickerFunctionContext<string> tickerContext, CancellationToken cancellationToken)
         {
+            await WaitUntilScheduledTimeAsync(tickerContext.ScheduledFor, cancellationToken);
             var schedulerRequest = JsonSerializer.Deserialize<FireSchedulerRequest>(tickerContext.Request, JsonSerialisationOptions.Options)!;
             await processor.SendAsync(schedulerRequest);
+        }
+
+        private static async Task WaitUntilScheduledTimeAsync(DateTime scheduledFor, CancellationToken cancellationToken)
+        {
+            var delay = scheduledFor - DateTime.UtcNow;
+            while (delay > TimeSpan.Zero)
+            {
+                await Task.Delay(delay, cancellationToken);
+                delay = scheduledFor - DateTime.UtcNow;
+            }
         }
     }
 }

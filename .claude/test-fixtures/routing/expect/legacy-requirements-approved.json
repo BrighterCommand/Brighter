@@ -1,0 +1,46 @@
+{
+  "run": [
+    "--spec",
+    "legacy-requirements-approved"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "steps": [
+      {
+        "name": "requirements",
+        "approved": true
+      },
+      {
+        "name": "design",
+        "approved": false
+      },
+      {
+        "name": "tasks",
+        "approved": false
+      }
+    ],
+    "next": {
+      "step": "design",
+      "commands": [
+        "/spec:design"
+      ]
+    },
+    "hand_off": {
+      "precondition": {
+        "holds": false,
+        "unapproved": [
+          {
+            "step": "design",
+            "marker_writer": "/spec:approve design"
+          },
+          {
+            "step": "tasks",
+            "marker_writer": "/spec:approve tasks"
+          }
+        ],
+        "message": "Implementation needs every step approved — unapproved: `design` (run `/spec:approve design`), `tasks` (run `/spec:approve tasks`)."
+      }
+    }
+  }
+}

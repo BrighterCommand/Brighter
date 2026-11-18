@@ -38,6 +38,10 @@ jobs:
     # and Test.Generator.Tests. 60 minutes leaves room for a cold NuGet cache on a slow runner.
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    outputs:
+      # A JSON array of test project names. Each test job below runs only when its project is in
+      # it, so a pull request runs the suites its changes can reach; see affected_test_projects.sh.
+      test-projects: ${{ steps.affected.outputs.test-projects }}
     steps:
       - name: Setup dotnet
         uses: actions/setup-dotnet@v6
@@ -49,6 +53,22 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - name: Restore .NET tools
+        run: dotnet tool restore
+      # Only a pull request is narrowed. A push to master or a release tag runs every suite, so
+      # anything the narrowing misses is still caught before a package ships. actions/checkout
+      # puts a pull request on GitHub's merge commit, whose first parent is the base branch, so
+      # diffing against HEAD^1 sees exactly what the pull request changes.
+      - name: Find affected test projects
+        id: affected
+        run: |
+          from=()
+          if [[ "${{ github.event_name }}" == pull_request ]]; then from=(HEAD^1); fi
+          projects=$(bash affected_test_projects.sh "${from[@]}" 2> "$RUNNER_TEMP/affected.log") ||
+            { cat "$RUNNER_TEMP/affected.log"; exit 1; }
+          cat "$RUNNER_TEMP/affected.log"
+          { echo '### Affected test projects'; echo '```'; cat "$RUNNER_TEMP/affected.log"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          echo "test-projects=$projects" >> "$GITHUB_OUTPUT"
       - name: Solution Project Guard Tests
         run: bash test_check_solution_projects.sh
       - name: Check Solution Projects
@@ -143,6 +163,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     needs: [build]
+    if: contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.InMemory.Tests')
 
     steps:
       - uses: actions/checkout@v7
@@ -161,6 +182,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     needs: [ build ]
+    if: contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.Hangfire.Tests')
 
     steps:
       - uses: actions/checkout@v7
@@ -179,6 +201,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     needs: [ build ]
+    if: contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.Quartz.Tests')
 
     steps:
       - uses: actions/checkout@v7
@@ -197,6 +220,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     needs: [ build ]
+    if: contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.TickerQ.Tests')
 
     steps:
       - uses: actions/checkout@v7
@@ -217,6 +241,7 @@ jobs:
     # this job at 7.0 minutes against the old 8-minute cap - the closest of any job to timing out.
     timeout-minutes: 15
     needs: [build]
+    if: contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.Redis.Tests')
 
     services:
       redis:  
@@ -246,6 +271,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [build]
+    if: contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.MQTT.Tests')
 
     services:
       mosquitto:  
@@ -271,6 +297,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [build]
+    if: contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.RMQ.Async.Tests')
 
     services:
       rabbitmq:
@@ -301,6 +328,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [build]
+    if: contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.RMQ.Sync.Tests')
 
     services:
       rabbitmq:
@@ -331,6 +359,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: [build]
+    if: |
+      contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.RMQ.Async.Tests')
+      || contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.RMQ.Sync.Tests')
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
@@ -362,6 +393,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: [build]
+    if: contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.Kafka.Tests')
     env:
       CONFLUENT_BOOSTRAP_SERVER: ${{ secrets.CONFLUENT_BOOSTRAP_SERVER }}
       CONFLUENT_SASL_PASSWORD: ${{ secrets.CONFLUENT_SASL_PASSWORD }}
@@ -439,6 +471,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [build]
+    if: contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.PostgresSQL.Tests')
 
     services:
       postgres:
@@ -470,6 +503,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [build]
+    if: contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.MSSQL.Tests')
 
     services:
       sqlserver:
@@ -496,6 +530,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     needs: [build]
+    if: contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.MySQL.Tests')
 
     services:
       mariadb:
@@ -529,8 +564,11 @@ jobs:
 
   dynamo-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     needs: [build]
+    if: |
+      contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.DynamoDB.Tests')
+      || contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.DynamoDB.V4.Tests')
     # Each framework gets its own emulator and shared test tables.
     strategy:
       fail-fast: false
@@ -561,6 +599,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: build
+    if: |
+      contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.AWS.Tests')
+      || contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.AWS.V4.Tests')
     env:
       AWS_SERVICE_URL: http://localhost:4566
     services:
@@ -612,8 +653,9 @@ jobs:
     # two no longer fit one after the other inside 20.
     timeout-minutes: 20
     if: |
-      (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
-      (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
+      (contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.AWS.Tests')) && (
+        (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
+        (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork))
     needs: [build]
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -647,8 +689,9 @@ jobs:
     # AWS.V4.Tests, split out of aws-ci so the two SDK suites run in parallel; see aws-ci.
     timeout-minutes: 20
     if: |
-      (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
-      (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
+      (contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.AWS.V4.Tests')) && (
+        (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
+        (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork))
     needs: [build]
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -680,8 +723,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     if: |
-      (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
-      (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
+      (contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.AWSScheduler.Tests') ||
+       contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.AWSScheduler.V4.Tests')) && (
+        (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
+        (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork))
     needs: [build]
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -714,6 +759,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     needs: [ build ]
+    if: contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.Sqlite.Tests')
 
     steps:
       - uses: actions/checkout@v7
@@ -732,8 +778,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     if: |
-      (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
-      (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
+      (contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.AzureServiceBus.Tests')) && (
+        (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
+        (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork))
     needs: [build]
     env:
       BrighterTestsASBConnectionString: ${{ secrets.BRIGHTERTESTS_ASB_CONNECTION_STRING }}
@@ -754,6 +801,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     needs: [build]
+    if: contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.MongoDb.Tests')
 
     services:
       mongo:
@@ -789,8 +837,9 @@ jobs:
     timeout-minutes: 20
     needs: [build]
     if: |
-      (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
-      (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
+      (contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.Gcp.Tests')) && (
+        (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
+        (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork))
     steps:
       - uses: actions/checkout@v7
         with: 
@@ -829,6 +878,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [build]
+    if: contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.Gcp.Tests')
 
     steps:
       - uses: actions/checkout@v7
@@ -864,6 +914,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: [build]
+    if: contains(fromJSON(needs.build.outputs.test-projects), 'Paramore.Brighter.RocketMQ.Tests')
     steps:
       - name: Checkout code
         uses: actions/checkout@v7

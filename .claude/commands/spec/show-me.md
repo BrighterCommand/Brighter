@@ -445,6 +445,7 @@ the factor(s) that set the level) is the Synthesiser's job, after this step ends
 | FR-16 row | Condition | Forced level | Measured-value cell |
 | --- | --- | --- | --- |
 | 8 | `requirements.present` is `false` | F5 = `Medium` | `no requirements.md — reconciliation not possible` |
+| 8 | `route.has_requirements_step` is `false` | F5 = `Medium` | `route {route.flow} has no requirements step — reconciliation not possible` |
 | 9 | `declared_total` is `0` | F5 = `Medium` | `0 declared ids in the bold lead-in form` |
 | 12 | `f1_level` is `null` (spec branch not determinable) | F1 = `Medium` | `no diff measured — spec branch not determinable` |
 
@@ -553,11 +554,13 @@ the count line last:
 - `Total breaking-change items: {n}` — always last, copied verbatim from the Classifier's tally.
 
 **`## Did it ship what it said?`** (FR-8) checks FR-16 rows 8 and 9 first, in this order, and writes
-one of their two lines verbatim in place of everything below when either applies; otherwise it
+the line that applies verbatim in place of everything below when either applies; otherwise it
 places the Classifier's judgements as Parts 1–4, in order:
 
-- Row 8 (`requirements.present` is `false`): write exactly `No requirements.md found for this spec —
-  scope reconciliation is not possible.`
+- Row 8, when `route.has_requirements_step` is `false`: write exactly `This spec's route ({route.flow})
+  has no requirements step — there is nothing to reconcile.`, with the flow name from `route.flow`.
+- Row 8 (`requirements.present` is `false`, the route having a requirements step): write exactly `No
+  requirements.md found for this spec — scope reconciliation is not possible.`
 - Otherwise, row 9 (`declared_total` is `0`): write exactly `requirements.md declares no numbered
   requirements in the bold lead-in form (**FR-n — …**) — nothing to reconcile.` No shipped-as-planned
   line, no deviation list, no count line follows.
@@ -688,7 +691,8 @@ never a row beyond this set:
 
 1. `requirements.md` — `used` when `requirements.present` is `true` (a whole read or a
    by-declaration read both count as `used`; a declaration a status could not afford is
-   `Unverifiable` there, not here); otherwise `not available: not present`.
+   `Unverifiable` there, not here); `not available: not on this spec's route` when
+   `route.has_requirements_step` is `false`; otherwise `not available: not present`.
 2. `tasks.md` — always `used` (FR-3's gate already required it).
 3. `.adr-list` — `used` when `adr_list` holds at least one entry; otherwise `not available: .adr-list
    missing or empty`.

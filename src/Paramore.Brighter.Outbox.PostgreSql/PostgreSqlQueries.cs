@@ -1,6 +1,6 @@
 ﻿namespace Paramore.Brighter.Outbox.PostgreSql
 {
-    public class PostgreSqlQueries : IRelationDatabaseOutboxQueries, IRelationalDatabaseOutboxCausationQueries, IRelationalDatabaseOutboxDataRefQueries
+    public class PostgreSqlQueries : IRelationDatabaseOutboxQueries, IRelationalDatabaseOutboxCountQueries, IRelationalDatabaseOutboxTopicCountQueries, IRelationalDatabaseOutboxCausationQueries, IRelationalDatabaseOutboxDataRefQueries
     {
         // All column are created with lower case because during table creating we didn't scape colum
         public string PagedDispatchedCommand { get; } = "SELECT * FROM {0} WHERE \"dispatched\" IS NOT NULL AND \"dispatched\" < @DispatchedSince ORDER BY \"timestamp\" DESC LIMIT @Take OFFSET @Skip";
@@ -12,18 +12,26 @@
             "(\"messageid\",\"messagetype\",\"topic\",\"timestamp\",\"correlationid\",\"replyto\",\"contenttype\",\"partitionkey\",\"headerbag\",\"body\"" +
             ",\"source\",\"type\",\"dataschema\",\"subject\",\"traceparent\",\"tracestate\",\"baggage\", \"workflowid\",\"jobid\") " +
             "VALUES (@MessageId,@MessageType,@Topic,@Timestamp,@CorrelationId,@ReplyTo,@ContentType,@PartitionKey,@HeaderBag,@Body" +
-            ",@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage, @WorkflowId,@JobId)";
+            ",@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage, @WorkflowId,@JobId) " +
+            "ON CONFLICT (\"messageid\") DO NOTHING";
 
         public string BulkAddCommand { get; } =
             "INSERT INTO {0} " +
             "(\"messageid\",\"messagetype\",\"topic\",\"timestamp\",\"correlationid\",\"replyto\",\"contenttype\",\"partitionkey\",\"headerbag\",\"body\"" +
             ",\"source\",\"type\",\"dataschema\",\"subject\",\"traceparent\",\"tracestate\",\"baggage\", \"workflowid\",\"jobid\") " +
-            "VALUES {1}";
+            "VALUES {1} ON CONFLICT (\"messageid\") DO NOTHING";
         public string MarkDispatchedCommand { get; } = "UPDATE {0} SET \"dispatched\" = @DispatchedAt WHERE \"messageid\" = @MessageId";
         public string MarkMultipleDispatchedCommand { get; } = "UPDATE {0} SET \"dispatched\" = @DispatchedAt WHERE \"messageid\" IN ( {1} )";
         public string GetMessageCommand { get; } = "SELECT * FROM {0} WHERE \"messageid\" = @MessageId";
         public string GetMessagesCommand { get; } = "SELECT * FROM {0} WHERE \"messageid\" IN ( {1} ) ORDER BY \"timestamp\" ASC";
         public string DeleteMessagesCommand { get; } = "DELETE FROM {0} WHERE \"messageid\" IN ( {1} )";
+
+        /// <inheritdoc />
+        public string GetOutstandingMessageCountCommand => "SELECT COUNT(1) FROM (SELECT 1 FROM {0} WHERE \"dispatched\" IS NULL AND \"timestamp\" < @TimestampSince LIMIT @Take) AS OutstandingMessages";
+
+        /// <inheritdoc />
+        public string GetOutstandingMessageCountByTopicCommand => "SELECT COUNT(1) FROM (SELECT 1 FROM {0} WHERE \"dispatched\" IS NULL AND \"timestamp\" < @TimestampSince AND \"topic\" = @Topic LIMIT @Take) AS OutstandingMessages";
+
         public string GetNumberOfOutstandingMessagesCommand { get; } = "SELECT COUNT(1) FROM {0} WHERE \"dispatched\" IS NULL";
 
         public string AddCausationCommand { get; } =
@@ -31,12 +39,13 @@
             "(\"messageid\",\"messagetype\",\"topic\",\"timestamp\",\"correlationid\",\"replyto\",\"contenttype\",\"partitionkey\",\"headerbag\",\"body\"" +
             ",\"source\",\"type\",\"dataschema\",\"subject\",\"traceparent\",\"tracestate\",\"baggage\", \"workflowid\",\"jobid\",\"causationid\") " +
             "VALUES (@MessageId,@MessageType,@Topic,@Timestamp,@CorrelationId,@ReplyTo,@ContentType,@PartitionKey,@HeaderBag,@Body" +
-            ",@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage, @WorkflowId,@JobId,@CausationId)";
+            ",@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage, @WorkflowId,@JobId,@CausationId) " +
+            "ON CONFLICT (\"messageid\") DO NOTHING";
         public string BulkAddCausationCommand { get; } =
             "INSERT INTO {0} " +
             "(\"messageid\",\"messagetype\",\"topic\",\"timestamp\",\"correlationid\",\"replyto\",\"contenttype\",\"partitionkey\",\"headerbag\",\"body\"" +
             ",\"source\",\"type\",\"dataschema\",\"subject\",\"traceparent\",\"tracestate\",\"baggage\", \"workflowid\",\"jobid\",\"causationid\") " +
-            "VALUES {1}";
+            "VALUES {1} ON CONFLICT (\"messageid\") DO NOTHING";
         public string ReplayCausationCommand { get; } = "UPDATE {0} SET \"dispatched\" = NULL WHERE \"causationid\" = @CausationId";
         public string CausationColumnExistsCommand { get; } = "SELECT 1 FROM pg_attribute WHERE attrelid = to_regclass('{0}') AND attname = 'causationid' AND NOT attisdropped";
 
@@ -46,14 +55,15 @@
             "(\"messageid\",\"messagetype\",\"topic\",\"timestamp\",\"correlationid\",\"replyto\",\"contenttype\",\"partitionkey\",\"headerbag\",\"body\"" +
             ",\"source\",\"type\",\"dataschema\",\"subject\",\"traceparent\",\"tracestate\",\"baggage\", \"workflowid\",\"jobid\", \"dataref\") " +
             "VALUES (@MessageId,@MessageType,@Topic,@Timestamp,@CorrelationId,@ReplyTo,@ContentType,@PartitionKey,@HeaderBag,@Body" +
-            ",@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage, @WorkflowId,@JobId, @DataRef)";
+            ",@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage, @WorkflowId,@JobId, @DataRef) " +
+            "ON CONFLICT (\"messageid\") DO NOTHING";
 
         /// <inheritdoc />
         public string BulkAddDataRefCommand { get; } =
             "INSERT INTO {0} " +
             "(\"messageid\",\"messagetype\",\"topic\",\"timestamp\",\"correlationid\",\"replyto\",\"contenttype\",\"partitionkey\",\"headerbag\",\"body\"" +
             ",\"source\",\"type\",\"dataschema\",\"subject\",\"traceparent\",\"tracestate\",\"baggage\", \"workflowid\",\"jobid\", \"dataref\") " +
-            "VALUES {1}";
+            "VALUES {1} ON CONFLICT (\"messageid\") DO NOTHING";
 
         /// <inheritdoc />
         public string AddDataRefCausationCommand { get; } =
@@ -61,14 +71,15 @@
             "(\"messageid\",\"messagetype\",\"topic\",\"timestamp\",\"correlationid\",\"replyto\",\"contenttype\",\"partitionkey\",\"headerbag\",\"body\"" +
             ",\"source\",\"type\",\"dataschema\",\"subject\",\"traceparent\",\"tracestate\",\"baggage\", \"workflowid\",\"jobid\", \"dataref\",\"causationid\") " +
             "VALUES (@MessageId,@MessageType,@Topic,@Timestamp,@CorrelationId,@ReplyTo,@ContentType,@PartitionKey,@HeaderBag,@Body" +
-            ",@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage, @WorkflowId,@JobId, @DataRef,@CausationId)";
+            ",@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage, @WorkflowId,@JobId, @DataRef,@CausationId) " +
+            "ON CONFLICT (\"messageid\") DO NOTHING";
 
         /// <inheritdoc />
         public string BulkAddDataRefCausationCommand { get; } =
             "INSERT INTO {0} " +
             "(\"messageid\",\"messagetype\",\"topic\",\"timestamp\",\"correlationid\",\"replyto\",\"contenttype\",\"partitionkey\",\"headerbag\",\"body\"" +
             ",\"source\",\"type\",\"dataschema\",\"subject\",\"traceparent\",\"tracestate\",\"baggage\", \"workflowid\",\"jobid\", \"dataref\",\"causationid\") " +
-            "VALUES {1}";
+            "VALUES {1} ON CONFLICT (\"messageid\") DO NOTHING";
 
         /// <inheritdoc />
         public string DataRefColumnExistsCommand { get; } = "SELECT 1 FROM pg_attribute WHERE attrelid = to_regclass('{0}') AND attname = 'dataref' AND NOT attisdropped";

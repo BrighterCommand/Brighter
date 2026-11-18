@@ -1,4 +1,5 @@
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 
 namespace Paramore.Brighter.MongoDb;
@@ -86,7 +87,7 @@ public abstract class BaseMongoDb<TCollection>
         if (CollectionConfiguration.TimeToLive != null)
         {
             collection.Indexes.CreateOne(
-                new CreateIndexModel<TCollection>(Builders<TCollection>.IndexKeys.Ascending(x => x.TimeStamp),
+                new CreateIndexModel<TCollection>(CreateTtlIndexKeys(collection),
                     new CreateIndexOptions
                     {
                         Name = $"brighter_ttl_{CollectionConfiguration.Name}",
@@ -95,6 +96,16 @@ public abstract class BaseMongoDb<TCollection>
         }
 
         return collection;
+    }
+
+    private static IndexKeysDefinition<TCollection> CreateTtlIndexKeys(IMongoCollection<TCollection> collection)
+    {
+        var timestamp = new ExpressionFieldDefinition<TCollection, DateTimeOffset>(x => x.TimeStamp)
+            .Render(new RenderArgs<TCollection>(collection.DocumentSerializer, collection.Settings.SerializerRegistry));
+        var fieldName = timestamp.FieldSerializer is DateTimeOffsetSerializer { Representation: BsonType.Document }
+            ? $"{timestamp.FieldName}.DateTime"
+            : timestamp.FieldName;
+        return new BsonDocument(fieldName, 1);
     }
 
     private void EnsureCollectionExists()

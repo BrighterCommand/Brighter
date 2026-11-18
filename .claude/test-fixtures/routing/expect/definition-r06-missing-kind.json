@@ -1,0 +1,19 @@
+{
+  "run": ["--definition", "r06-missing-kind"],
+  "flows": "flows-rules",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "r06-missing-kind", "source": "definition", "definition_present": true },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R6",
+        "code": "missing-kind",
+        "step": "design",
+        "message": "Step design declares no artefact kind."
+      }
+    ]
+  }
+}

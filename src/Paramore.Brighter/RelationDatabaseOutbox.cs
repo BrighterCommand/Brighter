@@ -33,6 +33,8 @@ namespace Paramore.Brighter
         private readonly int _outstandingCountTimeoutSeconds = RelationalDatabaseConfiguration.ToOutstandingCountTimeoutSeconds(
             configuration.OutstandingCountTimeout, nameof(configuration));
 
+        private const int MAX_TOPIC_AGE_DAYS = 365;
+
         protected IAmARelationalDbConnectionProvider ConnectionProvider { get; } = connectionProvider;
 
         protected IRelationDatabaseOutboxQueries Queries => queries;
@@ -1018,14 +1020,118 @@ namespace Paramore.Brighter
         /// <inheritdoc/>
         public int GetOutstandingMessageCount(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null)
         {
-            return ReadOutstandingMessages(dispatchedSince, requestContext, maxCount, 1, null, _outstandingCountTimeoutSeconds).Count();
+            if (queries is not IRelationalDatabaseOutboxCountQueries countQueries)
+                return ReadOutstandingMessages(dispatchedSince, requestContext, maxCount, 1, null, _outstandingCountTimeoutSeconds).Count();
+
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                { "db.operation.name", ExtractSqlOperationName(countQueries.GetOutstandingMessageCountCommand) },
+                { "db.query.text", countQueries.GetOutstandingMessageCountCommand }
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.OutStandingMessages, DatabaseConfiguration.OutBoxTableName,
+                    dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var count = ReadFromStore(
+                    connection => CreateOutstandingCountCommand(connection, countQueries, dispatchedSince, maxCount),
+                    MapOutstandingCount);
+                span?.AddTag("db.response.returned_rows", 1);
+                return count;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <inheritdoc/>
         public async Task<int> GetOutstandingMessageCountAsync(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         {
-            return (await ReadOutstandingMessagesAsync(dispatchedSince, requestContext, maxCount, 1, null, _outstandingCountTimeoutSeconds, cancellationToken))
-                .Count();
+            if (queries is not IRelationalDatabaseOutboxCountQueries countQueries)
+                return (await ReadOutstandingMessagesAsync(dispatchedSince, requestContext, maxCount, 1, null, _outstandingCountTimeoutSeconds, cancellationToken)).Count();
+
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                { "db.operation.name", ExtractSqlOperationName(countQueries.GetOutstandingMessageCountCommand) },
+                { "db.query.text", countQueries.GetOutstandingMessageCountCommand }
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.OutStandingMessages, DatabaseConfiguration.OutBoxTableName,
+                    dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var count = await ReadFromStoreAsync(
+                    connection => CreateOutstandingCountCommand(connection, countQueries, dispatchedSince, maxCount),
+                    dr => MapOutstandingCountAsync(dr, cancellationToken), cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
+                span?.AddTag("db.response.returned_rows", 1);
+                return count;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
+        }
+
+        /// <inheritdoc cref="IAmATopicCountingOutbox.GetOutstandingMessageCountsByTopicAsync"/>
+        /// <exception cref="NotSupportedException">
+        /// The outbox queries do not implement <see cref="IRelationalDatabaseOutboxTopicCountQueries"/>.
+        /// </exception>
+        public async Task<IReadOnlyDictionary<RoutingKey, int>> GetOutstandingMessageCountsByTopicAsync(
+            IReadOnlyDictionary<RoutingKey, TimeSpan> dispatchedSinceByTopic,
+            RequestContext? requestContext,
+            int maxCountPerTopic,
+            Dictionary<string, object>? args = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (dispatchedSinceByTopic is null)
+                throw new ArgumentNullException(nameof(dispatchedSinceByTopic));
+            if (maxCountPerTopic < 1)
+                throw new ArgumentOutOfRangeException(nameof(maxCountPerTopic), maxCountPerTopic, "The ceiling per topic must be at least 1.");
+            CheckRequestedTopics(dispatchedSinceByTopic);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (queries is not IRelationalDatabaseOutboxTopicCountQueries topicCountQueries)
+                throw new NotSupportedException(
+                    $"The outbox queries do not implement {nameof(IRelationalDatabaseOutboxTopicCountQueries)}.");
+
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                { "db.operation.name", ExtractSqlOperationName(topicCountQueries.GetOutstandingMessageCountByTopicCommand) },
+                { "db.query.text", topicCountQueries.GetOutstandingMessageCountByTopicCommand }
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.OutStandingMessageCount, DatabaseConfiguration.OutBoxTableName,
+                    dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var counts = new Dictionary<RoutingKey, int>();
+                foreach (var request in dispatchedSinceByTopic)
+                {
+                    var count = await ReadFromStoreAsync(
+                        connection => CreateOutstandingCountByTopicCommand(connection, topicCountQueries, request.Key, request.Value, maxCountPerTopic),
+                        dr => MapOutstandingCountAsync(dr, cancellationToken), cancellationToken)
+                        .ConfigureAwait(ContinueOnCapturedContext);
+                    counts.Add(request.Key, count);
+                }
+
+                span?.AddTag("db.response.returned_rows", counts.Count);
+                return counts;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <inheritdoc />
@@ -1385,6 +1491,30 @@ namespace Paramore.Brighter
                 : string.Empty;
 
             return (inClauseSql, inClause.parameters);
+        }
+
+        private DbCommand CreateOutstandingCountCommand(DbConnection connection,
+            IRelationalDatabaseOutboxCountQueries countQueries, TimeSpan dispatchedSince, int maxCount)
+            => CreateCommand(connection, GenerateSqlText(countQueries.GetOutstandingMessageCountCommand),
+                _outstandingCountTimeoutSeconds, CreatePagedOutstandingParameters(dispatchedSince, maxCount, 1, []));
+
+        private DbCommand CreateOutstandingCountByTopicCommand(DbConnection connection,
+            IRelationalDatabaseOutboxTopicCountQueries topicCountQueries, RoutingKey topic, TimeSpan dispatchedSince, int maxCount)
+            => CreateCommand(connection, GenerateSqlText(topicCountQueries.GetOutstandingMessageCountByTopicCommand),
+                _outstandingCountTimeoutSeconds,
+                CreatePagedOutstandingParameters(dispatchedSince, maxCount, 1, [CreateSqlParameter("@Topic", DbType.String, topic.Value)]));
+
+        private static void CheckRequestedTopics(IReadOnlyDictionary<RoutingKey, TimeSpan> dispatchedSinceByTopic)
+        {
+            foreach (var request in dispatchedSinceByTopic)
+            {
+                if (RoutingKey.IsNullOrEmpty(request.Key))
+                    throw new ArgumentException("A requested topic is null or empty.", nameof(dispatchedSinceByTopic));
+                if (request.Value <= TimeSpan.Zero || request.Value > TimeSpan.FromDays(MAX_TOPIC_AGE_DAYS))
+                    throw new ArgumentException(
+                        $"The age requested for topic {request.Key} must be greater than zero and no greater than {MAX_TOPIC_AGE_DAYS} days.",
+                        nameof(dispatchedSinceByTopic));
+            }
         }
 
         private DbCommand CreateRemainingOutstandingCommand(DbConnection connection)

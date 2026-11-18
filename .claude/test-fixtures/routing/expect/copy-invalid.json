@@ -1,0 +1,30 @@
+{
+  "run": [
+    "--spec",
+    "copy-invalid"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R4",
+        "code": "unknown-command",
+        "step": "design",
+        "message": "Step design names a command that does not exist, /spec:designx."
+      }
+    ],
+    "next": {
+      "step": null,
+      "kind": null,
+      "commands": [],
+      "unattended_driver": null,
+      "detours": []
+    },
+    "stop": {
+      "reason": "invalid",
+      "message": "The slip is invalid: Step design names a command that does not exist, /spec:designx. Re-copy the flow with /spec:route feature <reason>, after fixing .claude/test-fixtures/routing/flows/feature.flow if the fault is there."
+    }
+  }
+}

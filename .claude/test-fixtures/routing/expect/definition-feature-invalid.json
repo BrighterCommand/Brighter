@@ -1,0 +1,31 @@
+{
+  "run": ["--definition", "feature"],
+  "flows": "flows-invalid",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "feature", "source": "definition", "definition_present": true },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R4",
+        "code": "unknown-command",
+        "step": "design",
+        "message": "Step design names a command that does not exist, /spec:designx."
+      },
+      {
+        "rule": "R12",
+        "code": "approval-entry",
+        "step": null,
+        "message": ".claude/test-fixtures/routing/flows-invalid/approvals.md has more than one entry for kind tasks."
+      },
+      {
+        "rule": "R12",
+        "code": "approval-entry",
+        "step": null,
+        "message": ".claude/test-fixtures/routing/flows-invalid/approvals.md is unreadable or names a command that does not exist: /adr:acceptx."
+      }
+    ]
+  }
+}

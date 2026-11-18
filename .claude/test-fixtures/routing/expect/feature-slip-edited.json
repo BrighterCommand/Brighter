@@ -1,0 +1,23 @@
+{
+  "run": [
+    "--spec",
+    "feature-slip"
+  ],
+  "flows": "flows-edited",
+  "exit": 0,
+  "report": {
+    "flow": {
+      "name": "feature",
+      "source": "slip",
+      "definition_present": true
+    },
+    "valid": true,
+    "tampered": {
+      "value": false,
+      "case": null
+    },
+    "next": {
+      "detours": []
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "run": [
+    "--spec",
+    "bugfix-leftover-tasks"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "valid": true,
+    "violations": [],
+    "next": {
+      "commands": [
+        "/bugfix:confirm"
+      ]
+    },
+    "steps": [
+      {
+        "name": "diagnosis"
+      },
+      {
+        "name": "tasks",
+        "artefacts_present": true
+      }
+    ]
+  }
+}

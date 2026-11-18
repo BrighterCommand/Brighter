@@ -1,0 +1,48 @@
+{
+  "run": [
+    "--spec",
+    "legacy-out-of-order"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "steps": [
+      {
+        "name": "requirements",
+        "approved": false
+      },
+      {
+        "name": "design",
+        "approved": true
+      },
+      {
+        "name": "tasks",
+        "approved": false,
+        "precondition": {
+          "holds": true
+        }
+      }
+    ],
+    "out_of_order": [
+      {
+        "approved": "design",
+        "earlier_unapproved": [
+          "requirements"
+        ]
+      }
+    ],
+    "next": {
+      "step": "requirements",
+      "kind": "requirements",
+      "commands": [
+        "/spec:review requirements",
+        "/spec:approve requirements"
+      ]
+    },
+    "hand_off": {
+      "precondition": {
+        "holds": false
+      }
+    }
+  }
+}

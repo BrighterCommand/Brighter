@@ -1,0 +1,30 @@
+{
+  "run": [
+    "--definition",
+    "r04-unknown-command"
+  ],
+  "flows": "flows-rules",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": {
+      "name": "r04-unknown-command",
+      "source": "definition",
+      "definition_present": true
+    },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R4",
+        "code": "unknown-command",
+        "step": "design",
+        "message": "Step design names a command that does not exist, /spec:designx."
+      }
+    ],
+    "stop": {
+      "reason": "invalid",
+      "message": "Flow r04-unknown-command is invalid: Step design names a command that does not exist, /spec:designx. Fix or add .claude/test-fixtures/routing/flows-rules/r04-unknown-command.flow or .claude/test-fixtures/routing/flows-rules/approvals.md."
+    }
+  }
+}

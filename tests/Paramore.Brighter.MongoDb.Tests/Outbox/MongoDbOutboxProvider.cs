@@ -14,11 +14,13 @@ namespace Paramore.Brighter.MongoDb.Tests.Outbox;
 public class MongoDbOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync, IAmAnOutstandingCountOutboxProvider
 {
     private readonly string _collectionName = $"Outbox{Uuid.New():N}";
+    private readonly TimeProvider _timeProvider = TimeProvider.System;
 
     public IAmAnOutboxSync<Message, IClientSessionHandle> CreateOutbox()
     {
         return new MongoDbOutbox(new MongoDbConfiguration(Const.Client, Const.DatabaseName)
         {
+            TimeProvider = _timeProvider,
             Outbox = new MongoDbCollectionConfiguration
             {
                 Name = _collectionName
@@ -30,6 +32,7 @@ public class MongoDbOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvide
     {
         return new MongoDbOutbox(new MongoDbConfiguration(Const.Client, Const.DatabaseName)
         {
+            TimeProvider = _timeProvider,
             Outbox = new MongoDbCollectionConfiguration
             {
                 Name = _collectionName

@@ -1,0 +1,24 @@
+{
+  "run": [
+    "--spec",
+    "legacy-stray-ignored"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "valid": true,
+    "violations": [],
+    "flow": {
+      "name": "feature",
+      "source": "default"
+    },
+    "stray_markers": [
+      ".confirm-approved"
+    ],
+    "next": {
+      "commands": [
+        "/spec:implement"
+      ]
+    }
+  }
+}

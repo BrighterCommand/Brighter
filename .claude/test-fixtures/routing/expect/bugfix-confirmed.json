@@ -1,0 +1,29 @@
+{
+  "run": [
+    "--spec",
+    "bugfix-confirmed"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "valid": true,
+    "violations": [],
+    "next": {
+      "commands": [
+        "/bugfix:confirm"
+      ]
+    },
+    "steps": [
+      {
+        "name": "diagnosis",
+        "approved": true
+      },
+      {
+        "name": "tasks",
+        "precondition": {
+          "holds": true
+        }
+      }
+    ]
+  }
+}
