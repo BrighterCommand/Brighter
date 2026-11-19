@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
@@ -49,14 +50,20 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 /// The destination queue must already exist in the client's namespace. No administration requests
 /// are made. A retry gets a distinct, deterministic delivery ID and retains its first ID in
 /// <see cref="Message.OriginalMessageIdHeaderName"/>. The caller owns the client and settles the
-/// original delivery after scheduling succeeds. Each sender is closed after use.
+/// original delivery after scheduling succeeds. A sender is held per queue and reused across
+/// retries, so a requeue does not reopen and re-authorise a send link; the senders are closed when
+/// the scheduler is disposed.
 /// </remarks>
-public sealed partial class AzureServiceBusRequeueScheduler : IAmAMessageRequeueSchedulerAsync, IAmAMessageRequeueSchedulerSync
+public sealed partial class AzureServiceBusRequeueScheduler : IAmAMessageRequeueSchedulerAsync, IAmAMessageRequeueSchedulerSync,
+    IDisposable, IAsyncDisposable
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusRequeueScheduler>();
     private readonly IServiceBusSenderProvider _senderProvider;
     private readonly TimeProvider _timeProvider;
     private readonly InstrumentationOptions _instrumentationOptions;
+    private readonly ConcurrentDictionary<string, IServiceBusSenderWrapper> _senders = new();
+    //an int rather than a bool so both Dispose paths can claim disposal with a single atomic exchange
+    private int _disposed;
 
     /// <summary>Creates a native queue retry scheduler for the supplied client.</summary>
     /// <param name="clientProvider">The provider for the consuming broker's client.</param>
@@ -70,7 +77,11 @@ public sealed partial class AzureServiceBusRequeueScheduler : IAmAMessageRequeue
     {
     }
 
-    internal AzureServiceBusRequeueScheduler(IServiceBusSenderProvider senderProvider, TimeProvider timeProvider,
+    /// <summary>Creates a scheduler over an existing sender provider.</summary>
+    /// <param name="senderProvider">The provider that creates the queue senders the scheduler reuses.</param>
+    /// <param name="timeProvider">The clock used to calculate delivery times.</param>
+    /// <param name="instrumentationOptions">The verbosity of retry telemetry.</param>
+    public AzureServiceBusRequeueScheduler(IServiceBusSenderProvider senderProvider, TimeProvider timeProvider,
         InstrumentationOptions instrumentationOptions)
     {
         _senderProvider = senderProvider;
@@ -111,10 +122,9 @@ public sealed partial class AzureServiceBusRequeueScheduler : IAmAMessageRequeue
         retry.ApplicationProperties[Message.OriginalMessageIdHeaderName] = originalId;
         retry.ApplicationProperties[ASBConstants.CloudEventsId] = cloudEventId;
 
-        IServiceBusSenderWrapper? retrySender = null;
+        var retrySender = await GetSenderAsync(destination.Value).ConfigureAwait(false);
         try
         {
-            retrySender = _senderProvider.Get(destination.Value);
             await retrySender.ScheduleMessageAsync(retry, _timeProvider.GetUtcNow().Add(delay), cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -127,20 +137,98 @@ public sealed partial class AzureServiceBusRequeueScheduler : IAmAMessageRequeue
             Log.SchedulingFailed(s_logger, error, destination.Value);
             throw new ChannelFailureException("Error scheduling a retry on the broker, see inner exception for details", error);
         }
-        finally
+    }
+
+    /// <summary>
+    /// Returns the sender held for the destination, creating it on a miss.
+    /// </summary>
+    private async Task<IServiceBusSenderWrapper> GetSenderAsync(string destination)
+    {
+        if (_senders.TryGetValue(destination, out var cachedSender)) return cachedSender;
+
+        if (Volatile.Read(ref _disposed) != 0)
+            throw new ObjectDisposedException(nameof(AzureServiceBusRequeueScheduler));
+
+        var createdSender = CreateSender(destination);
+        var sender = _senders.GetOrAdd(destination, createdSender);
+        if (!ReferenceEquals(sender, createdSender))
+            //the sender we created lost the race: close ours, but a failure here must not fail a
+            //retry that already has a usable cached sender
+            await CloseSenderQuietlyAsync(createdSender, destination).ConfigureAwait(false);
+
+        if (Volatile.Read(ref _disposed) != 0)
         {
-            if (retrySender is not null)
-            {
-                try
-                {
-                    await retrySender.CloseAsync().ConfigureAwait(false);
-                }
-                catch (Exception error)
-                {
-                    // Closing a sender must not hide a scheduling failure or undo an accepted retry.
-                    Log.ClosingSenderFailed(s_logger, error, destination.Value);
-                }
-            }
+            //disposed while we were creating a sender: its cache entry was added after the close pass
+            //ran, so nothing else will ever close it
+            if (_senders.TryRemove(destination, out var strandedSender))
+                await CloseSenderQuietlyAsync(strandedSender, destination).ConfigureAwait(false);
+
+            throw new ObjectDisposedException(nameof(AzureServiceBusRequeueScheduler));
+        }
+
+        return sender;
+    }
+
+    /// <summary>
+    /// Create the sender for the destination, reporting a provider failure the same way a failed
+    /// schedule is reported so the caller keeps the original delivery.
+    /// </summary>
+    private IServiceBusSenderWrapper CreateSender(string destination)
+    {
+        try
+        {
+            return _senderProvider.Get(destination);
+        }
+        catch (Exception error)
+        {
+            Log.SchedulingFailed(s_logger, error, destination);
+            throw new ChannelFailureException("Error scheduling a retry on the broker, see inner exception for details", error);
+        }
+    }
+
+    /// <summary>Closes every sender held for reuse.</summary>
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        if (_senders.IsEmpty) return;
+
+        BrighterAsyncContext.Run(CloseCachedSendersAsync);
+    }
+
+    /// <summary>Closes every sender held for reuse.</summary>
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
+        await CloseCachedSendersAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Close and remove every cached sender, whether or not closing one of them fails.
+    /// </summary>
+    private async Task CloseCachedSendersAsync()
+    {
+        //TryRemove first, so a sender cannot be closed twice and a concurrent retry cannot add one
+        //that nothing will ever close
+        foreach (var destination in _senders.Keys)
+        {
+            if (!_senders.TryRemove(destination, out var sender)) continue;
+
+            await CloseSenderQuietlyAsync(sender, destination).ConfigureAwait(false);
+        }
+    }
+
+    private async Task CloseSenderQuietlyAsync(IServiceBusSenderWrapper sender, string destination)
+    {
+        try
+        {
+            await sender.CloseAsync().ConfigureAwait(false);
+        }
+        catch (Exception error)
+        {
+            //closing a sender must never hide a scheduling failure, undo an accepted retry, or strand
+            //the senders that follow it
+            Log.ClosingSenderFailed(s_logger, error, destination);
         }
     }
 
