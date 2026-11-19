@@ -69,26 +69,24 @@ public static class TestConfigurationLoader
             return null;
         }
 
-        // Resolved here rather than left to each caller, because a relative value would otherwise
-        // resolve against whatever the current directory happened to be: the project folder for the
-        // generator, which generate-test.sh cd's into, and the test host's folder for the audit.
-        // Those are different folders, and the audit would then report a project's whole tree as
-        // orphaned and an equal number of files as missing.
-        //
-        // The base is the configuration file's own folder, not the caller-supplied default. Those
-        // coincide whenever the tool is run the way generate-test.sh runs it, but only the file's
-        // own folder makes the two readers agree by construction: run the generator from the
-        // repository root against tests/Foo/test-configuration.json and the default is the root,
-        // while the audit's is always tests/Foo.
-        var configurationFolder =
-            Path.GetDirectoryName(Path.GetFullPath(configurationFilePath)) ?? defaultDestinationFolder;
-
-        configuration.DestinationFolder = string.IsNullOrEmpty(configuration.DestinationFolder)
-            ? Path.GetFullPath(defaultDestinationFolder)
-            : Path.GetFullPath(configuration.DestinationFolder, configurationFolder);
+        configuration.DestinationFolder = ResolveDestinationFolder(
+            configuration.DestinationFolder, configurationFilePath, defaultDestinationFolder);
 
         configuration.ApplySharedDefaults();
 
         return configuration;
+    }
+
+    // A relative folder resolves against the configuration file's own folder, not the current
+    // directory or the caller's default, so readers running from different folders agree.
+    private static string ResolveDestinationFolder(
+        string declaredFolder, string configurationFilePath, string defaultDestinationFolder)
+    {
+        var configurationFolder =
+            Path.GetDirectoryName(Path.GetFullPath(configurationFilePath)) ?? defaultDestinationFolder;
+
+        return string.IsNullOrEmpty(declaredFolder)
+            ? Path.GetFullPath(defaultDestinationFolder)
+            : Path.GetFullPath(declaredFolder, configurationFolder);
     }
 }

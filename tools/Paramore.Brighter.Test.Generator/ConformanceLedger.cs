@@ -217,17 +217,13 @@ public sealed class ConformanceLedger : IAmAConformanceLedger
     private static Dictionary<string, Dictionary<string, string>> ParseLedger(string path)
     {
         var cells = new Dictionary<string, Dictionary<string, string>>();
-        var columns = new List<string>();
 
         var lines = File.ReadAllLines(path);
 
         var headerLineIndex = -1;
         for (var i = 0; i < lines.Length; i++)
         {
-            var line = lines[i].Trim();
-            // Anchored on the whole cell rather than a substring: "FR-2" as a substring also
-            // matches a header carrying only FR-22 or FR-20, and FR-22 is a real column here.
-            if (line.StartsWith('|') && HasColumn(line, "FR-2") && HasColumn(line, "FR-4"))
+            if (IsMatrixHeader(lines[i].Trim()))
             {
                 headerLineIndex = i;
                 break;
@@ -244,13 +240,10 @@ public sealed class ConformanceLedger : IAmAConformanceLedger
                 + "matrix header, or update the parser if the table's shape has changed.");
         }
 
-        // Parse column headers (skip the first cell which is "Configuration").
-        var headerCells = SplitTableRow(lines[headerLineIndex]);
-        for (var i = 1; i < headerCells.Count; i++)
-            columns.Add(headerCells[i].Trim());
+        var columns = BehaviourColumns(lines[headerLineIndex]);
 
-        // Skip the separator row (|---|---|...|) and parse data rows.
-        for (var i = headerLineIndex + 2; i < lines.Length; i++)
+        var firstDataRow = headerLineIndex + 2;
+        for (var i = firstDataRow; i < lines.Length; i++)
         {
             var line = lines[i].Trim();
             if (!line.StartsWith('|')) break;
@@ -276,6 +269,19 @@ public sealed class ConformanceLedger : IAmAConformanceLedger
         }
 
         return cells;
+    }
+
+    // Matches whole cells: "FR-2" as a substring would also match FR-20 or FR-22, a real column.
+    private static bool IsMatrixHeader(string line) =>
+        line.StartsWith('|') && HasColumn(line, "FR-2") && HasColumn(line, "FR-4");
+
+    private static List<string> BehaviourColumns(string headerLine)
+    {
+        var columns = new List<string>();
+        var headerCells = SplitTableRow(headerLine);
+        for (var i = 1; i < headerCells.Count; i++)
+            columns.Add(headerCells[i].Trim());
+        return columns;
     }
 
     private static bool HasColumn(string line, string columnName) =>

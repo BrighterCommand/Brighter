@@ -99,13 +99,12 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
                     ? key
                     : outboxConfiguration.Prefix;
 
-                // Templates build a namespace suffix from the model's prefix, which is dot-qualified
-                // where the destination folder name is not.
+                var namespaceSuffix = $".{folderName}";
                 suites.AddRange(SuitesFor(
                     configuration,
                     outboxConfiguration,
                     folderName: folderName,
-                    modelPrefix: $".{folderName}"));
+                    modelPrefix: namespaceSuffix));
             }
         }
         else
