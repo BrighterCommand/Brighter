@@ -10,6 +10,10 @@ using Xunit;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor;
 
+/// <summary>
+/// A message sent with a delay is not delivered before the delay and is after it. The before-delay
+/// receive is shorter than the delay but long enough to catch an immediate delivery.
+/// </summary>
 [Trait("Category", "MQTT")]
 [Collection("MqttMessagingGateway")]
 public class WhenSendingADelayedMessageShouldDeliverAfterDelayAsync : IAsyncLifetime
@@ -60,15 +64,11 @@ public class WhenSendingADelayedMessageShouldDeliverAfterDelayAsync : IAsyncLife
 
         await _producer.SendWithDelayAsync(message, TimeSpan.FromSeconds(5));
 
-        // Assert — before-D arm: a single bounded receive, deliberately shorter than the 5 s delay,
-        // should yield MT_NONE. The window must be less than the delay so a correctly-delayed message
-        // is not observed here, yet long enough to catch a gateway that ignores the delay and delivers
-        // immediately. A single receive, not a poll loop: this asserts the message is absent.
+        // Assert
         var beforeDelay = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(2000));
         Assert.Equal(MessageType.MT_NONE, beforeDelay.Header.MessageType);
 
-        // Assert — once the delay has elapsed: poll every 500 ms, giving up after 30 s, and
-        // wait for the message to arrive
+        // Assert
         var received = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))
