@@ -93,7 +93,7 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
 
     /// <inheritdoc />
     /// <remarks>
-    /// Runs <see cref="EndExpiredOnceAsync"/>, and runs it once more if the database chose it as a deadlock victim.
+    /// Runs <see cref="EndExpiredOnceAsync"/>, and runs it once more if <see cref="IsDeadlock"/> recognises the failure.
     /// </remarks>
     public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(
         TripWindow window,
@@ -102,7 +102,7 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
 
     /// <inheritdoc />
     /// <remarks>
-    /// Runs <see cref="ReadLiveOnceAsync"/>, and runs it once more if the database chose it as a deadlock victim.
+    /// Runs <see cref="ReadLiveOnceAsync"/>, and runs it once more if <see cref="IsDeadlock"/> recognises the failure.
     /// </remarks>
     public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(
         TripWindow window,
@@ -111,7 +111,7 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
 
     /// <inheritdoc />
     /// <remarks>
-    /// Runs <see cref="WriteOnceAsync"/>, and runs it once more if the database chose it as a deadlock victim.
+    /// Runs <see cref="WriteOnceAsync"/>, and runs it once more if <see cref="IsDeadlock"/> recognises the failure.
     /// </remarks>
     public Task<IReadOnlyList<TripWriteResult>> WriteAsync(
         IReadOnlyList<TopicTrip> trips,
@@ -148,7 +148,7 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
         IReadOnlyList<TopicTrip> trips,
         CancellationToken cancellationToken);
 
-    // Runs the operation at most twice, the second time only after a deadlock; a second failure reaches the caller. The operation must be safe to run again.
+    // Runs the operation at most twice, the second time only when IsDeadlock recognises the failure; a second failure reaches the caller. The operation must be safe to run again.
     private async Task<T> RunWithDeadlockRetryAsync<T>(Func<Task<T>> operation)
     {
         try
@@ -162,10 +162,13 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
     }
 
     /// <summary>
-    /// Says whether a failure is the database choosing the operation as a deadlock victim.
+    /// Says whether a failure is a conflict the store can clear by running the operation again.
     /// </summary>
     /// <param name="exception">The failure.</param>
-    /// <returns>True when the operation should be run again. The base returns false.</returns>
+    /// <returns>
+    /// True when the operation should be run again. The base returns false. A derived store returns true for a deadlock,
+    /// and for any other conflict that rolls the transaction back and asks for it to be restarted.
+    /// </returns>
     protected virtual bool IsDeadlock(Exception exception) => false;
 
     /// <summary>

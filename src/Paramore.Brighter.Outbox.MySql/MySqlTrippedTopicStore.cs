@@ -121,7 +121,17 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     }
 
     /// <inheritdoc />
-    protected override bool IsDeadlock(Exception exception) => exception is MySqlException { ErrorCode: MySqlErrorCode.LockDeadlock };
+    /// <remarks>
+    /// A deadlock (<see cref="MySqlErrorCode.LockDeadlock"/>) is retried. So is MariaDB
+    /// <see cref="MySqlErrorCode.CheckRead"/> (1020, <c>ER_CHECKREAD</c>). With
+    /// <c>innodb_snapshot_isolation</c> on, MariaDB rolls a <c>REPEATABLE READ</c> transaction back when it
+    /// tries to lock a row another transaction has committed since the snapshot, and its message says to
+    /// restart the transaction. <see cref="EndExpiredOnceAsync"/> does that when two sweepers end the same
+    /// trip: its first read takes the snapshot, and the later locking read can meet the other sweeper's commit.
+    /// The call is safe to run again. MySQL does not raise 1020 for this.
+    /// </remarks>
+    protected override bool IsDeadlock(Exception exception) =>
+        exception is MySqlException { ErrorCode: MySqlErrorCode.LockDeadlock or MySqlErrorCode.CheckRead };
 
     /// <inheritdoc />
     protected override async Task<IReadOnlyList<TopicTrip>> EndExpiredOnceAsync(
