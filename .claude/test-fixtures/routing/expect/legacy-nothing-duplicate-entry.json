@@ -1,0 +1,32 @@
+{
+  "run": [
+    "--spec",
+    "legacy-nothing"
+  ],
+  "flows": "flows-duplicate-entry",
+  "exit": 0,
+  "report": {
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R12",
+        "code": "approval-entry",
+        "step": null,
+        "message": ".claude/test-fixtures/routing/flows-duplicate-entry/approvals.md has more than one entry for kind tasks."
+      }
+    ],
+    "steps": [
+      {
+        "name": "requirements",
+        "approval_subflow": []
+      },
+      {
+        "name": "design"
+      },
+      {
+        "name": "tasks",
+        "approval_subflow": null
+      }
+    ]
+  }
+}

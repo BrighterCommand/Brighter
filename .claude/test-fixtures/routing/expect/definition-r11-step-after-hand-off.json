@@ -1,0 +1,19 @@
+{
+  "run": ["--definition", "r11-step-after-hand-off"],
+  "flows": "flows-rules",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "r11-step-after-hand-off", "source": "definition", "definition_present": true },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R11",
+        "code": "step-after-hand-off",
+        "step": null,
+        "message": "A step follows the hand-off at line 11."
+      }
+    ]
+  }
+}

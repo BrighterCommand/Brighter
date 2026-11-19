@@ -1,0 +1,9 @@
+# flow: r13-last-not-tasks
+
+| Step | Kind | Producer | Artefacts | Marker | Marker-writer |
+| --- | --- | --- | --- | --- | --- |
+| requirements | requirements | /spec:requirements | requirements.md | .requirements-approved | /spec:approve requirements |
+| tasks | tasks | /spec:tasks | tasks.md | .tasks-approved | /spec:approve tasks |
+| design | design | /spec:design | .adr-list | .design-approved | /spec:approve design |
+
+hand-off: /spec:implement

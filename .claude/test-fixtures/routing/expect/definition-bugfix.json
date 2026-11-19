@@ -1,0 +1,17 @@
+{
+  "run": [
+    "--definition",
+    "bugfix"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "flow": {
+      "name": "bugfix",
+      "source": "definition",
+      "definition_present": true
+    },
+    "valid": true,
+    "violations": []
+  }
+}

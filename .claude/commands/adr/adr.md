@@ -37,18 +37,20 @@ So: take `max+1`, but if a concurrent branch later lands the same number, that c
 
 ### Step 2: Check for Linked Specification
 
-Check if there's a current specification this ADR should be linked to:
+Resolve the route to find any current specification this ADR should be linked to. `{command}` is `/adr:adr`.
 
-```bash
-# Check if specs/.current-spec exists
-if [ -f specs/.current-spec ]; then
-    cat specs/.current-spec
-fi
-```
+This command overrides the last sentence of the route instructions: when `stop.reason` is `current-spec-missing`, `current-spec-empty` or `current-spec-stale`, proceed with no linked spec instead of stopping, write a standalone ADR and skip the closing instructions.
 
-If a current spec exists:
-- Read `specs/[spec-name]/requirements.md` to understand context
-- This ADR should reference the parent requirement
+<!-- routing-text:route-instructions:begin -->
+Run `dotnet run .claude/commands/spec/resolve_route.cs -- specs/ --current`. If the exit status is not `0`, or standard output has no line beginning `route-report: `, or the JSON after that prefix on the last such line does not parse, stop. Print `{command} could not run the route resolver (.claude/commands/spec/resolve_route.cs): {state}. This is a tooling fault, not a fault in the spec — re-run after restoring the script.` Create or modify no file. Otherwise hold that JSON object as the route report. If `stop` is not `null`, print `stop.message` and stop, creating or modifying no file.
+<!-- routing-text:route-instructions:end -->
+
+The linked spec is the report's `spec`. Never read the approval marker files yourself.
+
+If there is a linked spec and `known_kinds.design` is `null`, stop, creating or modifying no file, and print the No design step template.
+
+If there is a linked spec and `known_kinds.design` is not `null`:
+- If `known_kinds.requirements` is not `null`, read `specs/[spec-name]/requirements.md` to understand context; this ADR should reference the parent requirement
 - Add this ADR to `specs/[spec-name]/.adr-list`
 
 ### Step 3: Read the ADR Authoring Guidance
@@ -301,7 +303,7 @@ awk -f .claude/commands/adr/generate_adr_index.awk docs/adr/[0-9]*.md > docs/adr
 
 ### Step 7: Update Spec ADR List (if applicable)
 
-If linked to a spec, append this ADR to the spec's ADR list:
+If linked to a spec that has a design step, append this ADR to the spec's ADR list:
 
 ```bash
 echo "docs/adr/[NNNN]-[title].md" >> specs/[spec-name]/.adr-list
@@ -342,7 +344,22 @@ Ask the user for the next step:
    - Create a feature branch if not already on one
    - Commit the ADR: `git commit -m "docs: add ADR for [title]"`
    - Continue with additional ADRs if needed
-   - Or proceed to `/spec:tasks` if design is complete
+   - Or tell the user the design is ready for review if it is complete
+
+With a linked spec, finish with the closing instructions. With no linked spec, skip them.
+
+<!-- routing-text:closing-instructions:begin -->
+After your last write, run `dotnet run .claude/commands/spec/resolve_route.cs -- specs/ --current` again, and apply the same test for a tooling fault as above. If it passes, print the next-step line, built from `next` in this second report. If it fails, print the tooling-fault message in place of the next-step line. Undo no write.
+<!-- routing-text:closing-instructions:end -->
+
+The templates this command prints:
+
+<!-- routing-text:templates:begin -->
+| Template | Printed by | Text |
+| --- | --- | --- |
+| Next-step line | the closing instructions, `/spec:status`, `/spec:switch`, `/spec:review`'s closing reminder, the route-changed template (0091), `/spec:new`'s post-check (0091), and the three templates below that end in it | ``Next: {next.commands joined with " then "}.``, or ``No next step: the slip is invalid (see violations).`` when `next.commands` is empty. Then ``Unattended: {next.unattended_driver}.`` when it is not `null`, and one ``Optional: {detour.command}, then return to {detour.return_to}.`` for each entry of `next.detours`, in order, all on the same line. With empty `next.commands` there is no driver and no detour |
+| No design step | `/adr:adr`, with a linked spec | ``Flow `{flow}` has no design step, so `/adr:adr` has no `.adr-list` to update for this spec.`` followed by the next-step line. The command writes nothing |
+<!-- routing-text:templates:end -->
 
 ## Important Guidelines
 
@@ -417,7 +434,7 @@ Status: Proposed
 Next steps:
 1. Review and edit the ADR as needed
 2. Commit: git commit -m "docs: add ADR for kafka message serialization strategy"
-3. Create more ADRs if needed, or approve design with /spec:approve design
+3. Create more ADRs if needed, or review the design
 4. Status will change to "Accepted" when approved
 
 The ADR has been added to specs/0001-kafka-dead-letter-queue/.adr-list

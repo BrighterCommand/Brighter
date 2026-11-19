@@ -1,0 +1,25 @@
+{
+  "run": ["--definition", "r03-duplicate-marker"],
+  "flows": "flows-rules",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "r03-duplicate-marker", "source": "definition", "definition_present": true },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R3",
+        "code": "duplicate-marker",
+        "step": null,
+        "message": "Marker .design-approved is named by more than one step (design, tasks)."
+      },
+      {
+        "rule": "R13",
+        "code": "last-step-not-tasks",
+        "step": "tasks",
+        "message": "The last step, tasks, is not the tasks step (kind tasks, tasks.md, .tasks-approved)."
+      }
+    ]
+  }
+}

@@ -61,6 +61,12 @@ public class OutboxConfiguration
     public bool SupportsTransactions { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets whether to generate per-topic outstanding-count conformance and cancellation tests.
+    /// Defaults to false for outboxes that do not implement the optional topic-counting capability.
+    /// </summary>
+    public bool SupportsTopicCounting { get; set; }
+
+    /// <summary>
     /// Gets or sets the test category to apply to generated test classes.
     /// </summary>
     public string? Category { get; set; }

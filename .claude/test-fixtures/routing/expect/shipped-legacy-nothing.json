@@ -1,0 +1,158 @@
+{
+  "run": [
+    "--spec",
+    "legacy-nothing"
+  ],
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "spec",
+    "spec": ".claude/test-fixtures/routing/specs/legacy-nothing",
+    "flow": {
+      "name": "feature",
+      "source": "default",
+      "definition_present": true
+    },
+    "valid": true,
+    "violations": [],
+    "tampered": {
+      "value": false,
+      "case": null,
+      "recorded_flow": null
+    },
+    "route_change": null,
+    "steps": [
+      {
+        "name": "requirements",
+        "kind": "requirements",
+        "known_kind": true,
+        "producer": "/spec:requirements",
+        "artefacts": [
+          "requirements.md"
+        ],
+        "artefacts_present": false,
+        "marker": ".requirements-approved",
+        "marker_writer": "/spec:approve requirements",
+        "approved": false,
+        "approval_subflow": [],
+        "gate": null,
+        "precondition": {
+          "holds": true,
+          "unapproved": [],
+          "message": null
+        }
+      },
+      {
+        "name": "design",
+        "kind": "design",
+        "known_kind": true,
+        "producer": "/spec:design",
+        "artefacts": [
+          ".adr-list"
+        ],
+        "artefacts_present": false,
+        "marker": ".design-approved",
+        "marker_writer": "/spec:approve design",
+        "approved": false,
+        "approval_subflow": [
+          "/adr:accept",
+          "/adr:retire-superseded",
+          "/adr:regenerate-index",
+          "/adr:report-approval"
+        ],
+        "gate": null,
+        "precondition": {
+          "holds": false,
+          "unapproved": [
+            {
+              "step": "requirements",
+              "marker_writer": "/spec:approve requirements"
+            }
+          ],
+          "message": "`/spec:design` needs step `requirements` approved — run `/spec:approve requirements`."
+        }
+      },
+      {
+        "name": "tasks",
+        "kind": "tasks",
+        "known_kind": true,
+        "producer": "/spec:tasks",
+        "artefacts": [
+          "tasks.md"
+        ],
+        "artefacts_present": false,
+        "marker": ".tasks-approved",
+        "marker_writer": "/spec:approve tasks",
+        "approved": false,
+        "approval_subflow": [],
+        "gate": null,
+        "precondition": {
+          "holds": false,
+          "unapproved": [
+            {
+              "step": "design",
+              "marker_writer": "/spec:approve design"
+            }
+          ],
+          "message": "`/spec:tasks` needs step `design` approved — run `/spec:approve design`."
+        }
+      }
+    ],
+    "known_kinds": {
+      "requirements": {
+        "step": "requirements",
+        "producer": "/spec:requirements",
+        "marker_writer": "/spec:approve requirements"
+      },
+      "design": {
+        "step": "design",
+        "producer": "/spec:design",
+        "marker_writer": "/spec:approve design"
+      },
+      "tasks": {
+        "step": "tasks",
+        "producer": "/spec:tasks",
+        "marker_writer": "/spec:approve tasks"
+      }
+    },
+    "gates": [],
+    "stray_markers": [],
+    "out_of_order": [],
+    "next": {
+      "step": "requirements",
+      "kind": "requirements",
+      "commands": [
+        "/spec:requirements"
+      ],
+      "unattended_driver": null,
+      "detours": []
+    },
+    "hand_off": {
+      "command": "/spec:implement",
+      "precondition": {
+        "holds": false,
+        "unapproved": [
+          {
+            "step": "requirements",
+            "marker_writer": "/spec:approve requirements"
+          },
+          {
+            "step": "design",
+            "marker_writer": "/spec:approve design"
+          },
+          {
+            "step": "tasks",
+            "marker_writer": "/spec:approve tasks"
+          }
+        ],
+        "message": "Implementation needs every step approved — unapproved: `requirements` (run `/spec:approve requirements`), `design` (run `/spec:approve design`), `tasks` (run `/spec:approve tasks`)."
+      }
+    },
+    "approve_steps": [
+      "requirements",
+      "design",
+      "tasks"
+    ],
+    "stop": null
+  }
+}

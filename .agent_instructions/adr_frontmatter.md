@@ -75,8 +75,9 @@ When you refer to an ADR in prose or `Related ADRs`, prefer the slug/filename
 Canonical values (Nygard vocabulary):
 
 - **Proposed** — drafted, not yet approved. New ADRs start here (set by `/spec:design` / `/adr`).
-- **Accepted** — approved and in force. `/spec:approve design` flips `Proposed` → `Accepted` in
-  both the frontmatter `status` and the body `## Status`.
+- **Accepted** — approved and in force. `/adr:accept`, run by the `design` sub-flow of
+  `/spec:approve design`, flips `Proposed` → `Accepted` in both the frontmatter `status` and the
+  body `## Status`.
 - **Deprecated** — no longer in force, but *not* replaced by a specific ADR (the decision was
   retired/abandoned). Use this when there is no superseding ADR to point at.
 - **Superseded** — replaced by a *specific* later ADR. When a new ADR supersedes an older one, set
@@ -156,7 +157,7 @@ It is a derived cache for single-file reads — it must never be hand-edited; re
 frontmatter so it cannot drift. The generated file carries a `DO NOT EDIT` banner.
 
 **Regenerate** it after adding an ADR or changing any frontmatter (status, tags, summary, title).
-This is the single canonical command — `/adr` and `/spec:approve` call it, and you can run it by
+This is the single canonical command — `/adr` and `/adr:regenerate-index` (the `design` sub-flow of `/spec:approve`) call it, and you can run it by
 hand:
 
 ```bash

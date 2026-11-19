@@ -1,0 +1,51 @@
+{
+  "run": [
+    "--spec",
+    "bugfix-nothing"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "valid": true,
+    "violations": [],
+    "flow": {
+      "name": "bugfix",
+      "source": "slip",
+      "definition_present": true
+    },
+    "steps": [
+      {
+        "name": "diagnosis",
+        "kind": "diagnosis",
+        "known_kind": false,
+        "approval_subflow": []
+      },
+      {
+        "name": "tasks"
+      }
+    ],
+    "gates": [
+      {
+        "command": "/bugfix:confirm",
+        "approves": "diagnosis",
+        "produces": "tasks",
+        "also_approves_produced": true
+      }
+    ],
+    "known_kinds": {
+      "requirements": null,
+      "design": null,
+      "tasks": {
+        "step": "tasks",
+        "producer": "/bugfix:confirm"
+      }
+    },
+    "approve_steps": [],
+    "next": {
+      "step": "diagnosis",
+      "commands": [
+        "/bugfix:triage"
+      ]
+    }
+  }
+}

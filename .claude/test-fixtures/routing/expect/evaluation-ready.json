@@ -1,0 +1,40 @@
+{
+  "run": [
+    "--spec",
+    "evaluation-ready"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "valid": true,
+    "violations": [],
+    "steps": [
+      {
+        "name": "evaluation",
+        "kind": "evaluation",
+        "known_kind": false
+      },
+      {
+        "name": "tasks"
+      }
+    ],
+    "next": {
+      "step": "evaluation",
+      "kind": "evaluation",
+      "commands": [
+        "/spec:approve evaluation"
+      ]
+    },
+    "known_kinds": {
+      "requirements": null,
+      "design": null
+    },
+    "approve_steps": [
+      "evaluation",
+      "tasks"
+    ],
+    "stray_markers": [
+      ".requirements-approved"
+    ]
+  }
+}

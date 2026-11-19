@@ -1,0 +1,55 @@
+{
+  "run": [
+    "--spec",
+    "route-changed-light"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "valid": true,
+    "steps": [
+      {
+        "name": "design",
+        "approved": true
+      },
+      {
+        "name": "tasks",
+        "precondition": {
+          "holds": true
+        }
+      }
+    ],
+    "next": {
+      "commands": [
+        "/spec:tasks"
+      ]
+    },
+    "known_kinds": {
+      "requirements": null
+    },
+    "hand_off": {
+      "precondition": {
+        "holds": false,
+        "unapproved": [
+          {
+            "step": "tasks",
+            "marker_writer": "/spec:approve tasks"
+          }
+        ],
+        "message": "Implementation needs every step approved \u2014 unapproved: `tasks` (run `/spec:approve tasks`)."
+      }
+    },
+    "route_change": {
+      "date": "2026-11-12",
+      "from": "feature",
+      "to": "light",
+      "reason": "The change is small enough to skip requirements."
+    },
+    "stray_markers": [
+      ".requirements-approved"
+    ],
+    "flow": {
+      "name": "light"
+    }
+  }
+}

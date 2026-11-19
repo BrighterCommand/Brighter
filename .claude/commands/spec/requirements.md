@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(mkdir:*), Bash(echo:*), Bash(gh:*), Bash(git:*), Read, Write, Glob, Agent, AskUserQuestion
+allowed-tools: Bash(dotnet run .claude/commands/spec/resolve_route.cs -- specs/:*), Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(gh:*), Bash(git:*), Read, Write, Glob, Agent, AskUserQuestion
 description: Create or review requirements specification
 argument-hint: [issue-number]
 ---
@@ -24,13 +24,21 @@ any ambiguous inputs with the user via `AskUserQuestion` (Step 2.5) *before* lau
 owns ALL of the bookkeeping — spec-directory setup, `gh`, branch management, writing the file,
 and the issue comment. See `.claude/commands/spec/README.md` → "Sub-agents & model policy".
 
-### Step 1: Setup Spec Directory
+### Step 1: Resolve the Route
 
-1. Create `specs/` directory if it doesn't exist: `mkdir -p specs`
-2. If `.current-spec` doesn't exist, determine next spec ID and create spec directory
-   - Check existing specs: `ls specs/` to find highest number
-   - Format: `specs/NNNN-{feature-name}/` (e.g., `specs/0001-kafka-dlq/`)
-   - Update `specs/.current-spec` with the new spec directory name
+Resolve the route first. `{command}` is `/spec:requirements`.
+
+<!-- routing-text:route-instructions:begin -->
+Run `dotnet run .claude/commands/spec/resolve_route.cs -- specs/ --current`. If the exit status is not `0`, or standard output has no line beginning `route-report: `, or the JSON after that prefix on the last such line does not parse, stop. Print `{command} could not run the route resolver (.claude/commands/spec/resolve_route.cs): {state}. This is a tooling fault, not a fault in the spec — re-run after restoring the script.` Create or modify no file. Otherwise hold that JSON object as the route report. If `stop` is not `null`, print `stop.message` and stop, creating or modifying no file.
+<!-- routing-text:route-instructions:end -->
+
+The active specification directory is the report's `spec`. This command never creates a spec
+directory or writes `.current-spec`. Never read the approval marker files yourself: the route
+report is the only source of the spec's flow, steps and next step.
+
+- If `known_kinds.requirements` is `null`, stop and create or modify no file. Print the Not on the route template.
+- If `known_kinds.requirements.producer` is not `/spec:requirements`, stop and create or modify no file. Print the Another producer template, with `{step}` as `known_kinds.requirements.step` and `{producer}` as `known_kinds.requirements.producer`.
+- Otherwise read the `steps` entry named `known_kinds.requirements.step`. If its `precondition.holds` is false, print its `precondition.message` and stop, creating or modifying no file.
 
 ### Step 2: Pull Existing Issue (if provided)
 
@@ -202,7 +210,19 @@ If issue number was provided:
 
 ### Step 8: Next Steps
 
-Remind user:
-- Review requirements.md
-- Run `/spec:review requirements` for an adversarial review, then `/spec:approve requirements` when ready to proceed to design phase
-- Next step: Create ADR in `docs/adr/` with technical design decisions
+Remind user to review requirements.md.
+
+<!-- routing-text:closing-instructions:begin -->
+After your last write, run `dotnet run .claude/commands/spec/resolve_route.cs -- specs/ --current` again, and apply the same test for a tooling fault as above. If it passes, print the next-step line, built from `next` in this second report. If it fails, print the tooling-fault message in place of the next-step line. Undo no write.
+<!-- routing-text:closing-instructions:end -->
+
+The templates this command prints:
+
+<!-- routing-text:templates:begin -->
+| Template | Printed by | Text |
+| --- | --- | --- |
+| Next-step line | the closing instructions, `/spec:status`, `/spec:switch`, `/spec:review`'s closing reminder, the route-changed template (0091), `/spec:new`'s post-check (0091), and the three templates below that end in it | ``Next: {next.commands joined with " then "}.``, or ``No next step: the slip is invalid (see violations).`` when `next.commands` is empty. Then ``Unattended: {next.unattended_driver}.`` when it is not `null`, and one ``Optional: {detour.command}, then return to {detour.return_to}.`` for each entry of `next.detours`, in order, all on the same line. With empty `next.commands` there is no driver and no detour |
+| Not on the route | the producing commands | ``{command} is not on flow `{flow}`'s route.`` followed by the next-step line |
+| Another producer | the producing commands | ``Step `{step}` on flow `{flow}` is produced by `{producer}`, not {command}. Run `{producer}`.`` |
+
+<!-- routing-text:templates:end -->

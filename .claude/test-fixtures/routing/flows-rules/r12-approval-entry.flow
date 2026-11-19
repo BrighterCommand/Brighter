@@ -1,0 +1,10 @@
+# flow: r12-approval-entry
+
+| Step | Kind | Producer | Artefacts | Marker | Marker-writer |
+| --- | --- | --- | --- | --- | --- |
+| spike | spike | /spec:review | spike.md | .spike-approved | /spec:approve spike |
+| requirements | requirements | /spec:requirements | requirements.md | .requirements-approved | /spec:approve requirements |
+| design | design | /spec:design | .adr-list | .design-approved | /spec:approve design |
+| tasks | tasks | /spec:tasks | tasks.md | .tasks-approved | /spec:approve tasks |
+
+hand-off: /spec:implement

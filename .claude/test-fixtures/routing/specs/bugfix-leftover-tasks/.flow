@@ -1,0 +1,8 @@
+# flow: bugfix
+
+| Step | Kind | Producer | Artefacts | Marker | Marker-writer |
+| --- | --- | --- | --- | --- | --- |
+| diagnosis | diagnosis | /bugfix:triage | bugfix.md | .confirm-approved | /bugfix:confirm |
+| tasks | tasks | /bugfix:confirm | tasks.md | .tasks-approved | /bugfix:confirm |
+
+hand-off: /spec:implement
