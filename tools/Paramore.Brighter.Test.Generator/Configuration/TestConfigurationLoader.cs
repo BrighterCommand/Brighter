@@ -33,16 +33,8 @@ namespace Paramore.Brighter.Test.Generator.Configuration;
 /// generators render from.
 /// </summary>
 /// <remarks>
-/// Turning a file into a configuration is stated once, here, because more than one caller does it:
-/// the generator when it writes the tree, and the audit when it asks what the tree should hold. Two
-/// statements of it would agree until one of them was changed - which had already happened, over
-/// whether an explicit <see cref="TestConfiguration.DestinationFolder"/> is honoured.
-/// </remarks>
-/// <remarks>
-/// The <see cref="TestConfiguration.DestinationFolder"/> a caller receives is always absolute -
-/// including the defaulted one, which is why the default is put through
-/// <see cref="Path.GetFullPath(string)"/> rather than trusted - so that the paths built from it are
-/// absolute too, whichever directory the caller happens to run in.
+/// The one reader of a configuration file, shared by the generator and the generated-tree audit.
+/// The <see cref="TestConfiguration.DestinationFolder"/> it returns is always absolute.
 /// </remarks>
 public static class TestConfigurationLoader
 {
@@ -51,8 +43,7 @@ public static class TestConfigurationLoader
     /// </summary>
     public const string ConfigurationFileName = "test-configuration.json";
 
-    // Pinned rather than left to the ambient default, so that both callers deserialize by the same
-    // rules. These are the defaults the generator has always read configurations with.
+    // Pinned so that both callers deserialize by the same rules.
     private static readonly JsonSerializerOptions s_serializerOptions = new(JsonSerializerDefaults.General);
 
     /// <summary>
