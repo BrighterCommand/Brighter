@@ -34,6 +34,7 @@ public sealed class MySqlDeadlockRowHolder : DeadlockRowHolder
 
     private readonly IAmARelationalDbConnectionProvider _provider;
     private readonly string _table;
+    private bool? _serverIsMariaDb;
 
     private MySqlDeadlockRowHolder(
         IAmARelationalDbConnectionProvider provider,
@@ -67,9 +68,52 @@ public sealed class MySqlDeadlockRowHolder : DeadlockRowHolder
     protected override async Task<long> CountBlockedAsync()
     {
         await using var connection = await _provider.GetConnectionAsync(default);
+        _serverIsMariaDb ??= await ServerIsMariaDbAsync(connection);
+        return _serverIsMariaDb.Value
+            ? await CountMariaDbLockWaitsAsync(connection)
+            : await CountMySqlLockWaitsAsync(connection);
+    }
+
+    private async Task<long> CountMySqlLockWaitsAsync(DbConnection connection)
+    {
         await using var command = connection.CreateCommand();
         command.CommandText =
             $"SELECT COUNT(*) FROM performance_schema.data_lock_waits WHERE BLOCKING_ENGINE_TRANSACTION_ID = {BlockingId}";
         return Convert.ToInt64(await command.ExecuteScalarAsync());
+    }
+
+    // information_schema.innodb_lock_waits does list the wait, but polling it on the test's 20 ms
+    // loop makes that table return no rows for the whole wait. The engine status still names the
+    // blocked statement and the table.
+    private async Task<long> CountMariaDbLockWaitsAsync(DbConnection connection)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SHOW ENGINE INNODB STATUS";
+        await using var reader = await command.ExecuteReaderAsync();
+        if (!await reader.ReadAsync())
+            return 0;
+
+        return CountLockWaits(reader.GetString(reader.GetOrdinal("Status")), _table);
+    }
+
+    private static long CountLockWaits(string status, string table)
+    {
+        var quotedTable = $"`{table}`";
+        long waiting = 0;
+        foreach (var block in status.Split("---TRANSACTION ", StringSplitOptions.None))
+        {
+            if (block.Contains("LOCK WAIT", StringComparison.Ordinal) && block.Contains(quotedTable, StringComparison.Ordinal))
+                waiting++;
+        }
+
+        return waiting;
+    }
+
+    private static async Task<bool> ServerIsMariaDbAsync(DbConnection connection)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT VERSION()";
+        var version = Convert.ToString(await command.ExecuteScalarAsync());
+        return version?.Contains("MariaDB", StringComparison.OrdinalIgnoreCase) == true;
     }
 }
