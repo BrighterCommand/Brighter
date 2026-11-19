@@ -1,5 +1,5 @@
 ---
-id: 0090-outbox-failure-channel
+id: 0093-outbox-failure-channel
 title: "Outbox failure channel"
 status: Proposed
 author:
@@ -13,7 +13,7 @@ tags:
   - "concurrency"
 ---
 
-# 90. Outbox failure channel
+# 93. Outbox failure channel
 
 Date: 2026-11-05
 
@@ -27,7 +27,7 @@ A send from the outbox can fail without anyone in the application being told. Th
 
 ### Terms
 
-The requirements of spec 0040 define *clear*, *attempt*, *raise*, *kind*, *capacity* and *dropped count*. This ADR uses those words with those meanings, and adds these:
+The requirements of spec 0041 define *clear*, *attempt*, *raise*, *kind*, *capacity* and *dropped count*. This ADR uses those words with those meanings, and adds these:
 
 - **Failure channel**: the requirements' *notification channel*. It is one bounded in-memory buffer of notifications with one dropped count. *Where the pieces live* names its type.
 - **Attach**: the single call in which a mediator claims a failure channel. *Key Components* gives the contract.
@@ -35,7 +35,7 @@ The requirements of spec 0040 define *clear*, *attempt*, *raise*, *kind*, *capac
 
 ### Scope
 
-**Parent requirement**: [specs/0040-outbox-failure-channel/requirements.md](../../specs/0040-outbox-failure-channel/requirements.md)
+**Parent requirement**: [specs/0041-outbox-failure-channel/requirements.md](../../specs/0041-outbox-failure-channel/requirements.md)
 
 **In scope**:
 
@@ -574,7 +574,7 @@ Rejection would make "one reader" explicit, but it needs state to tell a restart
 
 ## References
 
-- Requirements: [specs/0040-outbox-failure-channel/requirements.md](../../specs/0040-outbox-failure-channel/requirements.md)
+- Requirements: [specs/0041-outbox-failure-channel/requirements.md](../../specs/0041-outbox-failure-channel/requirements.md)
 - Related ADRs:
   - [0063-failed-delivery-context](0063-failed-delivery-context.md) defines `PublishConfirmationResult`, which is unchanged.
   - [0069-factory-registry-ownership-and-disposal-cascade](0069-factory-registry-ownership-and-disposal-cascade.md) keeps disposal with the creator, so the mediator closes and does not dispose.

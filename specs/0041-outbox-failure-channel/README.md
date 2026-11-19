@@ -1,4 +1,4 @@
-# Spec 0040: Outbox Failure Channel
+# Spec 0041: Outbox Failure Channel
 
 **Created:** 2026-11-05
 **GitHub Issue:** #4489 (the channel for failed clears; PR #4598 shipped the telemetry half)
