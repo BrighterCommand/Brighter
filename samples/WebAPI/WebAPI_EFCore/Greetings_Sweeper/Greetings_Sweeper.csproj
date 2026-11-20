@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AWSSDK.DynamoDBv2" />
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Extensions.Diagnostics\Paramore.Brighter.Extensions.Diagnostics.csproj"/>
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Outbox.Hosting\Paramore.Brighter.Outbox.Hosting.csproj" />
     <ProjectReference Include="..\..\WebAPI_Common\DbMaker\DbMaker.csproj" />
