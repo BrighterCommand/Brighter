@@ -159,8 +159,9 @@ dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Asyn
 ```
 
 Without `Requires!=Docker-mTLS` you get mutual-TLS failures for a certificate you have not
-generated; those need a separate broker and are covered by
-[RABBITMQ_MTLS_TESTING_GUIDE.md](../../RABBITMQ_MTLS_TESTING_GUIDE.md).
+generated; those need a separate broker — see
+[`tests/generate-test-certs.sh`](../../tests/generate-test-certs.sh) and
+[`tests/docker-compose.rabbitmq-mtls.yml`](../../tests/docker-compose.rabbitmq-mtls.yml).
 
 ⚠️ **Some configurations cannot be run locally at all.** GCP's four are emulator-only and the
 emulator cannot create a dead-letter subscription; AWS needs real AWS for several behaviours, since
