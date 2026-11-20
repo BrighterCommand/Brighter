@@ -1,0 +1,19 @@
+{
+  "run": ["--definition", "r05-shared-producer"],
+  "flows": "flows-rules",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "r05-shared-producer", "source": "definition", "definition_present": true },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R5",
+        "code": "shared-producer",
+        "step": null,
+        "message": "/spec:design is the producer of more than one step (design, tasks)."
+      }
+    ]
+  }
+}

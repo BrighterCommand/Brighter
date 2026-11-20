@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(grep:*), Bash(mkdir:*), Bash(npx:*), Bash(python3:*), Bash(git diff:*), Bash(git log:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git show:*), Read, Write, Glob, Grep, Agent, AskUserQuestion
+allowed-tools: Bash(dotnet run .claude/commands/spec/resolve_route.cs -- specs/:*), Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(grep:*), Bash(mkdir:*), Bash(npx:*), Bash(python3:*), Bash(git diff:*), Bash(git log:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git show:*), Read, Write, Glob, Grep, Agent, AskUserQuestion
 description: Review current specification phase (requirements, design, tasks, or code)
 argument-hint: [requirements|design [adr-number]|tasks|code [base-ref]] [threshold]
 ---
@@ -18,21 +18,32 @@ Current spec directory: specs/
 
 ### Step 1: Parse Arguments and Determine What to Review
 
-Read `specs/.current-spec` to determine the active specification directory.
+Resolve the route first. `{command}` is `/spec:review`.
 
-**Error handling**: If `.current-spec` does not exist, tell the user to run `/spec:new` first and stop. If the spec directory doesn't exist, tell the user and stop. If the document for the requested phase doesn't exist (e.g., no `requirements.md`), tell the user to run the appropriate creation command first (e.g., `/spec:requirements`) and stop. Do NOT launch the sub-agent with missing documents.
+<!-- routing-text:route-instructions:begin -->
+Run `dotnet run .claude/commands/spec/resolve_route.cs -- specs/ --current`. If the exit status is not `0`, or standard output has no line beginning `route-report: `, or the JSON after that prefix on the last such line does not parse, stop. Print `{command} could not run the route resolver (.claude/commands/spec/resolve_route.cs): {state}. This is a tooling fault, not a fault in the spec — re-run after restoring the script.` Create or modify no file. Otherwise hold that JSON object as the route report. If `stop` is not `null`, print `stop.message` and stop, creating or modifying no file.
+<!-- routing-text:route-instructions:end -->
+
+The active specification directory is the report's `spec`. Never read the approval marker files yourself, and never fall back to them: the route report is the only source of the spec's flow, steps and next step.
+
+**Error handling**: If the document for the requested phase doesn't exist (e.g., no `requirements.md`), tell the user to run the appropriate creation command first (e.g., `/spec:requirements`) and stop. Do NOT launch the sub-agent with missing documents.
 
 Parse $ARGUMENTS:
 - Extract **phase**: first word — `requirements`, `design`, `tasks`, or `code`
 - Extract **adr-number**: for `design` phase, a zero-padded 4-digit number (e.g., `0053`). **Precedence rule**: a 4-digit zero-padded number is ALWAYS an ADR number, never a threshold.
 - Extract **base-ref**: for `code` phase, a token starting with `--base=` (e.g., `--base=origin/master`). Default base is `master`.
 - Extract **threshold**: any other numeric value (default: **60**)
-- If phase is empty: auto-detect. Check approval markers in order: `.requirements-approved`, `.design-approved`, `.tasks-approved`. The first missing marker is the phase to review. If all three are approved, default to `code` (review the implementation against the approved specs). If no branch is checked out or there is no diff vs. base, tell the user there is nothing to review and suggest `/spec:status`.
+- If phase is empty: take it from the route report's `next`.
+  - If `next.step` is `null`, every step is approved: the phase is `code` (review the implementation against the approved specs). If no branch is checked out or there is no diff vs. base, tell the user there is nothing to review and suggest `/spec:status`.
+  - Otherwise, if `known_kinds` has an entry for `next.kind`, the phase is `next.kind`.
+  - Otherwise stop and create or modify no file. Print the Step with no review criteria template, with `{marker_writer}` as the `marker_writer` of the `steps` entry named `next.step`.
+- If phase is given: `code` is always accepted. Any other phase is accepted only when `known_kinds` has a non-`null` entry for it. Otherwise stop and create or modify no file. Print the Phase not on the route template, then the next-step line.
+- When `known_kinds.requirements` is `null`, print the No requirements step template as a note before the review, and apply no FR criteria: do not read `requirements.md`, and leave out every criterion in Step 4 that grades against FRs or `requirements.md`.
 
 **Approved phase warning**: If the user explicitly requests review of an already-approved phase, note this in the sub-agent prompt and include a note in the output: "This phase is already approved. Findings are informational — consider whether any warrant re-opening the phase." (Not applicable to `code` — code is never "approved" by the spec system.)
 
 Examples:
-- `/spec:review` → auto-detect phase, threshold 60
+- `/spec:review` → phase from `next.kind`, threshold 60
 - `/spec:review requirements` → review requirements, threshold 60
 - `/spec:review requirements 70` → review requirements, threshold 70
 - `/spec:review design 0053` → review ADR 0053, threshold 60
@@ -54,7 +65,7 @@ Read ALL documents the sub-agent will need. The sub-agent gets a clean context �
 **For design review:**
 - Read `specs/{current-spec}/.adr-list` to find ADRs
 - Read each ADR from `docs/adr/{filename}` (or just the specified one)
-- Read `specs/{current-spec}/requirements.md` (for cross-referencing)
+- Read `specs/{current-spec}/requirements.md` (for cross-referencing), only when `known_kinds.requirements` is not `null`
 - Pass the path to `.agent_instructions/documentation.md` — § *Architecture Decision Records* is
   the canonical skeleton, readability rules, diagram rules and pre-commit checks that the
   *Structure and Readability* criteria in Step 4 grade against, and § *Writing tone for design
@@ -65,7 +76,7 @@ Read ALL documents the sub-agent will need. The sub-agent gets a clean context �
 
 **For tasks review:**
 - Read `specs/{current-spec}/tasks.md`
-- Read `specs/{current-spec}/requirements.md` (for cross-referencing)
+- Read `specs/{current-spec}/requirements.md` (for cross-referencing), only when `known_kinds.requirements` is not `null`
 - Read `specs/{current-spec}/.adr-list` and each ADR (for cross-referencing)
 
 **For code review:**
@@ -75,7 +86,7 @@ Read ALL documents the sub-agent will need. The sub-agent gets a clean context �
 - Run `git log --oneline {base-ref}..HEAD` to get the commit list.
 - Run `git status --porcelain` to check for uncommitted changes (flag in findings if present).
 - If the diff is empty, tell the user there is nothing to review vs. `{base-ref}` and stop.
-- Read `specs/{current-spec}/requirements.md`, all ADRs from `.adr-list`, and `specs/{current-spec}/tasks.md`. These are the contracts the code must satisfy.
+- Read `specs/{current-spec}/requirements.md` (only when `known_kinds.requirements` is not `null`), all ADRs from `.adr-list`, and `specs/{current-spec}/tasks.md`. These are the contracts the code must satisfy.
 - Read `.agent_instructions/code_style.md`, `.agent_instructions/testing.md`, and `.agent_instructions/design_principles.md` if they exist — these encode project conventions the sub-agent must check against.
 - The sub-agent itself will use `Bash(git diff:* / git show:*)`, `Read`, `Glob`, and `Grep` to pull specific file-level diffs and surrounding context. Do NOT attempt to inline the full diff in the sub-agent prompt — pass the file list, commit list, stats, and base ref, and let the sub-agent drill in where it needs to.
 
@@ -94,7 +105,7 @@ Review is reasoning-heavy work, so it uses opus per the model policy (see
 
 **For requirements reviews**: Include the full text of the document in the sub-agent prompt. If the document is very large (you couldn't read it in one Read call), pass the file path instead and instruct the sub-agent to read it.
 
-**For design and tasks reviews**: Tell the sub-agent the file paths to read — it should read the files itself. This handles large documents (ADRs can be very long) and allows the sub-agent to verify codebase references. Include the requirements.md text in the prompt for cross-referencing (or the file path if it's also large).
+**For design and tasks reviews**: Tell the sub-agent the file paths to read — it should read the files itself. This handles large documents (ADRs can be very long) and allows the sub-agent to verify codebase references. When `known_kinds.requirements` is not `null`, include the requirements.md text in the prompt for cross-referencing (or the file path if it's also large).
 
 **Sub-agent tool access**: The sub-agent (general-purpose) inherits tool access. For design and tasks reviews it SHOULD use Read, Glob, and Grep to read documents and verify codebase references. For **design** reviews it SHOULD additionally use `Bash` to run the diagram render check and the escaped-markdown grep in the *Diagrams* criteria — those are verifications, not judgements, and a review that skips them has not checked the one class of defect that is invisible to a careful read. For **code** reviews it SHOULD additionally use `Bash(git diff:* / git show:* / git log:*)` to pull file-level diffs on demand. The sub-agent should NOT write the findings file — it should return the findings as text. The main agent writes the file after validating the output (see Step 6).
 
@@ -179,7 +190,7 @@ You are a skeptical reviewer. Assume the design has problems — your job is to 
 - Are consequences (both positive AND negative) documented honestly? Designs with only positive consequences are suspicious.
 - Are alternatives listed with genuine rationale for rejection? (Not strawman alternatives.)
 
-**Connection to Requirements:**
+**Connection to Requirements** (leave this group out when `known_kinds.requirements` is `null`):
 - Does the ADR reference specific requirements (FR-N) it addresses?
 - Are there requirements that this ADR should address but doesn't mention?
 - Does the design introduce scope beyond what the requirements ask for?
@@ -291,7 +302,7 @@ You are a skeptical reviewer. Assume the task list has problems — your job is 
 - Could any task be broken into smaller, independently verifiable pieces?
 
 **Coverage Cross-Reference:**
-- Map each FR from requirements.md to tasks. Are there FRs with no corresponding task? LIST THEM.
+- Map each FR from requirements.md to tasks (leave this out when `known_kinds.requirements` is `null`). Are there FRs with no corresponding task? LIST THEM.
 - Map each ADR decision to tasks. Are there design decisions with no implementation task? LIST THEM.
 - Are there tasks that don't trace back to any requirement or design decision? (Scope creep.)
 
@@ -313,8 +324,8 @@ You are a skeptical, **adversarial** reviewer. Your job is to find problems, not
 Every finding MUST cite concrete evidence: a file path, a line range, a diff hunk, or a spec section. No vibes.
 
 **Requirement & ADR Fidelity (highest priority):**
-- For each FR-N in requirements.md, locate where it is implemented in the diff. If you cannot find it, that is a finding (High or Critical depending on FR importance).
-- For each AC, locate a test that asserts it. If the AC is satisfied by a unit test where the spec implies integration, downgrade trust and flag it.
+- When `known_kinds.requirements` is not `null`: for each FR-N in requirements.md, locate where it is implemented in the diff. If you cannot find it, that is a finding (High or Critical depending on FR importance).
+- When `known_kinds.requirements` is not `null`: for each AC, locate a test that asserts it. If the AC is satisfied by a unit test where the spec implies integration, downgrade trust and flag it.
 - For each ADR decision, locate the corresponding code. Flag any deviation where the code does something different from the ADR without a documented reason.
 - Flag scope creep: changed files or new abstractions that don't trace back to any FR, AC, or ADR decision.
 - Flag scope holes: tasks in `tasks.md` marked done but with no visible code.
@@ -459,16 +470,14 @@ After the sub-agent returns:
    - Count of findings by severity
    - List just the title and score of each finding at or above threshold
    - Path to the findings file for full details
-   - For `requirements`/`design`/`tasks`: remind the user to use `/spec:approve {phase}` when ready, or to work the findings (Step 8) and re-run `/spec:review {phase}`.
+   - For `requirements`/`design`/`tasks`: print the next-step line, built from `next` in the route report, and remind the user they can work the findings (Step 8) and re-run `/spec:review {phase}`.
    - For `code`: remind the user that `code` has no approval marker — fix findings, commit, and re-run `/spec:review code` until clean. When clean, the next step is commit/push/PR.
 
 ### Step 7: Spec Status
 
 Display overall spec status:
 - Spec directory: `specs/{current-spec}`
-- Requirements: Approved / In Progress
-- Design: {X} ADRs ({Y} approved, {Z} proposed)
-- Tasks: Approved / In Progress / Not Started
+- One line per entry of the route report's `steps`: the step's `name`, its `kind`, and `approved` or `not approved`. For a step of kind `design`, add the ADR count ({X} ADRs, {Y} approved, {Z} proposed)
 - Code: Reviewed at {commit sha} / Not reviewed (code is "reviewed" if `review-code.md` exists; include its verdict and the commit sha at the top of HEAD when the review was run)
 
 ### Step 8: Working the Findings — Fix Issues, Not Lines
@@ -509,3 +518,21 @@ Fixing lines instead of issues is how a review loop stops converging.
    fix lower items in the same edit when they sit in a concept already touched.
 6. **Commit, then re-run `/spec:review {phase}`** as the next pass. The commit message names the
    issues worked, not only the finding numbers.
+
+The templates this command prints:
+
+<!-- routing-text:templates:begin -->
+| Template | Printed by | Text |
+| --- | --- | --- |
+| Next-step line | the closing instructions, `/spec:status`, `/spec:switch`, `/spec:review`'s closing reminder, the route-changed template (0091), `/spec:new`'s post-check (0091), and the three templates below that end in it | ``Next: {next.commands joined with " then "}.``, or ``No next step: the slip is invalid (see violations).`` when `next.commands` is empty. Then ``Unattended: {next.unattended_driver}.`` when it is not `null`, and one ``Optional: {detour.command}, then return to {detour.return_to}.`` for each entry of `next.detours`, in order, all on the same line. With empty `next.commands` there is no driver and no detour |
+| Phase not on the route | `/spec:review` | ``Phase `{phase}` has no step on flow `{flow}`'s route.`` followed by the next-step line |
+| Step with no review criteria | `/spec:review`, with no phase | ``Next step `{next.step}` on flow `{flow}` has no review criteria. Run its marker-writer, `{marker_writer}`.`` |
+| No requirements step | `/spec:review`, as a note before the review | ``Flow `{flow}` has no requirements step, so no FR criteria apply.`` |
+| Template | Printed by | Text |
+| --- | --- | --- |
+| Template | Printed by | Text |
+| --- | --- | --- |
+| Template | Printed by | Text |
+| --- | --- | --- |
+
+<!-- routing-text:templates:end -->

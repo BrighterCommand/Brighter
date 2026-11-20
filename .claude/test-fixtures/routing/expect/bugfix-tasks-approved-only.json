@@ -1,0 +1,32 @@
+{
+  "run": [
+    "--spec",
+    "bugfix-tasks-approved-only"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "valid": true,
+    "violations": [],
+    "out_of_order": [
+      {
+        "approved": "tasks",
+        "earlier_unapproved": [
+          "diagnosis"
+        ]
+      }
+    ],
+    "hand_off": {
+      "precondition": {
+        "holds": false,
+        "unapproved": [
+          {
+            "step": "diagnosis",
+            "marker_writer": "/bugfix:confirm"
+          }
+        ],
+        "message": "Implementation needs every step approved \u2014 unapproved: `diagnosis` (run `/bugfix:confirm`)."
+      }
+    }
+  }
+}

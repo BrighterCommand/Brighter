@@ -1,0 +1,35 @@
+{
+  "run": [
+    "--spec",
+    "legacy-design-approved"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "steps": [
+      {
+        "name": "requirements",
+        "approved": true
+      },
+      {
+        "name": "design",
+        "approved": true
+      },
+      {
+        "name": "tasks",
+        "approved": false,
+        "precondition": {
+          "holds": true,
+          "unapproved": [],
+          "message": null
+        }
+      }
+    ],
+    "next": {
+      "step": "tasks",
+      "commands": [
+        "/spec:tasks"
+      ]
+    }
+  }
+}

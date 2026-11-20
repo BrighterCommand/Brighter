@@ -1,0 +1,11 @@
+# flow: r00-malformed
+
+| Step | Kind | Producer | Artefacts | Marker | Marker-writer |
+| --- | --- | --- | --- | --- | --- |
+| requirements | requirements | /spec:requirements | requirements.md | .requirements-approved | /spec:approve requirements |
+| design | design | /spec:designx | .adr-list | .design-approved | /spec:approve design |
+| tasks | tasks | /spec:tasks | tasks.md | .tasks-approved | /spec:approve tasks |
+
+This line is prose, not slip syntax.
+
+hand-off: /spec:implement

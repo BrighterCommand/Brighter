@@ -1,0 +1,19 @@
+{
+  "run": ["--definition", "r10-self-approval"],
+  "flows": "flows-rules",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "r10-self-approval", "source": "definition", "definition_present": true },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R10",
+        "code": "self-approval",
+        "step": "requirements",
+        "message": "Step requirements is produced and approved by /spec:requirements with no gate before it."
+      }
+    ]
+  }
+}

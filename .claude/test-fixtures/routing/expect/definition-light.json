@@ -1,0 +1,17 @@
+{
+  "run": [
+    "--definition",
+    "light"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "flow": {
+      "name": "light",
+      "source": "definition",
+      "definition_present": true
+    },
+    "valid": true,
+    "violations": []
+  }
+}

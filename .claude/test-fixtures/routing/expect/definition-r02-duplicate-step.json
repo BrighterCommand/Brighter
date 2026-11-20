@@ -1,0 +1,19 @@
+{
+  "run": ["--definition", "r02-duplicate-step"],
+  "flows": "flows-rules",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "r02-duplicate-step", "source": "definition", "definition_present": true },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R2",
+        "code": "duplicate-step",
+        "step": "design",
+        "message": "Step design appears more than once."
+      }
+    ]
+  }
+}

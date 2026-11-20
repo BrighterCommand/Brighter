@@ -1,0 +1,31 @@
+{
+  "run": [
+    "--spec",
+    "tamper-a-route-changed"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "flow": {
+      "name": "feature",
+      "source": "slip",
+      "definition_present": true
+    },
+    "valid": true,
+    "tampered": {
+      "value": true,
+      "case": "a",
+      "recorded_flow": "feature"
+    },
+    "stop": {
+      "reason": "tampered",
+      "message": "Spec `.claude/test-fixtures/routing/specs/tamper-a-route-changed` has a tampered slip: `.flow` differs from the content recorded in `.flow.record`, so it does not match what was recorded when its route was set. Restore `.flow` from version control (`git restore --source=HEAD -- \".claude/test-fixtures/routing/specs/tamper-a-route-changed/.flow\"`), or re-copy the flow with `/spec:route feature <reason>`."
+    },
+    "route_change": {
+      "date": "2026-11-10",
+      "from": "light",
+      "to": "feature",
+      "reason": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    }
+  }
+}

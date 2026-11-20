@@ -1,0 +1,28 @@
+{
+  "run": [
+    "--spec",
+    "unknown-flow"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "flow": {
+      "name": "retired",
+      "source": "slip",
+      "definition_present": false
+    },
+    "valid": true,
+    "violations": [],
+    "steps": [
+      {
+        "name": "requirements"
+      },
+      {
+        "name": "design"
+      },
+      {
+        "name": "tasks"
+      }
+    ]
+  }
+}

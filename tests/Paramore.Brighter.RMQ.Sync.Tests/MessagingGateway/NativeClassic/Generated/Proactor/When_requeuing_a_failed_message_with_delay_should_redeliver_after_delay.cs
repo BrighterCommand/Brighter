@@ -10,6 +10,10 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.NativeClassic.Proactor;
 
+/// <summary>
+/// A message requeued with a delay is not redelivered before the delay and is after it. The
+/// before-delay receive is shorter than the delay but long enough to catch an immediate redelivery.
+/// </summary>
 [Trait("Category", "RMQNativeDelay")]
 [Collection("RMQNativeDelay")]
 public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelayAsync : IAsyncLifetime
@@ -60,22 +64,18 @@ public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelayAsync 
 
         await _producer.SendAsync(message);
 
-        // Act — receive the message and requeue it with a 5 s delay
+        // Act
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         var requeued = await _channel.RequeueAsync(received, TimeSpan.FromSeconds(5));
         Assert.True(requeued);
 
-        // Assert — before-D arm: a single bounded receive, deliberately shorter than the 5 s delay,
-        // should yield MT_NONE. The window must be less than the delay so a correctly-delayed message
-        // is not observed here, yet long enough to catch a gateway that ignores the delay and redelivers
-        // immediately. A single receive, not a poll loop: this asserts the message is absent.
+        // Assert
         var beforeDelay = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(2000));
         Assert.Equal(MessageType.MT_NONE, beforeDelay.Header.MessageType);
 
-        // Assert — once the delay has elapsed: poll every 500 ms, giving up after 30 s, and
-        // wait for the message to reappear
+        // Assert
         var redelivered = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))
@@ -88,8 +88,13 @@ public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelayAsync 
         }
 
         Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-        // R-1 vs R-23 (ADR 0077): the redelivered count must be >= the sent count; normalise
-        // it back so the transport's equality assertion can still compare the rest of the header.
+        AssertIsRedeliveryOf(message, redelivered);
+    }
+
+    // HandledCount may rise on redelivery (ADR 0077, Conformance oracle change for the redelivery
+    // arms), so it is normalised to let the shared assertion compare the rest of the header.
+    private void AssertIsRedeliveryOf(Message message, Message redelivered)
+    {
         Assert.True(redelivered.Header.HandledCount >= message.Header.HandledCount,
             $"Redelivered HandledCount {redelivered.Header.HandledCount} must be >= sent {message.Header.HandledCount} (R-1)");
         redelivered.Header.HandledCount = message.Header.HandledCount;
