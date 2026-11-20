@@ -91,6 +91,8 @@ namespace Paramore.Brighter
         private readonly IAmABrighterTracer? _tracer;
         private readonly TimeProvider _timeProvider;
         private readonly IAmABrighterOutboxMeter? _outboxMeter;
+        
+        private readonly ConcurrentDictionary<string, (OutboxClearSource ClearSource, DateTimeOffset? CreatedAt)> _pendingConfirmations = new();
 
         /// <inheritdoc />
         public IAmAnOutbox? Outbox => (IAmAnOutbox?)_outBox ?? _asyncOutbox;
@@ -983,16 +985,29 @@ namespace Paramore.Brighter
                         // must not mutate the shared construction-time context.
                         var dispatchedContext = (RequestContext)requestContext.CreateCopy();
                         dispatchedContext.Span = confirmationSpan;
-                        await ExecuteWithResiliencePipelineAsync(
+                        DateTimeOffset? dispatchedAt = null;
+                        var marked = await ExecuteWithResiliencePipelineAsync(
                             async ct =>
-                                await _asyncOutbox.MarkDispatchedAsync(result.MessageId, dispatchedContext, _timeProvider.GetUtcNow(),
-                                    cancellationToken: ct),
+                            {
+                                dispatchedAt = _timeProvider.GetUtcNow();
+                                await _asyncOutbox.MarkDispatchedAsync(result.MessageId, dispatchedContext, dispatchedAt.Value,
+                                    cancellationToken: ct);
+                            },
                             dispatchedContext
                         );
+                        if (marked && dispatchedAt.HasValue)
+                            RecordClearedOnConfirmation(result, dispatchedAt.Value);
+                        else
+                            UntrackPendingConfirmation(result.MessageId);
+                    }
+                    else
+                    {
+                        UntrackPendingConfirmation(result.MessageId);
                     }
                 }
                 else
                 {
+                    UntrackPendingConfirmation(result.MessageId);
                     Log.ConfirmationFailed(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty);
                     // Trip the breaker on the wire topic (result.Topic == message.Header.Topic),
                     // not the Publication topic — exact parity with the non-confirmation send
@@ -1080,13 +1095,27 @@ namespace Paramore.Brighter
                                 // must not mutate the shared construction-time context.
                                 var dispatchedContext = (RequestContext)requestContext.CreateCopy();
                                 dispatchedContext.Span = confirmationSpan;
-                                ExecuteWithResiliencePipeline(
-                                    () => _outBox.MarkDispatched(result.MessageId, dispatchedContext, _timeProvider.GetUtcNow()),
+                                DateTimeOffset? dispatchedAt = null;
+                                var marked = ExecuteWithResiliencePipeline(
+                                    () =>
+                                    {
+                                        dispatchedAt = _timeProvider.GetUtcNow();
+                                        _outBox.MarkDispatched(result.MessageId, dispatchedContext, dispatchedAt.Value);
+                                    },
                                     dispatchedContext);
+                                if (marked && dispatchedAt.HasValue)
+                                    RecordClearedOnConfirmation(result, dispatchedAt.Value);
+                                else
+                                    UntrackPendingConfirmation(result.MessageId);
+                            }
+                            else
+                            {
+                                UntrackPendingConfirmation(result.MessageId);
                             }
                         }
                         else
                         {
+                            UntrackPendingConfirmation(result.MessageId);
                             Log.ConfirmationFailed(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty);
                             // Trip the breaker on the wire topic (result.Topic == message.Header.Topic),
                             // not the Publication topic — exact parity with the non-confirmation send
@@ -1163,10 +1192,13 @@ namespace Paramore.Brighter
                     {
                         if (producer is ISupportPublishConfirmation)
                         {
-                            //mark dispatch handled by a callback - set in constructor
-                            ExecuteWithResiliencePipeline(
+                            // mark dispatch handled by a callback - set in constructor
+                            // register before sending: the confirmation can arrive before Send returns
+                            TrackPendingConfirmation(message, clearSource);
+                            var sentToConfirmingProducer = ExecuteWithResiliencePipeline(
                                 () => { producerSync.Send(message); },
                                 requestContext);
+                            if (!sentToConfirmingProducer) UntrackPendingConfirmation(message.Id);
                         }
                         else
                         {
@@ -1253,6 +1285,17 @@ namespace Paramore.Brighter
 
                         foreach (var batch in await bulkMessageProducer.CreateBatchesAsync(messages, cancellationToken))
                         {
+                            // register before sending: the confirmation can arrive before SendAsync returns
+                            if (producer is ISupportPublishConfirmation && _outboxMeter is { Enabled: true })
+                            {
+                                foreach (var id in batch.Ids())
+                                {
+                                    createdAtById ??= messages.ToDictionary(m => m.Id.Value, m => m.Header.TimeStamp, StringComparer.Ordinal);
+                                    TrackPendingConfirmation(
+                                        id, clearSource, createdAtById.TryGetValue(id.Value, out var created) ? created : null);
+                                }
+                            }
+
                             var sent = await ExecuteWithResiliencePipelineAsync(
                                     async ct => await bulkMessageProducer.SendAsync(batch, ct)
                                         .ConfigureAwait(continueOnCapturedContext),
@@ -1292,6 +1335,7 @@ namespace Paramore.Brighter
 
                             if (!sent)
                             {
+                                foreach (var id in batch.Ids()) UntrackPendingConfirmation(id);
                                 TripTopic(batch.RoutingKey, trips);
                             }
                         }
@@ -1338,6 +1382,10 @@ namespace Paramore.Brighter
 
                     if (producer is IAmAMessageProducerAsync producerAsync)
                     {
+                        // register before sending: the confirmation can arrive before SendAsync returns
+                        if (producer is ISupportPublishConfirmation)
+                            TrackPendingConfirmation(message, clearSource);
+
                         var sent = await ExecuteWithResiliencePipelineAsync(
                                 async ct => await producerAsync.SendAsync(message, ct)
                                     .ConfigureAwait(continueOnCapturedContext),
@@ -1346,6 +1394,8 @@ namespace Paramore.Brighter
                                 cancellationToken
                             )
                             .ConfigureAwait(continueOnCapturedContext);
+
+                        if (!sent) UntrackPendingConfirmation(message.Id);
 
                         if (producer is not ISupportPublishConfirmation && sent)
                         {
@@ -1610,6 +1660,24 @@ namespace Paramore.Brighter
             if (_outboxMeter is not { Enabled: true }) return;
             try { _outboxMeter.AddMessageAdded(message.Header.Topic); }
             catch (Exception ex) { Log.OutboxMetricsFault(s_logger, ex); }
+        }
+
+        private void TrackPendingConfirmation(Message message, OutboxClearSource clearSource)
+            => TrackPendingConfirmation(message.Id, clearSource, message.Header.TimeStamp);
+
+        private void TrackPendingConfirmation(Id messageId, OutboxClearSource clearSource, DateTimeOffset? createdAt)
+        {
+            if (_outboxMeter is not { Enabled: true }) return;
+            _pendingConfirmations[messageId.Value] = (clearSource, createdAt);
+        }
+
+        private void UntrackPendingConfirmation(Id messageId)
+            => _pendingConfirmations.TryRemove(messageId.Value, out _);
+
+        private void RecordClearedOnConfirmation(PublishConfirmationResult result, DateTimeOffset dispatchedAt)
+        {
+            if (!_pendingConfirmations.TryRemove(result.MessageId.Value, out var pending)) return;
+            RecordCleared(result.Topic ?? RoutingKey.Empty, pending.ClearSource, pending.CreatedAt, dispatchedAt);
         }
 
         private void RecordCleared(
