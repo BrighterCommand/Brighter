@@ -1,5 +1,25 @@
 {
   "Namespace": "Paramore.Brighter.MySQL.Tests",
+  "Inboxes": {
+    "Text": {
+      "InboxProvider": "MySqlTextInboxProvider",
+      "InboxProviderAsync": "MySqlTextInboxProvider",
+      "Category": "MySQL",
+      "CollectionName": "MySqlTextInbox"
+    },
+    "Binary": {
+      "InboxProvider": "MySqlBinaryInboxProvider",
+      "InboxProviderAsync": "MySqlBinaryInboxProvider",
+      "Category": "MySQL",
+      "CollectionName": "MySqlBinaryInbox"
+    },
+    "Json": {
+      "InboxProvider": "MySqlJsonInboxProvider",
+      "InboxProviderAsync": "MySqlJsonInboxProvider",
+      "Category": "MySQL",
+      "CollectionName": "MySqlJsonInbox"
+    }
+  },
   "Outboxes": {
     "Text": {
       "Transaction": "System.Data.Common.DbTransaction",

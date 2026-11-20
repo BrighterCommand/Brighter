@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
@@ -54,5 +54,10 @@ public static class DynamoDbInboxTable
         {
             s_semaphoreSlim.Release();
         }
+    }
+
+    public static void Reset()
+    {
+        s_tableName = null;
     }
 }
