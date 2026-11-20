@@ -63,7 +63,7 @@ public class AzureServiceBusBulkMessageProducerTestsAsync
 
         Assert.Equal(messageBody, sentMessage.Body.ToArray());
         Assert.Equal("MT_EVENT", sentMessage.ApplicationProperties["MessageType"]);
-        Assert.Equal(2, _topicClient.ClosedCount);
+        Assert.Equal(0, _topicClient.ClosedCount);
     }
 
     [Theory]
@@ -94,7 +94,7 @@ public class AzureServiceBusBulkMessageProducerTestsAsync
 
         Assert.Equal(messageBody, sentMessage.Body.ToArray());
         Assert.Equal("MT_COMMAND", sentMessage.ApplicationProperties["MessageType"]);
-        Assert.Equal(2, _topicClient.ClosedCount);
+        Assert.Equal(0, _topicClient.ClosedCount);
     }
 
     [Theory]
@@ -129,7 +129,7 @@ public class AzureServiceBusBulkMessageProducerTestsAsync
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task When_a_message_batch_is_created_and_an_exception_occurs_close_is_still_called(bool useQueues)
+    public async Task When_a_message_batch_is_created_and_an_exception_occurs_the_sender_is_kept_for_reuse(bool useQueues)
     {
         byte[] messageBody = Encoding.UTF8.GetBytes("A message body");
         List<Message> messages = new()
@@ -158,13 +158,13 @@ public class AzureServiceBusBulkMessageProducerTestsAsync
             // ignored
         }
 
-        Assert.Equal(1, _topicClient.ClosedCount);
+        Assert.Equal(0, _topicClient.ClosedCount);
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task When_a_message_batch_is_send_and_an_exception_occurs_close_is_still_called(bool useQueues)
+    public async Task When_a_message_batch_fails_to_send_the_sender_is_kept_for_reuse(bool useQueues)
     {
         byte[] messageBody = Encoding.UTF8.GetBytes("A message body");
         List<Message> messages = new()
@@ -192,7 +192,7 @@ public class AzureServiceBusBulkMessageProducerTestsAsync
             // ignored
         }
 
-        Assert.Equal(2, _topicClient.ClosedCount);
+        Assert.Equal(0, _topicClient.ClosedCount);
     }
 
     [Fact]

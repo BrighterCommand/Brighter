@@ -48,6 +48,15 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Whether the sender has been closed, and so can never send again.
+        /// </summary>
+        /// <remarks>
+        /// A sender also closes when the <c>ServiceBusClient</c> it came from is disposed, which a caller
+        /// holding it cannot see any other way.
+        /// </remarks>
+        bool IsClosed { get; }
+
+        /// <summary>
         /// Close the Connection.
         /// </summary>
         Task CloseAsync();
