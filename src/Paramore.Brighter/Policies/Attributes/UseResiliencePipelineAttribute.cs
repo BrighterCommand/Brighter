@@ -79,23 +79,13 @@ public class UseResiliencePipelineAttribute : RequestHandlerAttribute
     public string Policy { get; }
     
     /// <summary>
-    /// Gets or sets a value indicating whether the pipeline should be scoped per handler type.
+    /// Gets or sets whether to use a resilience pipeline registered for the request type.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// When <see langword="true"/>, the <see cref="ResiliencePipeline"/> is looked up using a key
-    /// composed of the handler type's full name and the specified <see cref="Policy"/> name.
-    /// This allows different instances of the same resilience strategy (e.g., a circuit breaker)
-    /// to be associated uniquely with each specific handler type.
-    /// </para>
-    /// <para>
-    /// When <see langword="false"/> (default), the pipeline is looked up solely by the <see cref="Policy"/> name,
-    /// implying a shared pipeline instance across all handlers using that same policy name.
-    /// </para>
-    /// <para>
-    /// This is particularly useful for strategies like Circuit Breaker, where you might want a separate
-    /// breaker for each distinct handler's external dependency.
-    /// </para>
+    /// When <see langword="true"/>, Brighter looks up the pipeline registered for the request type
+    /// under the <see cref="Policy"/> name. Handlers using the same registry, request type, and
+    /// policy name share that pipeline. When <see langword="false"/> (the default), Brighter
+    /// looks up the untyped pipeline under the same policy name.
     /// </remarks>
     public bool UseTypePipeline { get; set; }
 
