@@ -275,7 +275,16 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
     private async Task<IServiceBusSenderWrapper> GetSenderAsync(string topic)
     {
         if (_senders.TryGetValue(topic, out var cachedSender))
-            return cachedSender;
+        {
+            if (!cachedSender.IsClosed)
+                return cachedSender;
+
+            //a sender reaches a terminal state without the producer closing it, most often because the
+            //ServiceBusClient it came from was disposed: the cache must not pin a dead handle, so drop it
+            //and build a new one below, which is what a sender-per-send did before the cache
+            if (_senders.TryRemove(topic, out var closedSender))
+                await CloseSenderQuietlyAsync(closedSender, topic);
+        }
 
         if (Volatile.Read(ref _disposed) != 0)
             throw new ObjectDisposedException(nameof(AzureServiceBusMessageProducer));

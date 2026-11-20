@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
 using System.Text;
@@ -406,6 +407,38 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor
             Assert.Equal(1, loserSender.CloseAttempts);
             Assert.Equal(0, loserSender.ClosedCount);
             Assert.Equal(2, cachedSender.SentMessages.Count);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task When_the_cached_sender_is_closed_a_send_replaces_it(bool useQueues)
+        {
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", []);
+            _nameSpaceManagerWrapper.Queues.Add("topic");
+
+            var producer = useQueues ? _queueProducer : _producer;
+            var senders = new List<FakeServiceBusSenderWrapper>();
+            _topicClientProvider.SenderFactory = _ =>
+            {
+                var created = new FakeServiceBusSenderWrapper();
+                senders.Add(created);
+                return created;
+            };
+
+            await producer.SendAsync(CreateMessage("topic"));
+
+            //the send link behind a sender can close with the client it came from, and nothing in the
+            //producer closes it: without a look at IsClosed every later send would fail on that handle
+            await senders[0].CloseAsync();
+
+            await producer.SendAsync(CreateMessage("topic"));
+
+            Assert.Equal(2, senders.Count);
+            Assert.Single(senders[0].SentMessages);
+            Assert.Single(senders[1].SentMessages);
+            Assert.False(senders[1].IsClosed);
         }
 
         private static Message CreateMessage(string topic) => new(

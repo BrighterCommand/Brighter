@@ -21,6 +21,8 @@ public class FakeServiceBusSenderWrapper : IServiceBusSenderWrapper
 
     public int CloseAttempts { get; private set; } = 0;
 
+    public bool IsClosed { get; set; } = false;
+
     public Exception CloseException { get; set; } = null;
 
     public Exception SendException { get; set; } = null;
@@ -80,6 +82,7 @@ public class FakeServiceBusSenderWrapper : IServiceBusSenderWrapper
         if (CloseException != null)
             throw CloseException;
 
+        IsClosed = true;
         ClosedCount++;
         return Task.CompletedTask;
     }
