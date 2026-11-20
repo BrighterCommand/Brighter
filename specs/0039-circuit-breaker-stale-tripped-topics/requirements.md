@@ -26,6 +26,7 @@ How it works today (verified in the code):
 4. **The in-memory breaker stays.** Deployments without a durable store (in-memory outbox, single instance) keep `InMemoryOutboxCircuitBreaker`, with the time limit added.
 5. **A store failure never stops sweeping or publishing.** If the shared store cannot be reached, each instance falls back to its own view of the trips, still bounded in time, logs a Warning, and each sweeper instance reports the problem on the investigate health check.
 6. **Health signals match the fix.** With the distributed breaker, every running sweeper instance reports the deployment's tripped topics as last read from the shared store. Spec 0038 hid trips on instances that were not sweeping because they might be stale. Distributed trips are not stale, so they are no longer hidden there.
+7. **Every outbox backend gets a trip store.** Each outbox Brighter ships (MsSql, PostgreSql and MySql already have one) gains a trip store in the same package as the outbox, over the connection and configuration the outbox already uses, provisioned through the path that backend already uses for its outbox.
 
 ## Requirements
 
@@ -53,6 +54,15 @@ How it works today (verified in the code):
 - **Dispatch call**: the unit within which trips are coalesced (FR-3.7). It is one sweep's dispatch of its batch (`DispatchAsync` or `BulkDispatchAsync`, one per sweep), or one whole async Post / ClearOutbox call, however many messages it dispatches. `ClearOutboxAsync` dispatches its messages one at a time (`DispatchAsync([message])` in a loop), and the whole loop is one dispatch call.
 - **Unshared trip**: a trip in this instance's view whose store write failed and has not since been written. It stops being unshared when a later write of that topic succeeds or when it ends.
 - **Fallback view**: the view while the most recent store read on this instance has failed, or while it holds an unshared trip. It holds the trips last read successfully plus the trips recorded locally since, each still subject to trip end. Only a successful read ends the read-failure part, and only a successful write or the trip's end ends an unshared trip, so the state does not flip on operations of the other kind.
+- **Outbox backend**: a Brighter outbox implementation: MsSql, PostgreSql, MySql, Sqlite, Spanner, DynamoDB, DynamoDB V4, MongoDb, Firestore. Trip stores match outboxes only. The lock backend a deployment uses does not matter: a user whose lock is Azure Blob has a relational outbox, and the trip store for that outbox serves them. A CosmosDb outbox does not exist yet; when it ships, it ships with a trip store (FR-10.10).
+- **Relational backend**: an outbox backend that reaches its database through an `IAmARelationalDbConnectionProvider` (MsSql, PostgreSql, MySql, Sqlite, Spanner).
+- **Document backend**: an outbox backend that does not (DynamoDB, DynamoDB V4, MongoDb, Firestore).
+- **Trip store contract**: the three operations of `IAmATrippedTopicStore` (`WriteAsync`, `EndExpiredAsync`, `ReadLiveAsync`) and the five properties ADR 0089 says a backend must provide:
+  1. an atomic per-topic upsert that keeps the later stamp and returns the prior stamp and whether the row is left ended;
+  2. a marking of unmarked rows at or before a cutoff as ended, returning each marked row to exactly one caller;
+  3. a read of the unmarked rows, changing nothing;
+  4. durability across restarts of the database client and of the application;
+  5. a fixed number of operations per read, or a stated bound where the backend cannot mark a range in one operation.
 
 ### Functional Requirements
 
@@ -118,7 +128,7 @@ How it works today (verified in the code):
 - **FR-7.1 — The breaker stays opt in.** Brighter does not register an `IAmAnOutboxCircuitBreaker` by default (`ServiceCollectionExtensions.OutboxCircuitBreaker` resolves it with `GetService`). This does not change: with no breaker registered there is no circuit breaking, as today. The distributed circuit breaker is used only when the user registers it. Whether Brighter should pick it automatically when a durable outbox and a distributed lock are configured is OQ-3.
 - **FR-7.2 — Existing registrations.** A user who registers `InMemoryOutboxCircuitBreaker` and changes nothing else keeps a per-instance breaker. The behaviour changes are FR-1 (the D limit with its default) and the Reset log naming its cause (FR-1.4).
 - **FR-7.3 — Singleton.** As in spec 0038 FR-6A.4, the breaker must be registered as a singleton shared with the mediator. The docs say so for the distributed breaker too.
-- **FR-7.4 — Store implementations.** Brighter provides at least one production shared trip store backend and one in-memory store for tests. The ADR decides which backends ship and where they live (OQ-1).
+- **FR-7.4 — Store implementations.** Brighter provides a shared trip store for every outbox backend (FR-10) and one in-memory store for tests. (Replaced by Phase 3: the earlier text asked for at least one production backend.)
 
 **FR-8 — Health signals (changes to the spec 0038 contract, stated explicitly).**
 - **FR-8.1 — Gauge with the distributed breaker.** When the breaker in use is a distributed circuit breaker, `paramore.brighter.outbox_sweeper.tripped_topics` reports the count of topics in the instance's view on every running sweeper, whether or not it is active. This replaces spec 0038 FR-3A and FR-6A.5 for that breaker, and removes the one-interval lock-handover gap and the lock-acquisition gap (spec 0038 FR-6A.6) for it. A stopped sweeper still reports 0 (spec 0038 FR-1.2). A running sweeper that has not yet completed a successful read reports only its own local trips (0 if it has tripped none). Example: instances A (active) and B (`lock_unavailable`) with `orders` and `invoices` tripped both report 2.
@@ -133,6 +143,28 @@ How it works today (verified in the code):
 - **FR-9.1 — ADR.** A new ADR amends ADR 0028. It records the distributed breaker, the shared trip store, the elapsed-time cooldown, the async interface, the maximum trip duration and fallback, and states which parts of ADR 0028 it replaces (the in-memory-only decision, and the cooldown advancing only on the lock holder's sweep). It also amends ADR 0085 (`0085-track-outbox-sweeper-state-and-publish-gauges.md`, which decided the `IsActive` gating of the tripped-topics gauge; not `0085-gcp-purge-server-boundary.md`) and ADR 0086 (`0086-sweeper-remedy-health-checks.md`) for FR-8, ADR 0058 (`0058-outbox-circuit-breaker-trip-logging.md`) for the Reset cause and the distributed announcer rules, and ADR 0088 (`0088-shared-remedy-check-data-and-condition.md`) if the new condition's `Data` goes beyond the shared convention.
 - **FR-9.2 — Release notes.** The release notes name the new breaker, async interface and options, the D default and its effect on existing `InMemoryOutboxCircuitBreaker` users (FR-7.2), the request-path change, latency and write amplification (FR-3.5), and the health-signal changes (FR-8).
 - **FR-9.3 — Docs.** The changes needed in BrighterCommand/Docs (the circuit-breaker page, Telemetry page and health-check page) are listed in the PR. Writing them is tracked separately.
+
+**FR-10 — Every outbox backend has a trip store.** For each outbox backend there is a store that implements `IAmATrippedTopicStore` and meets the trip store contract.
+
+- **FR-10.1 — One store per outbox backend.** Stores exist for Sqlite, Spanner, DynamoDB, DynamoDB V4, MongoDb and Firestore, in addition to MsSql, PostgreSql and MySql. After Phase 3 no outbox backend is missing one.
+- **FR-10.2 — Same package, same connection.** A store lives in the package of its outbox (NFR-7) and takes the connection provider or configuration its outbox takes. A user needs no new package, database, credential or connection string to share trips.
+- **FR-10.3 — Durable across restarts.** Trips written through a store are still there after the application, and the store object, are recreated, for every backend including Sqlite. This is why Sqlite has a store although it has no lock provider: a trip survives a restart, and breakers in several processes that share the file see the same trips.
+- **FR-10.4 — Relational backends reuse the base class.** The Sqlite and Spanner stores derive from `RelationDatabaseTrippedTopicStore` and add only what the dialect needs: the statements, the deadlock-or-abort retry rule (`IsDeadlock`), and any command or parameter quirks. They do not copy the base class's rules (timeouts, identifier checks, ordinal topic order, one retry).
+- **FR-10.5 — Document backends are behind the same contract.** The DynamoDB, DynamoDB V4, MongoDb and Firestore stores implement `IAmATrippedTopicStore` directly. They honour the cancellation token the breaker passes, because the breaker's `StoreTimeout` relies on it (NFR-3), and they do not block before their first `await`.
+- **FR-10.6 — Soft delete only.** As in the SQL stores, a store never deletes a trip on a read or a write. It marks it ended. Each backend documents how an operator purges ended trips (the equivalent of `GetPurgeSql`).
+- **FR-10.7 — Bounded cost, stated per backend.** The number of operations a read makes does not depend on the number of outstanding messages. Where a backend cannot mark a range in one operation (DynamoDB: conditional updates are per item; Firestore: a transaction is capped at 500 writes), the ADR states the bound, and the store stays correct beyond it by working in batches.
+- **FR-10.8 — Identical behaviour on DynamoDB V3 and V4.** The two stores pass the same tests with the same expectations. A difference is a defect, not a documented variance.
+- **FR-10.9 — Provisioning follows the backend's existing path (below).**
+- **FR-10.10 — A new outbox ships with its trip store.** An outbox added to Brighter after this spec (CosmosDb is the known candidate) has a trip store and passes the generated trip store suite (NFR-10) before it is complete. AC-45 enforces this.
+
+**FR-10A — Provisioning.** A store's table or collection is provisioned the way that backend's outbox is provisioned today. Brighter adds no second provisioning mechanism.
+
+- **FR-10A.1 — Relational backends use Box Provisioning.** `Sqlite` and `Spanner` gain `AddSqliteTrippedTopics` and `AddSpannerTrippedTopics` beside the existing `Add{Backend}Outbox` and `Add{Backend}Inbox` extensions, in `Paramore.Brighter.BoxProvisioning.Sqlite` and `.Spanner`, using `BoxType.TrippedTopics` and `TrippedTopicsProvisioner` as the three existing backends do. Each store has `GetDDL` and `GetPurgeSql`, and `GetDDL` is the one string the provisioner and a user who runs scripts by hand both use.
+- **FR-10A.2 — MongoDb follows the collection options.** The trip collection is resolved through the same `MongoDbCollectionConfiguration` and `OnResolvingACollection` choice (`Assume`, `Validate`, `CreateIfNotExists`) the outbox uses, including the unique index on the topic.
+- **FR-10A.3 — DynamoDB and DynamoDB V4 follow the table builder.** The trip table is described with the same `DynamoDbTableFactory` / `DynamoDbTableBuilder` pieces the outbox table uses (key schema, any global secondary index, billing mode), so a user creates it the way they create the outbox table. The docs give the definition.
+- **FR-10A.4 — Firestore follows its collection configuration.** The trip collection is named in `FirestoreConfiguration` as the outbox's is. Any index its queries need is stated, and is created by the same route the outbox's own indexes are.
+- **FR-10A.5 — A missing table or collection is a clear store failure.** If the trip table, collection or index does not exist, calls fail with an error that names it, the breaker falls back (FR-5), and the investigate check reports `tripped_topics_store_unavailable`. A store does not create schema as a side effect of a read or write, unless that backend's outbox already does (`CreateIfNotExists`).
+- **FR-10A.6 — Names are safe.** Table, collection and schema names pass the same identifier rule as the SQL stores (`Identifiers.AssertSafe`), or the backend's own naming rules where those are stricter.
 
 ### Non-functional Requirements
 
@@ -154,6 +186,19 @@ How it works today (verified in the code):
 
 **NFR-9 — Breaker failures stay contained.** No exception from the breaker or its store escapes into a sweep's outcome, a Post / ClearOutbox call, or a publication-confirmation callback (FR-5).
 
+**NFR-10 — Generated tests, as for outboxes.** Trip store behaviour is tested the way outbox behaviour is: by Liquid templates in `tools/Paramore.Brighter.Test.Generator` (ADR 0035, `.agent_instructions/generated_tests.md`), rendered into each outbox test project from its `test-configuration.json`. A new `TrippedTopics` template folder holds a provider interface (create the store over a fresh table or collection, create a second store over the same one, delete it, never throwing) and one template per case; each project supplies a provider per outbox variant. Generated files are never hand-edited. The cases, each written out in the template:
+  - the written stamp is kept when later and replaced when earlier, and the prior stamp is returned;
+  - an ended trip is revived only by a later stamp;
+  - an expired trip is ended for exactly one of several racing callers;
+  - a live read changes nothing, and no operation deletes a row;
+  - trips survive recreating the store over the same database;
+  - a read makes the same number of operations whatever the table holds, or the bound the ADR states;
+  - a cancelled token ends the call.
+
+  The suite renders for every outbox backend. As with the outbox suite, a store that does not yet meet a case is marked in `test-configuration.json` with a tracked issue number, which renders that case as a skipped fact naming the issue; a mark is removed when the store meets the case. Behaviour specific to one backend (deadlock retry, command timeout rounding, statement counts, provisioning) stays in hand-written tests in that backend's project. Whether the Phase 2 hand-written per-case tests that the generated suite now duplicates are retired is a task decision, taken per backend once its generated suite is green.
+**NFR-11 — No regressions.** The three existing stores, `RelationDatabaseTrippedTopicStore` and `IAmATrippedTopicStore` do not change shape. A change to the base class that a new backend needs is made test-first and re-run against MsSql, PostgreSql and MySql.
+**NFR-12 — Test infrastructure.** Each store's generated and hand-written tests run in CI against the backend's real service or its official emulator, the same one its outbox tests use. A case that cannot run in CI is skipped with the reason, not deleted.
+
 ### Constraints and Assumptions
 
 - **Constraint**: `TimedOutboxSweeper` obtains and releases the distributed lock on every sweep. There is no long-lived holder, and this work does not change the lock protocol or the sweeper's scheduling.
@@ -162,9 +207,10 @@ How it works today (verified in the code):
 - **Constraint**: Brighter does not register `IAmAnOutboxCircuitBreaker` itself. `ControlBusSenderFactory` and `ControlBusReceiverBuilder` each construct a private `InMemoryOutboxCircuitBreaker`. Those get the FR-1 time limit because they use the same class, but they do not become distributed.
 - **Constraint**: The work is red-first (TDD), per the Brighter test-first workflow. Tests of a production store backend run against a real database, not a mock.
 - **Assumption**: The lock serialises sweeps but does not space them. With N instances whose timers are offset, the deployment can run up to N sweeps per `TimerInterval`. This is why the distributed cooldown is elapsed time (FR-4) and not a count of cooldown cycles.
-- **Assumption**: The available lock and outbox backends do not match one to one. Outboxes exist for MsSql, MySql, PostgreSql, Sqlite, DynamoDB (and V4), MongoDb, Firestore and Spanner. Locks exist for MsSql, MySql, PostgreSql, DynamoDB (and V4), MongoDb, Firestore and Azure Blob. Sqlite and Spanner have no lock provider, and Azure Blob has no outbox. This shapes the store choice (OQ-1).
+- **Assumption**: The lock and outbox backends do not match one to one. Sqlite and Spanner have no lock provider, so on those backends the stale-lock cause in #4628 cannot arise from a lost lock. Their stores are still required: trips persist across restarts (FR-10.3), and a deployment may run several processes against one database.
 - **Assumption**: Trip semantics stay as they are: a single failed publish trips, and a successful publish does not end a trip.
 - **Assumption**: At most one `TimedOutboxSweeper` per service provider (spec 0038 FR-4A).
+- **Constraint**: The Out of Scope list below is unchanged, with one exception: trip stores for Sqlite, DynamoDB, MongoDb, Firestore and Spanner, which ADR 0089's *Scope* recorded as out of scope, are now in scope (FR-10). A CosmosDb outbox and its store stay out of scope until that outbox exists (FR-10.10).
 
 ### Out of Scope
 
@@ -269,6 +315,25 @@ How it works today (verified in the code):
 
 **AC-44 — Best-effort sharing is logged (FR-3.9).** Given a request-only instance (no sweeper) and a store double that throws on write, when a PostAsync fails to publish `orders`, then no exception escapes, a Warning names the failure, and the message is still outstanding in the outbox. The same holds for a pending write from a confirmation callback.
 
+AC numbers continue from AC-44. AC-38 was dropped.
+
+**AC-45 — Every outbox backend has a store (FR-10.1, FR-10.10).** Given the outbox projects under `src/` (`Paramore.Brighter.Outbox.*`), when each is inspected, then each defines a class implementing `IAmATrippedTopicStore`. A new outbox project without one fails this test. (It must not inspect `project.assets.json`.)
+
+**AC-46 — The generator carries the trip store suite (NFR-10).** Given `tools/Paramore.Brighter.Test.Generator`, then a `TrippedTopics` template folder holds the provider interface and one template for each case listed in NFR-10, and `.agent_instructions/generated_tests.md` describes it.
+**AC-47 — Every outbox test project renders it (NFR-10, FR-10.1).** Given each project that generates outbox tests (MSSQL, PostgresSQL, MySQL, Sqlite, DynamoDB, DynamoDB.V4, MongoDb and Gcp for Firestore and Spanner), when the generator runs, then its `test-configuration.json` declares a trip store provider for each outbox variant, and the generated cases exist and pass against the real service or emulator. A skipped case names a tracked issue.
+
+**AC-48 — The generated cases hold for every store (FR-10, NFR-5, NFR-10).** Given each store, then: a write at t1, t2 > t1, t0 < t1 stores t2 and returns prior t1 on the second; an ended row is revived only by a later stamp; of 8 concurrent `EndExpiredAsync` calls over one expired row exactly one returns it; `ReadLiveAsync` returns only live rows and changes none; no row is deleted.
+**AC-49 — Trips survive a restart (FR-10.3).** Given a trip written through one store object, when a second store object is built over the same database, then `ReadLiveAsync` returns it. For Sqlite the database is a file, not `:memory:`.
+
+**AC-50 — A read costs a fixed number of operations (FR-10.7).** Given 10 and then 1,000 ended rows, when `EndExpiredAsync` and `ReadLiveAsync` run, then the operation count is the same, or the per-batch bound the ADR states for DynamoDB and Firestore.
+**AC-51 — Cancellation is honoured (FR-10.5, NFR-3).** Given a call whose token is cancelled while the backend is held up, then the call ends with the cancellation and starts no further operation.
+
+**AC-52 — Sqlite and Spanner are provisioned by Box Provisioning (FR-10A.1).** Given a fresh database, when `AddSqliteTrippedTopics` (or `AddSpannerTrippedTopics`) is registered and the provisioner runs, then the trip table exists with the columns `GetDDL` declares, a second run changes nothing, and `GetDDL` run by hand gives the same table.
+**AC-53 — Document stores are provisioned through the outbox's route (FR-10A.2 to FR-10A.4).** Given MongoDb with `CreateIfNotExists`, the trip collection and its unique topic index exist after first use; given `Validate` and no collection, the call fails naming the collection. Given DynamoDB and DynamoDB V4, a table built from the documented definition accepts every store operation, and the two stores give the same results for the same calls (FR-10.8). Given Firestore, the documented collection and index satisfy every query.
+
+**AC-54 — A missing table is a named, contained failure (FR-10A.5, FR-5).** Given each new store and a trip table or collection that does not exist, when a read runs through the breaker, then the breaker falls back, logs the Warning once, and `StoreStatus` reports the failure. The sweep and the publish continue.
+**AC-55 — The release notes and ADR record each backend (FR-9).** Given the release notes and ADR 0089, then each new store, its provisioning extension or table definition, and the DynamoDB and Firestore cost bounds are named.
+
 ## Additional Context
 
 - Found while specifying the sweeper health check (#4573, spec 0038, merged). Spec 0038 listed this issue as out of scope and as following work. Its FR-3A, FR-6A.5, FR-6A.6 and NFR-6 bullet 2 ("the circuit breaker's trip and cooldown behaviour do not change") are deliberately changed here by FR-1 and FR-8.
@@ -305,3 +370,10 @@ How it works today (verified in the code):
 - **OQ-12 — Refresh mechanism (FR-4A).** FR-4A requires the refresh not to wait on a long sweep, and the sweeper's scheduling must not change. Does the sweeper loop call the refresh on a tick that does not run a sweep, or does the breaker run its own timer?
 - **OQ-13 — Scope split.** The time bound (FR-1, FR-2) fixes the stale-trip symptom on its own and touches only core. The distributed breaker is much larger. Should they ship as two phases or two specs? This draft keeps one spec.
 - **OQ-14 — Smaller design points the ADR settles.** Whether a trip already announced from a fallback view announces again when a later write shares it (FR-3.3, FR-5.7); whether the end-of-call write honours the caller's `CancellationToken`, and what happens to the held trips if it does (FR-3.7); the store timeout's validation rules and whether refreshes may overlap (NFR-3).
+- **Phase 3 design hand-offs (2026-11-20).** The ADR 0089 amendment for Phase 3 settles these. None changes a requirement above.
+  - Sqlite: how the upsert returns the prior stamp (`RETURNING` gives the new row), `BEGIN IMMEDIATE`, and behaviour under `SQLITE_BUSY` with several processes.
+  - Spanner: `INSERT OR UPDATE` and `THEN RETURN`, and `ABORTED` as the retried error.
+  - DynamoDB: key schema, and Scan versus a sparse index on unmarked rows, which sets the stated cost bound.
+  - MongoDb: the aggregation-pipeline update the later-stamp upsert needs (MongoDB 4.2 and later), and a claim token on `updateMany` to return each ended row to one caller.
+  - Firestore: the composite index the unmarked-rows query needs and how it reaches the user (`gcp-ci` already fails on a missing composite index), and the 500-write transaction cap.
+  - Order of the work: proposed Sqlite and Spanner, MongoDb, DynamoDB and V4, then Firestore (most infrastructure risk).
