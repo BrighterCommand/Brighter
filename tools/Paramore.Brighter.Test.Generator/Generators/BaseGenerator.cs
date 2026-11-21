@@ -91,6 +91,8 @@ public abstract class BaseGenerator(ILogger logger)
     /// <remarks>
     /// <see cref="GenerateAsync(TestConfiguration,string,string,object,Func{string,bool},Action{string,object})"/>
     /// renders exactly this list, so an audit can ask what the generator owns without running it.
+    /// The <paramref name="ignore"/> predicate is handed the file name, not the path: predicates
+    /// match substrings, so a checkout under a folder named for one would silently drop templates.
     /// </remarks>
     /// <param name="configuration">The root test configuration containing the destination folder and shared settings.</param>
     /// <param name="prefix">A relative path prefix appended to <see cref="TestConfiguration.DestinationFolder"/> for the output directory.</param>
@@ -115,11 +117,6 @@ public abstract class BaseGenerator(ILogger logger)
         {
             var file = new FileInfo(fileName);
 
-            // The predicate is handed the file's name, not the absolute path Directory.GetFiles
-            // returns. Every predicate is a substring match, and the generator and the audit run
-            // from different bin directories, so passing the whole path would let a checkout
-            // located under a directory named for one of those substrings silently drop templates
-            // in one of the two - which is the drift the generated-tree audit exists to catch.
             if (ignore(file.Name))
             {
                 logger.LogInformation("Skipping {FileName}", file.Name);

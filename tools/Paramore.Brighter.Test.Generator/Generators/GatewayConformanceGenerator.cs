@@ -76,16 +76,7 @@ public class GatewayConformanceGenerator(ILogger<GatewayConformanceGenerator> lo
         return planned;
     }
 
-    /// <summary>
-    /// Describes every rendering this generator performs for <paramref name="configuration"/>: one
-    /// sweep per project, not per gateway variant, so there is at most one suite regardless of how
-    /// many <see cref="MessagingGatewayConfiguration"/> variants the project also configures.
-    /// </summary>
-    /// <remarks>
-    /// Both <see cref="GenerateAsync(TestConfiguration)"/> and <see cref="Plan(TestConfiguration)"/>
-    /// walk this list, so the file the generator writes and the file it claims to own are one
-    /// description rather than two that can drift apart.
-    /// </remarks>
+    // The one description GenerateAsync and Plan both walk: one sweep per project, not per gateway variant.
     private IReadOnlyList<GenerationSuite> Suites(TestConfiguration configuration)
     {
         if (configuration.GatewayConformance == null)
