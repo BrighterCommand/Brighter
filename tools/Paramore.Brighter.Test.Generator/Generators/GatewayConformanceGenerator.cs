@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
 
@@ -40,44 +39,8 @@ namespace Paramore.Brighter.Test.Generator.Generators;
 public class GatewayConformanceGenerator(ILogger<GatewayConformanceGenerator> logger)
     : BaseGenerator(logger)
 {
-    /// <summary>
-    /// Generates the gateway conformance test file for <see cref="TestConfiguration.GatewayConformance"/>,
-    /// if configured.
-    /// </summary>
-    /// <param name="configuration">The root test configuration containing the gateway conformance settings and destination folder.</param>
-    public async Task GenerateAsync(TestConfiguration configuration)
-    {
-        foreach (var suite in Suites(configuration))
-        {
-            await GenerateAsync(
-                configuration,
-                suite.Prefix,
-                suite.TemplateFolderName,
-                suite.Model,
-                suite.Ignore
-            );
-        }
-    }
-
-    /// <summary>
-    /// Computes the file <see cref="GenerateAsync(TestConfiguration)"/> would write for
-    /// <paramref name="configuration"/>, without writing it.
-    /// </summary>
-    /// <param name="configuration">The root test configuration containing the gateway conformance settings and destination folder.</param>
-    /// <returns>The gateway conformance test file this configuration owns, or none if not configured.</returns>
-    public IReadOnlyList<PlannedFile> Plan(TestConfiguration configuration)
-    {
-        var planned = new List<PlannedFile>();
-        foreach (var suite in Suites(configuration))
-        {
-            planned.AddRange(Plan(configuration, suite.Prefix, suite.TemplateFolderName, suite.Ignore));
-        }
-
-        return planned;
-    }
-
-    // The one description GenerateAsync and Plan both walk: one sweep per project, not per gateway variant.
-    private IReadOnlyList<GenerationSuite> Suites(TestConfiguration configuration)
+    /// <inheritdoc />
+    protected override IReadOnlyList<GenerationSuite> Suites(TestConfiguration configuration)
     {
         if (configuration.GatewayConformance == null)
         {

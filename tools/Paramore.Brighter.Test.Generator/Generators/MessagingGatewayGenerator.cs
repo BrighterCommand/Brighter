@@ -27,7 +27,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
 
@@ -53,47 +52,11 @@ public class MessagingGatewayGenerator(
     // than return null.
     private IAmAConformanceLedger _ledger = null!;
 
-    /// <summary>
-    /// Generates messaging gateway test files for the configured gateway(s) in the provided <paramref name="configuration"/>.
-    /// Uses <see cref="TestConfiguration.MessagingGateway"/> for a single gateway or <see cref="TestConfiguration.MessagingGateways"/> for multiple.
-    /// </summary>
-    /// <param name="configuration">The root test configuration containing messaging gateway settings and destination folder.</param>
-    public async Task GenerateAsync(TestConfiguration configuration)
-    {
-        _ledger = ledger ?? LoadLedgerFromFileSystem();
+    /// <inheritdoc />
+    protected override void PrepareGeneration() => _ledger = ledger ?? LoadLedgerFromFileSystem();
 
-        foreach (var suite in Suites(configuration))
-        {
-            await GenerateAsync(
-                configuration,
-                suite.Prefix,
-                suite.TemplateFolderName,
-                suite.Model,
-                suite.Ignore,
-                suite.PrepareModel
-            );
-        }
-    }
-
-    /// <summary>
-    /// Computes every file <see cref="GenerateAsync(TestConfiguration)"/> would write for
-    /// <paramref name="configuration"/>, without writing any of them.
-    /// </summary>
-    /// <param name="configuration">The root test configuration containing messaging gateway settings and destination folder.</param>
-    /// <returns>The messaging gateway test files this configuration owns.</returns>
-    public IReadOnlyList<PlannedFile> Plan(TestConfiguration configuration)
-    {
-        var planned = new List<PlannedFile>();
-        foreach (var suite in Suites(configuration))
-        {
-            planned.AddRange(Plan(configuration, suite.Prefix, suite.TemplateFolderName, suite.Ignore));
-        }
-
-        return planned;
-    }
-
-    // The one description GenerateAsync and Plan both walk: the Reactor, Proactor and Shared suites of each gateway.
-    private IReadOnlyList<GenerationSuite> Suites(TestConfiguration configuration)
+    /// <inheritdoc />
+    protected override IReadOnlyList<GenerationSuite> Suites(TestConfiguration configuration)
     {
         var suites = new List<GenerationSuite>();
 
