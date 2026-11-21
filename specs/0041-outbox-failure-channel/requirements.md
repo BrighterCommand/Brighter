@@ -44,7 +44,7 @@ This spec covers that channel, with the differences listed under "One channel or
 
 On 2026-11-10, on PR #4725, the author of issue #4489 pointed out that with a sweeper a failure notification can lead a subscriber to compensate, for example by marking an order as failed, and the next sweep can then still send the message, with nothing to tell the subscriber. Checking is not practical, because `Get` does not say whether a message was dispatched. The author suggested one notification for when the sweeper sends a message, and noted that it needs no list of ids. This spec first added that notification as an option (FR-16). On 2026-11-20 the same author wrote that with the max age he no longer needs it, and the spec dropped it (D-19). Successes stay out (OOS-13).
 
-On 2026-11-19, in his review of PR #4725, the maintainer suggested a max age set when configuring the publication: "don't send this message if it hasn't been dispatched already and its over X old", with the expired messages picked up "via the archive sweeper", and 0 or below meaning "we keep trying forever". He asked "Do you want an upper limit on send attempts based on time?" and offered "If we do set a max_age, we can tell you when we give up". His review summary asked to "Allow notification of all results, or allow filtering, such as only subscribing to the max_age expired". This spec answers yes, by age and not by a count of attempts, which he advised against, since a count is very dependent on the sweeper's configuration and needs more writes to a contended table (D-1). FR-17 to FR-22 add it. Applying the age to the sweep only, and letting an explicit clear send an expired message, is this spec's reading (D-14). "All results" is read as every kind of notification, each one filterable, with no notification for each successful `Post` (D-18). On the bullet that said no give-up point existed, he wrote "I think that fixes both this and the above issue", where this spec reads "the above issue" as the case of a sweep send after a compensation, the subject of his previous comment; this spec first kept `SentBySweep` for an application that sets no max age, and dropped it on 2026-11-20 (D-19). He recommended not adding a delete, since he suspected a race with the sweep or a delete that locks the table, so this spec no longer offers one. He also wrote that he would favour "explicit by age, over silent by TTL" (Q-3). On 2026-11-20 he agreed that an explicit clear sends an expired message (D-14) and that the max age applies per topic (D-20), and suggested a note in the documentation that the archiver should run as well as the sweeper, because people miss it (FR-21, NFR-11).
+On 2026-11-19, in his review of PR #4725, the maintainer suggested a max age set when configuring the publication: "don't send this message if it hasn't been dispatched already and its over X old", with the expired messages picked up "via the archive sweeper", and 0 or below meaning "we keep trying forever". He asked "Do you want an upper limit on send attempts based on time?" and offered "If we do set a max_age, we can tell you when we give up". His review summary asked to "Allow notification of all results, or allow filtering, such as only subscribing to the max_age expired". This spec answers yes, by age and not by a count of attempts, which he advised against, since a count is very dependent on the sweeper's configuration and needs more writes to a contended table (D-1). FR-17 to FR-22 add it. Applying the age to the sweep only, and letting an explicit clear send an expired message, is this spec's reading (D-14). "All results" is read as every kind of notification, each one filterable, with no notification for each successful `Post` (D-18). On the bullet that said no give-up point existed, he wrote "I think that fixes both this and the above issue", where this spec reads "the above issue" as the case of a sweep send after a compensation, the subject of his previous comment; this spec first kept `SentBySweep` for an application that sets no max age, and dropped it on 2026-11-20 (D-19). He recommended not adding a delete, since he suspected a race with the sweep or a delete that locks the table, so this spec no longer offers one. He also wrote that he would favour "explicit by age, over silent by TTL" (Q-3). On 2026-11-20 he agreed that an explicit clear sends an expired message (D-14) and that the max age applies per topic (D-20), and suggested a note in the documentation that the archiver should run as well as the sweeper, because people miss it (FR-21, NFR-11). Later that day he suggested checking the capacity at startup through `ValidatePipelines()`, "typically better than a late runtime failure", which FR-2 adds (D-24), and one channel per publication, so that an application does not have to sort notifications from several publications itself, which FR-14 adopts (D-23).
 
 ### One channel or two: what "gives up" means in the code
 
@@ -62,10 +62,10 @@ Everything else that goes undispatched is covered by the age telemetry when it i
 1. The application turns the feature on with one explicit step, and may set a capacity. Without that step, and with no max age set, nothing changes.
 2. When a send fails, the broker does not confirm a message or `MarkDispatched` fails (FR-3), the mediator raises one notification naming the message id, its topic, the kind of failure, the exception when there is one, and the time. It raises it for failures on the synchronous, asynchronous, bulk and confirmation paths, for every outbox.
 3. Raising never blocks, slows or fails the publishing path, and everything the mediator does today stays as it is, including exceptions that already reach the caller.
-4. A subscriber reads notifications independently of the publishing path. They are best effort: held in memory up to capacity and lost on a crash. When the channel is full, a notification is lost and the loss is counted.
+4. Each publication has its own channel. A subscriber reads the notifications of the publication it asks for, independently of the publishing path, and a burst of failures on one publication does not push out another's. Notifications are best effort: held in memory up to capacity and lost on a crash. When a channel is full, a notification is lost and the loss is counted.
 5. The notification is a signal and not a verdict. The message may still be retried, and each failed attempt raises another notification.
 6. A publication can set a max age. A sweep does not send an undispatched message older than its max age. An explicit clear still sends it.
-7. The archiver moves each expired message to the archive, marked as expired, and removes it from the outbox. Where the feature is on, it raises one `Expired` notification for the message on the same channel.
+7. The archiver moves each expired message to the archive, marked as expired, and removes it from the outbox. Where the feature is on, it raises one `Expired` notification for the message, on the channel of its publication.
 8. The application chooses which kinds of notification it receives.
 
 The maintainer suggested a channel the application subscribes to. This spec reads that as an in-process channel the subscriber reads from. The type and API are for the ADR.
@@ -80,17 +80,17 @@ The maintainer suggested a channel the application subscribes to. This spec read
 | **Explicit clear**, **sweep** | A clear from `ClearOutbox(Async)` (`OutboxProducerMediator.cs:381`, `:447`), and a clear from `ClearOutstandingFromOutboxAsync` (`:514`), whose only caller in Brighter is `OutboxSweeper.SweepAsync`. A sweep is asynchronous only. |
 | **Attempt** | One run of the resilience pipeline `CommandProcessor.OutboxProducer` around one send, one batch send or one `MarkDispatched`. The default pipeline makes up to four tries in one attempt (`ResiliencePipelineRegistryExtensions.cs:62-67`). |
 | **Failed clear** | A case in which a clear, or the confirmation that follows it, did not end with the message both sent and marked dispatched, as FR-3 lists. A `Call`'s confirmation counts too, although no clear precedes it (FR-3.2). FR-4 lists what stays out. |
-| **Notification channel** | What this spec adds: the in-process channel from which a subscriber reads notifications. Brighter already uses "channel" for a consumer's channel to a broker, so public names need care (Q-5). |
+| **Notification channel** | What this spec adds: the in-process channel from which a subscriber reads notifications. Each publication has its own (FR-14). Where this document speaks of one channel rather than two, it means that failures and `Expired` share it. Brighter already uses "channel" for a consumer's channel to a broker, so public names need care (Q-5). |
 | **Notification** | One record of one failed clear of one message, or of one expired message the archiver moved (FR-20), with the fields in FR-5. |
 | **Max age** | A limit a publication sets on how old an undispatched message on its topic may be before Brighter stops sending it from a sweep (FR-17). A working name. |
 | **Age** | The time from the message's `MessageHeader.TimeStamp` (`MessageHeader.cs:329`) to now, not from a store's write time. Where a store's outstanding query applies the age, now is the clock that query already uses for the sweep's minimum age: the system clock in the relational stores (`RelationDatabaseOutbox.cs:1603`, `MsSqlOutbox.cs:100`), and an injected `TimeProvider` in `InMemoryOutbox`, DynamoDB, Firestore and MongoDb. The max age and the minimum age of one query use the same clock. The ADR says whether a cutoff computed by the checking component, from its own `TimeProvider`, replaces the store's clock. |
 | **Expired message** | An undispatched message whose age is greater than the max age of its topic (FR-17). |
 | **Archiver run** | One call of `OutboxArchiver.Archive` or `ArchiveAsync` (`OutboxArchiver.cs:97`, `:147`), which `TimedOutboxArchiver` makes on its timer under the lock `Archiver` (`TimedOutboxArchiver.cs:62`, `:107-120`). |
-| **Raise** | What the mediator does to put a notification on the notification channel. This document uses "send" for messages only. |
+| **Raise** | What the mediator does to put a notification on a notification channel. This document uses "send" for messages only. |
 | **Subscriber** | The application code that reads notifications. |
 | **Delivered** | Read by the subscriber. |
-| **Capacity** | The most notifications the channel holds that have not been delivered. |
-| **Dropped count** | Since the channel was created, the total number of notifications raised and never delivered because of FR-9 or FR-13. |
+| **Capacity** | The most notifications one channel holds that have not been delivered. |
+| **Dropped count** | For one channel, since it was created, the total number of notifications raised for it and never delivered because of FR-9 or FR-13. |
 | **Kind** | The kind of failure, `SendFailed`, `ConfirmationFailed` or `MarkDispatchedFailed`, or `Expired` for an expired message the archiver moved. These are working names; the ADR fixes the final ones. |
 | **Topic** | `MessageHeader.Topic`, the wire topic. For a confirmation, this is `PublishConfirmationResult.Topic`, which holds the same value. |
 
@@ -102,9 +102,9 @@ No existing call turns it on, including `AddProducers`, `UseOutboxSweeper`, `Use
 > *Example.* `AddProducers` with no such step, and a producer that always throws: `PostAsync` behaves exactly as at commit 14850234f, and no notification exists.
 
 **FR-2 — Capacity has a default and is validated.**
-Capacity is optional. It has a documented default, and it must be at least 1. Its default, and any maximum, are for the ADR (P-2). An invalid capacity throws a `ConfigurationException` that names the setting and the value, no later than when the mediator is constructed. On the DI path the mediator is built lazily through `Activator.CreateInstance` (`ServiceCollectionExtensions.cs:416-420`, `:832`), so unless the ADR validates earlier, that exception reaches the application at the first resolve, as the inner exception of a `TargetInvocationException`.
+Capacity is optional and applies to each channel. It has a documented default, and it must be at least 1. Its default, and any maximum, are for the ADR (P-2). An invalid capacity throws a `ConfigurationException` that names the setting and the value, no later than when the mediator is constructed. On the DI path the mediator is built lazily through `Activator.CreateInstance` (`ServiceCollectionExtensions.cs:416-420`, `:832`), so that exception reaches the application at the first resolve, as the inner exception of a `TargetInvocationException`. On the DI path, `ValidatePipelines()` (`BrighterPipelineValidationExtensions.cs:61`, at commit 9e2f761de) resolves the mediator when it builds its validator (`:94`), and the hosted service that runs the validation takes the validators in its constructor (`BrighterValidationHostedService.cs:60-69`), so with it an invalid capacity stops the host at startup, through the check at construction, whatever `throwOnError` says. The ADR says whether it is also an `Error` finding of that validation. While the check at construction stays, the validation cannot report such a finding, because building its validators already throws, so a finding needs the validator to stop resolving the mediator when it is built (`BrighterPipelineValidationExtensions.cs:94`) (D-24). The check at construction stays, because direct construction has no startup validation and `ValidatePipelines()` is opt-in.
 
-> *Example.* 0 and -1 throw. 1 is accepted. With no capacity set, the documented default applies.
+> *Example.* 0 and -1 throw. 1 is accepted. With no capacity set, the documented default applies. With `ValidatePipelines()`, a capacity of 0 stops the host at startup.
 
 **FR-3 — Three kinds of failure raise a notification.**
 A notification is raised at each site below, on the sweep and on the explicit clear wherever both reach it. The notification sites are not the `TripTopic` sites: a synchronous send failure trips nothing today (`:1119-1136`), and a `MarkDispatched` failure trips nothing on any path.
@@ -209,25 +209,25 @@ Notifications are held in process memory only and are lost when the process cras
 
 > *Example.* Three notifications wait to be read and the process crashes: all three are lost, the messages are still in a persistent outbox, and the next sweep attempts them.
 
-**FR-9 — When the channel is full, a notification is lost and the loss is counted.**
-Raising a notification when the channel holds capacity notifications neither waits nor fails. One undelivered notification is lost, and which one is for the ADR (P-3). Then:
-- the dropped count goes up by 1, and the subscriber can read it at any time;
-- a `Warning` log entry naming the dropped count is written on the first drop, and then at a limited rate while drops continue. The ADR sets the interval (P-4).
+**FR-9 — When a channel is full, a notification is lost and the loss is counted.**
+Raising a notification when its channel holds capacity notifications neither waits nor fails. One undelivered notification is lost, and which one is for the ADR (P-3). Then:
+- that channel's dropped count goes up by 1, and the subscriber can read it at any time;
+- a `Warning` log entry naming the publication and the dropped count is written on the channel's first drop, and then at a limited rate while drops continue. The ADR sets the interval (P-4).
 
 The message itself is unaffected.
 
 > *Example.* Capacity 2, nothing reading, and notifications n1, n2 and n3 raised in order: a later read returns two of them in the order raised, and the dropped count is 1.
 
 **FR-10 — Order follows raising.**
-A notification whose raise completes before the next raise begins is delivered first, apart from any dropped. Notifications raised concurrently have no defined relative order. Order says nothing about the order on the broker: a confirmation from an earlier send can arrive after the failure of a later one. Occurred at records when the mediator raised the notification and is not monotonic across threads.
+Within one channel, a notification whose raise completes before the next raise begins is delivered first, apart from any dropped. Across channels no order is defined. Notifications raised concurrently have no defined relative order. Order says nothing about the order on the broker: a confirmation from an earlier send can arrive after the failure of a later one. Occurred at records when the mediator raised the notification and is not monotonic across threads.
 
 > *Example.* A sequential explicit clear of m1, m2 and m3 that all fail: the subscriber receives m1, m2, m3.
 
 **FR-11 — A subscriber's behaviour never reaches the publishing path.**
-- **One reader per notification.** A notification is delivered to one reader and never twice. Fan-out is the application's (P-5).
+- **One reader per notification.** A notification is delivered to one reader and never twice. Fan-out is the application's (P-5). A subscriber that wants the notifications of every publication reads each publication's channel.
 - **Early.** With the feature on, a subscriber may start reading before the mediator exists, as a hosted service can on the DI path, and it waits. Subscribing from a hosted service's start must be possible.
 - **Late.** Notifications raised after the feature is on and before the subscriber starts are held, up to capacity.
-- **Absent.** With no subscriber, FR-9 applies, and the feature holds no more than capacity notifications.
+- **Absent.** With no subscriber for a publication, FR-9 applies to its channel, which holds no more than capacity notifications.
 - **Slow or blocked.** Notifications wait in the channel and FR-9 applies. No publishing call waits.
 - **Throwing.** An exception in subscriber code stays in the subscriber's own read loop and never reaches a clear, a producer's thread or the sweeper. If that ends the loop, it becomes an absent subscriber.
 
@@ -241,24 +241,26 @@ It does not run on the calling thread during a clear, on a producer's confirmati
 **FR-13 — Shutdown is defined.**
 On `Dispose` of the mediator:
 - notifications raised while it closes the producers (`:231`) are accepted, because a producer may report confirmations then (`KafkaMessageProducer.cs:408-409`);
-- then the channel closes: the subscriber may still read what is buffered and can tell that no more will come;
+- then every channel of the mediator closes: a subscriber may still read what is buffered and can tell that no more will come;
 - `Dispose` does not wait for the subscriber;
-- a notification raised after the channel closes is discarded without an exception and added to the dropped count, with no log entry from the feature;
-- reaching the channel after `Dispose` does not throw: a read returns what is buffered and then reports the end.
+- a notification raised after its channel closes is discarded without an exception and added to that channel's dropped count, with no log entry from the feature;
+- reaching a channel after `Dispose` does not throw: a read returns what is buffered and then reports the end.
 
 > *Example.* Two notifications are buffered and the subscriber is blocked: `Dispose` returns; once unblocked, the subscriber reads two notifications and then sees the end.
 
-**FR-14 — Scope: one channel per mediator, in the process where the failure happens, for every outbox.**
-- Each mediator with the feature on has its own channel and dropped count. The DI path has one such mediator per container (`ServiceCollectionExtensions.cs:416-420`, `:554`). The control bus builds mediators of its own (`ControlBusSenderFactory.cs:62`, `ControlBusReceiverBuilder.cs:177`); they have no channel, so their failures do not notify.
-- A producer instance shared by two mediators calls both their confirmation handlers, so its result raises on both (`OutboxProducerMediator.cs:875-886`).
+**FR-14 — Scope: one channel per publication of each mediator, in the process where the failure happens, for every outbox.**
+- Each mediator with the feature on has one channel, with its own dropped count, for each publication in its producer registry, and a subscriber asks for the channel of a publication. The DI path has one such mediator per container (`ServiceCollectionExtensions.cs:416-420`, `:554`). The control bus builds mediators of its own (`ControlBusSenderFactory.cs:62`, `ControlBusReceiverBuilder.cs:177`); they have no channel, so their failures do not notify.
+- A notification goes to the channel of the publication of the producer involved, `IAmAMessageProducer.Publication` (`IAmAMessageProducer.cs:36`): for a send, a batch and a `MarkDispatched` after them, the producer the mediator looked up (`:1102`, `:1173`, `:1277`); for a confirmation and a `MarkDispatched` after it, the producer whose callback reported it, which the mediator has where it registers that callback (`:875-886`). Every notification site has that producer, so no notification lacks a channel, including one from a confirmation with an empty id or topic, and one for a message whose mapper changed its topic, which goes to the publication it was sent through.
+- Two publications on one topic, such as typed publications, have separate producers and so separate channels, on the paths that look up by type (`:1102`, `:1277`).
+- A producer instance shared by two mediators calls both their confirmation handlers, so its result raises on the channel of its publication in both (`OutboxProducerMediator.cs:875-886`).
 - A failure notifies only in the process that observes it. With several instances and a distributed lock, a message posted on instance B and retried by instance A notifies on A.
-- The archiver raises `Expired` on the channel of the mediator it is wired with: on the DI path, the mediator of the same container, and on direct construction, the channel the application passes to it (P-9). An archiver run on one instance notifies only that instance.
+- The archiver raises `Expired` on the channels of the mediator it is wired with: on the DI path, the mediator of the same container, and on direct construction, the channels the application passes to it (P-9). It uses the channel of the publication the mediator would send the message through, found by lookup topic and type as at `:1102`; where that lookup finds none, the channel of a publication on the message's topic that sets the max age applied (FR-17), and the ADR says which when several do. An archiver run on one instance notifies only that instance.
 - The failure kinds work at the mediator, above the outbox, so they need no store-specific code, query or schema change, and they apply to sync and async paths alike. They behave alike for every outbox, apart from a message with no row, where FR-3.3 says what differs. The max age is the exception: keeping expired messages out of a sweep's page and finding them for the archiver may need a filter in a store's outstanding query, with no schema change, and that store is then tested too (FR-18, FR-19, P-7, C-4).
 
-> *Example.* Two mediators in one process with separate producer registries, and a failure on the first: only the subscriber of the first receives a notification.
+> *Example.* Two mediators in one process with separate producer registries, and a failure on the first: only the subscriber of the first receives a notification. Within one mediator, publications on `orders` and `invoices`, capacity 1 and nobody reading: two failures on `orders` drop one notification of `orders` and none of `invoices`.
 
 **FR-15 — The feature is available through both ways of wiring a mediator.**
-Both the DI path (`AddProducers`, built at `ServiceCollectionExtensions.cs:817-853`) and direct construction of `OutboxProducerMediator` (`OutboxProducerMediator.cs:137`) can turn it on and reach it. The same holds for the archiver: `UseOutboxArchiver` (`HostedServiceCollectionExtensions.cs:58-77`) and direct construction of `OutboxArchiver` (`OutboxArchiver.cs:56-62`) can both reach the max age and the channel.
+Both the DI path (`AddProducers`, built at `ServiceCollectionExtensions.cs:817-853`) and direct construction of `OutboxProducerMediator` (`OutboxProducerMediator.cs:137`) can turn it on and reach it. The same holds for the archiver: `UseOutboxArchiver` (`HostedServiceCollectionExtensions.cs:58-77`) and direct construction of `OutboxArchiver` (`OutboxArchiver.cs:56-62`) can both reach the max age and the channels.
 
 > *Example.* A test that news up a mediator with an `InMemoryOutbox` needs no container to receive a notification.
 
@@ -297,7 +299,7 @@ An earlier version made a sweep send raise a `SentBySweep` notification, as an o
 > *Example.* A max age of 10 minutes on `orders`, none on `audit`, and a topic `billing` of another application in the same outbox. At 12:30:00 the outbox holds undispatched `m1` on `orders` stamped 12:00:00, `m2` on `orders` stamped 12:25:00, `a1` on `audit` and `b1` on `billing`, both stamped 11:00:00. An archiver run moves `m1` to the archive, marked as expired, and deletes it, and leaves `m2`, `a1` and `b1` undispatched.
 
 **FR-20 — The archiver raises `Expired` for each expired message it moves.**
-- With the feature on, the archiver raises one `Expired` notification for a message once the archive provider has accepted it, before the delete. It carries the message id, the topic, no exception, and the time from the archiver's `TimeProvider`.
+- With the feature on, the archiver raises one `Expired` notification for a message once the archive provider has accepted it, before the delete, on the channel FR-14 names. It carries the message id, the topic, no exception, and the time from the archiver's `TimeProvider`.
 - With the feature off, or with `Expired` filtered out (FR-22), the archiver still moves the message and raises nothing.
 - `Expired` is raised at least once, not exactly once. The archiver archives a batch and then deletes it, so an archive provider that throws part way through, or a failed delete, leaves archived messages in the outbox, and the next run archives them and raises `Expired` again (`OutboxArchiver.cs:117-130`; the host catches the exception, `TimedOutboxArchiver.cs:129`). With several instances and the default lock, which holds within one process only, each instance can move and notify the same message.
 - `Expired` does not prove the message was never sent. A sweep checks the age before its send attempt, and a send whose retries outlive the max age can reach the broker while the archiver moves the row; the later `MarkDispatched` then finds no row, which raises `MarkDispatchedFailed` on a store that throws for a missing row (FR-3.3). An explicit clear of an expired message can race the archiver the same way. A max age well above the longest send attempt narrows this, and does not close it.
@@ -330,7 +332,7 @@ With the feature on, a clear in which every message succeeds raises nothing and 
 Turned off, no buffer exists and no notification is allocated; each raise site checks that it is off.
 
 **NFR-5 — The number of notifications held is bounded.**
-The buffer never holds more than capacity notifications, whatever the failure rate. No field of a notification holds a message or a body. A notification keeps its exception object, which Brighter does not inspect and which can hold a body: on Kafka's sync path the `ChannelFailureException` wraps a `ProduceException` whose `DeliveryResult.Message` holds the message (`KafkaMessageProducer.cs:322-329`). Capacity bounds the number of notifications, not their bytes.
+A channel never holds more than capacity notifications, whatever the failure rate, so the feature holds at most capacity times the number of publications. No field of a notification holds a message or a body. A notification keeps its exception object, which Brighter does not inspect and which can hold a body: on Kafka's sync path the `ChannelFailureException` wraps a `ProduceException` whose `DeliveryResult.Message` holds the message (`KafkaMessageProducer.cs:322-329`). Capacity bounds the number of notifications, not their bytes.
 
 **NFR-6 — The channel is safe under concurrency.**
 Raising is safe from any number of threads at once: request threads, the sweeper and producers' threads. Below capacity, no notification is lost or duplicated, and the dropped count is exact.
@@ -350,11 +352,11 @@ A notification can be delivered as soon as raising it returns. Brighter adds no 
 Occurred at and the FR-9 log interval come from the mediator's injectable `TimeProvider`. The age checks of FR-18 and FR-19 use the clock of the term "Age", which is the system clock on the relational stores, so tests there use stamps relative to the time they run (AC-50, AC-56), and the occurred at of FR-20 uses a `TimeProvider` the archiver can be given.
 
 **NFR-10 — Nothing leaves the process.**
-The feature adds no export, instrument or log of a message's content. Its drop warning names the dropped count, and a fault inside the feature logs only the exception type. An exception on a notification may contain broker details and, as NFR-5 says, a body, and it reaches only application code in the same process.
+The feature adds no export, instrument or log of a message's content. Its drop warning names the publication and the dropped count, and a fault inside the feature logs only the exception type. An exception on a notification may contain broker details and, as NFR-5 says, a body, and it reaches only application code in the same process.
 
 **NFR-11 — The feature is documented.**
 Every new public type and member has XML documentation that follows `.agent_instructions/documentation.md`. A page in BrighterCommand/Docs covers:
-- how to turn it on and subscribe;
+- how to turn it on and subscribe to a publication's notifications, and that each publication has its own channel, capacity and dropped count;
 - the meaning of each kind, in particular that `MarkDispatchedFailed` means probably sent, `ConfirmationFailed` means not confirmed, and `SendFailed` does not prove the message was not sent, because a cancellation or client timeout after the broker's acceptance looks the same;
 - that a notification is not final, and a sweeper may still send the message;
 - that a subscriber should remove duplicates by id;
@@ -376,6 +378,7 @@ Every new public type and member has XML documentation that follows `.agent_inst
 - that the max age applies per topic, with the smallest age of the topic's publications, and that a message whose mapper changed its topic takes the max age of its new topic (D-20);
 - that the archiver moves at most its batch size of expired messages per run, so a large backlog leaves the outbox over several runs;
 - how to choose kinds (FR-22), for example to receive only `Expired`;
+- that with `ValidatePipelines()` an invalid capacity or an empty set of kinds stops the host at startup (FR-2);
 - how a consumer can treat a late message as expired by comparing `MessageHeader.TimeStamp` with the same age.
 
 ### Constraints and Assumptions
@@ -415,7 +418,7 @@ Every new public type and member has XML documentation that follows `.agent_inst
 ## Acceptance Criteria
 
 **Setup unless an AC says otherwise:**
-- **Mediator.** `OutboxProducerMediator` constructed directly, with the feature on at default capacity.
+- **Mediator.** `OutboxProducerMediator` constructed directly, with the feature on at default capacity, and one publication on `orders` unless an AC names more. "The channel" and "the dropped count" mean those of that publication.
 - **Clock.** A `FakeTimeProvider` at 2026-01-01T12:00:00Z.
 - **Pipeline.** `CommandProcessor.OutboxProducer` with no retry.
 - **Outbox.** `InMemoryOutbox`, holding message `m1` on topic `orders` and, where an AC says so, `m2` and `m3`. A *failing outbox* double wraps it and throws on request from `AddAsync`, `Get`, `GetAsync`, `OutstandingMessagesAsync`, `MarkDispatched` or `MarkDispatchedAsync`.
@@ -429,7 +432,7 @@ Every new public type and member has XML documentation that follows `.agent_inst
   - `InMemoryMessageProducer` with `PublishFailurePredicate` for a failed confirmation (`InMemoryMessageProducer.cs:126`), and with `UseAsyncPublishConfirmation = true` for one on the deferred pump (`InMemoryMessageProducer.cs:112`).
 - **Subscriber.** A test subscriber that records what it receives. On request it does not read, blocks, or throws. Waits for a delivery are bounded by 5 seconds of wall-clock time.
 - **Logger.** A test logger that captures entries.
-- **Archiver.** For FR-19 to FR-21, an `OutboxArchiver` over the same outbox, with the mediator's producer registry and channel, the same `FakeTimeProvider`, and an *archive provider* double that records what it receives and throws on request. No publication sets a max age unless an AC says so. Each message is added to the outbox with the clock set to its stamp, so its write time and its `MessageHeader.TimeStamp` agree; where an AC needs them to differ, it says so.
+- **Archiver.** For FR-19 to FR-21, an `OutboxArchiver` over the same outbox, with the mediator's producer registry and channels, the same `FakeTimeProvider`, and an *archive provider* double that records what it receives and throws on request. No publication sets a max age unless an AC says so. Each message is added to the outbox with the clock set to its stamp, so its write time and its `MessageHeader.TimeStamp` agree; where an AC needs them to differ, it says so.
 
 **AC-1 (FR-1, NFR-4).** **Given** the feature is not turned on, with `AddProducers`, `UseOutboxSweeper`, `UseOutboxStaleMessageMonitor` and `AddBrighterInstrumentation` all called, and a throwing async producer, **When** `ClearOutboxAsync(["m1"])` runs, **Then** it returns, `m1` is undispatched, nothing throws, and, where the ADR's API lets a test reach a channel, nothing can be read from it.
 
@@ -486,7 +489,7 @@ Every new public type and member has XML documentation that follows `.agent_inst
 
 **AC-23 (FR-9, FR-11).** **Given** capacity 2 and a subscriber that does not read, **When** n1, n2 and n3 are raised in order and the subscriber then reads, **Then** it receives exactly two of them in the order raised, and the dropped count reads 1. The ADR's policy fixes which two (P-3).
 
-**AC-24 (FR-9, NFR-9).** **Given** capacity 1, no reads, and the log interval the ADR sets, written I, **When** 5 notifications are raised at time T, then 1 at T + I minus one second, then 1 at T + I, **Then** exactly two `Warning` entries, one at T and one at T + I, each naming the dropped count then. **And** no such entry when nothing is dropped.
+**AC-24 (FR-9, NFR-9).** **Given** capacity 1, no reads, and the log interval the ADR sets, written I, **When** 5 notifications are raised at time T, then 1 at T + I minus one second, then 1 at T + I, **Then** exactly two `Warning` entries, one at T and one at T + I, each naming the publication and the dropped count then. **And** no such entry when nothing is dropped.
 
 **AC-25 (FR-10).** **Given** a sequential clear of `m1`, `m2` and `m3` that all fail, **Then** the subscriber receives them in that order.
 
@@ -544,18 +547,24 @@ Every new public type and member has XML documentation that follows `.agent_inst
 
 **AC-53 (FR-20, FR-3.3).** **Given** the failing outbox throwing for a missing row from `MarkDispatchedAsync`, a max age of 10 minutes, a sweep at 12:09:59 whose send of `m1`, stamped 12:00:00, waits until an archiver run at 12:10:01 has moved `m1`, **Then** `Expired` for `m1` and then `MarkDispatchedFailed` for `m1` are raised, and the producer received `m1`.
 
-**AC-54 (FR-21, FR-14, FR-15).** **Given** `AddProducers` with a max age of 10 minutes on `orders` and no `UseOutboxArchiver`, **When** the mediator is resolved, **Then** nothing throws and one `Warning` entry names `orders`. **And given** `UseOutboxArchiver` with `NullOutboxArchiveProvider` and the feature on in the same container, **Then** no such entry is written, and an archiver run removes expired `m1` from the outbox and raises `Expired` for `m1` on the channel of that container's mediator.
+**AC-54 (FR-21, FR-14, FR-15).** **Given** `AddProducers` with a max age of 10 minutes on `orders` and no `UseOutboxArchiver`, **When** the mediator is resolved, **Then** nothing throws and one `Warning` entry names `orders`. **And given** `UseOutboxArchiver` with `NullOutboxArchiveProvider` and the feature on in the same container, **Then** no such entry is written, and an archiver run removes expired `m1` from the outbox and raises `Expired` for `m1` on the channel of the publication on `orders` of that container's mediator.
 
 **AC-55 (FR-22).** **Given** the feature on with only `Expired` chosen, a throwing async producer and expired `m2`, **When** `ClearOutboxAsync(["m1"])` fails and an archiver run moves `m2`, **Then** the only notification is `Expired` for `m2`, and the dropped count is 0. **And given** no kinds chosen, **When** the mediator is constructed, **Then** it throws a `ConfigurationException`. **And given** the default kinds, **When** a send fails, a confirmation fails, a `MarkDispatched` fails and an archiver run moves an expired message, **Then** one notification of each kind is raised: `SendFailed`, `ConfirmationFailed`, `MarkDispatchedFailed` and `Expired`.
 
 **AC-56 (FR-18, C-4).** **Given** a max age of 10 minutes on `orders`, a sweep batch size of 10 and a minimum age of 0, 20 messages on `orders` stamped 11:00:00 and `m1` on `orders` stamped 12:09:00, all undispatched, **When** a sweep runs at 12:10:01, **Then** `m1` is sent, and none of the 20 is. This runs on `InMemoryOutbox`, which reads oldest first, and on each store whose outstanding query changes (P-7); on a store whose query uses the system clock, the stamps are relative to the time the test runs, with the same intervals.
+
+**AC-57 (FR-14, FR-9).** **Given** publications on `orders` and `invoices`, capacity 1, no reads, and a throwing async producer for each, **When** `m1` and `m2` on `orders` fail in turn and then `m3` on `invoices` fails, **Then** the channel of `invoices` returns only the notification for `m3`, the channel of `orders` returns one notification, the dropped count of `orders` is 1, and that of `invoices` is 0. **And given**, on a new mediator, a sync confirming producer for `invoices` that raises `(false, Id.Empty, null, null)`, **Then** that notification reaches the channel of `invoices`.
+
+**AC-58 (FR-14, FR-20).** **Given** two publications on `orders`, one for type `A` and one for type `B`, each with its own throwing producer, **When** `ClearOutboxAsync(["m1"])` fails for `m1` of type `A` on a producer that is not a bulk producer, **Then** its notification reaches the channel of the publication for `A` only. **And given** a max age of 10 minutes on the publication for `A` and expired `m2` of type `A`, **When** an archiver run moves `m2`, **Then** `Expired` for `m2` reaches the channel of the publication for `A`.
+
+**AC-59 (FR-2, FR-22).** **Given** the DI path with `ValidatePipelines()`, **When** the host starts with a capacity of 0, and separately with no kinds chosen, each with `throwOnError` true and then false, **Then** in each of the four cases the host does not start, and the exception is the `ConfigurationException` of AC-2 or AC-55, or has it as an inner exception. If the ADR adds an `Error` finding (FR-2), this AC changes with it.
 
 ### Requirement → Acceptance Criteria map
 
 | Requirement | AC | Requirement | AC |
 |---|---|---|---|
 | FR-1 | AC-1 | FR-13 | AC-30, AC-31 |
-| FR-2 | AC-2, AC-3 | FR-14 | AC-13, AC-32, AC-33, AC-54 |
+| FR-2 | AC-2, AC-3, AC-59 | FR-14 | AC-13, AC-32, AC-33, AC-54, AC-57, AC-58 |
 | FR-3.1 | AC-4 to AC-9 | FR-15 | AC-34, AC-54 |
 | FR-3.2 | AC-10, AC-11 | NFR-1 | AC-28 |
 | FR-3.3 | AC-12, AC-13, AC-53 | NFR-2 | AC-35 |
@@ -564,14 +573,14 @@ Every new public type and member has XML documentation that follows `.agent_inst
 | FR-6 | AC-7, AC-18, AC-19 | NFR-5 | AC-36 |
 | FR-7 | AC-14, AC-15, AC-20, AC-21 | NFR-6 | AC-37 |
 | FR-8 | AC-22 | NFR-7 | AC-38 |
-| FR-9 | AC-3, AC-23, AC-24 | NFR-8 | None: the build and the existing suite |
+| FR-9 | AC-3, AC-23, AC-24, AC-57 | NFR-8 | None: the build and the existing suite |
 | FR-10 | AC-25 | NFR-9 | AC-24, AC-46 |
 | FR-11 | AC-23, AC-26, AC-27, AC-28, AC-34 | NFR-10 | AC-39 |
 | FR-12 | AC-28, AC-29 | NFR-11 | AC-40 |
 | FR-16 | None: withdrawn | FR-17 | AC-45 to AC-47 |
 | FR-18 | AC-46 to AC-48, AC-56 | FR-19 | AC-47, AC-49, AC-50 |
-| FR-20 | AC-47, AC-49, AC-51 to AC-53 | FR-21 | AC-54 |
-| FR-22 | AC-55 | C-4 | AC-50, AC-56 |
+| FR-20 | AC-47, AC-49, AC-51 to AC-53, AC-58 | FR-21 | AC-54 |
+| FR-22 | AC-55, AC-59 | C-4 | AC-50, AC-56 |
 
 FR-3 is met through its sub-clauses.
 
@@ -610,6 +619,8 @@ The requirements above state these. Each row gives the alternative.
 | D-20 | The max age applies per topic, `MessageHeader.Topic` as stored, the column or attribute the stores already filter tripped topics and count stale messages by (`MsSqlQueries.cs:8`, `:31`; `MongoDbOutbox.cs:949-952`; `DynamoDbOutbox.cs:817-828`), and the topic uses the smallest of its publications' ages, as `StaleMessageAge` does (`Publication.cs:106-109`, `TimedOutboxStaleMessageMonitor.cs:393-399`). | Per lookup topic, read from the `ProducerTopic` entry of the header bag (`OutboxProducerMediator.cs:1064-1086`); or per publication, by topic and `MessageHeader.Type`. | The bag is stored as serialised JSON (`SqlOutboxBuilder.cs:50`; `MessageItem.cs:123`, `:241`) or as bytes in Firestore (`FirestoreOutbox.cs:1335`), so a filter on it needs a JSON function per dialect with no index, filters after DynamoDB's page limit, and cannot be written as a Firestore query. A relational store has a `[Type]` column (`SqlOutboxBuilder.cs:53`), but DynamoDB indexes by topic only and the bulk path groups by topic (`:1169`). Accepted cost: a message whose mapper changed `MessageHeader.Topic`, such as a reply, takes the max age of a publication on its new topic, usually none; and one publication with a max age makes its whole topic expire at that age. |
 | D-21 | One spec for the channel and the max age. | A separate spec for the max age. | The maintainer's review ties them: `Expired` travels on the channel and the filter of FR-22 is for it. A split is easy later if the maintainer prefers it. |
 | D-22 | Expired messages take no place in a sweep's batch (FR-18). | The sweep fetches its page as today and drops expired messages in memory; only the archiver's query changes. | On a store that reads oldest first (MsSql, MongoDb, InMemory), an expired backlog larger than the batch fills every page and the sweep sends nothing newer on that topic until the archiver has moved it, at most its batch size per run. Accepted cost of this decision: every store's outstanding query takes a bound per topic (P-7) and is tested (C-4), and on DynamoDB, which filters after its page limit, a sweep may read past the expired backlog on each run. |
+| D-23 | One channel per publication, as the maintainer suggested on 2026-11-20, routed by the producer involved (FR-14). | One channel per mediator, which the subscriber sorts by topic; one channel per mediator with a subscription filtered by publication; or one channel per topic. | With one channel per mediator, every application that reacts per publication writes the same dispatch code, which the maintainer noted, and a burst of failures on one publication pushes the others out of the shared capacity. A filtered subscription removes the dispatch code but not the shared capacity. One channel per topic would merge typed publications on a shared topic, which have separate producers. Accepted cost of this decision: memory bounded by capacity times the number of publications, and a subscriber that wants every notification reads each channel. |
+| D-24 | The check at construction stays, and `ValidatePipelines()` reaches it at startup (FR-2). | Only a finding of `ValidatePipelines()`. | Direct construction and a DI application that does not call `ValidatePipelines()` would accept an invalid setting. A finding beside the check at construction is reached only if the validator stops resolving the mediator when it is built (FR-2). |
 
 ### Proposed, for the ADR
 
@@ -618,14 +629,14 @@ The requirements above state the needs. These are proposals for how to meet them
 | # | Proposal | Alternative | Cost of the alternative |
 |---|---|---|---|
 | P-1 | A bounded channel from `System.Threading.Channels`, which `InMemoryJobChannel` also uses (`InMemoryJobChannel.cs:72`) and which can be configured with drop-oldest. It adds no dependency: the core references it (`Paramore.Brighter.csproj:30`) and already uses it (`InMemoryMessageProducer.cs:48-49`). The ADR confirms that the dropped count can be exact on every target framework. | An event, or a handler role. | A plain .NET event raised inline does not meet FR-12. A handler role means Brighter runs subscriber code and needs its own loop and exception handling. |
-| P-2 | Default capacity 1,024, valid values 1 to 1,048,576. | Another default; no maximum. | A smaller default loses more in a burst. A larger one, or no maximum, retains more exceptions (NFR-5). |
+| P-2 | Default capacity 1,024 per channel, valid values 1 to 1,048,576. | Another default; no maximum. | A smaller default loses more in a burst. A larger one, or no maximum, retains more exceptions (NFR-5). |
 | P-3 | When full, drop the oldest. | Drop the newest; or wait. | Waiting breaks NFR-1. Dropping the newest hides the current failures. Accepted cost: with no sweeper, a dropped oldest failure does not recur, and only the stale gauge can show its message. |
 | P-4 | The FR-9 `Warning` at most once per 60 seconds of `TimeProvider` time. | A log entry per drop; or the count only. | One per drop floods the log during an outage. With the count only, an application that does not read the count never learns of the loss. |
 | P-5 | One reader per notification, and the application fans out. A second reader competes for notifications or is rejected, as the ADR says. | Built-in fan-out. | Adds per-subscriber buffers and drop counts. An application can fan out itself. |
 | P-6 | Withdrawn with FR-16 (D-19). | | |
 | P-7 | The archiver asks for undispatched messages older than a topic's max age, one topic at a time, through `OutstandingMessages(Async)` with the topic in `args`, the way `MongoDbOutbox` and `DynamoDbOutbox` already read `args["Topic"]`. The relational stores, `InMemoryOutbox` and `FirestoreOutbox` gain that filter. For FR-18, the sweep passes, for each topic with a max age, an upper bound on age, that is a lower bound on `MessageHeader.TimeStamp`, so that its page holds no expired message; every store's outstanding query reads those bounds, `MongoDbOutbox` and `DynamoDbOutbox` included; the minimum age it passes today stays the lower bound on age. The filter matches the stored topic, as the tripped-topic filter does. `InMemoryOutbox` filters on its write time today (`InMemoryOutbox.cs:575-581`), so it must filter on `MessageHeader.TimeStamp` for this. No outbox interface gains a member. | An optional role interface with a query of its own, as `IAmATopicCountingOutbox` (ADR `0086-outbox-per-topic-stale-count`) added; or one query over all pending messages, filtered in memory. | The role interface adds no member to the existing interfaces, but it is one more interface for each store to implement and for the mediator and the archiver to test for. One query over all messages meets FR-19's problem: page 1 in the store's order can be full of messages on other topics or not yet expired. |
 | P-8 | The expired marker is one key in `MessageHeader.Bag`, set before the archive provider receives the message. | A new archive provider method. | Every provider would change, and `IAmAnArchiveProvider` would gain a member. |
-| P-9 | The archiver reaches the producer registry, the channel and a `TimeProvider` through new trailing optional parameters of its constructor, which `UseOutboxArchiver` fills from the container. | A new archiver type. | Two archivers to keep in step, and `TimedOutboxArchiver` would need to choose between them. |
+| P-9 | The archiver reaches the producer registry, the channels and a `TimeProvider` through new trailing optional parameters of its constructor, which `UseOutboxArchiver` fills from the container. | A new archiver type. | Two archivers to keep in step, and `TimedOutboxArchiver` would need to choose between them. |
 
 ### Open questions for the ADR and the maintainer
 
@@ -634,13 +645,16 @@ The requirements above state the needs. These are proposals for how to meet them
     - The DI path builds the mediator through `Activator.CreateInstance` with positional arguments (`ServiceCollectionExtensions.cs:828-852`), so a new constructor parameter must also be added there.
     - `BuildOutBoxProducerMediator` takes the class `ProducersConfiguration` (`ServiceCollectionExtensions.cs:820`), so a new property, if the ADR chooses one, goes on the class, and its default means off.
     - `ServiceCollectionExtensions.cs:565` replaces an application's own implementation of `IAmProducersConfiguration` with a new `ProducersConfiguration`, so a property on the class would leave the feature off in silence for that application.
-    - NFR-8 rules out a new member on `IAmAnOutboxProducerMediator`, and the DI path registers only that interface (`ServiceCollectionExtensions.cs:416`, `:554`). The subscriber therefore probably reaches the channel through an object of its own passed to the constructor.
+    - NFR-8 rules out a new member on `IAmAnOutboxProducerMediator`, and the DI path registers only that interface (`ServiceCollectionExtensions.cs:416`, `:554`). The subscriber therefore probably reaches the channels through an object of its own passed to the constructor.
   - Still open:
     - What a subscriber sees when the feature is off, including an application whose own `IAmProducersConfiguration` leaves it off in silence. A read that ends at once looks like a normal end and hides a forgotten step.
     - Whether one reader is enough (P-5). "Subscribe" may suggest several, and FR-11 assumes one.
-    - How a waiting reader ends when no mediator was ever built. FR-13 closes the channel only on a mediator's `Dispose`, so the ADR gives such a reader a way out, at the least its own cancellation.
-    - Whether two mediators on the direct path can receive the same object. FR-14 gives each mediator its own channel, so the ADR rejects sharing or says what replaces that rule.
-    - How the archiver receives the same channel as the mediator (P-9), and how FR-21's check sees whether `UseOutboxArchiver` was called.
+    - How a waiting reader ends when no mediator was ever built. FR-13 closes the channels only on a mediator's `Dispose`, so the ADR gives such a reader a way out, at the least its own cancellation.
+    - Whether two mediators on the direct path can receive the same object. FR-14 gives each mediator its own channels, so the ADR rejects sharing or says what replaces that rule.
+    - How a subscriber names the publication whose channel it reads, and whether the API also offers one read across all of a mediator's channels.
+    - What a subscriber gets when it asks for the channel of a publication that is not in the producer registry, and how a subscriber that starts before the mediator exists (FR-11) reaches the channel of a publication.
+    - Which channel `Expired` uses for a message whose send was routed by `RequestContext.Destination` (`ProducerRegistry.cs:119-120`), since the archiver has no request context and FR-14 has it look up the publication by topic and type.
+    - How the archiver receives the same channels as the mediator (P-9), and how FR-21's check sees whether `UseOutboxArchiver` was called.
 - **Q-2. Should a failed confirmation carry a reason?** `PublishConfirmationResult` has none, and Kafka's reason reaches only a log (`KafkaMessagePublisher.cs:61`), so a message over the size limit on Kafka notifies with no exception. An additive `init` property set by the Kafka producer could fix this later. This spec leaves it out (OOS-11), because it changes a transport and a record ADR `0063-failed-delivery-context` defined.
 - **Q-3. A TTL on an outbox. Answered.** With a TTL set, DynamoDB and Firestore stamp an expiry on add, and MongoDB indexes `TimeStamp` for its TTL. Whether a row is deleted depends on the store, as "One channel or two" says. Where one is deleted, there is no signal. On 2026-11-19 the maintainer wrote "I would favour explicit by age, over silent by TTL", so this spec documents the TTL case, and a max age shorter than the TTL gives the signal through `Expired` (FR-20).
 - **Q-4. An instrument for raised and dropped notifications?** None in this spec (OOS-8), to keep ADR `0084-outbox-metrics` untouched. It could be added later without changing this contract.
