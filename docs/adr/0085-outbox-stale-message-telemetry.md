@@ -370,7 +370,7 @@ The meter finds the readings only when the meter provider shares the application
 | Checks an outbox's overall count against FR-14 (a) and (b) | `OutstandingCountOutboxBaseTests<TTransaction>` (Paramore.Brighter.Base.Test) | Adds AC-16's nine messages, counts them and asserts the age and ceiling results. | doing | the outbox that a generated or derived class supplies |
 | Checks that a count ends when its token is cancelled | `OutstandingCountCancellationOutboxBaseTests<TTransaction>` (Paramore.Brighter.Base.Test) | Runs AC-17 against the prepared store and bounds the wait. | doing | `OutstandingCountCancellationSetup<TTransaction>` |
 | Holds the store for the cancellation test | `OutstandingCountCancellationSetup<TTransaction>` (Paramore.Brighter.Base.Test) | Knows the outbox, whether the store is held and the client's cancellation exception. Releases the hold and removes the store when disposed. | knowing, doing | the provider that prepares it |
-| Supplies each store's parts to the generated tests | `IAmAnOutstandingCountOutboxProvider` (rendered into each outbox test project) | Creates and removes a store of its own for each case. Prepares the store for AC-17. | doing | the outbox under test and its store |
+| Supplies each store's parts to the generated tests | `IAmAnOutstandingCountOutboxProvider` (rendered into each outbox test project) | Gives each case a store that holds only the case's messages, and empties or removes it afterwards. Prepares the store for AC-17. | doing | the outbox under test and its store |
 
 The loop decides what happened, the readings remember it, and the meter publishes it. The meter holds no schedule state, and the monitor holds no instruments. The monitor calls the per-topic capability of ADR 0086-outbox-per-topic-stale-count, which states that capability's contract and error conditions.
 
@@ -606,7 +606,7 @@ public sealed class OutstandingCountCancellationSetup<TTransaction> : IAsyncDisp
 
 | Member | Input | Output | Error conditions |
 | --- | --- | --- | --- |
-| `Outbox` | None | The asynchronous outbox under test, over a store that no other test writes to. The cases call the asynchronous count, as the monitor does | None |
+| `Outbox` | None | The asynchronous outbox under test, over a store that holds only the case's messages. The cases call the asynchronous count, as the monitor does | None |
 | `ReadConsistencyTimeout` | None | How long a case may retry a count against an eventually consistent index. Zero by default, which means one call | None |
 | `CreateStore`, `DeleteStore` | None | Create and remove the store around each case, as in `CausationTrackingOutboxBaseTests` | None |
 | `AddMessageWithAgeAsync` | A message and an age | The message is in the outbox, undispatched. It is at least that age old on the outbox's own clock when the case counts. It is older only by the time the case takes to reach the count | An exception fails the case |
@@ -645,15 +645,15 @@ A token cancelled before the call proves only that the outbox checks the token b
 | MongoDb, Spanner | Not held |
 | Firestore | Not held. FR-14 records its column (c) as a Gap, so its fact carries a gap mark once step 13 has recorded the result |
 
-AC-16 counts every undispatched message in the store, so the store must hold only the case's nine messages. The MsSql, PostgreSql, MySql, Sqlite, MongoDb and Spanner providers already create a table or a collection for each test. The DynamoDB providers share one table, and the Firestore provider shares one collection. The suite therefore asks each provider for a store of its own. The DynamoDB providers create a table for each case and delete it afterwards, as their tests for tripped topics already do. The Firestore provider creates a collection with a unique name for each case, and deletes its documents afterwards.
+AC-16 counts every undispatched message in the store, so the store must hold only the case's nine messages. The MsSql, PostgreSql, MySql, Sqlite, MongoDb and Spanner providers already create a table or a collection for each test. The DynamoDB providers share one table, and the Firestore provider shares the `outbox` collection. The suite therefore asks each provider for a store that holds only the case's messages. The DynamoDB providers create a table for each case and delete it afterwards, as their tests for tripped topics already do. The Firestore provider cannot do the same: a composite index belongs to a collection name, and the count's filter and order need one, so a collection named for each case cannot have it in advance. The Firestore provider therefore uses one fixed collection, `outbox_outstanding_count`, for every case. The count suites run one case at a time, the provider deletes the collection's documents after each case, and it clears documents left by an earlier run before the first case. The collection needs a composite index on `IsDispatched` ascending and `TimeStamp` descending in the Google Cloud project.
 
 The suite is the fourth that `OutboxGenerator.SuitesFor` yields, beside the Sync, Async and Causation suites, with its templates in `Templates/Outbox/OutstandingCount/`. It renders `IAmAnOutstandingCountOutboxProvider` into the suite's folder of each outbox test project, as the Sync and Async suites render their provider interfaces:
 
 | Member | Input | Output | Error conditions |
 | --- | --- | --- | --- |
-| `CreateOutstandingCountStore` | None | Creates a store that no other test writes to, and returns an asynchronous outbox over it | An exception fails the case |
+| `CreateOutstandingCountStore` | None | Creates a store that holds only the case's messages, and returns an asynchronous outbox over it | An exception fails the case |
 | `DeleteOutstandingCountStore` | None | Removes that store | Never throws |
-| `PrepareCancellationAsync` | How long to hold the store | The setup, over a store of its own that no other test writes to, as the table above describes for each outbox | An exception fails the case |
+| `PrepareCancellationAsync` | How long to hold the store | The setup, over a store that holds only the case's messages, as the table above describes for each outbox | An exception fails the case |
 
 Each outbox's provider class implements `IAmAnOutstandingCountOutboxProvider`, beside `IAmAnOutboxProviderSync` and `IAmAnOutboxProviderAsync`. The generated test classes derive from the base classes, as the causation template does. They override `Outbox`, the store hooks and `PrepareStoreAsync` with calls to the provider. `SuitesFor` gives the suite no `SkipTest` filter, so the generator renders each of the suite's templates for every outbox, whatever the template's name. ADR 0066-conformance-test-provider-and-ungating does not rely on names either, because a `SkipTest` matches parts of file names.
 
@@ -975,7 +975,7 @@ The overall count of every other outbox stays unchanged.
 - Until the FR-14 gaps are closed, the overall values are less accurate for some outboxes. Firestore ignores A, C and the token. DynamoDB can undercount when C is split across scan segments, and it reads more than C items.
 - No CI job runs the Spanner tests, so the Spanner facts run only by hand. The `gcp-ci` job does not run for a pull request from a fork, so step 13 also runs the Firestore facts by hand. Step 13 runs both sets of facts against an emulator, so FR-14 records no result from Google Cloud for Spanner or Firestore.
 - No audit checks the outbox gap marks. The FR-14 table and step 13 keep each mark in step with its issue.
-- The DynamoDB and Firestore providers create and remove a store for each AC-16 case.
+- The DynamoDB providers create and remove a store for each AC-16 case. The Firestore provider shares one fixed collection between the cases. The collection needs a composite index in the Google Cloud project, and two `gcp-ci` runs at the same time would share it.
 - The test generator gains a fourth outbox suite, two settings and three gap marks. Every outbox's provider implements one more interface.
 - A count that ignores cancellation holds one pool thread until it returns. Every due time of that count until then is skipped (FR-8). The skips are visible, but no reading of that count arrives.
 - An outbox's cancellation callback that blocks holds one more pool thread until it returns. It does not hold the loop, `StopAsync` or `FakeTimeProvider.Advance`.
