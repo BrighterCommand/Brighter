@@ -67,10 +67,6 @@ public class GatewayConformanceConfiguration
     /// <see cref="AdditionalExpectedSubjects"/>, rendering a generic entry's arity backtick as open
     /// generic angle brackets (<c>Ns.Foo`1</c> becomes <c>typeof(Ns.Foo&lt;&gt;)</c>).
     /// </summary>
-    /// <remarks>
-    /// The conversion is done here, once, rather than in the Liquid template, so the template owns
-    /// only rendering the values this property already computes.
-    /// </remarks>
     public IReadOnlyList<string> ExpectedSubjectTypeofLiterals =>
         new[] { SubscriptionType }.Concat(AdditionalExpectedSubjects)
             .Select(ToTypeofLiteral)
@@ -89,18 +85,6 @@ public class GatewayConformanceConfiguration
         return $"typeof({baseName}<{new string(',', arity - 1)}>)";
     }
 
-    /// <summary>
-    /// Returns a copy of this configuration with values it does not set taken from the root
-    /// <paramref name="configuration"/>.
-    /// </summary>
-    /// <param name="configuration">The root configuration to inherit unset values from.</param>
-    /// <returns>A copy; this instance is unchanged.</returns>
-    /// <remarks>
-    /// Applied where the model a rendering reads is built, so that describing the work and
-    /// performing it see the same model. Applying it on only one of those paths is how the
-    /// generator's expected set and its output would come to disagree - which is the drift the
-    /// generated-tree audit exists to catch, and so the last place it should be reintroduced.
-    /// </remarks>
     internal GatewayConformanceConfiguration WithDefaultsFrom(TestConfiguration configuration)
     {
         var copy = (GatewayConformanceConfiguration)MemberwiseClone();
