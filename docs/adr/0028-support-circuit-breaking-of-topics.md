@@ -21,7 +21,13 @@ Date: 2025-07-04
 
 Proposed
 
-Amended by ADR 0089 (`0089-distributed-outbox-circuit-breaker.md`): an in-memory trip also ends at the maximum trip duration D (`OutboxCircuitBreakerOptions.MaximumTripDuration`, default 5 minutes), and the cooldown no longer has to advance on the lock holder's sweep to end a trip.
+Amended by ADR 0089 (`0089-distributed-outbox-circuit-breaker.md`), which amends this ADR and does not supersede it. It replaces three decisions:
+
+- "an In-Memory collection of tripped topics" as the only state. Option 1 (persistence-backed) now ships as an opt-in beside Option 2: `DistributedOutboxCircuitBreaker` shares trips through an `IAmATrippedTopicStore` in the outbox database.
+- "On each sweep the OnTick method will be called to decrement the CoolDownCount". The cooldown no longer advances only on the lock holder's sweep. An in-memory trip also ends at the maximum trip duration D (`OutboxCircuitBreakerOptions.MaximumTripDuration`, default 5 minutes), and a distributed trip ends one trip length after its latest stamp.
+- "If a topic exceeds a configurable failure threshold within a time window" and "reset failure count on success". These were never built. As built, a single failed publish trips a topic, and a success does not end a trip. ADR 0089 records that rule and does not change it.
+
+The problem statement, the `trippedTopics` filter on `OutstandingMessagesAsync` and the bulk-dispatch change stand.
 
 ---
 

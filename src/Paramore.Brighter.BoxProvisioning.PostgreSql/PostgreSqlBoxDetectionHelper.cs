@@ -246,6 +246,7 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
     {
         BoxType.Outbox => "headerbag",
         BoxType.Inbox => "commandbody",
+        BoxType.TrippedTopics => "trip_time",
         _ => throw new ArgumentOutOfRangeException(nameof(boxType), boxType, "Unknown BoxType")
     };
 

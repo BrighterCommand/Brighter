@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Paramore.Brighter.CircuitBreaker;
 
 namespace Paramore.Brighter.Observability;
 
@@ -44,4 +45,15 @@ public readonly record struct OutboxSweeperSnapshot(
     int ConsecutiveFailedSweeps,
     SweepOutcome? LastOutcome,
     bool IsStopped,
-    bool IsActive);
+    bool IsActive)
+{
+    /// <summary>
+    /// Whether the sweeper's health signals read the tripped topics of <paramref name="breaker"/>: always while the sweeper is active,
+    /// and on any sweeper when the breaker shares its trips, because every instance sees the same shared view.
+    /// It does not consider <see cref="IsStopped"/>; a stopped sweeper reports nothing, and callers check that before they look the breaker up.
+    /// </summary>
+    /// <param name="breaker">The circuit breaker in use.</param>
+    /// <returns>True when the health signals should read the breaker's tripped topics.</returns>
+    public bool ReadsTrippedTopicsFrom(IAmAnOutboxCircuitBreaker breaker) =>
+        IsActive || breaker is IAmASharedOutboxCircuitBreaker;
+}

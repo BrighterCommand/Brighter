@@ -55,10 +55,12 @@ For the per-backend migration history (V1..V7 outbox uniform across the four rel
 | `IAmABoxProvisioner` | Per (backend × box-type) entry point; `ProvisionAsync(CancellationToken)`. |
 | `IAmABoxMigrationRunner` | Applies pending migrations under lock and writes history rows. |
 | `SqlBoxProvisioner<TConnection, TTransaction>` | Abstract base for the 8 relational provisioners (4 backends × Outbox/Inbox). Owns the orchestration body; derived classes supply only `CreateConnection` + `PayloadColumnName`. Spanner pair is free-standing. |
+| `TrippedTopicsProvisioner` | `IAmABoxProvisioner` for the distributed circuit breaker's trip table. Takes a table name, an optional schema and the backend's `IAmABoxMigrationRunner`; guards the identifiers and hands the runner the trip table's catalog. Not a `SqlBoxProvisioner`: the trip table has no payload column and no legacy table to bootstrap from. Created by `TrippedTopicsProvisioner.Create`, which the `Add{Backend}TrippedTopics` extensions share. |
+| `TrippedTopicsMigrationCatalog` | Abstract base for the three per-backend trip-table catalogs; the catalogs own the table's column names and discriminator. |
 | `SqlBoxMigrationRunner<TConnection, TTransaction>` | Abstract base for the 4 relational migration runners (template-method pattern; sealed `MigrateAsync` orchestration with abstract hooks). Spanner runner is free-standing. |
 | `BoxTableState` (record) | Snapshot of `(TableExists, HistoryExists, CurrentVersion)`. |
-| `BoxType` | `Outbox` or `Inbox`. |
-| `BoxProvisioningHostedService` | `IHostedService` — runs all registered provisioners at startup (Outbox before Inbox). |
+| `BoxType` | `Outbox`, `Inbox` or `TrippedTopics`. `TrippedTopics` is appended after `Inbox` so the existing numeric values do not change. |
+| `BoxProvisioningHostedService` | `IHostedService` — runs all registered provisioners at startup, in the order Outbox, TrippedTopics, Inbox. |
 | `BoxProvisioningOptions` | Configuration builder threaded through `UseBoxProvisioning(o => ...)`. |
 | `BrighterBuilderBoxProvisioningExtensions` | `UseBoxProvisioning(this IBrighterBuilder, Action<BoxProvisioningOptions>)`. Single-call contract enforced by `BoxProvisioningMarker`. |
 | `Identifiers.AssertSafe(identifier, parameterName)` | Defence-in-depth chokepoint validating SQL identifiers against `^[A-Za-z][A-Za-z0-9_]*$`. Rejects leading digits and leading underscores (Spanner reserves `_`-prefixed names). |
@@ -70,6 +72,7 @@ For each backend, the package `Paramore.Brighter.BoxProvisioning.{Backend}` cont
 | File | Role / Base |
 |------|-------------|
 | `{Backend}OutboxMigrationCatalog.cs`, `{Backend}InboxMigrationCatalog.cs` | `IAmABoxMigrationCatalog` |
+| `{Backend}TrippedTopicsMigrationCatalog.cs` (MsSql, MySql and PostgreSql only) | `TrippedTopicsMigrationCatalog`; the trip table for the distributed circuit breaker. SQLite and Spanner have no trip store yet. |
 | `{Backend}BoxDetectionHelper.cs` | `IAmAVersionDetectingMigrationHelper<TConn, TTx>` (Spanner: base `IAmABoxMigrationDetectionHelper` only) |
 | `{Backend}OutboxProvisioner.cs`, `{Backend}InboxProvisioner.cs` | `SqlBoxProvisioner<TConn, TTx>` (Spanner: implements `IAmABoxProvisioner` directly) |
 | `{Backend}BoxMigrationRunner.cs` | `SqlBoxMigrationRunner<TConn, TTx>` (Spanner: implements `IAmABoxMigrationRunner` directly) |

@@ -38,5 +38,11 @@ public enum BoxType
     /// An outbox table — stores messages produced inside a business transaction so that they
     /// can be reliably dispatched to the broker after the transaction commits.
     /// </summary>
-    Outbox
+    Outbox,
+
+    /// <summary>
+    /// A tripped-topics table — stores the circuit-breaker trips that instances share through
+    /// the outbox database so that a topic tripped by one instance is seen by the others.
+    /// </summary>
+    TrippedTopics
 }

@@ -1,0 +1,110 @@
+﻿#region Licence
+
+/* The MIT License (MIT)
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+#endregion
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Paramore.Brighter.CircuitBreaker;
+
+/// <summary>
+/// A trip store that holds its trips in memory, for one process.
+/// </summary>
+public class InMemoryTrippedTopicStore : IAmATrippedTopicStore
+{
+    private readonly object _lock = new();
+    private readonly Dictionary<RoutingKey, Row> _trips = new();
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(TripWindow window, CancellationToken cancellationToken = default)
+    {
+        lock (_lock)
+        {
+            IReadOnlyList<TopicTrip> ended = MarkEnded(window);
+            return Task.FromResult(ended);
+        }
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(TripWindow window, CancellationToken cancellationToken = default)
+    {
+        var cutoff = window.Cutoff;
+        lock (_lock)
+        {
+            IReadOnlyList<TopicTrip> live = _trips.Where(trip => trip.Value.EndedAt is null && trip.Value.TripTime > cutoff)
+                .Select(trip => new TopicTrip(trip.Key, trip.Value.TripTime))
+                .ToList();
+            return Task.FromResult(live);
+        }
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
+    {
+        RejectRepeatedTopics(trips);
+
+        lock (_lock)
+        {
+            IReadOnlyList<TripWriteResult> results = trips.Select(Write).ToList();
+            return Task.FromResult(results);
+        }
+    }
+
+    private static void RejectRepeatedTopics(IReadOnlyList<TopicTrip> trips)
+    {
+        if (trips.Select(trip => trip.Topic).Distinct().Count() != trips.Count)
+            throw new ArgumentException("A write must name each topic once.", nameof(trips));
+    }
+
+    private List<TopicTrip> MarkEnded(TripWindow window)
+    {
+        var expired = _trips.Where(trip => trip.Value.EndedAt is null && trip.Value.TripTime <= window.Cutoff).ToList();
+        foreach (var trip in expired)
+            _trips[trip.Key] = trip.Value with { EndedAt = window.Now };
+
+        return expired.Select(trip => new TopicTrip(trip.Key, trip.Value.TripTime)).ToList();
+    }
+
+    private TripWriteResult Write(TopicTrip trip)
+    {
+        if (!_trips.TryGetValue(trip.Topic, out var stored))
+            return Store(trip.Topic, new Row(trip.TripTime, null), null);
+
+        var tripTime = stored.TripTime > trip.TripTime ? stored.TripTime : trip.TripTime;
+        var remainsEnded = stored.EndedAt is not null && trip.TripTime <= stored.TripTime;
+        var prior = stored.EndedAt is null ? stored.TripTime : (DateTimeOffset?)null;
+        return Store(trip.Topic, new Row(tripTime, remainsEnded ? stored.EndedAt : null), prior);
+    }
+
+    private TripWriteResult Store(RoutingKey topic, Row row, DateTimeOffset? prior)
+    {
+        _trips[topic] = row;
+        return new TripWriteResult(topic, prior, row.TripTime, row.EndedAt is not null);
+    }
+
+    private sealed record Row(DateTimeOffset TripTime, DateTimeOffset? EndedAt);
+}

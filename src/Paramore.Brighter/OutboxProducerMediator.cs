@@ -460,8 +460,10 @@ namespace Paramore.Brighter
             var parentSpan = requestContext.Span;
 
             var childSpans = new ConcurrentDictionary<string, Activity>();
+            IAmATripBatch? trips = null;
             try
             {
+                trips = BeginTripBatchOrNull();
                 // Get all the messages being cleared in a batch to keep db operations down
                 var postArray = posts as Id[] ?? posts.ToArray();
                 Message[] messages = (await _asyncOutbox!.GetAsync(postArray, requestContext)).ToArray();
@@ -485,7 +487,7 @@ namespace Paramore.Brighter
 
                     try
                     {
-                        await DispatchAsync([message], requestContext, OutboxClearSource.Explicit, continueOnCapturedContext, cancellationToken);
+                        await DispatchAsync([message], requestContext, OutboxClearSource.Explicit, continueOnCapturedContext, cancellationToken, trips);
                     }
                     finally
                     {
@@ -495,7 +497,14 @@ namespace Paramore.Brighter
             }
             finally
             {
-                requestContext.Span = parentSpan;
+                try
+                {
+                    await WriteTripsOrWarnAsync(trips);
+                }
+                finally
+                {
+                    requestContext.Span = parentSpan;
+                }
             }
 
             CheckOutstandingMessages(requestContext);
@@ -755,14 +764,17 @@ namespace Paramore.Brighter
                 var parentSpan = requestContext.Span;
                 var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
                     _instrumentationOptions);
+                IAmATripBatch? trips = null;
                 try
                 {
                     requestContext.Span = span;
 
                     if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
+                    var trippedTopics = await ReadTrippedTopicsAsync(cancellationToken);
+                    trips = BeginTripBatchOrNull();
                     var messages =
                         (await _asyncOutbox.OutstandingMessagesAsync(timeSinceSent, requestContext,
-                            pageSize: amountToClear, trippedTopics: _outboxCircuitBreaker?.TrippedTopics, args: args, cancellationToken: cancellationToken)).ToArray();
+                            pageSize: amountToClear, trippedTopics: trippedTopics, args: args, cancellationToken: cancellationToken)).ToArray();
 
                     BrighterTracer.WriteOutboxEvent(BoxDbOperation.OutStandingMessages, messages, span, false, true,
                         _instrumentationOptions);
@@ -775,11 +787,11 @@ namespace Paramore.Brighter
                     // the sweep stays off a starved thread pool. A caller without a context is unaffected.
                     if (useBulk)
                     {
-                        await BulkDispatchAsync(messages, requestContext, OutboxClearSource.Sweeper, true, cancellationToken);
+                        await BulkDispatchAsync(messages, requestContext, OutboxClearSource.Sweeper, true, cancellationToken, trips);
                     }
                     else
                     {
-                        await DispatchAsync(messages, requestContext, OutboxClearSource.Sweeper, true, cancellationToken);
+                        await DispatchAsync(messages, requestContext, OutboxClearSource.Sweeper, true, cancellationToken, trips);
                     }
 
                     Log.MessagesHaveBeenCleared(s_logger);
@@ -792,8 +804,15 @@ namespace Paramore.Brighter
                 }
                 finally
                 {
-                    _tracer?.EndSpan(span);
-                    _backgroundClearSemaphore.Release();
+                    try
+                    {
+                        await WriteTripsOrWarnAsync(trips);
+                    }
+                    finally
+                    {
+                        _tracer?.EndSpan(span);
+                        _backgroundClearSemaphore.Release();
+                    }
                 }
 
                 CheckOutstandingMessages(requestContext);
@@ -803,6 +822,41 @@ namespace Paramore.Brighter
                 requestContext.Span?.SetStatus(ActivityStatusCode.Error);
                 Log.SkippingDispatchOfMessages(s_logger);
             }
+        }
+
+        private IAmATripBatch? BeginTripBatchOrNull()
+        {
+            try
+            {
+                return (_outboxCircuitBreaker as IAmAnOutboxCircuitBreakerAsync)?.BeginTripBatch();
+            }
+            catch (Exception e)
+            {
+                Log.FailedToBeginTripBatch(s_logger, e);
+                return null;
+            }
+        }
+
+        private static async Task WriteTripsOrWarnAsync(IAmATripBatch? trips)
+        {
+            if (trips is null) return;
+
+            try
+            {
+                await trips.WriteAsync();
+            }
+            catch (Exception e)
+            {
+                Log.FailedToWriteTripBatch(s_logger, e);
+            }
+        }
+
+        private async Task<IEnumerable<RoutingKey>?> ReadTrippedTopicsAsync(CancellationToken cancellationToken)
+        {
+            if (_outboxCircuitBreaker is IAmAnOutboxCircuitBreakerAsync asyncBreaker)
+                return await asyncBreaker.ReadTrippedTopicsAsync(cancellationToken);
+
+            return _outboxCircuitBreaker?.TrippedTopics;
         }
 
         private void CheckOutboxOutstandingLimit()
@@ -1186,7 +1240,8 @@ namespace Paramore.Brighter
             RequestContext requestContext,
             OutboxClearSource clearSource,
             bool continueOnCapturedContext,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            IAmATripBatch? trips)
         {
             var parentSpan = requestContext.Span;
             var producerSpans = new ConcurrentDictionary<string, Activity>();
@@ -1281,7 +1336,7 @@ namespace Paramore.Brighter
                             if (!sent)
                             {
                                 foreach (var id in batch.Ids()) UntrackPendingConfirmation(id);
-                                TripTopic(batch.RoutingKey);
+                                TripTopic(batch.RoutingKey, trips);
                             }
                         }
                     }
@@ -1303,7 +1358,8 @@ namespace Paramore.Brighter
             RequestContext requestContext,
             OutboxClearSource clearSource,
             bool continueOnCapturedContext,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            IAmATripBatch? trips)
         {
             var parentSpan = requestContext.Span;
             var producerSpans = new ConcurrentDictionary<string, Activity>();
@@ -1360,7 +1416,7 @@ namespace Paramore.Brighter
                                 RecordCleared(message.Header.Topic, clearSource, message.Header.TimeStamp, dispatchedAt.Value);
                         }
 
-                        if(!sent) TripTopic(message.Header.Topic);
+                        if(!sent) TripTopic(message.Header.Topic, trips);
                     }
                     else
                         throw new InvalidOperationException("No async message producer defined.");
@@ -1589,9 +1645,13 @@ namespace Paramore.Brighter
             }
         }
 
-        private void TripTopic(RoutingKey? routingKey)
+        private void TripTopic(RoutingKey? routingKey, IAmATripBatch? trips = null)
         {
-            if(!RoutingKey.IsNullOrEmpty(routingKey))
+            if (RoutingKey.IsNullOrEmpty(routingKey)) return;
+
+            if (trips is not null)
+                trips.TripTopic(routingKey);
+            else
                 _outboxCircuitBreaker?.TripTopic(routingKey);
         }
 
@@ -1707,6 +1767,12 @@ namespace Paramore.Brighter
 
             [LoggerMessage(LogLevel.Warning, "Failed to dispose owned resource {ResourceType} while disposing the mediator; continuing with the remaining resources")]
             public static partial void FailedToDisposeOwnedResource(ILogger logger, string resourceType, Exception exception);
+
+            [LoggerMessage(LogLevel.Warning, "The outbox circuit breaker failed to begin a trip batch; tripping topics directly for this sweep")]
+            public static partial void FailedToBeginTripBatch(ILogger logger, Exception exception);
+
+            [LoggerMessage(LogLevel.Warning, "The outbox circuit breaker failed to write a trip batch; the sweep result is unaffected")]
+            public static partial void FailedToWriteTripBatch(ILogger logger, Exception exception);
 
             [LoggerMessage(LogLevel.Warning, "Outbox metric recording failed; the metric has been dropped but the Outbox operation was unaffected")]
             public static partial void OutboxMetricsFault(ILogger logger, Exception ex);
