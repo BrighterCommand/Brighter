@@ -501,12 +501,18 @@ namespace Paramore.Brighter.ServiceActivator
                 lock (_lifecycleLock)
                 {
                     subscription = Subscriptions.Single(c => c.Name == connectionName);
-                    currentPerformers = starting ? 0 : subscription.NoOfPerformers;
+                    // A performer can stop itself, for example on reaching its unacceptable message limit, without
+                    // the configured count changing. Count the performers that are actually running for a subscription
+                    // that is not shut, so that a request for the configured count replaces the ones that have stopped.
+                    var runningConsumers = _consumers.Values
+                        .Where(c => c.Subscription.Name == subscription.Name && IsRunning(c))
+                        .ToArray();
+                    currentPerformers = starting ? 0
+                        : _shutSubscriptions.Contains(subscription.Name) ? subscription.NoOfPerformers
+                        : runningConsumers.Length;
                     subscription.SetNumberOfPerformers(numberOfPerformers);
                     desiredPerformers = subscription.NoOfPerformers;
-                    consumersToClose = _consumers.Values
-                        .Where(c => c.Subscription.Name == subscription.Name)
-                        .Take(Math.Max(0, currentPerformers - desiredPerformers)).ToArray();
+                    consumersToClose = runningConsumers.Take(Math.Max(0, currentPerformers - desiredPerformers)).ToArray();
                 }
 
                 if (currentPerformers < desiredPerformers)
@@ -516,6 +522,11 @@ namespace Paramore.Brighter.ServiceActivator
                 return Array.Empty<Consumer>();
             });
         }
+
+        // A consumer that has not opened yet has no job, but is about to run. One that was shut, or whose job has
+        // completed because the performer stopped itself, is on its way out and is not running.
+        private static bool IsRunning(IAmAConsumer consumer)
+            => consumer.Job is null || (consumer.State == ConsumerState.Open && !consumer.Job.IsCompleted);
 
         private void ExecuteConsumerOperation(Func<bool, IEnumerable<Consumer>> createConsumers)
         {
