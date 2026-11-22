@@ -88,6 +88,7 @@ public class GatewayConformanceConfiguration
     internal GatewayConformanceConfiguration WithDefaultsFrom(TestConfiguration configuration)
     {
         var copy = (GatewayConformanceConfiguration)MemberwiseClone();
+        copy.AdditionalExpectedSubjects = new List<string>(AdditionalExpectedSubjects);
 
         if (string.IsNullOrEmpty(copy.Namespace))
         {
