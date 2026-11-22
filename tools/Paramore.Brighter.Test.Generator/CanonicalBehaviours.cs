@@ -28,16 +28,14 @@ using System.Collections.Generic;
 namespace Paramore.Brighter.Test.Generator;
 
 /// <summary>
-/// The canonical conformance behaviours (FR-21 / ADR 0067): the mapping from a canonical template
+/// The canonical conformance behaviours (ADR 0067): the mapping from a canonical template
 /// to the conformance-ledger column it is judged against, and the human-readable label used for
 /// that column in a Deferred Skip string.
-///
-/// This is the single source of truth for both mappings. The generator reads it when deciding
-/// whether to emit a Skip, and the conformance audit reads it when checking an already-generated
-/// Skip back against the ledger cell it claims to come from. Holding one copy is what lets the
-/// audit assert the exact cell rather than merely that the issue number appears somewhere in the
-/// ledger — two copies could drift and the audit would then be checking the wrong cell.
 /// </summary>
+/// <remarks>
+/// The one copy both the generator and the conformance audit read, so the audit can check a
+/// generated Skip against the exact ledger cell it came from.
+/// </remarks>
 public static class CanonicalBehaviours
 {
     /// <summary>

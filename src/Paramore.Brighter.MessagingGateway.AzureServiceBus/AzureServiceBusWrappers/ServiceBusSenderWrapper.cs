@@ -43,6 +43,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         public Task SendAsync(ServiceBusMessageBatch batch, CancellationToken cancellationToken = default)
             => _serviceBusSender.SendMessagesAsync(batch, cancellationToken);
 
+        public bool IsClosed => _serviceBusSender.IsClosed;
+
         public Task CloseAsync()
         {
             return _serviceBusSender.CloseAsync();
