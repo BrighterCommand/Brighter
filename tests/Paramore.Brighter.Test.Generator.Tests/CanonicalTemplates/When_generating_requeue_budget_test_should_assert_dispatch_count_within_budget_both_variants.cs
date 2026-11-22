@@ -88,17 +88,27 @@ public class WhenGeneratingRequeueBudgetTestShouldAssertDispatchCountWithinBudge
 
     private static void AssertVariantObligations(string content, string label)
     {
-        // 1. Dispatch count is read using the correct key derivation
+        AssertReadsDispatchCountKeyedBySentMessage(content, label);
+        AssertDispatchCountWithinBudget(content, label);
+        AssertDispatchCountReadAfterPumpAwaited(content, label);
+        AssertRejectionReasonInsideStampsGuard(content, label);
+        AssertKeepsHandledCountLowerBound(content, label);
+    }
+
+    private static void AssertReadsDispatchCountKeyedBySentMessage(string content, string label)
+    {
         Assert.True(content.Contains(GET_DISPATCH_COUNT),
             $"{label}: generated file must call {GET_DISPATCH_COUNT}");
         Assert.True(content.Contains(KEY_OF_MESSAGE),
             $"{label}: dispatch count key must use {KEY_OF_MESSAGE}");
+    }
 
-        // 2. Dispatch count is bounded by RequeueCount
+    private static void AssertDispatchCountWithinBudget(string content, string label) =>
         Assert.True(content.Contains(DISPATCH_WITHIN_BUDGET),
             $"{label}: must assert dispatch count {DISPATCH_WITHIN_BUDGET}");
 
-        // 3. Dispatch count assertion appears AFTER await pumping (R-4: window closes after quit-and-await)
+    private static void AssertDispatchCountReadAfterPumpAwaited(string content, string label)
+    {
         var awaitPumpingIndex = content.IndexOf(AWAIT_PUMPING, StringComparison.Ordinal);
         var dispatchCountIndex = content.IndexOf(GET_DISPATCH_COUNT, StringComparison.Ordinal);
 
@@ -109,8 +119,10 @@ public class WhenGeneratingRequeueBudgetTestShouldAssertDispatchCountWithinBudge
         Assert.True(dispatchCountIndex > awaitPumpingIndex,
             $"{label}: {GET_DISPATCH_COUNT} (at {dispatchCountIndex}) must appear after " +
             $"'{AWAIT_PUMPING}' (at {awaitPumpingIndex})");
+    }
 
-        // 4. StampsRejectionMetadata guard contains keys.RejectionReason == "DeliveryError"
+    private static void AssertRejectionReasonInsideStampsGuard(string content, string label)
+    {
         Assert.True(content.Contains(STAMPS_REJECTION_METADATA),
             $"{label}: must contain {STAMPS_REJECTION_METADATA} guard");
         Assert.True(content.Contains(KEYS_REJECTION_REASON),
@@ -118,17 +130,16 @@ public class WhenGeneratingRequeueBudgetTestShouldAssertDispatchCountWithinBudge
         Assert.True(content.Contains(DELIVERY_ERROR_VALUE),
             $"{label}: must assert {DELIVERY_ERROR_VALUE}");
 
-        // RejectionReason assertion must be INSIDE the StampsRejectionMetadata guard
         var stampsIndex = content.IndexOf(STAMPS_REJECTION_METADATA, StringComparison.Ordinal);
         var rejectionReasonIndex = content.IndexOf(KEYS_REJECTION_REASON, StringComparison.Ordinal);
         Assert.True(rejectionReasonIndex > stampsIndex,
             $"{label}: {KEYS_REJECTION_REASON} (at {rejectionReasonIndex}) must appear after " +
             $"{STAMPS_REJECTION_METADATA} (at {stampsIndex}) — assertion must be inside the guard");
+    }
 
-        // 5. Existing HandledCount >= RequeueCount - 1 assertion is kept (R-5 bound)
+    private static void AssertKeepsHandledCountLowerBound(string content, string label) =>
         Assert.True(content.Contains(HANDLED_COUNT_BOUND),
             $"{label}: must retain '{HANDLED_COUNT_BOUND}' assertion");
-    }
 
     private static InMemoryConformanceLedger PassLedger(string frColumn) =>
         new(new Dictionary<(string, string), string>
