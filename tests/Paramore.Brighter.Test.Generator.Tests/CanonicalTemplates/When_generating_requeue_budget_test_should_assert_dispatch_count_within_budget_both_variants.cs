@@ -27,19 +27,10 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
 /// <summary>
-/// Verifies that the generated FR-23 (Reactor and Proactor) templates assert the dispatch count
-/// within the delivery budget and stamp the DeliveryError rejection reason on the dead-letter
-/// message (R-27(c)(4), R-4, AC-3, AC-36 last two clauses, NFR-7).
-///
-/// Specifically asserts all obligations in one shot:
-/// <list type="number">
-///   <item>The dispatch count is read via ConformanceDeferredPump.GetDispatchCount(ConformanceDeferredPump.KeyOf(message))</item>
-///   <item>The dispatch count assertion (&lt;= _subscription.RequeueCount) appears after await pumping</item>
-///   <item>When keys.StampsRejectionMetadata is true, the generated code asserts
-///         dlqMessage.Header.Bag[keys.RejectionReason] == "DeliveryError", with the assertion
-///         inside the StampsRejectionMetadata guard (R-5: the route was Brighter-managed)</item>
-///   <item>The existing HandledCount &gt;= RequeueCount - 1 assertion is kept in both variants</item>
-/// </list>
+/// Pins the too-many-requeues dead-letter templates, both variants: the dispatch count, keyed by
+/// ConformanceDeferredPump.KeyOf(message) and read after the pump is awaited, stays within RequeueCount;
+/// DeliveryError is asserted inside the StampsRejectionMetadata guard; the HandledCount lower bound is kept.
+/// See ADR 0077, What the FR-23 harness can assert.
 /// </summary>
 public class WhenGeneratingRequeueBudgetTestShouldAssertDispatchCountWithinBudgetBothVariants : IDisposable
 {
@@ -47,21 +38,17 @@ public class WhenGeneratingRequeueBudgetTestShouldAssertDispatchCountWithinBudge
     private const string FR23_TEMPLATE =
         "When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue";
 
-    // ── Dispatch count assertions ────────────────────────────────────────────
-    // The template must call GetDispatchCount using KeyOf(message) of the SENT message.
     private const string GET_DISPATCH_COUNT = "GetDispatchCount";
     private const string KEY_OF_MESSAGE = "ConformanceDeferredPump.KeyOf(message)";
     private const string DISPATCH_WITHIN_BUDGET = "<= _subscription.RequeueCount";
 
-    // ── Ordering: dispatch count read comes after await pumping ──────────────
     private const string AWAIT_PUMPING = "await pumping";
 
-    // ── RejectionReason assertion inside StampsRejectionMetadata guard ───────
     private const string STAMPS_REJECTION_METADATA = "keys.StampsRejectionMetadata";
     private const string KEYS_REJECTION_REASON = "keys.RejectionReason";
     private const string DELIVERY_ERROR_VALUE = "\"DeliveryError\"";
 
-    // ── Kept assertion: HandledCount >= RequeueCount - 1 ────────────────────
+    // deliveriesExpected is RequeueCount - 1 (ADR 0077, What the FR-23 harness can assert).
     private const string HANDLED_COUNT_BOUND = "HandledCount >= deliveriesExpected";
 
     private readonly string _testDirectory;
@@ -78,15 +65,6 @@ public class WhenGeneratingRequeueBudgetTestShouldAssertDispatchCountWithinBudge
         _logger = factory.CreateLogger<Generators.MessagingGatewayGenerator>();
     }
 
-    /// <summary>
-    /// Generates both FR-23 templates and asserts all R-27(c)(4) obligations in one shot:
-    /// <list type="number">
-    ///   <item>Dispatch count is read with GetDispatchCount(ConformanceDeferredPump.KeyOf(message))</item>
-    ///   <item>Dispatch count assertion (&lt;= _subscription.RequeueCount) appears after await pumping in both variants</item>
-    ///   <item>StampsRejectionMetadata guard contains keys.RejectionReason == "DeliveryError"</item>
-    ///   <item>HandledCount &gt;= deliveriesExpected is kept in both variants</item>
-    /// </list>
-    /// </summary>
     [Fact]
     public async Task When_generating_requeue_budget_test_should_assert_dispatch_count_within_budget_both_variants()
     {
@@ -98,20 +76,16 @@ public class WhenGeneratingRequeueBudgetTestShouldAssertDispatchCountWithinBudge
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reactor variant
+        // Assert
         var reactor = await File.ReadAllTextAsync(ReactorFr23Path());
         AssertVariantObligations(reactor, "Reactor");
 
-        // Assert — Proactor variant
         var proactor = await File.ReadAllTextAsync(ProactorFr23Path());
         AssertVariantObligations(proactor, "Proactor");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Asserts all R-27(c)(4) obligations for one variant (Reactor or Proactor).
-    /// </summary>
     private static void AssertVariantObligations(string content, string label)
     {
         // 1. Dispatch count is read using the correct key derivation
