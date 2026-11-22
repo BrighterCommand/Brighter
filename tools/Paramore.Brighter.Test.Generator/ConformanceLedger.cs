@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Test.Generator;
 
 /// <summary>
 /// Provides per-(configuration × behaviour) conformance Skip values for canonical test
-/// templates, driven by the checked-in conformance ledger (FR-21 / ADR 0067).
+/// templates, driven by the checked-in conformance ledger (ADR 0067).
 /// </summary>
 public interface IAmAConformanceLedger
 {
@@ -91,11 +91,8 @@ public sealed class ConformanceLedger : IAmAConformanceLedger
     /// Thrown when no ledger is found above <paramref name="startDirectory"/>.
     /// </exception>
     /// <remarks>
-    /// Failing is the point. A caller handed a null ledger generates the canonical suite with no
-    /// Skip values assigned at all, and a model whose Skip stays null renders
-    /// <c>[Fact(Skip = "")]</c> - Liquid treats <c>nil != empty</c> as TRUE - so every canonical
-    /// test on every transport is reported skipped and the suite goes green having run nothing.
-    /// A gate that cannot find its own criteria has to stop, not wave the build through.
+    /// Throws rather than return null: with no ledger every canonical test renders as skipped
+    /// (Liquid treats <c>nil != empty</c> as true), and the suite goes green having run nothing.
     /// </remarks>
     public static ConformanceLedger LoadFrom(string startDirectory)
     {
@@ -137,10 +134,7 @@ public sealed class ConformanceLedger : IAmAConformanceLedger
     /// Every cell in the matrix, as (configuration row, behaviour column, raw text).
     /// </summary>
     /// <remarks>
-    /// <para>Exists so that a caller wanting to sweep the whole matrix - an audit asking "which
-    /// cells are Deferred, and do they carry an issue and a sign-off" - does not have to parse the
-    /// markdown a second time. A second parser is a second set of header heuristics, and the two
-    /// drift: the ledger stops meaning one thing.</para>
+    /// <para>Lets a caller sweep the whole matrix without parsing the markdown a second time.</para>
     /// <para>Cell text is returned uninterpreted. Ask <see cref="IsRecognisedCellValue"/> what a
     /// value means rather than matching on it here.</para>
     /// </remarks>
@@ -186,24 +180,19 @@ public sealed class ConformanceLedger : IAmAConformanceLedger
                || value.StartsWith("Deferred ->", StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>
-    /// Converts a raw ledger cell value to the Deferred Skip string.
-    /// Pass/Fixed → empty; Unknown → placeholder #NNNN; Deferred → real issue number.
-    /// </summary>
+    // Pass or Fixed → no Skip; Unknown, a transient fix-phase state → the placeholder #NNNN;
+    // Deferred -> #N → that issue number.
     internal static string ComputeSkip(string cellValue, string transport, string behaviour)
     {
         if (string.IsNullOrEmpty(cellValue)) return string.Empty;
 
-        // Pass or Fixed (#PR/commit) → test runs without Skip.
         if (cellValue.StartsWith("Pass", StringComparison.OrdinalIgnoreCase)
             || cellValue.StartsWith("Fixed", StringComparison.OrdinalIgnoreCase))
             return string.Empty;
 
-        // Unknown (transient fix-phase state) → use the pre-audit placeholder.
         if (cellValue.StartsWith("Unknown", StringComparison.OrdinalIgnoreCase))
             return $"Deferred: #NNNN — {behaviour} not yet conformant for {transport} (maintainer sign-off)";
 
-        // Deferred -> #NNNN (sign-off: @maintainer) → extract the real issue number.
         if (cellValue.StartsWith("Deferred ->", StringComparison.OrdinalIgnoreCase))
         {
             var issueNumber = ExtractIssueNumber(cellValue);
@@ -224,33 +213,17 @@ public sealed class ConformanceLedger : IAmAConformanceLedger
         return end > start ? cellValue[start..end] : "NNNN";
     }
 
-    /// <summary>
-    /// Reads the conformance matrix out of the ledger's markdown table.
-    /// </summary>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown when the matrix cannot be found, or is found but holds no rows.
-    /// </exception>
-    /// <remarks>
-    /// Throws for the same reason <see cref="LoadFrom"/> does, one level down. Returning an empty
-    /// dictionary here is not "no criteria found" but "every cell means run without a Skip", which
-    /// is the single answer a ledger should never be able to give by accident: reformat the header
-    /// row and the whole deferral mechanism silently switches off. The cross-check audit would
-    /// report every key unresolved, but that is defence-in-depth doing the primary check's job.
-    /// </remarks>
+    // Throws rather than return an empty matrix, which would read as every cell Pass.
     private static Dictionary<string, Dictionary<string, string>> ParseLedger(string path)
     {
         var cells = new Dictionary<string, Dictionary<string, string>>();
-        var columns = new List<string>();
 
         var lines = File.ReadAllLines(path);
 
         var headerLineIndex = -1;
         for (var i = 0; i < lines.Length; i++)
         {
-            var line = lines[i].Trim();
-            // Anchored on the whole cell rather than a substring: "FR-2" as a substring also
-            // matches a header carrying only FR-22 or FR-20, and FR-22 is a real column here.
-            if (line.StartsWith('|') && HasColumn(line, "FR-2") && HasColumn(line, "FR-4"))
+            if (IsMatrixHeader(lines[i].Trim()))
             {
                 headerLineIndex = i;
                 break;
@@ -267,13 +240,10 @@ public sealed class ConformanceLedger : IAmAConformanceLedger
                 + "matrix header, or update the parser if the table's shape has changed.");
         }
 
-        // Parse column headers (skip the first cell which is "Configuration").
-        var headerCells = SplitTableRow(lines[headerLineIndex]);
-        for (var i = 1; i < headerCells.Count; i++)
-            columns.Add(headerCells[i].Trim());
+        var columns = BehaviourColumns(lines[headerLineIndex]);
 
-        // Skip the separator row (|---|---|...|) and parse data rows.
-        for (var i = headerLineIndex + 2; i < lines.Length; i++)
+        var firstDataRow = headerLineIndex + 2;
+        for (var i = firstDataRow; i < lines.Length; i++)
         {
             var line = lines[i].Trim();
             if (!line.StartsWith('|')) break;
@@ -301,17 +271,27 @@ public sealed class ConformanceLedger : IAmAConformanceLedger
         return cells;
     }
 
-    /// <summary>
-    /// Whether a markdown table row carries <paramref name="columnName"/> as a whole cell.
-    /// </summary>
+    // Matches whole cells: "FR-2" as a substring would also match FR-20 or FR-22, a real column.
+    private static bool IsMatrixHeader(string line) =>
+        line.StartsWith('|') && HasColumn(line, "FR-2") && HasColumn(line, "FR-4");
+
+    private static List<string> BehaviourColumns(string headerLine)
+    {
+        var columns = new List<string>();
+        var headerCells = SplitTableRow(headerLine);
+        for (var i = 1; i < headerCells.Count; i++)
+            columns.Add(headerCells[i].Trim());
+        return columns;
+    }
+
     private static bool HasColumn(string line, string columnName) =>
         SplitTableRow(line).Any(cell => cell.Trim() == columnName);
 
+    // Drops the empty pieces outside the leading and trailing pipes.
     private static List<string> SplitTableRow(string line)
     {
         var parts = line.Split('|');
         var result = new List<string>();
-        // Skip the first element (before the leading |) and the last (after the trailing |).
         for (var i = 1; i < parts.Length - 1; i++)
             result.Add(parts[i]);
         return result;

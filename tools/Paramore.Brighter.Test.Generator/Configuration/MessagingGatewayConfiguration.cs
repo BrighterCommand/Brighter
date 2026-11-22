@@ -100,14 +100,12 @@ public class MessagingGatewayConfiguration
     /// <summary>
     /// Gets or sets a value indicating whether the messaging gateway surfaces an error when
     /// infrastructure is absent and <c>OnMissingChannel.Assume</c> told it not to look.
-    ///
-    /// This is narrower than <see cref="HasSupportToValidateInfrastructure"/>, which covers the
-    /// explicit <c>OnMissingChannel.Validate</c> check. A transport can support the explicit check
-    /// and still complete a send/receive silently against infrastructure that does not exist.
-    /// Setting this false skips only the <c>assume_channel</c> template, leaving
-    /// <c>validate_channel</c> generated. Kafka's KIP-848 consumer retains this opt-out because
-    /// Assume performs no broker lookup; its startup warning does not detect topic existence.
     /// </summary>
+    /// <remarks>
+    /// Narrower than <see cref="HasSupportToValidateInfrastructure"/>: false skips only the
+    /// <c>assume_channel</c> template, leaving <c>validate_channel</c> generated. Kafka's KIP-848
+    /// consumer opts out because Assume performs no broker lookup.
+    /// </remarks>
     public bool HasSupportToDetectMissingInfrastructureOnAssume { get; set; } = true;
 
     /// <summary>
@@ -122,7 +120,7 @@ public class MessagingGatewayConfiguration
 
     /// <summary>
     /// Gets or sets the conformance-ledger row key for this configuration,
-    /// e.g. "Kafka / Classic" or "RMQ.Async / Classic" (FR-21 / ADR 0067).
+    /// e.g. "Kafka / Classic" or "RMQ.Async / Classic" (ADR 0067).
     /// When null the ledger-driven Skip mechanism is skipped for this configuration.
     /// </summary>
     public string? LedgerKey { get; set; }
@@ -141,25 +139,7 @@ public class MessagingGatewayConfiguration
     [JsonIgnore]
     public string Skip { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Returns a copy of this configuration carrying <paramref name="prefix"/>.
-    /// </summary>
-    /// <param name="prefix">The prefix the copy should carry.</param>
-    /// <returns>A copy; this instance is unchanged.</returns>
-    /// <remarks>
-    /// <para>
-    /// Templates read <see cref="Prefix"/> to build a namespace suffix, and the value they need is
-    /// not always the one the configuration file declares. Handing each rendering its own copy keeps
-    /// that difference out of the caller's object, so planning what would be generated can be asked
-    /// as a question rather than performed as an edit.
-    /// </para>
-    /// <para>
-    /// The copy is a <see cref="object.MemberwiseClone"/>, which is a deep copy only because every
-    /// property here is a string or a value type. A property holding a list or a dictionary would be
-    /// shared with the caller's object, and the purity this method exists for would be lost without
-    /// anything failing to compile.
-    /// </para>
-    /// </remarks>
+    // MemberwiseClone is a shallow copy: safe only while every property is a string or a value type.
     internal MessagingGatewayConfiguration WithPrefix(string prefix)
     {
         var copy = (MessagingGatewayConfiguration)MemberwiseClone();
@@ -167,18 +147,6 @@ public class MessagingGatewayConfiguration
         return copy;
     }
 
-    /// <summary>
-    /// Returns a copy of this configuration with values it does not set taken from the root
-    /// <paramref name="configuration"/>.
-    /// </summary>
-    /// <param name="configuration">The root configuration to inherit unset values from.</param>
-    /// <returns>A copy; this instance is unchanged.</returns>
-    /// <remarks>
-    /// Applied where the model a rendering reads is built, so that describing the work and
-    /// performing it see the same model. Applying it on only one of those paths is how the
-    /// generator's expected set and its output would come to disagree - which is the drift the
-    /// generated-tree audit exists to catch, and so the last place it should be reintroduced.
-    /// </remarks>
     internal MessagingGatewayConfiguration WithDefaultsFrom(TestConfiguration configuration)
     {
         var copy = (MessagingGatewayConfiguration)MemberwiseClone();

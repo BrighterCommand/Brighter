@@ -39,15 +39,6 @@ public class SharedGenerator(ILogger<SharedGenerator> logger) : BaseGenerator(lo
     /// <summary>
     /// Generates shared test infrastructure files.
     /// </summary>
-    /// <remarks>
-    /// The defaulting of <see cref="TestConfiguration.MessageBuilder"/> and
-    /// <see cref="TestConfiguration.MessageAssertion"/> used to happen here, by writing back onto
-    /// the caller's configuration - which is how the other two generators came to depend on this
-    /// one having run first, and how the generated-tree audit, which never runs it, came to plan
-    /// from a differently-populated root. It is applied by
-    /// <see cref="TestConfigurationLoader.Load"/> instead, so every reader of a configuration file
-    /// starts from the same root and no generator has to run before another.
-    /// </remarks>
     /// <param name="configuration">The root test configuration containing shared settings and destination folder.</param>
     public async Task GenerateAsync(TestConfiguration configuration)
     {
