@@ -54,9 +54,7 @@ public class UseResiliencePipelineAsyncAttribute : RequestHandlerAttribute
     /// </summary>
     public string Policy { get; }
     
-    /// <summary>
-    /// Gets or sets the type pipeline
-    /// </summary>
+    /// <inheritdoc cref="UseResiliencePipelineAttribute.UseTypePipeline"/>
     public bool UseTypePipeline { get; set; }
 
     /// <inheritdoc />
