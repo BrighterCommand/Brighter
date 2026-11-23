@@ -79,23 +79,7 @@ public class WhenGeneratingDeferredPumpShouldEmitDispatchCountKeyedByOriginalMes
 
         // Assert
         var pump = await File.ReadAllTextAsync(PumpPath());
-        Assert.Contains(CONCURRENT_DICTIONARY, pump);
-
-        Assert.Contains(ORIGINAL_MESSAGE_ID_HEADER, pump);
-        Assert.Contains(HEADER_MESSAGE_ID_FALLBACK, pump);
-
-        var originatingMessageCount = CountOccurrences(pump, ORIGINATING_MESSAGE_ACCESS);
-        Assert.True(originatingMessageCount >= 2,
-            $"Expected Context.OriginatingMessage in at least 2 handler bodies, found {originatingMessageCount}");
-
-        var accessIndex = pump.IndexOf(ORIGINATING_MESSAGE_ACCESS, StringComparison.Ordinal);
-        var deferIndex = pump.IndexOf(DEFER_MESSAGE_ACTION, StringComparison.Ordinal);
-        Assert.True(accessIndex < deferIndex,
-            $"Context.OriginatingMessage access (at {accessIndex}) must precede " +
-            $"throw new DeferMessageAction() (at {deferIndex})");
-
-        Assert.Contains(RESET_METHOD, pump);
-        Assert.Contains(GET_DISPATCH_COUNT, pump);
+        AssertPumpObligations(pump);
 
         var reactorFr23 = await File.ReadAllTextAsync(ReactorFr23Path());
         AssertConstructorContainsReset(reactorFr23, "Reactor FR-23");
@@ -105,6 +89,46 @@ public class WhenGeneratingDeferredPumpShouldEmitDispatchCountKeyedByOriginalMes
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private static void AssertPumpObligations(string pump)
+    {
+        AssertStaticThreadSafeStore(pump);
+        AssertKeyedByOriginalMessageIdElseMessageId(pump);
+        AssertBothHandlersReadOriginatingMessage(pump);
+        AssertIncrementPrecedesDefer(pump);
+        AssertResetAndReadEntryPoints(pump);
+    }
+
+    private static void AssertStaticThreadSafeStore(string pump) =>
+        Assert.Contains(CONCURRENT_DICTIONARY, pump);
+
+    private static void AssertKeyedByOriginalMessageIdElseMessageId(string pump)
+    {
+        Assert.Contains(ORIGINAL_MESSAGE_ID_HEADER, pump);
+        Assert.Contains(HEADER_MESSAGE_ID_FALLBACK, pump);
+    }
+
+    private static void AssertBothHandlersReadOriginatingMessage(string pump)
+    {
+        var originatingMessageCount = CountOccurrences(pump, ORIGINATING_MESSAGE_ACCESS);
+        Assert.True(originatingMessageCount >= 2,
+            $"Expected Context.OriginatingMessage in at least 2 handler bodies, found {originatingMessageCount}");
+    }
+
+    private static void AssertIncrementPrecedesDefer(string pump)
+    {
+        var accessIndex = pump.IndexOf(ORIGINATING_MESSAGE_ACCESS, StringComparison.Ordinal);
+        var deferIndex = pump.IndexOf(DEFER_MESSAGE_ACTION, StringComparison.Ordinal);
+        Assert.True(accessIndex < deferIndex,
+            $"Context.OriginatingMessage access (at {accessIndex}) must precede " +
+            $"throw new DeferMessageAction() (at {deferIndex})");
+    }
+
+    private static void AssertResetAndReadEntryPoints(string pump)
+    {
+        Assert.Contains(RESET_METHOD, pump);
+        Assert.Contains(GET_DISPATCH_COUNT, pump);
+    }
 
     // Appearing before the first [Fact] stands in for "inside the constructor".
     private static void AssertConstructorContainsReset(string content, string label)

@@ -99,12 +99,38 @@ public class WhenGeneratingDeferredPumpShouldEmitRecordingConsumerCountingRequeu
 
         // Assert
         var pump = await File.ReadAllTextAsync(PumpPath());
+        AssertRecordingConsumerObligations(pump);
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private static void AssertRecordingConsumerObligations(string pump)
+    {
+        AssertSyncDecoratorImplementsConsumer(pump);
+        AssertAsyncDecoratorImplementsConsumer(pump);
+        AssertSyncDecoratorForwardsEveryMember(pump);
+        AssertAsyncDecoratorForwardsEveryMember(pump);
+        AssertRequeueCountRecorded(pump);
+        AssertHandledCountLogRecorded(pump);
+        AssertHandledCountReadAfterReceive(pump);
+        AssertResetClearsRecordings(pump);
+        AssertRecordingChannelFactories(pump);
+    }
+
+    private static void AssertSyncDecoratorImplementsConsumer(string pump)
+    {
         Assert.Contains(SYNC_DECORATOR_CLASS, pump);
         Assert.Contains(SYNC_IMPLEMENTS, pump);
+    }
 
+    private static void AssertAsyncDecoratorImplementsConsumer(string pump)
+    {
         Assert.Contains(ASYNC_DECORATOR_CLASS, pump);
         Assert.Contains(ASYNC_IMPLEMENTS, pump);
+    }
 
+    private static void AssertSyncDecoratorForwardsEveryMember(string pump)
+    {
         Assert.Contains(SYNC_FORWARD_ACKNOWLEDGE, pump);
         Assert.Contains(SYNC_FORWARD_REJECT, pump);
         Assert.Contains(SYNC_FORWARD_PURGE, pump);
@@ -112,7 +138,10 @@ public class WhenGeneratingDeferredPumpShouldEmitRecordingConsumerCountingRequeu
         Assert.Contains(SYNC_FORWARD_NACK, pump);
         Assert.Contains(SYNC_FORWARD_REQUEUE, pump);
         Assert.Contains(SYNC_FORWARD_DISPOSE, pump);
+    }
 
+    private static void AssertAsyncDecoratorForwardsEveryMember(string pump)
+    {
         Assert.Contains(ASYNC_FORWARD_ACKNOWLEDGE, pump);
         Assert.Contains(ASYNC_FORWARD_REJECT, pump);
         Assert.Contains(ASYNC_FORWARD_PURGE, pump);
@@ -120,13 +149,22 @@ public class WhenGeneratingDeferredPumpShouldEmitRecordingConsumerCountingRequeu
         Assert.Contains(ASYNC_FORWARD_NACK, pump);
         Assert.Contains(ASYNC_FORWARD_REQUEUE, pump);
         Assert.Contains(ASYNC_FORWARD_DISPOSE, pump);
+    }
 
+    private static void AssertRequeueCountRecorded(string pump)
+    {
         Assert.Contains(REQUEUE_COUNT_FIELD, pump);
         Assert.Contains(GET_REQUEUE_COUNT, pump);
+    }
 
+    private static void AssertHandledCountLogRecorded(string pump)
+    {
         Assert.Contains(HANDLED_COUNT_LOG_FIELD, pump);
         Assert.Contains(GET_HANDLED_COUNT_LOG, pump);
+    }
 
+    private static void AssertHandledCountReadAfterReceive(string pump)
+    {
         var syncReceiveIndex = pump.IndexOf(SYNC_FORWARD_RECEIVE, StringComparison.Ordinal);
         Assert.True(syncReceiveIndex >= 0, $"Expected '{SYNC_FORWARD_RECEIVE}' in the pump");
         var handledCountAfterSyncReceive = pump.IndexOf(
@@ -136,15 +174,19 @@ public class WhenGeneratingDeferredPumpShouldEmitRecordingConsumerCountingRequeu
         Assert.True(handledCountAfterSyncReceive > syncReceiveIndex,
             $"Expected '{HANDLED_COUNT_PROPERTY}' to be read after '{SYNC_FORWARD_RECEIVE}' " +
             $"(HandledCount must be copied as an integer from each received message before the pump sees it)");
+    }
 
+    private static void AssertResetClearsRecordings(string pump)
+    {
         Assert.Contains(RESET_CLEARS_REQUEUE, pump);
         Assert.Contains(RESET_CLEARS_HANDLED_COUNT, pump);
+    }
 
+    private static void AssertRecordingChannelFactories(string pump)
+    {
         Assert.Contains(CREATE_RECORDING_CHANNEL, pump);
         Assert.Contains(CREATE_RECORDING_CHANNEL_ASYNC, pump);
     }
-
-    // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static InMemoryConformanceLedger PassLedger(string frColumn) =>
         new(new Dictionary<(string, string), string>
