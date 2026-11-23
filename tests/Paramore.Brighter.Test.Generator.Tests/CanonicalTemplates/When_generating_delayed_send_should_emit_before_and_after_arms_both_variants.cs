@@ -9,18 +9,9 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
 /// <summary>
-/// Verifies that the canonical delayed-send templates emit both a Reactor and a
-/// Proactor variant that:
-///   - call <c>SendWithDelay</c> (Reactor) / <c>SendWithDelayAsync</c> (Proactor) on the
-///     producer surface with a 5 s delay;
-///   - assert an immediate single bounded receive before the delay yields MT_NONE (the
-///     before-delay arm is a single receive, NOT the bounded retry loop);
-///   - assert arrival INSIDE the bounded retry loop (500 ms poll, 30 s ceiling) after
-///     the delay (the after-delay arm);
-///   - contain no reference to a scheduler, native-delay API, Thread.Sleep, or Task.Delay in
-///     the after-D arm;
-///   - emit the conditional ledger-driven Skip pattern so the Deferred marker is supplied
-///     by the conformance ledger, not hard-coded in the template.
+/// Pins the delayed-send templates, both variants: SendWithDelay/SendWithDelayAsync with a 5 s delay, a
+/// single receive before the delay that sees nothing, a bounded poll after it, no sleep and no scheduler
+/// or broker mechanism, and a Skip supplied by the ledger.
 /// </summary>
 public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants : IDisposable
 {
@@ -55,7 +46,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reactor file exists at the expected path
+        // Assert
         var reactorPath = ReactorOutputPath(configuration);
         Assert.True(File.Exists(reactorPath),
             $"Reactor canonical delayed-send file not found at {reactorPath}");
@@ -72,7 +63,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Proactor file exists at the expected path
+        // Assert
         var proactorPath = ProactorOutputPath(configuration);
         Assert.True(File.Exists(proactorPath),
             $"Proactor canonical delayed-send file not found at {proactorPath}");
@@ -89,7 +80,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — sync variant drives SendWithDelay on the producer surface
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("SendWithDelay(", content);
         Assert.Contains("TimeSpan.FromSeconds(5)", content);
@@ -106,7 +97,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — async variant drives SendWithDelayAsync on the producer surface
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("SendWithDelayAsync(", content);
         Assert.Contains("TimeSpan.FromSeconds(5)", content);
@@ -123,8 +114,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — before-D arm: a single Receive asserting MT_NONE (a single receive outside the retry loop;
-        // this must NOT be inside the bounded Stopwatch retry loop)
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("MT_NONE", content);
         Assert.Contains("Receive(", content);
@@ -141,7 +131,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — before-D arm: a single ReceiveAsync asserting MT_NONE (a single receive outside the retry loop)
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("MT_NONE", content);
         Assert.Contains("ReceiveAsync(", content);
@@ -158,7 +148,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — after-D arm uses the bounded retry loop
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Stopwatch", content);
         Assert.Contains("TimeSpan.FromSeconds(30)", content);
@@ -176,7 +166,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — after-D arm uses the bounded retry loop
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("Stopwatch", content);
         Assert.Contains("TimeSpan.FromSeconds(30)", content);
@@ -194,7 +184,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — bounded retry loop replaces fixed sleep
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.DoesNotContain("Thread.Sleep", content);
         Assert.DoesNotContain("Task.Delay", content);
@@ -211,7 +201,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — bounded retry loop replaces fixed sleep
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.DoesNotContain("Thread.Sleep", content);
         Assert.DoesNotContain("Task.Delay", content);
@@ -228,7 +218,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — no mechanism assertions
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.DoesNotContain("scheduler", content, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("RedrivePolicy", content, StringComparison.OrdinalIgnoreCase);
@@ -247,7 +237,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — no mechanism assertions
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.DoesNotContain("scheduler", content, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("RedrivePolicy", content, StringComparison.OrdinalIgnoreCase);
@@ -258,7 +248,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
     [Fact]
     public async Task When_ledger_is_pass_reactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
@@ -266,7 +256,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact] present; Skip absent (the conditional pattern renders nothing when Skip is empty)
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("[Fact]", content);
         Assert.DoesNotContain("Skip =", content);
@@ -275,7 +265,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
     [Fact]
     public async Task When_ledger_is_deferred_reactor_should_emit_skip_on_fact()
     {
-        // Arrange — ledger cell is Deferred; the template must conditionally emit Skip
+        // Arrange
         var ledger = new InMemoryConformanceLedger(
             new Dictionary<(string, string), string>
             {
@@ -287,7 +277,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact, Skip = "Deferred: #4567 ..."] is emitted
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Skip = \"Deferred: #4567", content);
     }
@@ -295,7 +285,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
     [Fact]
     public async Task When_ledger_is_pass_proactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
