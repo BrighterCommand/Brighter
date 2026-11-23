@@ -2,10 +2,10 @@ using System.Text.Json;
 using DbMaker;
 using GreetingsApp.Requests;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.DynamoDb.V4;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
-using Paramore.Brighter.Outbox.DynamoDB;
+using Paramore.Brighter.Outbox.DynamoDB.V4;
 using Paramore.Brighter.Outbox.Hosting;
 using TransportMaker;
 
