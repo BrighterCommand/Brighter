@@ -8,7 +8,7 @@ using Paramore.Brighter;
 using GreetingsEntities;
 using GreetingsApp.Requests;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.DynamoDb.V4;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
 

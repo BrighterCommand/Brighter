@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
 
@@ -40,45 +39,8 @@ namespace Paramore.Brighter.Test.Generator.Generators;
 /// <param name="logger">The logger instance used for diagnostic output during generation.</param>
 public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(logger)
 {
-    /// <summary>
-    /// Generates outbox test files for the configured outbox(es) in the provided <paramref name="configuration"/>.
-    /// Uses <see cref="TestConfiguration.Outbox"/> for a single outbox or <see cref="TestConfiguration.Outboxes"/> for multiple.
-    /// </summary>
-    /// <param name="configuration">The root test configuration containing outbox settings and destination folder.</param>
-    public async Task GenerateAsync(TestConfiguration configuration)
-    {
-        foreach (var suite in Suites(configuration))
-        {
-            await GenerateAsync(
-                configuration,
-                suite.Prefix,
-                suite.TemplateFolderName,
-                suite.Model,
-                suite.Ignore
-            );
-        }
-    }
-
-    /// <summary>
-    /// Computes every file <see cref="GenerateAsync(TestConfiguration)"/> would write for
-    /// <paramref name="configuration"/>, without writing any of them.
-    /// </summary>
-    /// <param name="configuration">The root test configuration containing outbox settings and destination folder.</param>
-    /// <returns>The outbox test files this configuration owns.</returns>
-    public IReadOnlyList<PlannedFile> Plan(TestConfiguration configuration)
-    {
-        var planned = new List<PlannedFile>();
-        foreach (var suite in Suites(configuration))
-        {
-            planned.AddRange(Plan(configuration, suite.Prefix, suite.TemplateFolderName, suite.Ignore));
-        }
-
-        return planned;
-    }
-
-    // The one description GenerateAsync and Plan both walk: the Sync, Async, Causation,
-    // OutstandingCount and optional TopicCounting suites of each outbox.
-    private IReadOnlyList<GenerationSuite> Suites(TestConfiguration configuration)
+    /// <inheritdoc />
+    protected override IReadOnlyList<GenerationSuite> Suites(TestConfiguration configuration)
     {
         var suites = new List<GenerationSuite>();
 

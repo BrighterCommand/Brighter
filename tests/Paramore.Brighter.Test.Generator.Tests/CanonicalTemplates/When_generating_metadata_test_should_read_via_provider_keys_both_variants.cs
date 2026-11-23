@@ -9,19 +9,9 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
 /// <summary>
-/// Verifies that the canonical rejection-metadata templates emit both a Reactor and a
-/// Proactor variant (closing the Kafka Reactor-only gap) that:
-///   - name the file When_rejecting_message_should_include_metadata;
-///   - read every metadata field via provider.RejectionMetadataKeys.* — never hard-coded key strings
-///     a field whose provider key is string.Empty fails as a genuine non-conformance;
-///   - assert OriginalTopic equals the data topic;
-///   - assert OriginalType equals "MT_COMMAND";
-///   - assert RejectionReason equals "DeliveryError";
-///   - assert RejectionMessage equals the description passed to Reject;
-///   - assert RejectionTimestamp is a parseable ISO-8601 timestamp within the last minute;
-///   - assert DLQ arrival INSIDE the bounded retry loop (Stopwatch, 500 ms, 60 s);
-///   - emit the conditional ledger-driven Skip so the Deferred marker is supplied by the
-///     conformance ledger, not hard-coded in the template.
+/// Pins the rejection-metadata templates, both variants: every field is read through
+/// provider.RejectionMetadataKeys, never a literal key, so a key of string.Empty fails as a
+/// non-conformance (ADR 0066); the dead-letter copy is polled in a bounded loop; the Skip is supplied by the ledger.
 /// </summary>
 public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : IDisposable
 {
@@ -54,7 +44,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reactor file exists at the mandated path
+        // Assert
         var reactorPath = ReactorOutputPath(configuration);
         Assert.True(File.Exists(reactorPath),
             $"Reactor canonical metadata file not found at {reactorPath}");
@@ -71,7 +61,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Proactor file exists at the mandated path (closing the Kafka Reactor-only gap)
+        // Assert
         var proactorPath = ProactorOutputPath(configuration);
         Assert.True(File.Exists(proactorPath),
             $"Proactor canonical metadata file not found at {proactorPath}");
@@ -88,7 +78,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — OriginalTopic read via keys.OriginalTopic, not a hard-coded string
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("keys.OriginalTopic", content);
         Assert.Contains("_publication.Topic!.Value", content);
@@ -105,7 +95,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — OriginalTopic read via keys.OriginalTopic
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("keys.OriginalTopic", content);
         Assert.Contains("_publication.Topic!.Value", content);
@@ -122,7 +112,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — OriginalType read via keys.OriginalType and asserted equal to the sent message's own type
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("keys.OriginalType", content);
         Assert.Contains("message.Header.MessageType.ToString()", content);
@@ -139,7 +129,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — OriginalType read via keys.OriginalType and asserted equal to the sent message's own type
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("keys.OriginalType", content);
         Assert.Contains("message.Header.MessageType.ToString()", content);
@@ -156,7 +146,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RejectionReason read via keys.RejectionReason and asserted equal to "DeliveryError"
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("keys.RejectionReason", content);
         Assert.Contains("DeliveryError", content);
@@ -173,7 +163,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RejectionReason read via keys.RejectionReason
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("keys.RejectionReason", content);
         Assert.Contains("DeliveryError", content);
@@ -190,7 +180,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RejectionMessage read via keys.RejectionMessage; value equals description passed to Reject
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("keys.RejectionMessage", content);
     }
@@ -206,7 +196,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RejectionMessage read via keys.RejectionMessage
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("keys.RejectionMessage", content);
     }
@@ -222,7 +212,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RejectionTimestamp read via keys.RejectionTimestamp and parsed as ISO-8601
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("keys.RejectionTimestamp", content);
         Assert.Contains("DateTimeOffset.TryParse", content);
@@ -240,7 +230,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RejectionTimestamp read via keys.RejectionTimestamp and parsed
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("keys.RejectionTimestamp", content);
         Assert.Contains("DateTimeOffset.TryParse", content);
@@ -258,7 +248,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — DLQ arrival polled inside the bounded retry loop
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueue", content);
         Assert.Contains("Stopwatch", content);
@@ -277,7 +267,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — DLQ arrival polled inside the bounded retry loop
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueueAsync", content);
         Assert.Contains("Stopwatch", content);
@@ -288,7 +278,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
     [Fact]
     public async Task When_ledger_is_pass_reactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
@@ -296,7 +286,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact] present; Skip absent (conditional pattern renders nothing when Skip is empty)
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("[Fact]", content);
         Assert.DoesNotContain("Skip =", content);
@@ -305,7 +295,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
     [Fact]
     public async Task When_ledger_is_deferred_reactor_should_emit_skip_on_fact()
     {
-        // Arrange — ledger cell is Deferred; the template must conditionally emit Skip
+        // Arrange
         var ledger = new InMemoryConformanceLedger(
             new Dictionary<(string, string), string>
             {
@@ -317,7 +307,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact, Skip = "Deferred: #9012 ..."] is emitted
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Skip = \"Deferred: #9012", content);
     }
@@ -325,7 +315,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
     [Fact]
     public async Task When_ledger_is_pass_proactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);

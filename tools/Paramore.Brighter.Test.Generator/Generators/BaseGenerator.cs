@@ -41,6 +41,49 @@ public abstract class BaseGenerator(ILogger logger)
     private readonly Parser _parser = new();
 
     /// <summary>
+    /// Generates the test files for each suite described by the configuration.
+    /// </summary>
+    /// <param name="configuration">The suite settings and destination folder.</param>
+    /// <returns>A task that completes when all suites have been rendered.</returns>
+    public async Task GenerateAsync(TestConfiguration configuration)
+    {
+        PrepareGeneration();
+        foreach (var suite in Suites(configuration))
+        {
+            await GenerateAsync(configuration, suite.Prefix, suite.TemplateFolderName,
+                suite.Model, suite.Ignore, suite.PrepareModel);
+        }
+    }
+
+    /// <summary>
+    /// Lists the files that <see cref="GenerateAsync(TestConfiguration)"/> would write.
+    /// </summary>
+    /// <param name="configuration">The suite settings and destination folder.</param>
+    /// <returns>The template and destination paths in generation order.</returns>
+    public IReadOnlyList<PlannedFile> Plan(TestConfiguration configuration)
+    {
+        var planned = new List<PlannedFile>();
+        foreach (var suite in Suites(configuration))
+        {
+            planned.AddRange(Plan(configuration, suite.Prefix, suite.TemplateFolderName, suite.Ignore));
+        }
+
+        return planned;
+    }
+
+    /// <summary>
+    /// Describes the suites used for both generation and planning.
+    /// </summary>
+    /// <param name="configuration">The configuration from which to select suites.</param>
+    /// <returns>The suites in generation order.</returns>
+    protected abstract IReadOnlyList<GenerationSuite> Suites(TestConfiguration configuration);
+
+    /// <summary>
+    /// Prepares resources needed for rendering before generation begins.
+    /// </summary>
+    protected virtual void PrepareGeneration() { }
+
+    /// <summary>
     /// Generates test files by rendering all Liquid templates in the specified template folder into the destination directory.
     /// </summary>
     /// <param name="configuration">The root test configuration containing the destination folder and shared settings.</param>

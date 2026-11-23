@@ -9,15 +9,9 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
 /// <summary>
-/// Verifies that the canonical fallback-ladder templates emit both a Reactor and a
-/// Proactor variant that:
-///   - name the file When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq;
-///   - create the subscription with deadLetterRoutingKey ONLY (no invalidMessageRoutingKey);
-///   - call _channel.Reject with an Unacceptable MessageRejectionReason;
-///   - poll for DLQ arrival INSIDE the bounded retry loop (Stopwatch, 500 ms, 60 s);
-///   - assert the rejection-reason key equals "Unacceptable" on the DLQ message;
-///   - emit the conditional ledger-driven Skip so the Deferred marker is supplied by the
-///     conformance ledger, not hard-coded in the template.
+/// Pins the unacceptable-with-no-invalid-channel templates, both variants: a subscription with a dead-letter
+/// routing key only, Reject with Unacceptable, DLQ arrival polled in a bounded loop, the rejection reason
+/// asserted on the DLQ message, and a Skip supplied by the ledger.
 /// </summary>
 public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants : IDisposable
 {
@@ -52,7 +46,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reactor file exists at the mandated path
+        // Assert
         var reactorPath = ReactorOutputPath(configuration);
         Assert.True(File.Exists(reactorPath),
             $"Reactor canonical DLQ-fallback file not found at {reactorPath}");
@@ -69,7 +63,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Proactor file exists at the mandated path
+        // Assert
         var proactorPath = ProactorOutputPath(configuration);
         Assert.True(File.Exists(proactorPath),
             $"Proactor canonical DLQ-fallback file not found at {proactorPath}");
@@ -86,7 +80,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — subscription names deadLetterRoutingKey only; no invalidMessageRoutingKey
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("deadLetterRoutingKey:", content);
         Assert.DoesNotContain("invalidMessageRoutingKey:", content);
@@ -103,7 +97,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — subscription names deadLetterRoutingKey only; no invalidMessageRoutingKey
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("deadLetterRoutingKey:", content);
         Assert.DoesNotContain("invalidMessageRoutingKey:", content);
@@ -120,7 +114,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reject is called with Unacceptable
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Reject(", content);
         Assert.Contains("Unacceptable", content);
@@ -137,7 +131,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RejectAsync is called with Unacceptable
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("RejectAsync(", content);
         Assert.Contains("Unacceptable", content);
@@ -154,7 +148,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — DLQ arrival polled inside the bounded retry loop
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueue", content);
         Assert.Contains("Stopwatch", content);
@@ -173,7 +167,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — DLQ arrival polled inside the bounded retry loop
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueueAsync", content);
         Assert.Contains("Stopwatch", content);
@@ -192,7 +186,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — rejection-reason key equals "Unacceptable" on DLQ message
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("keys.RejectionReason", content);
         Assert.Contains("RejectionReason.Unacceptable.ToString()", content);
@@ -209,7 +203,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — rejection-reason key equals "Unacceptable" on DLQ message
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("keys.RejectionReason", content);
         Assert.Contains("RejectionReason.Unacceptable.ToString()", content);
@@ -218,7 +212,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
     [Fact]
     public async Task When_ledger_is_pass_reactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
@@ -226,7 +220,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact] present; Skip absent (conditional pattern renders nothing when Skip is empty)
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("[Fact]", content);
         Assert.DoesNotContain("Skip =", content);
@@ -235,7 +229,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
     [Fact]
     public async Task When_ledger_is_deferred_reactor_should_emit_skip_on_fact()
     {
-        // Arrange — ledger cell is Deferred; the template must conditionally emit Skip
+        // Arrange
         var ledger = new InMemoryConformanceLedger(
             new Dictionary<(string, string), string>
             {
@@ -247,7 +241,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact, Skip = "Deferred: #1234 ..."] is emitted
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Skip = \"Deferred: #1234", content);
     }
@@ -255,7 +249,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
     [Fact]
     public async Task When_ledger_is_pass_proactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
