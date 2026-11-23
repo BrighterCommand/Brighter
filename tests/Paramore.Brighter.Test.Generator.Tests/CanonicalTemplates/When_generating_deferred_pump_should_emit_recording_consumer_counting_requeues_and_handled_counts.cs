@@ -27,36 +27,22 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
 /// <summary>
-/// Verifies that the generated ConformanceDeferredPump emits recording consumer decorators
-/// that count requeues and record the HandledCount on each receive (R-27(c)(5)-(6), ADR 0077).
-///
-/// The decorators:
-///   - implement <c>IAmAMessageConsumerSync</c> / <c>IAmAMessageConsumerAsync</c>
-///   - forward every interface member to an inner consumer
-///   - count <c>Requeue</c>/<c>RequeueAsync</c> by the key from the dispatch count (task 3.2)
-///   - record the integer value of <c>Header.HandledCount</c> for each message returned by
-///     <c>Receive</c>/<c>ReceiveAsync</c>, in delivery order, before the pump sees it (a value
-///     copy, not a reference — the pump increments the same header via UpdateHandledCount)
-///   - are reset and read through the same static surface as the dispatch count
-///   - are exposed through factory helpers that build <c>Channel</c>/<c>ChannelAsync</c>
-///
-/// These decorators are test-infrastructure only (C-10: not mocks, not production counters).
-/// They are emitted from ConformanceDeferredPump.cs.liquid so no new suite is needed.
+/// Pins the ConformanceDeferredPump template's recording consumers, sync and async: decorators that forward
+/// every member to the real consumer, count requeues by the dispatch-count key, and copy each received
+/// message's HandledCount as an integer before the pump increments it; reset with the dispatch count and
+/// wrapped in a channel by factory helpers. See ADR 0077, What the FR-23 harness can assert.
 /// </summary>
 public class WhenGeneratingDeferredPumpShouldEmitRecordingConsumerCountingRequeuesAndHandledCounts
     : IDisposable
 {
     private const string LEDGER_KEY = "Kafka / Classic";
 
-    // ── Sync decorator ─────────────────────────────────────────────────────────
     private const string SYNC_DECORATOR_CLASS = "RecordingConsumerSync";
     private const string SYNC_IMPLEMENTS = ": IAmAMessageConsumerSync";
 
-    // ── Async decorator ────────────────────────────────────────────────────────
     private const string ASYNC_DECORATOR_CLASS = "RecordingConsumerAsync";
     private const string ASYNC_IMPLEMENTS = ": IAmAMessageConsumerAsync";
 
-    // ── Sync forwarding — every member of IAmAMessageConsumerSync ──────────────
     private const string SYNC_FORWARD_ACKNOWLEDGE = "_inner.Acknowledge(";
     private const string SYNC_FORWARD_REJECT = "_inner.Reject(";
     private const string SYNC_FORWARD_PURGE = "_inner.Purge()";
@@ -65,7 +51,6 @@ public class WhenGeneratingDeferredPumpShouldEmitRecordingConsumerCountingRequeu
     private const string SYNC_FORWARD_REQUEUE = "_inner.Requeue(";
     private const string SYNC_FORWARD_DISPOSE = "_inner.Dispose()";
 
-    // ── Async forwarding — every member of IAmAMessageConsumerAsync ────────────
     private const string ASYNC_FORWARD_ACKNOWLEDGE = "_inner.AcknowledgeAsync(";
     private const string ASYNC_FORWARD_REJECT = "_inner.RejectAsync(";
     private const string ASYNC_FORWARD_PURGE = "_inner.PurgeAsync(";
@@ -74,20 +59,16 @@ public class WhenGeneratingDeferredPumpShouldEmitRecordingConsumerCountingRequeu
     private const string ASYNC_FORWARD_REQUEUE = "_inner.RequeueAsync(";
     private const string ASYNC_FORWARD_DISPOSE = "_inner.DisposeAsync()";
 
-    // ── Requeue count — counted by KeyOf, read by key ─────────────────────────
     private const string REQUEUE_COUNT_FIELD = "s_requeueCount";
     private const string GET_REQUEUE_COUNT = "GetRequeueCount";
 
-    // ── HandledCount log — integer value copied from each received message ─────
     private const string HANDLED_COUNT_LOG_FIELD = "s_handledCountLog";
     private const string GET_HANDLED_COUNT_LOG = "GetHandledCountLog";
     private const string HANDLED_COUNT_PROPERTY = "HandledCount";
 
-    // ── Reset clears requeue count and handled count log ──────────────────────
     private const string RESET_CLEARS_REQUEUE = "s_requeueCount.Clear()";
     private const string RESET_CLEARS_HANDLED_COUNT = "s_handledCountLog.Clear()";
 
-    // ── Factory helpers — wrap decorator in Channel/ChannelAsync ───────────────
     private const string CREATE_RECORDING_CHANNEL = "CreateRecordingChannel(";
     private const string CREATE_RECORDING_CHANNEL_ASYNC = "CreateRecordingChannelAsync(";
 
@@ -105,20 +86,6 @@ public class WhenGeneratingDeferredPumpShouldEmitRecordingConsumerCountingRequeu
         _logger = factory.CreateLogger<Generators.MessagingGatewayGenerator>();
     }
 
-    /// <summary>
-    /// Generates the ConformanceDeferredPump shared template and asserts all R-27(c)(5)-(6)
-    /// obligations:
-    /// <list type="number">
-    ///   <item>Sync recording decorator implements IAmAMessageConsumerSync</item>
-    ///   <item>Async recording decorator implements IAmAMessageConsumerAsync</item>
-    ///   <item>Both decorators forward every interface member to the inner consumer</item>
-    ///   <item>Requeue/RequeueAsync increment a per-key requeue count via KeyOf</item>
-    ///   <item>Receive/ReceiveAsync record the integer HandledCount from each message (value copy)</item>
-    ///   <item>ResetDispatchCount also clears the requeue count and HandledCount log</item>
-    ///   <item>GetRequeueCount and GetHandledCountLog read entry points exist</item>
-    ///   <item>Factory helpers CreateRecordingChannel / CreateRecordingChannelAsync exist</item>
-    /// </list>
-    /// </summary>
     [Fact]
     public async Task When_generating_deferred_pump_should_emit_recording_consumer_counting_requeues_and_handled_counts()
     {
@@ -130,17 +97,40 @@ public class WhenGeneratingDeferredPumpShouldEmitRecordingConsumerCountingRequeu
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — sync decorator implements IAmAMessageConsumerSync
+        // Assert
         var pump = await File.ReadAllTextAsync(PumpPath());
+        AssertRecordingConsumerObligations(pump);
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private static void AssertRecordingConsumerObligations(string pump)
+    {
+        AssertSyncDecoratorImplementsConsumer(pump);
+        AssertAsyncDecoratorImplementsConsumer(pump);
+        AssertSyncDecoratorForwardsEveryMember(pump);
+        AssertAsyncDecoratorForwardsEveryMember(pump);
+        AssertRequeueCountRecorded(pump);
+        AssertHandledCountLogRecorded(pump);
+        AssertHandledCountReadAfterReceive(pump);
+        AssertResetClearsRecordings(pump);
+        AssertRecordingChannelFactories(pump);
+    }
+
+    private static void AssertSyncDecoratorImplementsConsumer(string pump)
+    {
         Assert.Contains(SYNC_DECORATOR_CLASS, pump);
         Assert.Contains(SYNC_IMPLEMENTS, pump);
+    }
 
-        // Assert — async decorator implements IAmAMessageConsumerAsync
+    private static void AssertAsyncDecoratorImplementsConsumer(string pump)
+    {
         Assert.Contains(ASYNC_DECORATOR_CLASS, pump);
         Assert.Contains(ASYNC_IMPLEMENTS, pump);
+    }
 
-        // Assert — sync decorator forwards every interface member (forwarding is not a counter —
-        // C-10 forbids a mock standing in for the real transport)
+    private static void AssertSyncDecoratorForwardsEveryMember(string pump)
+    {
         Assert.Contains(SYNC_FORWARD_ACKNOWLEDGE, pump);
         Assert.Contains(SYNC_FORWARD_REJECT, pump);
         Assert.Contains(SYNC_FORWARD_PURGE, pump);
@@ -148,8 +138,10 @@ public class WhenGeneratingDeferredPumpShouldEmitRecordingConsumerCountingRequeu
         Assert.Contains(SYNC_FORWARD_NACK, pump);
         Assert.Contains(SYNC_FORWARD_REQUEUE, pump);
         Assert.Contains(SYNC_FORWARD_DISPOSE, pump);
+    }
 
-        // Assert — async decorator forwards every interface member
+    private static void AssertAsyncDecoratorForwardsEveryMember(string pump)
+    {
         Assert.Contains(ASYNC_FORWARD_ACKNOWLEDGE, pump);
         Assert.Contains(ASYNC_FORWARD_REJECT, pump);
         Assert.Contains(ASYNC_FORWARD_PURGE, pump);
@@ -157,16 +149,22 @@ public class WhenGeneratingDeferredPumpShouldEmitRecordingConsumerCountingRequeu
         Assert.Contains(ASYNC_FORWARD_NACK, pump);
         Assert.Contains(ASYNC_FORWARD_REQUEUE, pump);
         Assert.Contains(ASYNC_FORWARD_DISPOSE, pump);
+    }
 
-        // Assert — requeue count: static field exists, GetRequeueCount read entry point exists
+    private static void AssertRequeueCountRecorded(string pump)
+    {
         Assert.Contains(REQUEUE_COUNT_FIELD, pump);
         Assert.Contains(GET_REQUEUE_COUNT, pump);
+    }
 
-        // Assert — HandledCount log: static field exists, GetHandledCountLog read entry point exists
+    private static void AssertHandledCountLogRecorded(string pump)
+    {
         Assert.Contains(HANDLED_COUNT_LOG_FIELD, pump);
         Assert.Contains(GET_HANDLED_COUNT_LOG, pump);
+    }
 
-        // Assert — HandledCount is accessed from messages returned by Receive (value copy before pump sees it)
+    private static void AssertHandledCountReadAfterReceive(string pump)
+    {
         var syncReceiveIndex = pump.IndexOf(SYNC_FORWARD_RECEIVE, StringComparison.Ordinal);
         Assert.True(syncReceiveIndex >= 0, $"Expected '{SYNC_FORWARD_RECEIVE}' in the pump");
         var handledCountAfterSyncReceive = pump.IndexOf(
@@ -176,17 +174,19 @@ public class WhenGeneratingDeferredPumpShouldEmitRecordingConsumerCountingRequeu
         Assert.True(handledCountAfterSyncReceive > syncReceiveIndex,
             $"Expected '{HANDLED_COUNT_PROPERTY}' to be read after '{SYNC_FORWARD_RECEIVE}' " +
             $"(HandledCount must be copied as an integer from each received message before the pump sees it)");
+    }
 
-        // Assert — ResetDispatchCount clears requeue count and handled count log
+    private static void AssertResetClearsRecordings(string pump)
+    {
         Assert.Contains(RESET_CLEARS_REQUEUE, pump);
         Assert.Contains(RESET_CLEARS_HANDLED_COUNT, pump);
+    }
 
-        // Assert — factory helpers build Channel/ChannelAsync over the recording decorator
+    private static void AssertRecordingChannelFactories(string pump)
+    {
         Assert.Contains(CREATE_RECORDING_CHANNEL, pump);
         Assert.Contains(CREATE_RECORDING_CHANNEL_ASYNC, pump);
     }
-
-    // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static InMemoryConformanceLedger PassLedger(string frColumn) =>
         new(new Dictionary<(string, string), string>

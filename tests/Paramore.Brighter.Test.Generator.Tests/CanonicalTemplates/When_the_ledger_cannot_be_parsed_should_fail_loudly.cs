@@ -34,18 +34,9 @@ namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 /// A ledger that is present but unreadable must fail the same way a missing one does.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The parser used to return an empty dictionary when it could not find the matrix header. That is
-/// not "no criteria found": <c>GetSkip</c> answers the empty string for a missing row, and the empty
-/// string means <em>run, with no Skip</em>. So a reformatted header row silently switched the whole
-/// deferral mechanism off, and the suite reported every deferred behaviour as running.
-/// </para>
-/// <para>
-/// The cross-check audit would have caught it downstream, by reporting every ledger key unresolved.
-/// These tests exist because that is defence-in-depth doing the primary check's job - the same
-/// argument <see cref="ConformanceLedger.LoadFrom"/> already makes for a ledger that cannot be found
-/// at all.
-/// </para>
+/// A ledger whose matrix cannot be read resolves every cell to the empty Skip, which means <em>run</em>, so the
+/// whole deferral mechanism would silently switch off. A header that only carries a column name as a
+/// substring (FR-22 for FR-2) is not the matrix. A well-formed fact guards against throwing unconditionally.
 /// </remarks>
 public class LedgerParseFailureTests : IDisposable
 {
@@ -67,7 +58,7 @@ public class LedgerParseFailureTests : IDisposable
     [Fact]
     public void When_the_matrix_header_cannot_be_found_should_throw()
     {
-        // Arrange - a ledger whose matrix header has been reformatted past recognition
+        // Arrange
         var path = ALedgerContaining(
             "# Conformance status\n\n| Configuration | Something | Else |\n|---|---|---|\n| Redis | Pass | Pass |\n");
 
@@ -80,7 +71,7 @@ public class LedgerParseFailureTests : IDisposable
     [Fact]
     public void When_the_matrix_holds_no_rows_should_throw()
     {
-        // Arrange - a header the parser recognises, with nothing under it
+        // Arrange
         var path = ALedgerContaining(
             "# Conformance status\n\n| Configuration | FR-2 | FR-4 |\n|---|---|---|\n\nSome prose.\n");
 
@@ -93,9 +84,7 @@ public class LedgerParseFailureTests : IDisposable
     [Fact]
     public void When_a_column_name_only_appears_as_a_substring_should_not_match_the_header()
     {
-        // Arrange - the conformance ledger's FR-22 column contains "FR-2" as a substring. A
-        // header carrying FR-22 and FR-4 but no FR-2 column is not the matrix, and matching it
-        // would read every cell from the wrong column offsets rather than failing.
+        // Arrange
         var path = ALedgerContaining(
             "# Conformance status\n\n| Configuration | FR-22 | FR-4 |\n|---|---|---|\n| Redis | Pass | Pass |\n");
 
@@ -108,7 +97,7 @@ public class LedgerParseFailureTests : IDisposable
     [Fact]
     public void When_the_ledger_is_well_formed_should_parse_it()
     {
-        // Arrange - guards against "make it throw" being satisfied by throwing unconditionally
+        // Arrange
         var path = ALedgerContaining(
             "# Conformance status\n\n| Configuration | FR-2 | FR-4 |\n|---|---|---|\n| Redis / X | Pass | Pass |\n");
 
