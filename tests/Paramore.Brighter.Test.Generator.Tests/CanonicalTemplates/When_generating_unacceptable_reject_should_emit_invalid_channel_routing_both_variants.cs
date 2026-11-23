@@ -9,18 +9,10 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
 /// <summary>
-/// Verifies that the canonical unacceptable-reject templates emit both a Reactor and a
-/// Proactor variant that:
-///   - name the file When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel;
-///   - create the subscription with BOTH a deadLetterRoutingKey AND an invalidMessageRoutingKey
-///     named argument;
-///   - call _channel.Reject with an Unacceptable MessageRejectionReason;
-///   - poll for invalid-channel arrival INSIDE the bounded retry loop (Stopwatch, 500 ms, 60 s);
-///   - assert the rejection reason equals "Unacceptable" and the original-topic equals the data topic;
-///   - assert DLQ absence via a SINGLE bounded GetMessageFromDeadLetterQueue call outside the retry
-///     loop, asserting MT_NONE (a single receive outside the retry loop);
-///   - emit the conditional ledger-driven Skip so the Deferred marker is supplied by the
-///     conformance ledger, not hard-coded in the template.
+/// Pins the unacceptable reject templates, both variants: a subscription with both routing keys, Reject with
+/// Unacceptable, invalid-channel arrival polled in a bounded loop, the rejection reason and original topic
+/// asserted, the DLQ's absence checked by a single bounded receive, and a Skip supplied by the ledger.
+/// See ADR 0066, Conventions the canonical templates follow.
 /// </summary>
 public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBothVariants : IDisposable
 {
@@ -55,7 +47,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reactor file exists at the mandated path
+        // Assert
         var reactorPath = ReactorOutputPath(configuration);
         Assert.True(File.Exists(reactorPath),
             $"Reactor canonical unacceptable-reject file not found at {reactorPath}");
@@ -72,7 +64,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Proactor file exists at the mandated path
+        // Assert
         var proactorPath = ProactorOutputPath(configuration);
         Assert.True(File.Exists(proactorPath),
             $"Proactor canonical unacceptable-reject file not found at {proactorPath}");
@@ -89,7 +81,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — subscription must name both deadLetterRoutingKey and invalidMessageRoutingKey
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("deadLetterRoutingKey:", content);
         Assert.Contains("invalidMessageRoutingKey:", content);
@@ -106,7 +98,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — subscription must name both deadLetterRoutingKey and invalidMessageRoutingKey
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("deadLetterRoutingKey:", content);
         Assert.Contains("invalidMessageRoutingKey:", content);
@@ -123,7 +115,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reject is called with Unacceptable
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Reject(", content);
         Assert.Contains("Unacceptable", content);
@@ -140,7 +132,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RejectAsync is called with Unacceptable
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("RejectAsync(", content);
         Assert.Contains("Unacceptable", content);
@@ -157,7 +149,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — invalid-channel arrival polled inside the bounded retry loop
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("GetMessageFromInvalidChannel", content);
         Assert.Contains("Stopwatch", content);
@@ -176,7 +168,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — invalid-channel arrival polled inside the bounded retry loop
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("GetMessageFromInvalidChannelAsync", content);
         Assert.Contains("Stopwatch", content);
@@ -195,7 +187,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — rejection reason "Unacceptable" and original-topic assertion
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("if (keys.StampsRejectionMetadata)", content);
         Assert.Contains("keys.RejectionReason", content);
@@ -214,7 +206,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — rejection reason "Unacceptable" and original-topic assertion
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("if (keys.StampsRejectionMetadata)", content);
         Assert.Contains("keys.RejectionReason", content);
@@ -233,8 +225,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — DLQ absence: single bounded GetMessageFromDeadLetterQueue call asserting MT_NONE
-        // (a single receive outside the retry loop)
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueue", content);
         Assert.Contains("MT_NONE", content);
@@ -251,8 +242,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — DLQ absence: single bounded GetMessageFromDeadLetterQueueAsync call asserting MT_NONE
-        // (a single receive outside the retry loop)
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueueAsync", content);
         Assert.Contains("MT_NONE", content);
@@ -261,7 +251,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
     [Fact]
     public async Task When_ledger_is_pass_reactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
@@ -269,7 +259,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact] present; Skip absent (conditional pattern renders nothing when Skip is empty)
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("[Fact]", content);
         Assert.DoesNotContain("Skip =", content);
@@ -278,7 +268,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
     [Fact]
     public async Task When_ledger_is_deferred_reactor_should_emit_skip_on_fact()
     {
-        // Arrange — ledger cell is Deferred; the template must conditionally emit Skip
+        // Arrange
         var ledger = new InMemoryConformanceLedger(
             new Dictionary<(string, string), string>
             {
@@ -290,7 +280,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact, Skip = "Deferred: #9876 ..."] is emitted
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Skip = \"Deferred: #9876", content);
     }
@@ -298,7 +288,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
     [Fact]
     public async Task When_ledger_is_pass_proactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
