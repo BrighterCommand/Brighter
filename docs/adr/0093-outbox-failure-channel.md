@@ -1,7 +1,7 @@
 ---
 id: 0093-outbox-failure-channel
 title: "Outbox notifications and message max age"
-status: Proposed
+status: Accepted
 author:
   - "Guilherme Appel"
 created: 2026-11-05
@@ -19,7 +19,7 @@ Date: 2026-11-05
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
