@@ -54,6 +54,7 @@ namespace Paramore.Brighter.ServiceActivator
         private bool _stopping;
         private bool _endRequested;
         private readonly HashSet<SubscriptionName> _shutSubscriptions = new();
+        private readonly Dictionary<SubscriptionName, int> _reservedPerformers = new();
         private volatile DispatcherState _state;
         //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange,
         //making the disposal body run exactly once even under concurrent Dispose (an application-level
@@ -492,6 +493,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <exception cref="ObjectDisposedException">The dispatcher has been disposed.</exception>
         public void SetActivePerformers(string connectionName, int numberOfPerformers)
         {
+            var reservation = new PerformerReservation(this);
             ExecuteConsumerOperation(starting =>
             {
                 Subscription subscription;
@@ -501,12 +503,20 @@ namespace Paramore.Brighter.ServiceActivator
                 lock (_lifecycleLock)
                 {
                     subscription = Subscriptions.Single(c => c.Name == connectionName);
-                    currentPerformers = starting ? 0 : subscription.NoOfPerformers;
+                    // A performer can stop itself, for example on reaching its unacceptable message limit, without
+                    // the configured count changing. Count the performers that are actually running for a subscription
+                    // that is not shut, so that a request for the configured count replaces the ones that have stopped.
+                    var runningConsumers = _consumers.Values
+                        .Where(c => c.Subscription.Name == subscription.Name && IsRunning(c))
+                        .ToArray();
+                    currentPerformers = starting ? 0
+                        : _shutSubscriptions.Contains(subscription.Name) ? subscription.NoOfPerformers
+                        : runningConsumers.Length + ReservedPerformers(subscription.Name);
                     subscription.SetNumberOfPerformers(numberOfPerformers);
                     desiredPerformers = subscription.NoOfPerformers;
-                    consumersToClose = _consumers.Values
-                        .Where(c => c.Subscription.Name == subscription.Name)
-                        .Take(Math.Max(0, currentPerformers - desiredPerformers)).ToArray();
+                    consumersToClose = runningConsumers.Take(Math.Max(0, currentPerformers - desiredPerformers)).ToArray();
+                    if (currentPerformers < desiredPerformers)
+                        reservation.Reserve(subscription.Name, desiredPerformers - currentPerformers);
                 }
 
                 if (currentPerformers < desiredPerformers)
@@ -514,10 +524,50 @@ namespace Paramore.Brighter.ServiceActivator
 
                 consumersToClose.Each(consumer => consumer.Shut(subscription.RoutingKey));
                 return Array.Empty<Consumer>();
-            });
+            }, reservation.Release);
         }
 
-        private void ExecuteConsumerOperation(Func<bool, IEnumerable<Consumer>> createConsumers)
+        // Performers being created are only added to _consumers once channel creation completes, outside the lock.
+        // Counting them as reserved stops an overlapping request from creating them a second time.
+        private int ReservedPerformers(SubscriptionName name)
+            => _reservedPerformers.TryGetValue(name, out var reserved) ? reserved : 0;
+
+        private sealed class PerformerReservation(Dispatcher dispatcher)
+        {
+            private SubscriptionName? _name;
+            private int _count;
+
+            // Called with the lifecycle lock held.
+            public void Reserve(SubscriptionName name, int count)
+            {
+                _name = name;
+                _count = count;
+                dispatcher._reservedPerformers[name] = dispatcher.ReservedPerformers(name) + count;
+            }
+
+            public void Release()
+            {
+                lock (dispatcher._lifecycleLock)
+                {
+                    if (_name is null)
+                        return;
+
+                    var remaining = dispatcher.ReservedPerformers(_name) - _count;
+                    if (remaining > 0)
+                        dispatcher._reservedPerformers[_name] = remaining;
+                    else
+                        dispatcher._reservedPerformers.Remove(_name);
+                    _name = null;
+                }
+            }
+        }
+
+        // A consumer that has not opened yet has no job, but is about to run. One that was shut, or whose job has
+        // completed because the performer stopped itself, is on its way out and is not running.
+        private static bool IsRunning(IAmAConsumer consumer)
+            => consumer.Job is null || (consumer.State == ConsumerState.Open && !consumer.Job.IsCompleted);
+
+        private void ExecuteConsumerOperation(Func<bool, IEnumerable<Consumer>> createConsumers, Action? consumersRegistered = null)
         {
             var starting = BeginConsumerOperation();
             Consumer[] consumers = [];
@@ -531,6 +581,7 @@ namespace Paramore.Brighter.ServiceActivator
                         _consumers.TryAdd(consumer.Name.Value, consumer);
                         _shutSubscriptions.Remove(consumer.Subscription.Name);
                     }
+                    consumersRegistered?.Invoke();
                 }
 
                 if (starting)
@@ -554,6 +605,7 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 lock (_lifecycleLock)
                 {
+                    consumersRegistered?.Invoke();
                     --_pendingConsumerOperations;
                     Monitor.PulseAll(_lifecycleLock);
                 }
