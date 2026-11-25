@@ -1,19 +1,19 @@
 ---
 id: 0093-outbox-failure-channel
-title: "Outbox failure channel"
+title: "Outbox notifications and message max age"
 status: Proposed
 author:
   - "Guilherme Appel"
 created: 2026-11-05
-summary: "UseOutboxFailureChannel or a trailing constructor argument gives OutboxProducerMediator an opt-in OutboxFailureChannel, which receives one OutboxFailureNotification per failed send, failed confirmation or failed mark-dispatched and, as an option, one per message a sweep sends through a producer that does not confirm publication. Raising never waits on a reader or changes an outcome, and the bounded buffer drops the oldest notification and keeps an exact dropped count."
+summary: "A registry built from the producer registry gives each publication a bounded, drop-oldest notification channel, and the mediator raises send, confirmation and mark-dispatched failures into that channel without blocking. Publication.MaxAge keeps expired messages out of a sweep's page, and the archiver moves them to the archive and raises Expired on the same channels."
 tags:
   - "outbox"
   - "error-handling"
   - "api-design"
-  - "concurrency"
+  - "archive"
 ---
 
-# 93. Outbox failure channel
+# 93. Outbox notifications and message max age
 
 Date: 2026-11-05
 
@@ -23,114 +23,179 @@ Proposed
 
 ## Context
 
-A send from the outbox can fail without anyone in the application being told. The mediator catches the exception and writes a log entry, and `PostAsync` returns normally. A broker refusal can also arrive later on another thread, and a message that was sent can fail to be marked as dispatched. An application that wants to alert, compensate or delete the message learns of the failure only from a log or from the message's age.
+A send from the outbox can fail and nobody in the application hears about it: the mediator catches the exception, logs it, and `PostAsync` returns normally. A broker can also refuse a message later, on another thread, and a sent message can fail to be marked as dispatched. A sweeper retries an undispatched message for as long as the outbox keeps it, even after the message has lost its value.
 
 ### Terms
 
-The requirements of spec 0041 define *clear*, *attempt*, *raise*, *kind*, *capacity* and *dropped count*. This ADR uses those words with those meanings, and adds these:
+The requirements of spec 0041 define *clear*, *explicit clear*, *sweep*, *attempt*, *raise*, *kind*, *capacity*, *dropped count*, *max age*, *age*, *expired message* and *archiver run*. This ADR uses those words with those meanings, narrows *notification channel* to one publication, and adds four terms:
 
-- **Failure channel**: the requirements' *notification channel*. It is one bounded in-memory buffer of notifications with one dropped count. *Where the pieces live* names its type.
-- **Attach**: the single call in which a mediator claims a failure channel. *Key Components* gives the contract.
-- **Close**: the call after which a failure channel accepts nothing more and a reader can drain what remains.
+- Notification channel, as narrowed here: one bounded in-memory buffer of notifications for one publication, with its own dropped count.
+- Stored topic: `MessageHeader.Topic`, the topic the outbox row holds.
+- Lookup topic: the topic `Dispatch` uses to find a producer, `Message.ProducerLookupTopic()`.
+- Notification registry: the object that holds the notification channels for one producer registry.
+- Expiry bound: a pair of topic and max age that the mediator or the archiver passes to a store's outstanding query.
 
 ### Scope
 
-**Parent requirement**: [specs/0041-outbox-failure-channel/requirements.md](../../specs/0041-outbox-failure-channel/requirements.md)
+Parent requirement: [specs/0041-outbox-failure-channel/requirements.md](../../specs/0041-outbox-failure-channel/requirements.md)
 
-**In scope**:
+In scope:
 
-- FR-1, FR-15, NFR-4: a builder step on the DI path and a constructor argument on the direct path turn the feature on. Without either step, no failure channel exists.
-- FR-2: the failure channel validates capacity. The DI step does so before registering anything.
-- FR-3, FR-5, FR-6, D-2, D-3, D-4: the mediator raises at the sites listed in Implementation Approach, and carries the swallowed exception through a new pair of private helpers.
-- FR-4, FR-7, D-10: no other site raises, and each raise comes before any code that can throw.
-- FR-8, FR-9, FR-10, NFR-5, NFR-6: a bounded channel from `System.Threading.Channels` holds the notifications in drop-oldest mode, with an exact dropped count.
-- FR-11, FR-12, NFR-1, NFR-2, NFR-3, NFR-7: raising is a guarded, non-blocking write with asynchronous continuations.
-- FR-13: the mediator closes the failure channel after it has closed its producers.
-- FR-14, NFR-8: each failure channel accepts one mediator, and no listed interface changes.
-- NFR-9, NFR-10: the failure channel takes its clock from the mediator, its drop warning names only the dropped count, and its guards log the exception type only.
-- FR-16, D-11, D-12, P-6: an option of the same step, and of the failure channel's constructor, makes a sweep raise `SentBySweep` for each message it sends through a non-confirming producer, at the sites listed in Implementation Approach. Confirming producers raise none (OOS-16).
-- Q-1 and Q-5: this ADR answers both. P-1 to P-6 are confirmed, with detail added under Technology Choices. Q-3, Q-4 and Q-7 stay as the requirements leave them: OOS-9, OOS-8 and FR-5.
+- FR-1, FR-15, NFR-4: the builder step `UseOutboxNotifications` on the DI path, and a notification registry passed to the constructor on the direct path, turn the feature on. Without either, no registry exists.
+- FR-2, FR-22, D-24: `OutboxNotificationOptions.Validate` rejects an invalid capacity or an empty set of kinds. The step calls it, and so does the registry's constructor.
+- FR-3, FR-5, FR-6: the mediator raises at the sites listed in Implementation Approach. A new pair of private helpers carries the swallowed exception to the raise.
+- FR-4, FR-7: no other site raises. Each raise comes before any code at its site that can throw.
+- FR-8, FR-9, FR-10, NFR-5, NFR-6: each notification channel is a bounded channel from `System.Threading.Channels` in drop-oldest mode, with an exact dropped count.
+- FR-11, FR-12, NFR-1, NFR-2, NFR-7: a raise is a guarded, non-blocking write. Readers' continuations never run on the raising thread.
+- NFR-3: a successful clear reaches no raise, and with no max age the archiver makes no extra call.
+- FR-13: the mediator closes the registry after it has closed its producers.
+- FR-14, D-23: the registry creates one channel per publication, and the mediator routes each raise to the channel of the producer involved.
+- FR-17, D-20: `Publication.MaxAge`. `OutboxMaxAges` reduces the publications to one max age per stored topic, the smallest.
+- FR-18, D-14, D-22: a sweep passes the expiry bounds to the store's outstanding query, and each store leaves expired messages out of the page. DynamoDB's scan departs from FR-18 while a topic is tripped, as the table of open items records. An explicit clear passes nothing new.
+- FR-19, FR-20, P-8, P-9: a second archiver pass reads expired messages one topic at a time, marks and archives each, and raises `Expired` after each one the provider accepts.
+- FR-21, D-17: the DI build of the mediator writes one `Warning` per topic with a max age when no archiver is registered in the container.
+- NFR-8: no listed interface gains a member. The binary breaks are trailing optional constructor parameters on `OutboxProducerMediator` and `OutboxArchiver`. NFR-8 lists binary breaks only. This ADR adds three behaviour lines under `#### Breaking changes`: two for third-party stores and one for causation replay.
+- NFR-9, NFR-10: the mediator's clock times its raises and the drop warning. The archiver's clock times `Expired`. Each store applies the age with the clock it already uses for the minimum age.
+- NFR-11, AC-40: the XML documentation, and the release notes that the documentation page builds on. The documentation advises running the archiver as well as the sweeper.
+- Q-1 and Q-5: this ADR answers both. It confirms P-1 to P-5, P-8 and P-9, and changes part of P-7.
 
-**Out of scope**:
+Out of scope:
 
-- Which failures notify. FR-3 and FR-4 set that, and Q-6 records the narrowing.
+- Which failures notify. FR-3 and FR-4 define that. Q-6 keeps open whether three kinds are enough.
 - A reason on `PublishConfirmationResult`, a record ADR 0063-failed-delivery-context defined (OOS-11, Q-2).
 - Which failures trip the breaker of ADR 0089-distributed-outbox-circuit-breaker (OOS-10).
 - New instruments beside those of ADR 0084-outbox-metrics, ADR 0081-timed-outbox-sweeper-health-metrics and ADR 0085-outbox-stale-message-telemetry (OOS-8).
 - A notification for a sweep that fails as a whole. The failed-sweep count of ADR 0081-timed-outbox-sweeper-health-metrics and the investigate check of ADR 0086-sweeper-remedy-health-checks report that.
-- A count of waiting messages per topic, which ADR 0086-outbox-per-topic-stale-count provides.
-- The page in BrighterCommand/Docs that NFR-11 asks for. It follows this ADR and is not part of its decision.
+- A count of waiting messages per topic, which ADR 0086-outbox-per-topic-stale-count provides. That count still includes expired messages.
+- The archiver's lock and timer, which ADR 0056-timed-outbox-archiver-sync-fallback and ADR 0021-move-archive-from-esb describe. Neither changes.
+- A notification for a successful send, including a sweep send (OOS-13).
+- The page in BrighterCommand/Docs that NFR-11 asks for. It follows this ADR.
 
-### A failed clear reaches nothing the application can read
+### What a failed or stale message does today
 
-| What fails | What the mediator does today | What application code can see at the time |
+| What happens | What the mediator or archiver does today | What application code can see at the time |
 | --- | --- | --- |
 | A send throws, after the pipeline's retries | Logs, returns false, may trip the topic | Nothing. `PostAsync` returns |
-| The broker refuses the message, and the producer reports that in a confirmation, usually on another thread | Logs, trips the topic | Nothing. On async Kafka the send looked successful |
-| `MarkDispatched` throws after a good send | Logs | Nothing. A sweeper will send the message again |
+| The broker refuses the message in a confirmation, usually on another thread | Logs, trips the topic | Nothing. On async Kafka the send looked successful |
+| `MarkDispatched` throws after a good send | Logs | Nothing. A sweeper sends the message again |
+| A message stays undispatched for hours | Every sweep tries it again | The stale gauge, if enabled, counts it |
+| The archiver runs | Moves dispatched messages only | Nothing about undispatched messages |
 
-Three consequences follow. A subscriber cannot tell a message that is too large from a broker outage, because the exception goes no further than the log. A sweeper retries in silence, so the first sign is often the age of the message. Without a sweeper, the message may wait until someone looks.
-
-A failure notification alone leaves one more gap, which the author of issue #4489 raised in a comment on PR #4725 on 2026-11-10. A subscriber that compensated, for example by marking an order failed, is not told when a later sweep sends the message after all. `Get` does not say whether a message was dispatched, so checking means paging through the outstanding or dispatched messages.
-
-The mechanism is one private pair of helpers. `ExecuteWithResiliencePipeline` and its async twin catch every exception, log it and return a bool. The same helpers also write to the outbox and send a `Call`, where that behaviour must stay as it is.
+A subscriber cannot tell a message that is too large from a broker outage, because the exception goes no further than the log.
 
 ### The forces
 
-- A raise can happen on a request thread, on the sweeper's own thread or on a producer's confirmation thread. Producers wait on those callbacks, so subscriber code must never run there.
+- A raise can happen on a request thread, on the sweeper's own thread, on a producer's confirmation thread or in an archiver run. Producers wait on their callbacks, so subscriber code must never run there.
 - A subscriber can start before the mediator exists. The DI path builds the mediator lazily, on first resolve, and a hosted service starts earlier.
-- `IAmAnOutboxProducerMediator` gains no member under NFR-8, and the DI path registers only that interface. A subscriber therefore cannot reach a failure channel through the mediator.
-- `IAmProducersConfiguration` gains no member, and an application's own implementation of it is replaced when the mediator is built (`ServiceCollectionExtensions.cs:565`). A setting on the configuration class would leave the feature off in silence.
+- `IAmAnOutboxProducerMediator` gains no member under NFR-8, and the DI path registers only that interface. A subscriber therefore cannot reach a channel through the mediator.
+- `IAmProducersConfiguration` gains no member. The DI path ignores or replaces an application's own implementation of it when it builds the mediator (the mediator factory in `ServiceCollectionExtensions.AddProducers`).
 - `Paramore.Brighter` also targets netstandard2.0, so the buffer and the dropped count can use only what exists there.
-- `TripTopic`, a logger and the store can all throw on the same paths. Each of those exceptions must keep its current effect under FR-7.
-- Producers report confirmations while they close (`KafkaMessageProducer.cs:408`), so a failure channel cannot close before the producers do.
+- `TripTopic`, a logger and the store can all throw on the same paths. Each of those exceptions keeps its current effect under FR-7.
+- Producers report confirmations while they close, so a channel cannot close before the producers do.
+- The stores order their outstanding query differently, and some read oldest first. An expired backlog must not fill a sweep's page or hide from the archiver.
+- No outbox interface gains a member, so the expiry bound must travel through what `OutstandingMessages(Async)` already accepts.
+- The archiver and the mediator are built separately, often in different assemblies of the application. They must route `Expired` to the same channels.
 
 ## Decision
 
-**Each mediator can be given one `OutboxFailureChannel`, an object created before the mediator, and raises one `OutboxFailureNotification` into it at each failure site without blocking. As an option, a sweep also raises one for each message it sends through a producer that does not confirm publication.**
+**A registry built from the producer registry holds one bounded notification channel per publication, and messages older than their publication's max age go to the archiver instead of the sweep.**
 
-The failure channel is a separate object because a subscriber must reach it before the mediator exists. That route adds nothing to the mediator's interfaces. No failure channel exists when the feature is off, so a forgotten step surfaces where the subscriber asks for the failure channel. It never looks like a normal end of the stream. The mediator reports what it observes and changes no outcome.
+The mediator raises failures into those channels without blocking, and changes no outcome. The archiver moves expired messages to the archive and raises `Expired` on the same channels. The registry is a separate object, so a subscriber can ask it for a channel by topic and optional CloudEvents type before the mediator exists. The max age is the one setting that changes what Brighter does, and it acts on the message, not on a notification.
+
+| Decision point | Choice | Section |
+| --- | --- | --- |
+| How a subscriber reaches the channels | A notification registry built from the producer registry, before the mediator | Technology Choices |
+| How a subscriber names a publication | Topic and optional CloudEvents type, as `ProducerRegistry.LookupBy` | Technology Choices |
+| One read across all channels | Not offered. The registry lists its keys | Technology Choices |
+| Which kinds are raised | A flags set on the options, all by default | Key Components |
+| When a channel is full | Drop the oldest, count exactly, warn at most once per 60 seconds | Technology Choices |
+| Where the max age lives | `Publication.MaxAge`, reduced per stored topic to the smallest | Key Components |
+| How a store learns the bound | Two well-known keys in the query's `args` | Technology Choices |
+| How the archiver finds expired messages | One query per topic, then a check in memory | Technology Choices |
+| How an archived message shows it expired | A header bag entry with the time of the move | Key Components |
+| How FR-21 sees the archiver | `IServiceProviderIsService` at the mediator's build | Technology Choices |
+| When invalid options fail | At the step and at the registry's construction. No validation finding | Technology Choices |
 
 ### The mechanism, end to end
+
+The failure path:
 
 ```mermaid
 sequenceDiagram
     participant App as Application start
     participant Sub as Subscriber
-    participant Failures as OutboxFailureChannel
+    participant Reg as OutboxNotificationRegistry
+    participant Chan as Channel of orders
     participant Med as Mediator
-    participant Prod as Producer
+    participant Prod as Producer of orders
 
-    App->>Failures: create with a capacity
-    Sub->>Failures: ReadAllAsync, waits
-    App->>Med: build with the failure channel
-    Med->>Failures: Attach with the mediator clock
-    Note over Failures: A second Attach throws ConfigurationException
+    App->>Reg: create from the producer registry, with options
+    Reg->>Chan: one channel per publication
+    Sub->>Reg: LookupBy orders
+    Sub->>Chan: ReadAllAsync, waits
+    App->>Med: build with the registry
+    Med->>Reg: Attach with the mediator clock
+    Note over Reg: A second Attach throws ConfigurationException
     Med->>Prod: send inside the pipeline
     Prod--xMed: exception, caught by the helper
-    Med->>Failures: Raise SendFailed with the exception
-    Failures--)Sub: continuation queued, never run inline
+    Med->>Chan: Raise SendFailed with the exception
+    Chan--)Sub: continuation queued, never run inline
     Med->>Med: TripTopic, may throw as it does today
     Prod-)Med: later, on its own thread, failed confirmation
-    Med->>Failures: Raise ConfirmationFailed, no exception
+    Med->>Chan: Raise ConfirmationFailed, no exception
     App->>Med: Dispose
-    Med->>Prod: close producers, confirmations are still accepted
-    Med->>Failures: close
-    Sub->>Failures: reads what is buffered, then the stream ends
+    Med->>Prod: close producers, confirmations still accepted
+    Med->>Reg: Close every channel
+    Sub->>Chan: reads what is buffered, then the stream ends
 ```
 
-Four rules hold:
+The max age path:
+
+```mermaid
+sequenceDiagram
+    participant Sweeper as Sweeper
+    participant Med as Mediator
+    participant Store as Outbox store
+    participant Arch as OutboxArchiver
+    participant Prov as Archive provider
+    participant Reg as OutboxNotificationRegistry
+
+    Sweeper->>Med: ClearOutstandingFromOutboxAsync
+    Med->>Store: OutstandingMessagesAsync, args carry ExcludeExpired
+    Store-->>Med: a page with no expired message
+    Med->>Med: send the page as today
+    Arch->>Store: dispatched pass, unchanged
+    Arch->>Store: OutstandingMessages for one topic, args carry OnlyExpired
+    Store-->>Arch: expired messages of that topic
+    Arch->>Arch: check each age again, set the ExpiredAt bag entry
+    loop each message that passes the check
+        Arch->>Prov: ArchiveMessage
+        Arch->>Reg: RaiseExpired, if Expired is chosen
+    end
+    Arch->>Store: Delete the archived ids in one call
+```
+
+Four rules hold at the mediator's raise sites:
 
 | Rule | What it protects |
 | --- | --- |
-| A raise never throws, because the failure channel guards it end to end | A clear's outcome stays the same as with the feature off |
-| A raise comes before any code that can throw at that site | A throwing `TripTopic`, or a logger at that site, cannot suppress the notification. The one gap is a fault inside the helper's own catch, under *Why the helper returns the exception* |
+| A raise never throws, because the channel guards it end to end | A clear's outcome stays the same as with the feature off |
+| A raise comes before any code at its site that can throw | A throwing `TripTopic` or logger cannot suppress the notification |
 | On a confirmation, a catch raises only if the result reported success | A failed confirmation whose `TripTopic` throws raises once |
-| A raise that is the last statement of the `try` cannot reach the catch | A failed `MarkDispatched` on a confirmation raises once |
+| A raise that is the last statement of a `try` cannot reach its catch | A failed `MarkDispatched` on a confirmation raises once |
 
-When the buffer is full, the oldest notification goes and the dropped count rises by 1. After close, a raise is discarded and the dropped count rises by 1, with no log entry. A raise that reaches the bounded channel therefore ends in one of three states: delivered, still buffered, or counted as dropped.
+A raise first checks the kinds the options chose. A kind left out returns at once, allocates nothing and counts nothing. A raise of a chosen kind ends in one of three states: delivered, still buffered, or counted as dropped. The buffer drops its oldest notification when full. After a close, the raise itself is discarded. Both cases add 1 to the dropped count.
 
-With the sweep-send option on, a sweep through a producer that does not confirm publication also raises `SentBySweep` for each message it sends, right after the send returns and before the mark. It follows the first two rules. The other two concern confirmations, which never raise it.
+`Expired` goes to a channel by these rules, in order:
+
+| Step | The archiver looks for | Result |
+| --- | --- | --- |
+| 1 | The key of the message's lookup topic and `MessageHeader.Type`, the key the mediator's `Dispatch` finds | That publication's channel, the one `Dispatch` would send through |
+| 2 | Publications on the message's stored topic, `MessageHeader.Topic`, whose own max age equals the age applied to that topic | The first such key in ordinal order of its text, `topic:type` |
+
+Step 2 always finds a channel when the archiver's producer registry is the one the notification registry was built from. A message is expired only if a publication on its stored topic sets the age applied, so such a publication always exists. With another producer registry, which the direct path allows, step 2 can find no channel, and then the archiver raises nothing. A send routed by `RequestContext.Destination` has no request context at the archiver, so its `Expired` follows the same two steps.
+
+`Expired` tells the subscriber that the archiver moved the message and that later sweeps leave it out. It does not prove the message was never sent. A sweep checks the age only when it reads its page. A send from that page, retries included, can still reach the broker after the archiver moved the row.
 
 ### Where the pieces live
 
@@ -139,28 +204,56 @@ flowchart LR
     subgraph App["Application"]
         Sub["Subscriber code"]
     end
+    subgraph Hosting["Paramore.Brighter.Outbox.Hosting"]
+        UseArch["CHANGED: UseOutboxArchiver"]
+        Timed["TimedOutboxArchiver, unchanged"]
+    end
     subgraph DI["Paramore.Brighter.Extensions.DependencyInjection"]
-        Step["NEW: UseOutboxFailureChannel"]
-        Build["CHANGED: BuildOutBoxProducerMediator"]
+        Step["NEW: UseOutboxNotifications"]
+        Build["CHANGED: BuildOutBoxProducerMediator, FR-21 warning"]
+        Helper["NEW: OutboxNotifications helper"]
     end
     subgraph Core["Paramore.Brighter"]
-        Role["NEW: IAmAnOutboxFailureChannel"]
-        Failures["NEW: OutboxFailureChannel"]
-        Note1["NEW: OutboxFailureNotification, OutboxFailureKind"]
+        RegRole["NEW: IAmAnOutboxNotificationRegistry"]
+        Reg["NEW: OutboxNotificationRegistry"]
+        ChanRole["NEW: IAmAnOutboxNotificationChannel"]
+        Chan["NEW: OutboxNotificationChannel"]
+        Types["NEW: OutboxNotification, OutboxNotificationKind, OutboxNotificationOptions"]
+        Ages["NEW: OutboxMaxAges"]
+        Pub["CHANGED: Publication.MaxAge"]
         Med["CHANGED: OutboxProducerMediator"]
-        Chan["System.Threading.Channels bounded channel"]
+        Arch["CHANGED: OutboxArchiver"]
+        Rel["CHANGED: RelationDatabaseOutbox"]
+        Mem["CHANGED: InMemoryOutbox"]
     end
-    Sub --> Role
-    Failures --> Role
-    Step --> Failures
-    Build --> Failures
+    subgraph Stores["Store assemblies"]
+        Dialects["CHANGED: MsSql, MySql, PostgreSql, Sqlite, Spanner queries"]
+        Others["CHANGED: DynamoDB, DynamoDB.V4, MongoDb, Firestore outboxes"]
+    end
+    Sub --> RegRole
+    Sub --> ChanRole
+    Reg --> RegRole
+    Chan --> ChanRole
+    Reg --> Chan
+    Chan --> Types
+    Step --> Reg
+    Build --> Helper
+    UseArch --> Helper
+    Helper --> Reg
     Build --> Med
-    Med --> Failures
-    Failures --> Note1
-    Failures --> Chan
+    Med --> Reg
+    Med --> Ages
+    Arch --> Reg
+    Arch --> Ages
+    Ages --> Pub
+    Rel --> Ages
+    Mem --> Ages
+    Dialects --> Rel
+    Others --> Ages
+    Timed --> Arch
 ```
 
-The dependencies point inward to the core. The mediator knows the failure channel, and the failure channel does not know the mediator. Transports, stores and the sweeper have no dependency on any new type.
+The dependencies point inward to the core. The mediator and the archiver know the registry, and the registry knows neither. Stores know `OutboxMaxAges`, and the relational dialects also implement `IRelationalDatabaseOutboxExpiryQueries`. Transports and the sweeper have no dependency on any new type.
 
 ### Key Components
 
@@ -168,24 +261,65 @@ The dependencies point inward to the core. The mediator knows the failure channe
 
 | Role | Type | Responsibilities | Responsibility classifier | Collaborators |
 | --- | --- | --- | --- | --- |
-| Reports one failed clear of one message, or one sweep send | `OutboxFailureNotification` (core) | Holds id, topic, kind, exception and time | **knowing** | `OutboxFailureKind` |
-| Names what failed, or that a sweep sent | `OutboxFailureKind` (core) | Distinguishes the three failure kinds and the sweep send | **knowing** | None |
-| Lets a subscriber read failures | `IAmAnOutboxFailureChannel` (core) | Yields notifications, reports the end, reports the dropped count | **doing**, **knowing** | `OutboxFailureNotification` |
-| Holds notifications between raising and reading | `OutboxFailureChannel` (core) | Bounds the buffer, counts drops, limits the drop warning, accepts one mediator, closes, holds whether sweep sends are included | **doing**, **knowing**, **deciding** | Bounded channel, `TimeProvider`, logger |
-| Observes failures and sweep sends, and decides their kind | `OutboxProducerMediator` (core) | Raises at each site, attaches the failure channel, closes it after the producers | **deciding**, **doing** | `OutboxFailureChannel` |
-| Turns the feature on in a container | `UseOutboxFailureChannel` (DI) | Validates capacity, registers a failure channel per container, passes the sweep-send option | **doing** | `OutboxFailureChannel`, `IBrighterBuilder` |
+| Reports one failure or one expired message | `OutboxNotification` (core) | Holds id, topic, kind, exception and time | knowing | `OutboxNotificationKind` |
+| Names what happened, and the set of kinds chosen | `OutboxNotificationKind` (core) | One flag per kind, combinable for the set | knowing | None |
+| Holds the feature's settings | `OutboxNotificationOptions` (core) | Capacity and kinds, with their validation | knowing | `ConfigurationException` |
+| Lets a subscriber read one publication | `IAmAnOutboxNotificationChannel` (core) | Yields notifications, reports the end, the key and the dropped count | doing, knowing | `OutboxNotification` |
+| Holds one publication's notifications | `OutboxNotificationChannel` (core) | Filters kinds, bounds the buffer, counts drops, limits the drop warning, closes | doing, knowing, deciding | Bounded channel, `TimeProvider`, logger |
+| Lets a subscriber find a channel | `IAmAnOutboxNotificationRegistry` (core) | Lists keys, looks a channel up by topic and type | knowing | `IAmAnOutboxNotificationChannel` |
+| Owns the channels of one producer registry | `OutboxNotificationRegistry` (core) | Creates a channel per publication, accepts one mediator, routes `Expired`, closes | doing, deciding | Producer registry, `OutboxNotificationChannel` |
+| Gives each stored topic its max age | `OutboxMaxAges` (core) | Reduces publications to the smallest age per topic, names the query keys | knowing | `Publication` |
+| Observes failures and decides their kind | `OutboxProducerMediator` (core) | Raises at each site, passes the expiry bounds to a sweep's query | deciding, doing | Notification registry, `OutboxMaxAges` |
+| Moves dispatched and expired messages | `OutboxArchiver` (core) | Reads expired messages per topic, checks and marks them, archives each, raises `Expired` after each, then deletes the archived ones | doing, deciding | Store, archive provider, notification registry |
+| Applies the bound in a query | Each outbox store | Leaves expired messages out, or returns only them | doing | `OutboxMaxAges` |
+| Turns the feature on in a container | `UseOutboxNotifications` (DI) | Validates options, registers one registry per container | doing | `IBrighterBuilder` |
 
-The mediator alone knows what failed and which kind that is. The failure channel alone knows what happens to a notification afterwards.
+The mediator alone decides which kind a failure is. The channel alone decides what happens to a notification afterwards. `OutboxMaxAges` alone decides which age a topic has, so the sweep, the archiver and every store agree.
 
-#### `OutboxFailureNotification` and `OutboxFailureKind`
+#### `Publication.MaxAge`
 
 ```csharp
-public enum OutboxFailureKind { SendFailed, ConfirmationFailed, MarkDispatchedFailed, SentBySweep }
+public TimeSpan? MaxAge { get; set; }
+```
 
-public sealed record OutboxFailureNotification(
+| Member | Input | Output | Error conditions |
+| --- | --- | --- | --- |
+| `MaxAge` | A `TimeSpan`, or null | The age after which a sweep leaves an undispatched message on this publication's topic out. Null, zero or negative means no limit | None. No value throws |
+
+The mediator, the archiver and the registry read the property once, when each is constructed. A changed max age therefore takes effect after a restart, as `StaleMessageAge` does.
+
+#### `OutboxNotificationKind`
+
+```csharp
+[Flags]
+public enum OutboxNotificationKind
+{
+    None = 0,
+    SendFailed = 1,
+    ConfirmationFailed = 2,
+    MarkDispatchedFailed = 4,
+    Expired = 8,
+    All = SendFailed | ConfirmationFailed | MarkDispatchedFailed | Expired
+}
+```
+
+| Member | Input | Output | Error conditions |
+| --- | --- | --- | --- |
+| `SendFailed` | None | An attempt to send ended in an exception | None |
+| `ConfirmationFailed` | None | The producer reported that the broker did not confirm the message | None |
+| `MarkDispatchedFailed` | None | The send or the confirmation succeeded, and the outbox was not updated | None |
+| `Expired` | None | The archiver moved an expired message to the archive | None |
+| `None`, `All` | None | Only for a set of kinds. A notification never carries them | None |
+
+A notification carries exactly one flag. The options carry a set of them.
+
+#### `OutboxNotification`
+
+```csharp
+public sealed record OutboxNotification(
     Id MessageId,
     RoutingKey Topic,
-    OutboxFailureKind Kind,
+    OutboxNotificationKind Kind,
     Exception? Exception,
     DateTimeOffset OccurredAt);
 ```
@@ -193,397 +327,627 @@ public sealed record OutboxFailureNotification(
 | Member | Input | Output | Error conditions |
 | --- | --- | --- | --- |
 | `MessageId` | None | The message, or `Id.Empty` when a confirmation carries no id | None |
-| `Topic` | None | The wire topic, or `RoutingKey.Empty` when a confirmation carries none | None |
-| `Kind` | None | The kind of failure, or `SentBySweep` | None |
-| `Exception` | None | The exception object, or null for `ConfirmationFailed` and `SentBySweep` | None |
-| `OccurredAt` | None | The time of the raise, from the mediator's `TimeProvider` | None |
+| `Topic` | None | The message's stored topic, or `RoutingKey.Empty` when a confirmation carries none | None |
+| `Kind` | None | One kind | None |
+| `Exception` | None | The exception object, or null for `ConfirmationFailed` and `Expired` | None |
+| `OccurredAt` | None | The time of the raise, from the mediator's `TimeProvider`, or the archiver's for `Expired` | None |
 
 The record has a public constructor, so an application can build one to test its subscriber.
 
-#### `IAmAnOutboxFailureChannel`
+#### `OutboxNotificationOptions`
 
 ```csharp
-public interface IAmAnOutboxFailureChannel
+public sealed class OutboxNotificationOptions
 {
-    long DroppedCount { get; }
-    IAsyncEnumerable<OutboxFailureNotification> ReadAllAsync(CancellationToken cancellationToken = default);
+    public const int DefaultCapacity = 1024;
+    public const int MaxCapacity = 1_048_576;
+    public int Capacity { get; set; } = DefaultCapacity;
+    public OutboxNotificationKind Kinds { get; set; } = OutboxNotificationKind.All;
+    public void Validate();
 }
 ```
 
 | Member | Input | Output | Error conditions |
 | --- | --- | --- | --- |
-| `ReadAllAsync` | The reader's token | Notifications in raise order. The stream ends after close, once the buffer is empty. The token cancels a wait on an empty buffer at once, and it is checked before each notification is taken, so a cancelled read leaves the rest in the buffer | `OperationCanceledException` from the reader's own token only. It does not throw at the end or after close |
-| `DroppedCount` | None | The total dropped so far, readable at any time | None |
+| `Capacity` | 1 to `MaxCapacity` | The most undelivered notifications each channel holds | Checked by `Validate` |
+| `Kinds` | A non-empty set of defined flags | The kinds raised. The default is `All` | Checked by `Validate` |
+| `Validate` | None | Nothing | `ConfigurationException` naming `Capacity` and its value outside 1 to `MaxCapacity`, or naming `Kinds` and its value when it is `None` or has an undefined bit |
 
-Several readers may read one failure channel. They compete, and each notification reaches one of them. A loop that ended because subscriber code threw can start again.
-
-#### `OutboxFailureChannel`
+#### `IAmAnOutboxNotificationChannel`
 
 ```csharp
-public sealed class OutboxFailureChannel : IAmAnOutboxFailureChannel, IDisposable
+public interface IAmAnOutboxNotificationChannel
 {
-    public const int DEFAULT_CAPACITY = 1024;
-    public const int MAX_CAPACITY = 1048576;
-    public OutboxFailureChannel(int capacity = DEFAULT_CAPACITY, bool includeSweepSends = false);
+    ProducerKey Key { get; }
+    long DroppedCount { get; }
+    IAsyncEnumerable<OutboxNotification> ReadAllAsync(CancellationToken cancellationToken = default);
+}
+```
+
+| Member | Input | Output | Error conditions |
+| --- | --- | --- | --- |
+| `Key` | None | The publication's topic and type, as the registry lists it | None |
+| `DroppedCount` | None | The total dropped so far, readable at any time | None |
+| `ReadAllAsync` | The reader's token | Notifications in raise order. The stream ends after the close, once the buffer is empty. The token cancels a wait on an empty buffer at once, and is checked before each notification is taken | `OperationCanceledException` from the reader's own token only. No exception at the end or after the close |
+
+Several readers may read one channel. They compete, and each notification reaches one of them. A loop that ended because subscriber code threw can start again.
+
+#### `OutboxNotificationChannel`
+
+```csharp
+public sealed class OutboxNotificationChannel : IAmAnOutboxNotificationChannel
+{
     public int Capacity { get; }
-    public bool IncludesSweepSends { get; }
-    public void Dispose();
-    internal void Attach(TimeProvider timeProvider);
-    internal void Raise(Id messageId, RoutingKey? topic, OutboxFailureKind kind, Exception? exception);
+    internal OutboxNotificationChannel(ProducerKey key, OutboxNotificationOptions options, Func<TimeProvider> clock);
+    internal void Raise(Id messageId, RoutingKey? topic, OutboxNotificationKind kind, Exception? exception, DateTimeOffset occurredAt);
     internal void Close();
 }
 ```
 
 | Member | Input | Output | Error conditions |
 | --- | --- | --- | --- |
-| Constructor | Capacity, and whether sweep sends are included | A failure channel with an empty buffer | `ConfigurationException` naming `capacity` and the value, outside 1 to `MAX_CAPACITY` |
-| `IncludesSweepSends` | None | The constructor's `includeSweepSends`. The mediator reads it at each sweep-send site | None |
-| `Dispose` | None | Calls `Close`, for the failure channel's owner | None |
-| `Attach` | The mediator's clock | Stores the clock. A stored clock marks the failure channel as claimed | `ConfigurationException` if a mediator already holds the failure channel |
-| `Raise` | The fields, with a null topic read as `RoutingKey.Empty` | Written, or counted as dropped | None. Every exception is caught, and logged where the logger allows |
-| `Close` | None | `TryComplete`. Buffered notifications stay readable. It is safe to call more than once | None |
+| `Capacity` | None | The validated capacity | None |
+| Constructor | Key, validated options, the registry's current clock | A channel with an empty buffer | None. The registry validated the options |
+| `Raise` | The fields, with a null topic read as `RoutingKey.Empty` | Nothing for a kind not chosen. Otherwise written, or counted as dropped | None. Every exception is caught, and logged with its type only where the logger allows |
+| `Close` | None | `TryComplete`. Buffered notifications stay readable. Safe to call more than once | None |
 
-`Attach`, `Raise` and `Close` are internal because a subscriber must not be able to claim or write to a failure channel. The mediator is in the same assembly, and tests reach a raise by making a clear fail.
+The constructor and `Raise` are internal, so a subscriber cannot write to a channel. The mediator and the archiver are in the same assembly as the channel.
 
-#### `UseOutboxFailureChannel`
+#### `IAmAnOutboxNotificationRegistry` and `OutboxNotificationRegistry`
 
 ```csharp
-public static IBrighterBuilder UseOutboxFailureChannel(
-    this IBrighterBuilder brighterBuilder,
-    int capacity = OutboxFailureChannel.DEFAULT_CAPACITY,
-    bool includeSweepSends = false);
+public interface IAmAnOutboxNotificationRegistry
+{
+    IReadOnlyCollection<ProducerKey> Keys { get; }
+    IAmAnOutboxNotificationChannel LookupBy(RoutingKey topic, CloudEventsType? type = null);
+}
+
+public sealed class OutboxNotificationRegistry : IAmAnOutboxNotificationRegistry, IDisposable
+{
+    public OutboxNotificationRegistry(IAmAProducerRegistry producerRegistry, OutboxNotificationOptions? options = null);
+    public void Dispose();
+    internal void Attach(IAmAProducerRegistry producerRegistry, TimeProvider timeProvider);
+    internal OutboxNotificationChannel? ChannelFor(IAmAMessageProducer producer);
+    internal void RaiseExpired(Message message, DateTimeOffset occurredAt);
+    internal void Close();
+}
 ```
 
 | Member | Input | Output | Error conditions |
 | --- | --- | --- | --- |
-| The step | Builder, capacity, whether sweep sends are included | The builder. Registers `IAmAnOutboxFailureChannel` as a singleton created by a factory, whose instance is an `OutboxFailureChannel`. It does not register the class, so the container tracks the object once | `ArgumentNullException` for the builder. `ConfigurationException` for the capacity, before anything is registered, because the step first builds and disposes a failure channel of that capacity |
+| `Keys` | None | One key per publication, topic and type | None |
+| `LookupBy` | Topic, and a type or null for none | The channel whose key is the topic and the type, or `CloudEventsType.Empty` when null | `ConfigurationException` naming the topic and type when no publication has that key |
+| Constructor | The producer registry, options or null for the defaults | A registry with one channel per publication, keyed as the producer registry finds it | `ArgumentNullException` for the producer registry. The `ConfigurationException` of `Validate` |
+| `Dispose` | None | Calls `Close` | None |
+| `Attach` | The mediator's producer registry and clock | Stores the clock for the drop warnings | `ConfigurationException` if a mediator already attached, or if a producer of the mediator has no channel |
+| `ChannelFor` | A producer | Its channel, by reference | None. Null for an unknown producer |
+| `RaiseExpired` | The archived message, the archiver's time | Raises `Expired` on the channel the routing table above picks | None. Guarded as `Raise` is |
+| `Close` | None | Closes every channel | None |
 
-When the step runs twice, the capacity and the sweep-send option of the first call are kept, as `UseOutboxStaleMessageMonitor` does.
+The constructor reads the producers once and keeps the keys, so `LookupBy` still works after the mediator's `Dispose` has cleared the producer registry. For each producer it asks the producer registry which key finds it: first the publication's topic and type, then the topic alone. `ProducerRegistry.LookupBy` throws `ConfigurationException` for a key it lacks, so the probe catches that exception and compares the producer found by reference. A producer registry built from a dictionary of topics therefore yields keys with an empty type, as its own lookup does. When neither key finds the same producer, as a third-party producer registry may do, the constructor throws `ConfigurationException` naming the publication. Before `Attach`, the drop warnings use `TimeProvider.System`.
+
+#### `UseOutboxNotifications`
+
+```csharp
+public static IBrighterBuilder UseOutboxNotifications(
+    this IBrighterBuilder brighterBuilder,
+    Action<OutboxNotificationOptions>? configure = null);
+```
+
+| Member | Input | Output | Error conditions |
+| --- | --- | --- | --- |
+| The step | Builder, an optional action on the options | The builder. Registers `IAmAnOutboxNotificationRegistry` as a singleton created by a factory over `IAmAProducerRegistry`. It does not register the class | `ArgumentNullException` for the builder. The `ConfigurationException` of `Validate`, before anything is registered |
+
+When the step runs twice, the first call's options are kept, as `UseOutboxStaleMessageMonitor` does.
+
+#### `OutboxMaxAges`
+
+```csharp
+public sealed class OutboxMaxAges
+{
+    public const string ExcludeExpiredArgsKey = "paramore.brighter.ExcludeExpired";
+    public const string OnlyExpiredArgsKey = "paramore.brighter.OnlyExpired";
+    public static OutboxMaxAges From(IEnumerable<Publication> publications);
+    public IReadOnlyDictionary<RoutingKey, TimeSpan> ByTopic { get; }
+    public bool IsEmpty { get; }
+}
+```
+
+| Member | Input | Output | Error conditions |
+| --- | --- | --- | --- |
+| `From` | Publications | The smallest positive `MaxAge` per `Publication.Topic`. A publication with no limit does not lift a topic's age | `ArgumentNullException` |
+| `ByTopic` | None | Topic to max age | None |
+| `IsEmpty` | None | True when no publication sets a positive age | None |
+| `ExcludeExpiredArgsKey` | None | The `args` key whose value, an `OutboxMaxAges`, asks a query to leave expired messages out | None |
+| `OnlyExpiredArgsKey` | None | The `args` key whose value, an `OutboxMaxAges` with one topic, asks a query to return only that topic's expired messages | A store throws `ArgumentException` for more than one topic |
+
+A message is expired when its `MessageHeader.TimeStamp` is earlier than now minus the age. An age equal to the max age is not expired. An age whose cutoff would fall before the earliest time the store can hold expires nothing. With `ExcludeExpiredArgsKey` that topic gets no bound, and with `OnlyExpiredArgsKey` the store returns an empty page without a query. A store compares the age with the time since that earliest time before it subtracts, so no age makes the subtraction throw.
+
+#### `IRelationalDatabaseOutboxExpiryQueries`
+
+```csharp
+public interface IRelationalDatabaseOutboxExpiryQueries
+{
+    string ExpiredMessageFragment { get; }
+    DateTimeOffset EarliestTimestamp { get; }
+}
+```
+
+| Member | Input | Output | Error conditions |
+| --- | --- | --- | --- |
+| `ExpiredMessageFragment` | None | A predicate with two placeholders, the topic parameter and the cutoff parameter, over the dialect's topic and timestamp columns | None |
+| `EarliestTimestamp` | None | The earliest time the dialect's timestamp column holds, such as 1753-01-01 for MsSql's `DATETIME` | None |
+
+`RelationDatabaseOutbox` joins the fragments with `OR` and adds `AND NOT (...)` for `ExcludeExpiredArgsKey` or `AND (...)` for `OnlyExpiredArgsKey`. The fragment is NULL-safe for both columns. A row with a null topic or a null timestamp is never expired and stays in the sweep. Each dialect's queries class implements the role, as with `IRelationalDatabaseOutboxTopicCountQueries`. A queries class without the role, given a bound, makes the query throw `NotSupportedException`.
+
+#### `OutboxArchiver` constructor and `Message.ExpiredAtHeaderName`
+
+```csharp
+public OutboxArchiver(
+    IAmAnOutbox outbox,
+    IAmAnArchiveProvider archiveProvider,
+    IAmARequestContextFactory? requestContextFactory = null,
+    int archiveBatchSize = 100,
+    IAmABrighterTracer? tracer = null,
+    InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
+    IAmAProducerRegistry? producerRegistry = null,
+    OutboxNotificationRegistry? notifications = null,
+    TimeProvider? timeProvider = null);
+
+public const string ExpiredAtHeaderName = "paramore.brighter.ExpiredAt";
+```
+
+| Member | Input | Output | Error conditions |
+| --- | --- | --- | --- |
+| `producerRegistry` | The producer registry whose publications set the max ages, or null | With null, or with no max age, the archiver's run does exactly what it does today | None |
+| `notifications` | The same notification registry the mediator holds, or null | With null, expired messages are moved and nothing is raised | None |
+| `timeProvider` | A clock, or null for `TimeProvider.System`. `UseOutboxArchiver` passes `TimeProvider.System`, as the mediator's build does | The time on `Expired` and on the bag entry, and the clock of the check in memory | None |
+| `ExpiredAtHeaderName` | None | The header bag key the archiver sets on an expired message, valued with its time in round-trip `O` format | None |
+
+#### `OutboxProducerMediator` constructor
+
+One trailing optional parameter, `OutboxNotificationRegistry? notifications = null`, follows `outboxMeter`. The mediator reads the max ages from its producer registry whether or not the parameter is set.
 
 #### Where each type is touched
 
 | Assembly | Type | Change |
 | --- | --- | --- |
-| `Paramore.Brighter` | `OutboxFailureNotification`, `OutboxFailureKind`, `IAmAnOutboxFailureChannel`, `OutboxFailureChannel` | New |
-| `Paramore.Brighter` | `OutboxProducerMediator` | One trailing optional constructor parameter, `failureChannel`. Two private helpers, the raises and the close |
-| `Paramore.Brighter.Extensions.DependencyInjection` | `ServiceCollectionExtensions` | The new step, and one more positional argument when building the mediator |
-| `release_notes.md` | None | One entry for the feature, and a `#### Breaking changes` line marking the constructor parameter *(binary)* |
+| `Paramore.Brighter` | `OutboxNotification`, `OutboxNotificationKind`, `OutboxNotificationOptions`, `IAmAnOutboxNotificationChannel`, `OutboxNotificationChannel`, `IAmAnOutboxNotificationRegistry`, `OutboxNotificationRegistry`, `OutboxMaxAges`, `IRelationalDatabaseOutboxExpiryQueries` | New |
+| `Paramore.Brighter` | `Publication` | `MaxAge` |
+| `Paramore.Brighter` | `Message` | `ExpiredAtHeaderName`, and an internal `ProducerLookupTopic` moved from the mediator |
+| `Paramore.Brighter` | `OutboxProducerMediator` | The trailing parameter, two private helpers, the raises, the close, the sweep's bound |
+| `Paramore.Brighter` | `OutboxArchiver` | Three trailing parameters and the expired pass |
+| `Paramore.Brighter` | `RelationDatabaseOutbox`, `InMemoryOutbox` | Read the two keys in the outstanding query |
+| `Paramore.Brighter.Outbox.MsSql`, `.MySql`, `.PostgreSql`, `.Sqlite`, `.Spanner` | Each queries class | Implements `IRelationalDatabaseOutboxExpiryQueries` |
+| `Paramore.Brighter.Outbox.DynamoDB`, `.DynamoDB.V4`, `.MongoDb`, `.Firestore` | Each outbox | Reads the two keys in the outstanding query |
+| `Paramore.Brighter.Extensions.DependencyInjection` | `ServiceCollectionExtensions` | The step, a public helper that resolves the registry, one more positional argument, the FR-21 warning |
+| `Paramore.Brighter.Outbox.Hosting` | `HostedServiceCollectionExtensions` | `UseOutboxArchiver` passes the three new arguments, with `TimeProvider.System` as the clock |
+| `tools/Paramore.Brighter.Test.Generator` | Outbox templates | Two new templates, sync and async |
+| `release_notes.md` | None | The feature, and the change of behaviour a max age brings. Under `#### Breaking changes`, two *(binary)* lines and three behaviour lines: a third-party relational dialect without the role, a third-party outbox that ignores `ExcludeExpiredArgsKey`, and causation replay. The behaviour line for the dialect says every archiver run then fails in its expired pass, after the dispatched pass. The line for replay says a replayed message older than its max age is left out of sweeps and archived as expired |
 
 These stay unchanged:
 
 - `IAmAnOutbox`, `IAmAnOutboxSync`, `IAmAnOutboxAsync`, `IAmAnOutboxProducerMediator` and its generic form.
-- `IAmAMessageProducer` and its roles, `ISupportPublishConfirmation` and `ISupportPublishConfirmationAsync`.
+- `IAmAMessageProducer` and its roles, `ISupportPublishConfirmation` and `ISupportPublishConfirmationAsync`, and `PublishConfirmationResult`.
+- `IAmAProducerRegistry`, `ProducerRegistry` and `ProducerKey`.
 - `IAmAnOutboxCircuitBreaker`, `IAmABrighterOutboxMeter`, `IAmABrighterTracer` and every instrument.
-- `IAmProducersConfiguration` and `ProducersConfiguration`. Neither gains a member.
-- `PublishConfirmationResult`, every transport, every outbox store and its schema, and the sweeper.
+- `IAmProducersConfiguration` and `ProducersConfiguration`.
+- `IAmAnArchiveProvider` and every archive provider.
+- `IAmACausationTrackingOutbox` and `ReplayCausation` in every store. A replayed message keeps its `TimeStamp`, so a max age applies to it.
+- `TimedOutboxSweeper`, `OutboxSweeper`, `TimedOutboxArchiver` and their options.
+- Every store schema, and the order of every outstanding query.
+- `BrighterPipelineValidationExtensions` and its validators.
 - The outbox-write sites and the `Call` send, which keep the bool-returning helpers.
-- The two mediators that the control bus builds. They receive no failure channel, so their failures do not notify.
+- The mediators the control bus builds. They receive no registry, so their failures do not notify.
 
 ### Technology Choices
 
-#### Why a builder step and not a property on `ProducersConfiguration`
+#### Why a registry built before the mediator
 
-The failure channel reaches the mediator from the container and not from the configuration. The outbox meter and the circuit breaker reach it the same way. The DI path looks for a registered failure channel when it builds the mediator, whichever `AddProducers` overload ran. An application with its own `IAmProducersConfiguration` therefore gets the feature with the same step, and the replacement of its configuration cannot turn the feature off.
+A subscriber can start before the mediator exists, so it needs an object that does not depend on the mediator. The producer registry is that kind of object. It exists before the mediator and holds the publications. The notification registry builds its channels from it, so a subscriber that resolves the registry early reaches every channel. On the DI path that early resolve also builds the producer registry. The deferred `AddProducers` overload otherwise builds it at the first resolve of the outbox, the archiver or the mediator.
 
-The step registers a factory and not an instance. Two containers built from one service collection then get two failure channels, which FR-14 requires, and each container disposes its own.
+The step is on the builder and not on `ProducersConfiguration`. The DI path looks for a registered registry when it builds the mediator, whichever `AddProducers` overload ran. An application with its own `IAmProducersConfiguration` therefore gets the feature with the same step, and replacing that configuration cannot turn the feature off.
 
-The step registers only the interface. The default container records a disposable once per descriptor and disposes in reverse order. A second descriptor for the class, first resolved after the mediator, would therefore close the failure channel before the mediator closes its producers. That order is ordinary, because `ValidatePipelines` and a consumer's hosted service build the mediator when the host creates them. With one descriptor, the mediator's build resolves the failure channel or finds it already built, so the container always disposes the mediator first.
+The step registers a factory and not an instance, so two containers built from one service collection get two registries. It registers only the interface. The default container disposes in reverse order of creation, and the mediator's build resolves the registry first. The container therefore disposes the mediator before the registry, and confirmations reported while producers close still reach an open channel.
+
+#### How a subscriber names a publication
+
+`LookupBy(topic, type)` uses the key `ProducerRegistry.LookupBy` uses, so a subscriber names a publication as the configuration already does. Typed publications on one topic have separate keys and separate channels. An unknown key throws `ConfigurationException`, which is what `ProducerRegistry` throws for the same mistake. `Keys` lets a subscriber read every channel without knowing the publications.
+
+#### Why no read across all channels
+
+A merged read would add API and define no order across channels, and FR-10 promises order only within one. Each channel already has its own capacity and dropped count, which is what one channel per publication is for. A subscriber that wants everything starts one loop per key. A merged read can be added later without changing this contract.
 
 #### What a subscriber sees when the feature is off
 
-There is no failure channel to see. On the DI path, a constructor that takes `IAmAnOutboxFailureChannel` fails at resolve, with the container's normal exception, and `GetService` returns null. On the direct path, the application has no object to hold. No read can end at once and look like a normal end. An application that forgets the step finds out when its subscriber starts.
+There is no registry to see. On the DI path a constructor that takes `IAmAnOutboxNotificationRegistry` fails at resolve, with the container's normal exception, and `GetService` returns null. On the direct path the application has no object to hold. No read can end at once and look like a normal end.
 
 #### How a waiting reader ends when no mediator was built
 
-A reader has two ways out. One is its own cancellation token, such as a hosted service's stopping token. It cancels a wait on an empty buffer at once, and otherwise cancels the read before the next notification is taken, with `OperationCanceledException`. The other is `Dispose` on the failure channel, which ends the read as a close does. On the DI path a factory created the failure channel, so the container disposes it at teardown, after the host has stopped its hosted services. On the direct path the application that created the failure channel disposes it. A mediator that the application registers itself, without passing the failure channel, raises nothing and never closes it, so the same two ways out apply.
+A reader has two ways out. One is its own cancellation token, such as a hosted service's stopping token. The other is `Dispose` on the registry, which closes every channel. On the DI path the container disposes the registry at teardown, after the host has stopped its hosted services. On the direct path the application that created the registry disposes it.
 
-#### Why two mediators cannot share a failure channel
+#### Why two mediators cannot share a registry
 
-The second `Attach` throws `ConfigurationException`, so the second mediator's constructor fails. Sharing would break FR-14 twice. The dropped count would no longer belong to one mediator, and the first `Dispose` would close the failure channel under the second. A shared producer stays possible where FR-14 expects it: a producer shared by two mediators raises on each mediator's own failure channel.
+The second `Attach` throws `ConfigurationException`, so the second mediator's constructor fails. `Attach` is atomic: a call that throws leaves the registry as it was. Sharing would merge two mediators' dropped counts, and the first `Dispose` would close the channels under the second. A producer shared by two mediators with two registries raises on each registry's channel, as FR-14 expects. `Attach` also checks that each of the mediator's producers has a channel, which catches a registry built from another producer registry.
 
-#### Why the interface does not expose `ChannelReader`
+#### How the archiver receives the same channels
 
-`ChannelReader.ReadAsync` throws `ChannelClosedException` at the end of the stream, and FR-13 says that reaching the failure channel after `Dispose` does not throw. A narrow surface makes the promise true for every read that the interface offers. The narrow surface also keeps the buffer's type internal. An application can test a subscriber with a double by constructing the subscriber directly, because a double registered beside a real mediator makes that mediator's build throw.
+On the direct path the application passes the same registry to the mediator and the archiver. On the DI path a public helper, `ServiceCollectionExtensions.OutboxNotifications(IServiceProvider)`, resolves the interface. It returns the concrete registry, null when nothing is registered, and throws `ConfigurationException` naming any other implementation. The mediator's build and `UseOutboxArchiver` both call it, so both get the container's one registry. `UseOutboxArchiver` also passes `IAmAProducerRegistry`, resolved with `GetService`, so it is null without `AddProducers`. It passes `TimeProvider.System` as the clock, as the mediator's build does.
 
-`ReadAllAsync` is its own iterator over `WaitToReadAsync` and `TryRead`, and it does not forward to `ChannelReader.ReadAllAsync`. The .NET method checks its token only when the buffer runs dry, so a cancelled reader of a full buffer would go on through every notification and any new ones. A full buffer during an outage is when a host most needs the reader to stop. Forwarding and documenting the limit would need less code, but a hosted reader would then hold up shutdown.
+#### How FR-21 sees the archiver
+
+`UseOutboxArchiver` registers `OutboxArchiver<Message, TTransaction>`. The mediator's build knows the transaction type, so it asks `IServiceProviderIsService` whether that closed type is registered. When the max ages are not empty and the answer is not yes, it writes one `Warning` per topic, naming it. A container without `IServiceProviderIsService` counts as no archiver, so the warning errs toward being written. The check runs at the mediator's build, so the order of the two steps does not matter.
+
+#### Why validation happens at the step and at construction
+
+`Validate` runs in the step, before anything is registered, so a DI application fails while it configures its services. It runs again in the registry's constructor, so the direct path fails no later than the mediator's construction. `ValidatePipelines()` adds no finding. The validator resolves the mediator when the validator is built (`BrighterPipelineValidationExtensions.ValidatePipelines`), so the constructor's exception comes first. With `ValidatePipelines()`, an invalid option stops the host at startup, whatever `throwOnError` says (AC-59). The step already fails earlier than any finding could.
+
+#### How the sweep keeps expired messages out of its page
+
+The mediator builds `OutboxMaxAges` once from its producer registry. When it is not empty, a sweep copies the caller's `args` and adds `ExcludeExpiredArgsKey`. The caller's dictionary is never changed, and an empty set of ages passes `args` exactly as today. An explicit clear reads by id and passes nothing new, so it sends an expired message.
+
+Each store applies the bound where its order needs it:
+
+| Store | Order | Where the bound applies |
+| --- | --- | --- |
+| MsSql, MySql, PostgreSql, Sqlite, Spanner | Oldest first in MsSql, newest first in the others | In SQL, beside the tripped-topic clause |
+| `InMemoryOutbox` | Oldest first | In the query, on `MessageHeader.TimeStamp` |
+| MongoDb | Oldest first | In the filter document |
+| Firestore | Newest first | In memory, reading further pages until the page is full |
+| DynamoDB, DynamoDB.V4 | Within a page or a shard | The scan: in the same `Where` as the tripped-topic filter. The query for one topic: in the key condition |
+
+Firestore filters in memory, because that keeps the sweep's query free of a composite `OR` filter. Topics have different ages, so a page of the newest messages can hold only expired ones while an unexpired message of another topic waits further back. Firestore therefore keeps reading further pages until it has a full page of unexpired messages or reaches the end. D-22 accepts those extra reads, and the change to P-7 records them.
+
+DynamoDB's scan filters in the same `Where` that applies the tripped-topic filter. `ScanOutstandingIndexSegmentForMessages` already keeps scanning while no topic is excluded, a pagination token remains and the segment holds fewer messages than the page size. So the loop scans past expired messages until the page is full or the scan ends. With tripped topics it reads one scan page per segment and returns what is left, as it does today. Expired messages then take up room in that scan page. While the scan passes the backlog, a sweep can send fewer than its batch size, or nothing. The scan resumes from its saved position on the next sweep. FR-18's third bullet therefore holds on DynamoDB only while no topic is tripped. D-22 accepts extra reads, not a short page, so this departs from FR-18.
+
+With `"Topic"` in `args`, `OutstandingMessagesForTopicAsync` queries each shard oldest first. A filter after the query would then fill pages with expired messages and leave later shards unread. On that path the bound goes into the key condition, since `OutstandingCreatedTime` holds `MessageHeader.TimeStamp`. `OnlyExpiredArgsKey` lowers the upper bound to the cutoff. `ExcludeExpiredArgsKey` adds the cutoff as a lower bound, through a `BETWEEN` expression beside `KeyTopicOutstandingCreatedTimeExpression`. `BETWEEN` includes both bounds, so the upper bound is one tick below the minimum age's limit and stays strict, as it is today. When the cutoff is not earlier than now minus the minimum age, the topic gets an empty page without a query. `GetShardNumber` can return a negative shard for a partition key. With `OnlyExpiredArgsKey`, the query therefore reads every shard from `-(NumberOfShards - 1)`, as `GetOutstandingMessageCountsByTopicAsync` does. Without that key it starts at shard 0, as it does today. The archiver always asks for page 1, as the mediator does, so it never relies on the paging state DynamoDB keeps per topic.
+
+#### How the archiver finds expired messages
+
+The archiver asks one topic at a time, with `OnlyExpiredArgsKey` holding that topic alone and with `dispatchedSince` of zero. It also passes `topic.Value` under `"Topic"`, the key DynamoDB and MongoDb already read for a per-topic query, and DynamoDB casts it to a string. The relational stores and `InMemoryOutbox` ignore `"Topic"`, and the single-topic bound restricts them. Their behaviour for an application that already passes `"Topic"` therefore does not change. Firestore adds an equality on the topic and a range on the timestamp. That needs a composite index on `IsDispatched`, `Topic` and `TimeStamp`, which the release notes name and the CI project needs (C-4).
+
+The archiver then checks each returned message in memory, with its own clock: the stored topic and the age must match. A store that ignores the key returns messages that are not expired, and the check moves none of them. The store's clock and the archiver's clock agree by default, because both are the system clock or the same injected `TimeProvider`.
+
+The archiver archives every message of the page that passes the check, raising `Expired` after each one the provider accepts. It then deletes the ids of the archived messages in one call, as the dispatched pass does. A message that fails the check stays in the outbox.
+
+The archiver starts each run at the next topic in ordinal order, so one topic's backlog cannot starve the others. It then visits the topics in that order until it has moved its batch size of expired messages or has asked every topic. The batch size bounds the expired messages it moves in a run, apart from the dispatched pass.
+
+#### When the age is measured, and by which clock
+
+Each store computes the cutoff with the clock it already uses for the minimum age. The relational stores use `DateTimeOffset.UtcNow`, and `InMemoryOutbox`, DynamoDB, MongoDb and Firestore use their injected `TimeProvider`. A relational store whose column cannot hold the cutoff, such as MsSql's `DATETIME` for a huge age, treats that topic as having nothing expired. `OutboxMaxAges` describes this. The mediator passes ages, not cutoffs. The max age and the minimum age of one query therefore share one clock. Tests against the relational stores use stamps relative to the time they run. MsSql's `DATETIME` rounds to 1/300 of a second, so boundary tests keep a margin.
+
+#### Why the expired marker is a bag entry
+
+`MessageHeader.Bag` travels with the message to every archive provider, so no provider changes. The value is the time of the move, so a reader of the archive can tell when the message left. `AzureBlobArchiveProvider` stores the body only, so its archive does not carry the entry. Its tags can, with `TagBlobs` and a `TagsFunc` that reads the bag, and the documentation shows that.
 
 #### Why the helper returns the exception
 
-A new private pair, `TryExecuteWithResiliencePipeline` and `TryExecuteWithResiliencePipelineAsync`, holds the current bodies unchanged and returns the caught exception, or null. The bool-returning helpers become one-line wrappers. The outbox-write sites and the `Call` send do not change by a line, and neither do their logs or checks.
+A new private pair, `TryExecuteWithResiliencePipeline` and `TryExecuteWithResiliencePipelineAsync`, holds the current bodies unchanged and returns the caught exception, or null. The bool helpers become one-line wrappers. The outbox-write sites and the `Call` send keep them, and their logs and checks stay as they are. An `async` method cannot have an `out` parameter, so a return value serves both helpers. It also keeps the raise at the site, where the kind and the id are known.
 
-The return value needs no new type and costs nothing on a successful clear. An `async` method cannot have an `out` parameter, so an `out` exception cannot serve both helpers. The return value also keeps the raise at the site, where the kind and the id are known.
-
-One case loses a notification. If the logger or `CheckOutstandingMessages` throws inside the helper's catch, then the helper throws and the site never runs. That exception reaches the caller, as it does today, so the failure is not silent. Microsoft's `LoggerFactory` wraps a provider's exception in an `AggregateException`, so that wrapper is what the caller sees. On a confirmation path the same exception reaches the catch, which raises once and carries that exception and not the store's.
+One case loses a notification. If the logger or `CheckOutstandingMessages` throws inside the helper's catch, the helper throws and the site never runs. That exception reaches the caller as it does today, so the failure is not silent.
 
 #### Why capacity is 1,024, with a maximum of 1,048,576
 
-The sweeper's defaults are 100 messages every 5 seconds, so one sweeper raises at most about 20 notifications per second. Against a broker that is down, that sweeper alone therefore takes at least 50 seconds to fill 1,024 notifications, and longer without bulk, because each failed message also waits for the default pipeline's retries. A failing `Post` or explicit clear raises as well, at the application's rate, so the buffer can fill sooner. A notification is small, but it keeps its exception, and capacity bounds the number of notifications and not their bytes. The maximum exists to reject a mistake such as `int.MaxValue`. It is not a recommendation: at that size, an outage could retain a million exceptions. A smaller default loses more in a burst, and a larger one retains more exceptions (P-2).
+The sweeper's defaults are 100 messages every 5 seconds, so one sweeper raises at most about 20 notifications per second. Against a broker that is down, that sweeper alone takes at least 50 seconds to fill 1,024 notifications. A failing `Post` raises at the application's rate, so the buffer can fill sooner. A notification keeps its exception, and capacity bounds the number of notifications, not their bytes. The maximum rejects a mistake such as `int.MaxValue`. It is not a recommendation.
 
 #### Why drop the oldest
 
-Waiting would block a publisher, which NFR-1 forbids. Dropping the newest would hide the failures that are happening now. The cost of dropping the oldest: with no sweeper, a dropped failure does not recur, and only the stale gauge of ADR 0085-outbox-stale-message-telemetry can show its message. In the example of FR-9, a read after n1, n2 and n3 at capacity 2 returns n2 and n3.
+Waiting would block a publisher, which NFR-1 forbids. Dropping the newest would hide the failures happening now. The cost: with no sweeper, a dropped failure does not recur, and only the stale gauge can show its message. In the example of FR-9, a read after n1, n2 and n3 at capacity 2 returns n2 and n3.
 
 #### How the dropped count stays exact on every target framework
-
-Two paths lose a notification, and each has one exact count:
 
 | Path | Signal | Action |
 | --- | --- | --- |
 | The buffer is full | The `itemDropped` delegate of `Channel.CreateBounded`, called once per dropped item | `Interlocked.Increment`, then the rate-limited warning |
-| The failure channel is closed | `TryWrite` returns false, which in drop-oldest mode has no other cause | `Interlocked.Increment`, with no log entry |
+| The channel is closed | `TryWrite` returns false, which in drop-oldest mode has no other cause | `Interlocked.Increment`, with no log entry |
 
-`DroppedCount` reads through `Interlocked.Read`, which is safe for a `long` on a 32-bit process.
-
-`Paramore.Brighter.csproj` references `System.Threading.Channels` only for netstandard2.0, where `Directory.Packages.props` pins 10.0.12. net8.0, net9.0 and net10.0 use the copy in the shared framework, so a runtime update decides their version. The package's netstandard2.0 asset and the reference packs of .NET 8, 9 and 10 declare the overload.
-
-The IL of `BoundedChannelWriter.TryWrite` in the netstandard2.0 asset shows the order. A closed bounded channel returns false. A full one removes the oldest item, adds the new one, releases the lock, and only then calls the delegate. So the delegate runs on the raising thread, outside the bounded channel's lock, and a slow logger cannot hold up other writers there. The new item is in the buffer before the delegate runs, so a logger fault cannot lose it.
-
-Test projects run on net9.0 and net10.0 only, so no test executes the netstandard2.0 asset or the net8.0 shared framework. For those two targets, the exactness rests on the inspection above and on a design that uses only `Interlocked` and the documented overload.
+`DroppedCount` reads through `Interlocked.Read`, which is safe for a `long` in a 32-bit process. The core references `System.Threading.Channels` only for netstandard2.0, pinned at 10.0.12. net8.0, net9.0 and net10.0 use the shared framework. Each of those declares the `itemDropped` overload. The delegate runs on the raising thread after the bounded channel releases its lock, and the new item is already buffered. A slow or throwing logger therefore holds up no other writer and loses no notification. Test projects run on net9.0 and net10.0 only, so the netstandard2.0 and net8.0 targets rest on the documented API, not on a test run.
 
 #### How the drop warning stays limited
 
-The delegate reads the attached `TimeProvider` and compares it with the next permitted time, a `long` of ticks. It claims the slot with `Interlocked.CompareExchange`, so only one thread logs per interval. The interval is 60 seconds of `TimeProvider` time. The first drop always logs, and the entry names the count at that moment. Nothing runs on a timer, and a raise that drops nothing does not read the clock for this purpose.
+The delegate reads the clock and compares it with the next permitted time, a `long` of ticks. It claims the slot with `Interlocked.CompareExchange`, so only one thread logs per interval. The interval is 60 seconds of `TimeProvider` time. The first drop always logs. The entry names the channel's key and the count, and nothing else. Nothing runs on a timer.
 
 #### How FR-12 and the close hold
 
-The bounded channel is created with `AllowSynchronousContinuations = false`, so a reader's continuation is queued and never runs on the raising thread. `InMemoryJobChannel` sets the opposite, so that setting cannot be copied from there. `SingleReader` and `SingleWriter` are both false, because raises come from many threads and readers may compete.
+Each bounded channel has `AllowSynchronousContinuations = false`, so a reader's continuation is queued and never runs on the raising thread. `InMemoryJobChannel` in `Paramore.Brighter.Mediator` sets the opposite, so the setting is not copied from there. `SingleReader` and `SingleWriter` are false, because raises come from many threads and readers may compete. `ReadAllAsync` is its own iterator over `WaitToReadAsync` and `TryRead`. `ChannelReader.ReadAllAsync` checks its token only when the buffer runs dry, so a cancelled reader of a full buffer would go on. The interface does not expose `ChannelReader`, whose `ReadAsync` throws `ChannelClosedException` at the end.
 
-The mediator closes the failure channel after its existing guarded `CloseAll`, so confirmations reported during producer disposal are still accepted. A close is `TryComplete`, which cannot throw and can repeat. A raise that loses the race with a close is counted, and one that wins is buffered. Neither `Close` nor `Dispose` waits for any reader.
-
-#### Why a sweep send notifies, and why it is an option
-
-A subscriber that compensated for a failure needs to hear when a sweep sends the message after all. The mediator knows, at the send, that the clear came from a sweep: `BackgroundDispatchUsingAsync`, which `ClearOutstandingFromOutboxAsync` calls, passes `OutboxClearSource.Sweeper` to `BulkDispatchAsync` and `DispatchAsync` (`OutboxProducerMediator.cs:776`, `:780`). So the raise needs no list of ids and no new state, as the author of the issue noted.
-
-The raise comes inside the check `producer is not ISupportPublishConfirmation && sent` that leads to the mark, when the send returns without an exception (D-12). It is raised in the sweep's own async flow before `MarkDispatched`, so a `MarkDispatchedFailed` for the same id from that sweep always comes after it. A confirming producer gets no `SentBySweep`. Its confirmation can arrive before the send returns, as `InMemoryMessageProducer` raises it inline by default (`InMemoryMessageProducer.cs:190-194`, `:228-235`, `:250-261`), or on another thread, before or after the send returns, as Kafka (`KafkaMessageProducer.cs:458-475`) and RabbitMQ do. A subscriber could then see `ConfirmationFailed` first and undo a compensation for a message the broker refused. Waiting for the confirmation instead needs to know which clear sent its message. The doc comment on `OutboxClearSource.Unknown` mentions a map of pending clears, but no such map exists at commit 14850234f, and adding one is the in-flight state D-10 rejects. A `SentBySweep` is not final: a `SendFailed` for the same id can still follow from a `Post`, an explicit clear or another instance that sends the same message.
-
-`SentBySweep` does not mean the message failed before (D-11). An application that deposits and never clears, and lets the sweeper dispatch through a non-confirming producer, gets one per message, up to about 20 a second per sweeping instance at the sweeper's defaults. With drop-oldest, a buffer that nobody reads would then lose failures to those notifications, and the drop warning would fire for messages that were sent. So the option is off by default and set in the same step, and with it off NFR-3 holds with no exception (P-6).
-
-The option lives on the failure channel, and not on the mediator, so the mediator's constructor gains no second parameter. `OutboxFailureChannel` holds it and the mediator reads `IncludesSweepSends` at each sweep-send site. A mediator with no failure channel, or with the option off, builds no arguments at those sites.
+The mediator closes the registry after its guarded `CloseAll`. A close is `TryComplete`, which cannot throw and can repeat. Neither `Close` nor `Dispose` waits for any reader.
 
 #### Public names
 
-`OutboxFailureChannel`, `IAmAnOutboxFailureChannel`, `OutboxFailureNotification`, `OutboxFailureKind` and `UseOutboxFailureChannel` answer Q-5. `SentBySweep` is the one kind that is not a failure. The names keep "Failure" because the failures are the channel's purpose and the sweep send is there for a subscriber that acted on a failure. A neutral family was the other choice, such as `OutboxDispatchNotification`, which would hide that most notifications report a failure. "Channel" is the word issue #4489 uses. In Brighter that word usually means a consumer's channel to a broker, so the type names carry the `Outbox` qualifier, as `IAmAJobChannel` carries `Job`. Another option was a word of its own, such as "feed". "Feed" cannot read as a consumer's channel, but no type in `src/` uses it. The three failure kinds keep their working names, which say what failed.
+`OutboxNotification`, `OutboxNotificationKind`, `OutboxNotificationOptions`, `IAmAnOutboxNotificationChannel`, `OutboxNotificationChannel`, `IAmAnOutboxNotificationRegistry`, `OutboxNotificationRegistry`, `UseOutboxNotifications`, `Publication.MaxAge`, `OutboxMaxAges` and `Message.ExpiredAtHeaderName` answer Q-5. The kinds are `SendFailed`, `ConfirmationFailed`, `MarkDispatchedFailed` and `Expired`. "Notification" covers `Expired`, which is not a failure. The `Outbox` qualifier keeps "channel" apart from a consumer's channel to a broker, as `Job` does in `IAmAJobChannel`. `MaxAge` avoids `TimeToLive`, which `AzureServiceBusPublication` uses for the broker. `InMemoryOutbox` also clears "expired" entries, which are dispatched entries past its own limit, and the documentation keeps the two apart.
 
-#### How the proposals resolve
+#### How the open items resolve
 
 | Item | Outcome |
 | --- | --- |
-| P-1 | Confirmed. The bounded channel adds no dependency |
+| P-1 | Confirmed. The bounded channel adds no dependency, and the dropped count is exact on every target |
 | P-2 | Confirmed: default 1,024, valid values 1 to 1,048,576 |
 | P-3 | Confirmed: drop the oldest |
-| P-4 | Confirmed: at most one `Warning` per 60 seconds of `TimeProvider` time |
-| P-5 | Confirmed. A second reader competes and is not rejected. Fan-out is the application's |
-| P-6 | Confirmed: `includeSweepSends` on the step and on the failure channel's constructor, false by default |
-| D-1, D-3 to D-12 | Stand as the requirements state them |
-| D-2 | Settled by the helper pair above |
+| P-4 | Confirmed: at most one `Warning` per 60 seconds of the mediator's `TimeProvider` |
+| P-5 | Confirmed. A second reader competes and is not rejected |
+| P-7 | Changed in part. Two `args` keys carry the bounds. The archiver passes `"Topic"` to every store, and only DynamoDB and MongoDb use it. Firestore applies the topic from `OnlyExpiredArgsKey`, and filters a sweep's page in memory |
+| P-8 | Confirmed: `paramore.brighter.ExpiredAt` in the header bag |
+| P-9 | Confirmed: three trailing optional parameters on `OutboxArchiver` |
+| Age clock | Each store's own clock. No cutoff computed by the caller |
+| `Error` finding | None |
+| Fallback channel | The publication on the stored topic with the applied age, first in ordinal key order |
+| Changed max age | Takes effect after a restart |
+| Q-1 sub-items | Answered in the sections above |
+| Q-2 | Out of scope (OOS-11). `PublishConfirmationResult` is unchanged |
+| Q-3 | Answered. The documentation covers a store TTL, and a max age shorter than the TTL gives `Expired` |
+| Q-4 | Out of scope (OOS-8). No new instrument |
+| Q-6 | Open. This ADR follows FR-4 and raises only the three failure kinds |
+| Q-7 | Out of scope. A notification carries no trace context, and the subscriber reads the message by id |
+| Q-8 | Open. This ADR follows D-10 and FR-3.2, so a failed `Call` confirmation notifies. On DynamoDB and Firestore a successful confirmed `Call` raises `MarkDispatchedFailed` (FR-3.3) |
+| D-1 to D-24 | Stand, except that Firestore applies D-22's bound in memory, as the change to P-7 records |
+| FR-18 | Stands, except on DynamoDB's scan while a topic is tripped: expired messages can take up room in its scan page, so the page can be short. The scan does this today for tripped topics |
 
 ### Implementation Approach
 
-Code locations are at commit 14850234f. A bare `:NNN` is in `src/Paramore.Brighter/OutboxProducerMediator.cs`, except in step 6, which names its own file. Each behavioural step starts with its failing tests, as `CONTRIBUTING.md` asks, and this ADR precedes the code.
+Each behavioural step starts with its failing tests, as `CONTRIBUTING.md` asks. Structural steps come first, in their own commits.
 
-1. Structural. Move the bodies of `:1475-1498` and `:1500-1540` into the two `TryExecute` helpers, returning the exception or null. Leave the bool helpers as wrappers. The async wrapper awaits with `ConfigureAwait(continueOnCapturedContext)`. No behaviour changes, and the existing suite stays green.
-2. Add `OutboxFailureKind`, `OutboxFailureNotification`, `IAmAnOutboxFailureChannel` and `OutboxFailureChannel`, with capacity validation, `IncludesSweepSends`, reads and close.
-3. Add `failureChannel` after `outboxMeter` at `:156`, and a field beside `:93`. At `:205`, create the request context first, then call `Attach`, then `ConfigureCallbacks`. A rejected second mediator then leaves no callback on a shared producer. Call `Close` in a `finally` on the `try` at `:231-232`, before the owned factories are disposed. `ControlBusSenderFactory.cs:62` and `ControlBusReceiverBuilder.cs:177` bind optional arguments and need no change.
-4. Raise at the send sites below, then at the mark-dispatched sites, then at the confirmation sites, then at the sweep-send sites, each as its own commit.
-5. Add the `itemDropped` count and the rate-limited `Warning` to the failure channel, with its own `LoggerMessage` entries. The guards use their own `LoggerMessage` at `Error`, with the exception type and no message. The failure channel's logger comes from `ApplicationLogging.CreateLogger<OutboxFailureChannel>()`, as `OutboxMeter` and `InMemoryOutboxCircuitBreaker` use their own type.
-6. Add `UseOutboxFailureChannel`, with `includeSweepSends` passed to the failure channel's constructor, to `src/Paramore.Brighter.Extensions.DependencyInjection/ServiceCollectionExtensions.cs` beside `:583`. Add a private `FailureChannel(serviceProvider)` beside `:1016`. It calls `GetService<IAmAnOutboxFailureChannel>()` and returns null when nothing is registered, so a mediator with the feature off is built as it is today. An `OutboxFailureChannel` comes back as that type, and any other implementation throws `ConfigurationException`, naming the registered type. Pass it after `OutboxMeter(serviceProvider)` at `:852`.
-7. Add the XML documentation and the `release_notes.md` entry.
+1. Structural. Move `GetProducerLookupTopic` to an internal `Message.ProducerLookupTopic()`, so the archiver can route `Expired` the way `Dispatch` looks up its producer.
+2. Structural. Move the bodies of `ExecuteWithResiliencePipeline` and `ExecuteWithResiliencePipelineAsync` into the two `TryExecute` helpers. Leave the bool helpers as wrappers. The async wrapper awaits with `ConfigureAwait(continueOnCapturedContext)`.
+3. Structural. In `src/Paramore.Brighter/OutboxArchiver.cs`, extract the dispatched pass of `Archive` and `ArchiveAsync` into private methods. The early `return` on an empty page in `Archive` then ends only that pass.
+4. Add `OutboxNotificationKind`, `OutboxNotification`, `OutboxNotificationOptions`, the two interfaces, `OutboxNotificationChannel` and `OutboxNotificationRegistry`, with validation, keys, lookups, reads and close. `ChannelFor` uses a reference-equality comparer of its own, because netstandard2.0 lacks `ReferenceEqualityComparer`.
+5. Add `notifications` after the `outboxMeter` constructor parameter, and a field beside `_outboxMeter`. In the constructor, call `Attach` before `ConfigureCallbacks`, so a rejected second mediator adds no callback to a shared producer. In `ConfigureCallbacks`, capture each producer's channel in its handlers. Call `Close` in a `finally` on the `try` around `CloseAll` in `Dispose(bool)`. `ControlBusSenderFactory` and `ControlBusReceiverBuilder` bind optional arguments and need no change.
+6. Raise at the send sites, then the mark sites, then the confirmation sites, each as its own commit, as the table below lists.
+7. Add the `itemDropped` count and the rate-limited `Warning`, with `LoggerMessage` entries. The channel's logger comes from `ApplicationLogging.CreateLogger<OutboxNotificationChannel>()`.
+8. Add `Publication.MaxAge` beside `StaleMessageAge` (`src/Paramore.Brighter/Publication.cs`) and `OutboxMaxAges`, whose grouping by `Publication.Topic` follows `TimedOutboxStaleMessageMonitor.BuildTopicAges`.
+9. In `BackgroundDispatchUsingAsync`, copy `args` and add the exclude key before the `OutstandingMessagesAsync` fetch when the ages are not empty.
+10. Read both keys in `InMemoryOutbox.OutstandingMessages`, on `MessageHeader.TimeStamp`.
+11. Add the generated templates under `tools/Paramore.Brighter.Test.Generator/Templates/Outbox/Sync` and `Async`, beside `When_Retrieving_Outstanding_Messages_It_Should_Filter_By_Age`. One excludes expired messages from a page, and one returns only a topic's expired messages. Each template also has a case with two topics of different ages. There, an expired backlog on one topic must not hide the other's unexpired message from a page (AC-56). Each also has a case with a huge age, and the DynamoDB run stores an expired message in a negative shard. The negative shard comes from a partition key whose hash gives a negative shard at the default three shards. The only-expired template passes `"Topic"`, as the archiver does. The exclude template has a case with `"Topic"`, so DynamoDB and MongoDb also run their per-topic path. Regenerate, and see them fail on every store before the stores change. Every store with a generated suite then runs both templates. `InMemoryOutbox` has none, so the Core tests of step 10 cover it. Never edit a generated file.
+12. Add `IRelationalDatabaseOutboxExpiryQueries`. Compose its fragments in `RelationDatabaseOutbox` next to `GeneratePagedOutstandingCommandInStatementAndAddParameters`, into the same `{1}` slot. Take the cutoff from `DateTimeOffset.UtcNow`, as `CreatePagedOutstandingParameters` does. Create it with the dialect's `CreateSqlParameter(name, DbType.DateTimeOffset, cutoff)`, and the topic with `DbType.String`. MsSql's paged command holds `{1}` twice, so its fragment appears twice and one cutoff parameter serves both. A cutoff before the earliest time the column holds adds no fragment for `ExcludeExpiredArgsKey`, and gives an empty page for `OnlyExpiredArgsKey`. When no topic adds a fragment, the command gains no clause. Throw `NotSupportedException` without the role, as in `GetOutstandingMessageCountsByTopicAsync`. Implement the role in each of the five dialects' queries classes.
+13. Read both keys in DynamoDB and DynamoDB.V4 beside the `"Topic"` read (`OutstandingMessagesAsync` in each `DynamoDbOutbox`). On the per-topic path, put the bound into the key condition, and keep the upper bound strict. With `OnlyExpiredArgsKey`, read the shards from `-(NumberOfShards - 1)`. Read both keys in MongoDb beside the `"Topic"` read in both `OutstandingMessages` and `OutstandingMessagesAsync` of `MongoDbOutbox`, and in Firestore's `FirestoreOutbox.OutstandingMessagesAsync`.
+14. Add the archiver's parameters after `instrumentationOptions` in the `OutboxArchiver` constructor, and the expired pass after the dispatched pass. The pass queries one topic at a time, passing `topic.Value` under `"Topic"`, and checks each message in memory. It sets the bag entry and archives every message of the page that passes the check, raising `Expired` after each one the provider accepts. Then it deletes the ids of those messages in one call.
+15. Add `UseOutboxNotifications` and the public `OutboxNotifications(IServiceProvider)` helper to `src/Paramore.Brighter.Extensions.DependencyInjection/ServiceCollectionExtensions.cs`, beside `TransformFactory`, the precedent for a public helper. Pass the registry after the `OutboxMeter(serviceProvider)` argument. Add the FR-21 check after the mediator's construction in `BuildOutBoxProducerMediator`.
+16. In `UseOutboxArchiver` in `src/Paramore.Brighter.Outbox.Hosting/HostedServiceCollectionExtensions.cs`, pass the producer registry, the registry from the helper and `TimeProvider.System` to the archiver's constructor, as the mediator's build does.
+17. Add the XML documentation and the `release_notes.md` entries: the feature, and the change of behaviour a max age brings. Under `#### Breaking changes`, add two *(binary)* lines and three behaviour lines: a third-party relational dialect without the role, a third-party outbox that ignores `ExcludeExpiredArgsKey`, and causation replay. The dialect line says every archiver run then fails in its expired pass, after the dispatched pass. The replay line says a replayed message older than its max age is left out of sweeps and archived as expired. The documentation advises running the archiver as well as the sweeper.
 
-Every raise site, with its place in the code:
+Every raise site of the mediator:
 
 | Site | Kind | Today | Where the raise sits |
 | --- | --- | --- | --- |
-| `Dispatch`, confirming send, `:1113-1115` | `SendFailed` | Result discarded | Directly after the helper returns an exception |
-| `Dispatch`, send, `:1119-1122` | `SendFailed` | `sent` false, and nothing trips | Directly after the helper returns an exception |
-| `Dispatch`, mark, `:1126-1134` | `MarkDispatchedFailed` | `marked` false | Directly after the helper returns an exception |
-| `DispatchAsync`, send, `:1285-1292` | `SendFailed` | `TripTopic` at `:1313` | At `:1313`, before `TripTopic`. The mark block is skipped when `sent` is false, so nothing runs between |
-| `DispatchAsync`, mark, `:1297-1309` | `MarkDispatchedFailed` | `marked` false | Directly after the helper returns an exception |
-| `BulkDispatchAsync`, send, `:1201-1208` | `SendFailed`, per id | `TripTopic` at `:1240` | At `:1238`, before `TripTopic`. One raise per `batch.Ids()`, with `batch.RoutingKey` and the same exception |
-| `BulkDispatchAsync`, mark, `:1215-1226` | `MarkDispatchedFailed`, per id | `marked` false | Directly after the helper returns, with the id and `topicBatch.Key.WireTopic` |
-| Async callback, failure, `:940-947` | `ConfirmationFailed` | Logs at `:942`, trips at `:946` | First statement of the `else`, before `:942` |
-| Async callback, mark, `:932-937` | `MarkDispatchedFailed` | Result discarded | Directly after the helper returns, as the last statement of the `try` |
-| Async callback, catch, `:949` | `MarkDispatchedFailed` | Logs at `:953` | First statement of the catch, only when `result.Success`, before `:953` |
-| Sync callback, failure, `:1034-1041` | `ConfirmationFailed` | Logs at `:1036`, trips at `:1040` | First statement of the `else`, before `:1036` |
-| Sync callback, mark, `:1029-1031` | `MarkDispatchedFailed` | Result discarded | Directly after the helper returns, as the last statement of the `try` |
-| Sync callback, catch, `:1043` | `MarkDispatchedFailed` | Logs at `:1051` | First statement of the catch, only when `result.Success`, before `:1051` |
-| `DispatchAsync`, send, `:1285-1292`, from a sweep | `SentBySweep` | Checks at `:1294` and marks at `:1297` when the producer does not confirm; otherwise leaves the message to its confirmation | First statement inside the check at `:1294`, before the mark at `:1297`, when `clearSource` is `Sweeper` and `IncludesSweepSends` is true |
-| `BulkDispatchAsync`, send, `:1201-1208` | `SentBySweep`, per id | Checks at `:1210` and marks at `:1215` when the producer does not confirm; otherwise leaves the batch to its confirmations | First statement inside the check at `:1210`, before the mark at `:1215`, when `clearSource` is `Sweeper` and `IncludesSweepSends` is true. One raise per `batch.Ids()`, with `batch.RoutingKey`. Only a sweep reaches this method today, and the source check keeps the site correct if that changes |
+| `Dispatch`, confirming send | `SendFailed` | `sentToConfirmingProducer` false untracks the pending confirmation | Directly after the helper returns an exception, before the untrack |
+| `Dispatch`, send | `SendFailed` | `sent` false, nothing trips | Directly after the helper returns an exception |
+| `Dispatch`, mark | `MarkDispatchedFailed` | `marked` false | Directly after the helper returns an exception |
+| `DispatchAsync`, send | `SendFailed` | `sent` false untracks the pending confirmation, then `TripTopic` in `if (!sent)` | Directly after the helper returns an exception, before the untrack and `TripTopic` |
+| `DispatchAsync`, mark | `MarkDispatchedFailed` | `marked` false | Directly after the helper returns an exception |
+| `BulkDispatchAsync`, send | `SendFailed`, per id | In `if (!sent)`, untracks each id, then `TripTopic` | In `if (!sent)`, before the untrack loop and `TripTopic`. One raise per `batch.Ids()`, with `batch.RoutingKey` and the same exception |
+| `BulkDispatchAsync`, mark | `MarkDispatchedFailed`, per id | `marked` false | Directly after the helper returns, with the id and the stored topic |
+| `HandleAsyncPublishConfirmation`, failure | `ConfirmationFailed` | Untracks, logs, then `TripTopic` | First statement of the `else` |
+| `HandleAsyncPublishConfirmation`, mark | `MarkDispatchedFailed` | `marked` false untracks the pending confirmation | Last statement of the `else` of `marked`, after the untrack, which cannot throw. Nothing follows it in the `try` |
+| `HandleAsyncPublishConfirmation`, catch | `MarkDispatchedFailed` | Logs | First statement of the catch, only when `result.Success` |
+| `ConfigurePublisherCallbackMaybe`, failure | `ConfirmationFailed` | Untracks, logs, then `TripTopic` | First statement of the `else` |
+| `ConfigurePublisherCallbackMaybe`, mark | `MarkDispatchedFailed` | `marked` false untracks the pending confirmation | Last statement of the `else` of `marked`, after the untrack, which cannot throw. Nothing follows it in the `try` |
+| `ConfigurePublisherCallbackMaybe`, catch | `MarkDispatchedFailed` | Logs | First statement of the catch, only when `result.Success` |
 
 Reading the table:
 
-- A `TripTopic` that throws at `:946`, `:1040`, `:1240` or `:1313` runs after the raise, so the notification already exists. Its exception then goes where it goes today.
-- A failed confirmation reaches a catch only with `result.Success` false, so the catch raises nothing more. A successful confirmation that raised at a mark site has no statement left in the `try`. `Raise` does not throw, so that confirmation cannot reach the catch either.
-- The pipeline lookup at `:1477` and `:1506` sits outside the helper's `try`. On a confirmation, a missing pipeline therefore reaches the catch and raises once, with the `KeyNotFoundException` that AC-13 names. At a send site the exception reaches the caller, as it does today, and nothing raises.
-- `CallViaExternalBus` at `:363` and the outbox writes at `:293`, `:338`, `:650` and `:681` keep the bool helpers and raise nothing.
-- A `SentBySweep` raise sits inside the non-confirming check, before the mark, so a `MarkDispatchedFailed` for the same id from that sweep comes after it, and a confirming producer never reaches it. An explicit clear passes `OutboxClearSource.Explicit` (`:417`, `:486`), so it never raises `SentBySweep`.
+- A `TripTopic` that throws in the two callbacks, `BulkDispatchAsync` or `DispatchAsync` runs after the raise, so the notification already exists.
+- The `GetPipeline` lookup in `ExecuteWithResiliencePipeline` and `ExecuteWithResiliencePipelineAsync` sits outside the helper's `try`. On a confirmation a missing pipeline reaches the catch and raises once. At a send site the exception reaches the caller, as today, and nothing raises.
+- `CallViaExternalBus` and the outbox writes in `AddToOutboxAsync`, `AddToOutbox`, `EndBatchAddToOutbox` and `EndBatchAddToOutboxAsync` keep the bool helpers and raise nothing.
+- The batch raise goes through one small mediator method with its own guard. Enumerating a third-party `batch.Ids()` or reading `batch.RoutingKey` can throw before the channel's guard applies.
+- Every site first checks whether it has a channel, so a mediator with none builds no arguments.
 
-Both batch raises, `SendFailed` and `SentBySweep`, go through one small mediator method with its own guard. Enumerating a third-party `batch.Ids()` can throw before the failure channel's guard applies. That guard also logs the exception type only. Every site first checks whether it has a failure channel, so a mediator with none builds no arguments.
-
-The tests use the doubles of the requirements' setup section. `FakeTimeProvider` drives time, and the `CapturingLogger` family in `tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/TestDoubles` captures log entries. The process-wide `ApplicationLogging.LoggerFactory` means that tests which capture logs share one xUnit collection, as the stale-message tests do. No test needs a broker.
+The tests use the doubles of the requirements. `FakeTimeProvider` drives time, and the `CapturingLogger` family in `tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/TestDoubles` captures log entries. Tests that capture logs share one xUnit collection, because `ApplicationLogging.LoggerFactory` is process-wide.
 
 | Test group | Project | Criteria | How it shows the behaviour |
 | --- | --- | --- | --- |
-| Off, and capacity | Core, and `Paramore.Brighter.Extensions.AspNetCore.Tests` for the DI forms | AC-1, AC-2, AC-3 | On the DI path, `GetService` returns null with the feature off. The step throws for 0 |
-| Each site raises once | Core | AC-4 to AC-13, AC-18, AC-19, AC-41, AC-42 | One test per row of the site table, sync and async, reading the fields of the notification. AC-42 reads the order of a sweep send and the `MarkDispatchedFailed` that follows it, and that a confirming producer raises only its `ConfirmationFailed` |
-| Sweep sends only when asked | Core, and `Paramore.Brighter.Extensions.AspNetCore.Tests` for the DI form | AC-41, AC-43, AC-44 | Explicit clears, `Call` and confirmations raise no `SentBySweep`. With the option off, a sweep that sends raises nothing. On the DI path, the option set in the step makes a sweep raise one `SentBySweep` per message |
-| Nothing else raises | Core | AC-14 to AC-17 | The FR-4 cases, with the existing exceptions asserted as well |
-| Behaviour unchanged | Core | AC-20, AC-21 | The same script runs with a failure channel and with none, using counting doubles, and compares the captured log entries. A throwing breaker covers each `TripTopic` site |
-| Delivery and order | Core | AC-22, AC-25, AC-26, AC-27, AC-38 | Real readers with bounded waits |
-| Full buffer | Core | AC-23, AC-24, AC-35, AC-36 | Fake clock at T, at T + 60 seconds minus 1 second, and at T + 60 seconds. AC-23 asserts n2 and n3 |
-| Never blocks | Core | AC-28, AC-29 | A reader blocked after its read. A producer double that raises on its own thread and must regain control |
-| Shutdown | Core | AC-30, AC-31 | A producer double that raises a failed confirmation from `Dispose`, and one raise after `Dispose` returned |
-| Scope | Core | AC-32, AC-33, AC-37 | Two mediators, single-role outbox doubles, 8 threads at capacity 8,000 |
-| Hosted | `Paramore.Brighter.Extensions.AspNetCore.Tests` | AC-34 | A hosted service reads from `IAmAnOutboxFailureChannel`, before and after the mediator's first resolve |
-| Content and documents | Core, and by reading | AC-39, AC-36, AC-40 | Captured entries hold no body. Reflection finds no `Message` member. A person reads the page |
+| Off, options and kinds | Core, and `Paramore.Brighter.Extensions.AspNetCore.Tests` for the DI forms | AC-1, AC-2, AC-3, AC-55, AC-59 | `GetService` returns null with the feature off. The step and the constructor throw for a capacity of 0 and for `None` |
+| Each site raises once | Core | AC-4 to AC-13, AC-18, AC-19 | One test per row of the site table, sync and async |
+| Nothing else raises | Core | AC-14 to AC-17 | The FR-4 cases, with the existing exceptions asserted |
+| Behaviour unchanged | Core | AC-20, AC-21 | The same script with a registry and with none, compared through counting doubles and captured logs |
+| Delivery, order, full buffer | Core | AC-22 to AC-27, AC-35, AC-36, AC-38 | Real readers with bounded waits. A fake clock at T, T + 59 seconds and T + 60 seconds |
+| Never blocks, shutdown | Core | AC-28 to AC-31 | A blocked reader, a producer double that raises from `Dispose` |
+| Scope and routing | Core | AC-32, AC-33, AC-37, AC-57, AC-58 | Two mediators, single-role outbox doubles, two publications, typed publications |
+| Success raises nothing | Core, DI | AC-43, AC-44 | A succeeding producer, sync and async, bulk and not, with a registry attached |
+| Hosted | `Paramore.Brighter.Extensions.AspNetCore.Tests` | AC-34, AC-54 | A hosted reader before and after the mediator's resolve. The warning with and without `UseOutboxArchiver` |
+| Max age on the sweep | Core | AC-45 to AC-48, AC-56 | `InMemoryOutbox` with a fake clock, bulk and not bulk |
+| Archiver | Core, `tests/Paramore.Brighter.Core.Tests/Archiving` | AC-49 to AC-53 | Sync and async, with the single-role outbox wrappers there |
+| Store queries | Generated tests per store | AC-50, AC-56 | The two new templates, in Docker where a container exists, and Firestore against the GCP project the CI uses |
+| Content and documents | Core, and by reading | AC-39, AC-40 | Captured entries hold no body. A person reads the page |
 
 Further tests pin decisions of this ADR:
 
-- A second mediator on one failure channel throws, and adds no handler to a shared producer.
-- `Dispose` on an unattached failure channel ends a waiting read.
-- A token cancelled after the first read of a full buffer throws `OperationCanceledException` before the next notification is taken, and the rest stays readable.
-- A token cancelled while a read waits on an empty buffer throws `OperationCanceledException`, with no mediator built and nothing raised.
-- `CloseAll` throws and its log entry throws, and a waiting read still ends.
-- An application with its own `IAmProducersConfiguration` still receives notifications with the step.
-- Two containers from one collection get two failure channels, and each disposes its own.
-- With the mediator resolved before the interface and a producer that raises from `Dispose`, the notification is delivered, and the container disposes the failure channel once.
-- A registered implementation other than `OutboxFailureChannel` makes the mediator's build throw `ConfigurationException`.
-- An invalid capacity registers nothing.
-- A second call of the step keeps the first capacity and the first sweep-send option.
+- `LookupBy` with an unknown key throws `ConfigurationException`, and still works after the mediator's `Dispose`.
+- A second mediator on one registry throws and adds no handler to a shared producer.
+- A registry built from another producer registry makes `Attach` throw.
+- `Dispose` on an unattached registry ends a waiting read.
+- A token cancelled after the first read of a full buffer throws before the next notification is taken.
+- An application with its own `IAmProducersConfiguration` receives notifications with the step.
+- Two containers from one collection get two registries.
+- A sweep with caller `args` leaves the caller's dictionary unchanged.
+- A store double that ignores `OnlyExpiredArgsKey` leads the archiver to move and delete nothing that is not expired.
+- An archiver run with several expired topics starts at a different topic on the next run.
+- A second call of the step keeps the first options.
 
 ## Consequences
 
 ### Positive
 
-- An application learns of a failed send, a failed confirmation or a failed `MarkDispatched` soon after it happens. The notification carries the id, topic, kind and exception (FR-3, FR-5).
-- A forgotten step surfaces where the subscriber asks for the failure channel. The replacement of an application's configuration cannot turn the feature off (FR-1, FR-15).
-- A subscriber can start at any time before or after the mediator exists, and a slow one costs only drops (FR-11).
-- With the option on and a producer that does not confirm publication, a subscriber that compensated for a failure learns when a sweep sends the message after all, with no list of ids kept by Brighter (FR-16).
-- With the feature off there is no buffer and no allocation, and with it on, a successful clear raises nothing, apart from a sweep through a non-confirming producer with the sweep-send option on (NFR-3, NFR-4).
-- The dropped count accounts for every raise that reached the bounded channel and was not delivered or buffered (FR-9, FR-13, NFR-6).
+- A subscriber reads failures with their exceptions, per publication, soon after they happen, on every outbox and both wiring paths.
+- A max age gives a signal, `Expired`, and stops later sweeps from sending a message older than its max age.
+- A burst on one publication cannot push another publication's notifications out.
+- A forgotten step fails where the subscriber asks for the registry. It never looks like an empty stream.
+- With no max age set, the mediator's outcomes, breaker trips and metrics stay as they are, and its logs gain only the drop warning.
+- No outbox, producer or mediator interface gains a member, so third-party implementations keep compiling.
+- The archiver's check in memory means it never archives a message that is not expired, even from a store that ignores the bound.
 
 ### Negative
 
-- A notification is lost when the logger or `CheckOutstandingMessages` throws inside the helper's catch on a send or non-confirmation mark path. The caller still receives that exception.
-- A failure channel keeps exceptions, and on Kafka's sync path an exception can hold a body, so capacity bounds notifications and not bytes (NFR-5).
-- The mediator closes a failure channel that it did not create. It does not dispose it, which ADR 0069-factory-registry-ownership-and-disposal-cascade keeps for the owner. It only ends the writing side through an internal `Close`, because it is the only writer. The container or the application still disposes the failure channel. The mediator already closes the producers of a registry it did not create in the same way (`OutboxProducerMediator.cs:231`).
-- A trailing optional parameter is source-compatible, as in ADR 0084-outbox-metrics, but binary-breaking: an assembly compiled against the old constructor must be rebuilt. The release note says so, as it does for `InMemoryOutboxCircuitBreaker` and `TimedOutboxSweeper`.
-- The first call's capacity and sweep-send option are kept when the step runs twice, so a second value is ignored in silence. This matches the existing `UseOutboxStaleMessageMonitor`.
-- On stores that throw for a missing row, each successful `Call` on a confirming producer raises a false `MarkDispatchedFailed` (D-10).
-- The bounded channel takes a short lock on each raise. The lock holds no subscriber code, but raising is not lock-free.
-- `OutboxFailureChannel` reads close to `ChannelFailureException` and `IHaveAChannelFailureCount`, which are about consumers. The XML documentation states the difference.
-- On async Kafka a refused message notifies with no exception. A subscriber there cannot tell a size limit from an outage until Q-2 is answered.
-- A hosted reader should pass its stopping token. A host stops its hosted services before it disposes the container. A loop that waits for the end of the stream therefore holds up shutdown until the host's timeout. A reader that does pass the token has gone before the mediator closes. Whatever the buffer holds then stays unread, as does a confirmation accepted during shutdown, and the dropped count includes neither. A reader that wants that backlog can read once more with a short timeout token.
-- If a later constructor step throws after `Attach`, the failure channel stays claimed, and a retried resolve reports the second-mediator error.
-- The container registers only the interface. `GetService<OutboxFailureChannel>()` returns null, `Capacity` is reachable only on the direct path or through a cast, and the mediator's build casts what it resolves. An application's own implementation of the interface, registered beside a real mediator, makes that build throw `ConfigurationException`.
-- `SentBySweep` means the send returned, and it does not mean the message failed before. A `MarkDispatchedFailed` or a `SendFailed` for the same id can still follow. A subscriber matches ids against its own records (D-11, D-12).
-- A confirming producer, such as Kafka or RabbitMQ, raises no `SentBySweep`, so on those transports a subscriber that compensated is still not told when a sweep sends the message (OOS-16).
-- With the option on, an application that dispatches through the sweeper and a non-confirming producer gets one `SentBySweep` per message, and those take capacity from the failures and count in the dropped count. With no reader, a healthy sweep fills the default 1,024 in no less than about 50 seconds, when every sweep finds a full batch.
-- A sweep send notifies only on the instance that ran the sweep. A subscriber that compensated on another instance hears nothing there (FR-14), so each instance reads its own channel and acts on records shared across instances.
-- An exception that escapes a `BackgroundService` reader stops the host by default. It does not reach the publishing path, but the reader's code decides whether the application keeps running.
+- `OutboxProducerMediator` and `OutboxArchiver` gain trailing optional parameters, which breaks binary compatibility. Code compiled against the old constructors must be recompiled.
+- A max age changes what Brighter sends, with or without notifications. The release notes list it as a change of behaviour.
+- Without an archiver, expired messages stay in the outbox. They count toward `MaxOutStandingMessages`, so where that limit is set a `Post` can throw `OutboxLimitReachedException` (`OutboxProducerMediator.CheckOutboxOutstandingLimit`, C-3). They also stay in the stale gauge.
+- With a max age set, the archiver also deletes undispatched rows, so it can contend with the sweep on the outbox table.
+- `Expired` is at least once. A failed delete, or several instances without a distributed lock, repeats it.
+- A notification keeps its exception, which can hold a message body on Kafka's sync path.
+- A third-party relational dialect without the new role makes every sweep throw `NotSupportedException` once a max age is set. The sweeper then sends nothing from that outbox, and every archiver run fails in its expired pass, after the dispatched pass. `RelationDatabaseOutbox.GetOutstandingMessageCountsByTopicAsync` throws the same way without its role.
+- A third-party outbox that ignores `ExcludeExpiredArgsKey` keeps sending expired messages from a sweep.
+- A throw in the archiver's dispatched pass skips the expired pass for that run.
+- One failure inside the helper's own catch loses its notification. Its exception still reaches the caller.
+- A subscriber that resolves the registry early also builds the producer registry early.
+- Channels are per process, so `Expired` reaches only the subscribers of the process whose archiver holds the lock for that run.
+- An archiver built without a producer registry moves no expired message, while the sweep still leaves them out. The documentation says so (NFR-11).
+- A provider that always throws on one message ends each archiver run that reaches it. The `Expired` of the messages archived before it then repeats on each such run. FR-20 allows the repeat, and the stale gauge shows the message.
+- A max age on a reply publication has no effect, because a reply's topic is set per request.
+- A max age at or below the sweeper's minimum message age means a send that failed is never tried again.
+- Causation replay (`IAmACausationTrackingOutbox.ReplayCausation`) clears the dispatched state but keeps `TimeStamp`. With a max age set, a replayed message older than that age is left out of sweeps, and an archiver archives it as expired.
+- `OutboxNotificationKind.Expired` and the `InMemoryOutbox` clean-up of old dispatched entries both use the word "expired".
 
 ### Risks and Mitigations
 
-- A subscriber that asks for a clear on every notification can repeat without end. The documentation of NFR-11 states this risk, and Brighter never reacts to a notification by itself (OOS-12).
-- The Warning runs on the raising thread, so a slow logging provider slows a failing publish. The rate limit bounds the delay to one entry per interval, and NFR-1 names this exception.
-- A later version could change when `itemDropped` runs, on the package for netstandard2.0 or through a runtime update on the others. AC-23, AC-24, AC-36 and AC-37 pin the behaviour on net9.0 and net10.0.
-- net8.0 and netstandard2.0 run no tests. The design uses only documented API on those targets, and the order that matters was read from the IL of the netstandard2.0 asset.
-- A third-party container that disposes singletons in another order could close the failure channel before the mediator closes its producers. Confirmations raised in that window would be discarded and added to the dropped count, with no log entry. On the direct path, the same happens if the application disposes the failure channel before the mediator. A test pins the order on the default container.
-- An application's own mediator registration that doesn't pass the failure channel leaves it silent. The documentation states this, because the mediator's interfaces gain nothing. A rule in `ValidatePipelines` could report it later, and this ADR does not add one.
+| Risk | Mitigation |
+| --- | --- |
+| A Firestore composite index is missing, so the archiver's query fails | The release notes and the Docs page name the index. The archiver's run fails and logs, as today, and the sweep is unaffected |
+| While fewer than a page of unexpired messages wait, every Firestore sweep reads the whole expired backlog, one read per document, until the archiver drains it | D-22 accepts the extra reads. The archiver drains the backlog at its batch size |
+| A DynamoDB sweep reads past an expired backlog each time its scan passes the backlog. With a tripped topic, its page can hold fewer messages than the batch size | D-22 accepts the extra reads. The scan resumes from its saved position, and the archiver drains the backlog at its batch size |
+| A store TTL shorter than the max age deletes an undispatched message before the archiver sees it, so no `Expired` is raised | The documentation advises a TTL longer than the largest max age on DynamoDB, Firestore and MongoDb |
+| The archiver deletes undispatched rows and contends with the sweep | The batch size bounds each run, the delete is by id, and the sweep no longer reads those rows |
+| An expired backlog after a long outage takes many runs to leave | The documentation states the rate, about 400 a minute at the defaults, and how to raise the batch size |
+| Rolling deploys run two max ages at once | The documentation says a changed max age takes effect per instance at restart |
+| The bag entry is not visible in an Azure blob archive | The documentation shows a `TagsFunc` that copies the entry into a tag |
+| A send that outlives the max age reaches the broker after the archiver moved the row | The documentation advises a max age well above the time a sweep takes to send its page, retries included. On DynamoDB and Firestore, whose `MarkDispatched` throws for a missing row, `MarkDispatchedFailed` reports the case. The relational stores, MongoDb and `InMemoryOutbox` report nothing |
+| A container without `IServiceProviderIsService` warns although an archiver is registered | The warning only writes a log entry. Microsoft's container provides the service |
+| The netstandard2.0 and net8.0 paths are not executed by tests | The design uses only `Interlocked` and the documented `itemDropped` overload |
 
 ## Alternatives Considered
 
+### A `Publication` instance as the lookup key
+
+A subscriber would pass the `Publication` it configured. Few subscribers hold that instance, especially in a hosted service that starts before the configuration code runs. Topic and type are what the configuration states, and they match `ProducerRegistry.LookupBy`.
+
+### `For<TRequest>()` by `RequestType`
+
+A generic lookup by request type reads well, but a publication's request type is optional, and several publications can share one. Topic and type always identify one publication.
+
+### A `ReadAllAsync` across all channels
+
+A merged read needs more API and defines no order between channels. It would also undo the reason for separate capacities, since one reader would serve every publication. The registry lists its keys, and a merged read can come later.
+
+### An `Error` finding in `ValidatePipelines()`
+
+The validator resolves the mediator when it is built (`BrighterPipelineValidationExtensions.ValidatePipelines`), so the constructor's exception comes first. A finding would need that validator to change, and the step already fails earlier.
+
 ### A property on `ProducersConfiguration`
 
-A property needs no new extension method, and capacity sits with the other settings. The DI path would replace an application's own configuration with a new one, which leaves the feature off in silence. On the deferred overload, a subscriber would also have to build the configuration before it could reach the failure channel. Copying a member across needs a member on `IAmProducersConfiguration`, which NFR-8 forbids.
+The DI path ignores or replaces an application's own `IAmProducersConfiguration`, so the feature would stay off in silence for that application. A builder step works with every overload.
 
-### The mediator creates the failure channel and exposes it
+### The mediator creates the channels and exposes them
 
-This is the simplest form on the direct path, with one object fewer to pass. It fails on the DI path. The container registers only `IAmAnOutboxProducerMediator`, which gains no member, and a subscriber that resolves the mediator early would build it early, against FR-11.
+A subscriber could not reach a channel before the mediator exists, and the mediator's interface cannot gain a member under NFR-8.
 
-### A closed or empty failure channel when the feature is off
+### One channel per mediator, or per topic
 
-A failure channel that always resolves frees a subscriber from a null check or a failed resolve. A read that ends at once looks like a normal end and hides the forgotten step. FR-1 also allows no buffer when the feature is off.
+One channel per mediator makes every subscriber sort by publication and lets one publication's burst push out another's. One per topic merges typed publications that have separate producers (D-23).
+
+### An empty, closed channel when the feature is off
+
+A read that ends at once looks like a normal end, and hides a forgotten step.
 
 ### A .NET event, or a handler role
 
-An event is the familiar .NET form and needs no read loop. Raised inline, it runs subscriber code on the raising thread, against FR-12. A handler role would make Brighter run subscriber code, and it needs its own loop, exception handling and lifetime. A reader that owns its loop keeps those with the application.
+An event raised inline runs subscriber code on the raising thread, against FR-12. A handler role makes Brighter run subscriber code, with its own loop and exception handling.
 
-### Exposing `ChannelReader` directly
+### Exposing `ChannelReader`
 
-This needs no new interface, and .NET developers know the type. `ReadAsync` then throws at the end of the stream, against FR-13, and an application test would need a real bounded channel.
+`ReadAsync` throws `ChannelClosedException` at the end, against FR-13. It would also make the buffer's type part of the contract.
 
-### An exception callback passed into the helpers
+### An exception callback passed to the helpers, or the last exception in a field
 
-The helper would call a delegate first in its catch, before the log. A logger that throws could not then lose a notification, which is the advantage. On a confirmation path, the same logger fault would reach the catch after the raise. The site would then need a flag to avoid a second raise. Each attempt also allocates a delegate, including on a success. The return value has neither cost, and the case it gives up still surfaces as the logger's exception.
-
-### Changing the helpers' return type in place
-
-One pair of helpers would avoid the wrappers. Every outbox-write site and the `Call` send would then change for a value they do not use. That change puts the widest behaviour guarantee of FR-7 at risk for no gain.
-
-### Storing the last exception on the mediator
-
-An instance field or an `AsyncLocal` needs no signature change. The mediator is a singleton used by many threads, so a field would mix up failures. An `AsyncLocal` hides the data flow from a future reader.
+A callback needs a closure at every site, including the successful ones. A field or an `AsyncLocal` is shared state that concurrent clears would overwrite.
 
 ### Raising from `TripTopic`
 
-This needs one site. A sync send trips nothing and a failed mark trips nothing, so the feature would miss both (D-3).
+A synchronous send failure trips nothing, and no `MarkDispatched` failure trips (D-3).
 
 ### Counting drops without `itemDropped`
 
-A buffer of Brighter's own under a lock could count exactly and would need no delegate. That buffer reimplements the waiting readers and asynchronous continuations that the bounded channel already provides. Wait mode with `TryRead` to evict the oldest needs no delegate either. It can race a real reader, and it makes eviction and write two separate steps.
+Comparing the count before and after a write races with other writers. The delegate is called once per dropped item.
 
 ### A constructor overload that keeps the old signature
 
-An assembly compiled against the old constructor would keep working without a rebuild. The cost is a second public constructor on the mediator. A trailing optional parameter follows ADR 0084-outbox-metrics, and the release note tells such an assembly to rebuild, as it does for `InMemoryOutboxCircuitBreaker` and `TimedOutboxSweeper` (`release_notes.md:161`, `:338`).
+Every later parameter would need another overload, and the type would carry two constructors.
 
-### Registering the class as well as the interface
+### Registering the registry class as well as the interface
 
-A subscriber or a test could then resolve `OutboxFailureChannel` and read `Capacity`. The container would track one object under two descriptors, and resolving the interface after the mediator would close the failure channel before the producers. Resolving both inside the mediator's build avoids that order, but it hangs the guarantee on the order of two calls and leaves a public `Dispose` with any resolver. A non-disposable wrapper for the interface also works, at the cost of a second type.
+A second descriptor resolved after the mediator would be disposed before it, and close the channels before the producers.
 
-### A clock in the failure channel's constructor
+### The mediator marks an expired message dispatched
 
-The failure channel could take an optional `TimeProvider`, as `InMemoryOutboxCircuitBreaker` does, and `Attach` would only claim it. A stored clock would then no longer also mean "claimed". A test on the direct path would pass its clock twice, and a notification's time could differ from the mediator's, against NFR-9.
+The row would leave the pending set at once, but "dispatched" would then be false, and `Expired` would depend on a sweep reading the row (D-13).
 
-### Sweep sends always on with the feature
+### The sweep raises `Expired`
 
-One setting fewer, and a subscriber never misses a sweep send for want of a flag. An application that dispatches through the sweeper would then fill the buffer with sends, push failures out under drop-oldest and log drop warnings for messages that were sent (P-6).
+A sweep meets the same expired message every run until the archiver moves it, so it would notify every few seconds (D-15).
 
-### Sweep sends in a later change
+### Filtering expired messages in memory after every page
 
-This change would carry only the failures that issue #4489 asked for, and the sweep send would follow in a change of its own. The new kind is additive. The option is not: adding `includeSweepSends` later changes the signatures of the `OutboxFailureChannel` constructor and of `UseOutboxFailureChannel`, a second binary break, or it needs an overload of each. Until then, a subscriber that compensated is not told when a sweep sends the message (FR-16).
+On a store that reads oldest first, an expired backlog larger than the page fills every page, and the sweep sends nothing newer on that topic (D-22). Firestore filters in memory but reads further pages until its page is full, so its page is never filled with expired messages.
 
-### `SentBySweep` for confirming producers too
+### A `protected virtual` member on `RelationDatabaseOutbox`
 
-Kafka and RabbitMQ users would also hear about sweep sends. Their confirmation can arrive before or after the send returns, so a `ConfirmationFailed` and a `SentBySweep` for the same id would come in either order, and with `InMemoryMessageProducer`'s default always failure first. A subscriber that follows the latest notification would undo a compensation for a message the broker refused. A signal that misleads on exactly the transports that confirm is worse than none, so they are left out (D-12, OOS-16).
+The base class would read the earliest time from a member that MsSql overrides. The role keeps every dialect's expiry knowledge in one place, beside the fragment.
 
-### A channel of its own for sweep sends
+### A typed parameter beside `trippedTopics`
 
-Sweep sends could not push failures out, and each would have its own dropped count. The cost is a second type, step and reader, and a subscriber loses the order between a failure of an earlier clear and the sweep send of the same id, which is the order it needs to undo a compensation.
+A parameter such as `maxAges` on `OutstandingMessages(Async)` would be typed, but it changes `IAmAnOutboxSync` and `IAmAnOutboxAsync`, so every outbox outside this repository stops compiling (NFR-8). The `args` keys reach every store through the signature it already has, as `"Topic"` already does for DynamoDB and MongoDb.
 
-### `SentBySweep` after the mark or the confirmation
+### An optional outbox role for the expiry queries
 
-The notification would then mean "sent and recorded". For a non-confirming producer this only moves the raise past the mark. For a confirming producer the mediator would have to record which ids a sweep sent until their confirmations arrive, with a bound and eviction, the state D-10 rejects (D-12).
+A role interface such as `IAmATopicCountingOutbox` adds a type per store and a test in the mediator and the archiver. The `args` keys reach every store through the methods it already has.
 
-### `SentBySweep` only for ids that failed before
+### A cutoff computed by the caller's `TimeProvider`
 
-The subscriber would hear only about messages it may have compensated for. The mediator would need a set of failed ids with no bound, lost on restart and blind to a failure on another instance, the cost D-7 rejects (D-11).
+The relational stores use the system clock for the minimum age. A cutoff from another clock would let the two bounds of one query disagree.
+
+### Reading `"Topic"` in the relational stores and `InMemoryOutbox`
+
+An application that already passes `"Topic"` to those stores would see its sweep filtered. The single-topic bound restricts the archiver's query without that change.
+
+### A new archive provider method for the marker
+
+Every provider would change, and `IAmAnArchiveProvider` would gain a member (P-8).
+
+### A new archiver type
+
+Two archivers would need to stay in step, and `TimedOutboxArchiver` would need to choose between them (P-9).
+
+### A `ConfigurationException` for a max age without an archiver
+
+It rejects valid setups, such as an archiver in another process or one the application calls from its own job (D-17).
+
+### Several kinds on one notification, or a second enum for the filter
+
+A notification reports one thing, so one flag is enough. A second enum would repeat the four names.
+
+### Validating only at the step
+
+The direct path has no step, so the registry's constructor must validate too. The same `Validate` method serves both.
 
 ### Rejecting a second reader, or built-in fan-out
 
-Rejection would make "one reader" explicit, but it needs state to tell a restarted loop from a second reader. FR-11 expects a loop that ended to count as absent. Fan-out needs a buffer and a dropped count per reader, and an application can build it on one reader.
+Rejecting needs reader tracking for no gain. Fan-out needs a buffer and a dropped count per subscriber, and an application can fan out itself (P-5).
 
 ## References
 
-- Requirements: [specs/0041-outbox-failure-channel/requirements.md](../../specs/0041-outbox-failure-channel/requirements.md)
+- Parent: [specs/0041-outbox-failure-channel/requirements.md](../../specs/0041-outbox-failure-channel/requirements.md)
 - Related ADRs:
-  - [0063-failed-delivery-context](0063-failed-delivery-context.md) defines `PublishConfirmationResult`, which is unchanged.
-  - [0069-factory-registry-ownership-and-disposal-cascade](0069-factory-registry-ownership-and-disposal-cascade.md) keeps disposal with the creator, so the mediator closes and does not dispose.
-  - [0084-outbox-metrics](0084-outbox-metrics.md) counts successes and set the precedent of a trailing optional constructor parameter.
-  - [0085-outbox-stale-message-telemetry](0085-outbox-stale-message-telemetry.md) remains the way to learn of a message whose notification was lost.
-  - [0086-outbox-per-topic-stale-count](0086-outbox-per-topic-stale-count.md) gives that count per topic.
-  - [0081-timed-outbox-sweeper-health-metrics](0081-timed-outbox-sweeper-health-metrics.md) and [0086-sweeper-remedy-health-checks](0086-sweeper-remedy-health-checks.md) report a sweep that fails as a whole.
-  - [0089-distributed-outbox-circuit-breaker](0089-distributed-outbox-circuit-breaker.md) depends on the `TripTopic` calls, which keep their sites and their effect. Its phase 2, which issue #4628 tracks, gives `DispatchAsync` and `BulkDispatchAsync` a trailing `IAmATripBatch? trips` parameter and routes their trips through it (its step 6). The send and sweep-send sites of this ADR are in the same methods, so their line numbers will move, and each raise still comes before the trip.
-- External references:
-  - Issue #4489 and PR #4598, the telemetry half of that issue.
-  - PR #4725, where the author of issue #4489 raised the sweep send on 2026-11-10.
-  - [`Channel.CreateBounded`](https://learn.microsoft.com/dotnet/api/system.threading.channels.channel.createbounded) and [`BoundedChannelFullMode`](https://learn.microsoft.com/dotnet/api/system.threading.channels.boundedchannelfullmode).
+  - ADR 0084-outbox-metrics
+  - ADR 0085-outbox-stale-message-telemetry
+  - ADR 0086-outbox-per-topic-stale-count
+  - ADR 0086-sweeper-remedy-health-checks
+  - ADR 0089-distributed-outbox-circuit-breaker
+  - ADR 0063-failed-delivery-context
+  - ADR 0081-timed-outbox-sweeper-health-metrics
+  - ADR 0056-timed-outbox-archiver-sync-fallback
+  - ADR 0021-move-archive-from-esb
+  - ADR 0053-pipeline-validation-at-startup
+  - ADR 0064-validate-pipeline-assembly-and-provider-registration
+  - ADR 0035-generated-test
+- External:
+  - [System.Threading.Channels](https://learn.microsoft.com/dotnet/core/extensions/channels)
+  - [BoundedChannelFullMode](https://learn.microsoft.com/dotnet/api/system.threading.channels.boundedchannelfullmode)
+  - [Service disposal in Microsoft.Extensions.DependencyInjection](https://learn.microsoft.com/dotnet/core/extensions/dependency-injection#service-lifetimes)
+  - [IServiceProviderIsService](https://learn.microsoft.com/dotnet/api/microsoft.extensions.dependencyinjection.iserviceproviderisservice)
