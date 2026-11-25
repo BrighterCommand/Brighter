@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Google.Cloud.Firestore.V1;
 using Grpc.Core;
@@ -15,7 +16,11 @@ namespace Paramore.Brighter.Gcp.Tests.Outbox.Firestore;
 
 public class FirestoreOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync, IAmAnOutstandingCountOutboxProvider
 {
-    private readonly string _outstandingCountCollection = $"outbox_{Uuid.New():N}";
+    private static readonly Lazy<bool> s_earlierRunsCleared = new(() =>
+    {
+        new FirestoreOutboxProvider().DeleteOutstandingCountStore();
+        return true;
+    });
 
     public IAmAnOutboxSync<Message, FirestoreTransaction> CreateOutbox()
     {
@@ -101,12 +106,16 @@ public class FirestoreOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
     {
         try
         {
-            var config = Configuration.CreateOutbox(_outstandingCountCollection);
+            var config = Configuration.CreateOutstandingCountOutbox();
             var firestore = new FirestoreConnectionProvider(config).GetFirestoreClient();
+            var outbox = new FirestoreOutbox(config);
 
-            foreach (var message in new FirestoreOutbox(config).Get(pageSize: 1_000))
+            for (var messages = outbox.Get(pageSize: 1_000).ToList(); messages.Count > 0; messages = outbox.Get(pageSize: 1_000).ToList())
             {
-                firestore.DeleteDocument(new DeleteDocumentRequest { Name = config.GetDocumentName(_outstandingCountCollection, message.Id) });
+                foreach (var message in messages)
+                {
+                    firestore.DeleteDocument(new DeleteDocumentRequest { Name = config.GetDocumentName(config.Outbox!.Name, message.Id) });
+                }
             }
         }
         catch (Exception)
@@ -116,12 +125,15 @@ public class FirestoreOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
 
     public IAmAnOutboxAsync<Message, FirestoreTransaction> CreateOutstandingCountStore()
     {
-        return new FirestoreOutbox(Configuration.CreateOutbox(_outstandingCountCollection));
+        ClearMessagesLeftByEarlierRuns();
+        return new FirestoreOutbox(Configuration.CreateOutstandingCountOutbox());
     }
+
+    private static void ClearMessagesLeftByEarlierRuns() => _ = s_earlierRunsCleared.Value;
 
     public Task<OutstandingCountCancellationSetup<FirestoreTransaction>> PrepareCancellationAsync(TimeSpan holdFor)
     {
-        var outbox = new FirestoreOutbox(Configuration.CreateOutbox(_outstandingCountCollection));
+        var outbox = new FirestoreOutbox(Configuration.CreateOutstandingCountOutbox());
         return Task.FromResult(new OutstandingCountCancellationSetup<FirestoreTransaction>(
             outbox,
             storeHeld: false,

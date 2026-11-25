@@ -25,7 +25,7 @@ public interface IAmAnOutstandingCountOutboxProvider
     void DeleteOutstandingCountStore();
 
     /// <summary>
-    /// Prepares an outbox over a store of its own that no other test writes to, held for
+    /// Prepares an outbox over a store that holds only the case's messages, held for
     /// <paramref name="holdFor"/> when the store can be held.
     /// </summary>
     /// <param name="holdFor">How long to hold the store, at least 30 seconds.</param>
