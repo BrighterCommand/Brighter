@@ -16,7 +16,7 @@ public abstract class OutstandingCountOutboxBaseTests<TTransaction> : IDisposabl
     private static readonly TimeSpan s_dispatchedSince = TimeSpan.FromMinutes(5);
 
     /// <summary>
-    /// The outbox under test, over a store that no other test writes to. The cases call the asynchronous count.
+    /// The outbox under test, over a store that holds only the case's messages. The cases call the asynchronous count.
     /// </summary>
     protected abstract IAmAnOutboxAsync<Message, TTransaction> Outbox { get; }
 
