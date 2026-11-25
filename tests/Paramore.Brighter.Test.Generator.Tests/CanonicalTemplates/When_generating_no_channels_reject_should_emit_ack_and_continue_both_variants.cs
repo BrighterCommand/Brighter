@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Test.Generator.Configuration;
 using Xunit;
+using static Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates.CanonicalTemplateSetup;
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -39,159 +39,103 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
         _logger = factory.CreateLogger<Generators.MessagingGatewayGenerator>();
     }
 
-    [Fact]
-    public async Task When_generating_no_channels_reject_reactor_file_should_exist_with_correct_name()
+    [Theory]
+    [InlineData(REACTOR)]
+    [InlineData(PROACTOR)]
+    public async Task When_generating_no_channels_reject_file_should_exist_with_correct_name(string variant)
     {
         // Arrange
-        var ledger = PassLedger();
-        var configuration = BuildConfiguration();
+        var ledger = PassLedger(LEDGER_KEY, FR_COLUMN);
+        var configuration = BuildConfiguration(_testDirectory, LEDGER_KEY);
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
 
         // Act
         await generator.GenerateAsync(configuration);
 
         // Assert
-        var reactorPath = ReactorOutputPath(configuration);
-        Assert.True(File.Exists(reactorPath),
-            $"Reactor canonical no-channels file not found at {reactorPath}");
+        var path = OutputPath(_testDirectory, variant, TEMPLATE_NAME);
+        Assert.True(File.Exists(path),
+            $"{variant} canonical no-channels file not found at {path}");
     }
 
-    [Fact]
-    public async Task When_generating_no_channels_reject_proactor_file_should_exist_with_correct_name()
+    [Theory]
+    [InlineData(REACTOR)]
+    [InlineData(PROACTOR)]
+    public async Task When_generating_no_channels_reject_should_create_subscription_with_neither_routing_key(
+        string variant)
     {
         // Arrange
-        var ledger = PassLedger();
-        var configuration = BuildConfiguration();
+        var ledger = PassLedger(LEDGER_KEY, FR_COLUMN);
+        var configuration = BuildConfiguration(_testDirectory, LEDGER_KEY);
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
 
         // Act
         await generator.GenerateAsync(configuration);
 
         // Assert
-        var proactorPath = ProactorOutputPath(configuration);
-        Assert.True(File.Exists(proactorPath),
-            $"Proactor canonical no-channels file not found at {proactorPath}");
-    }
-
-    [Fact]
-    public async Task When_generating_no_channels_reject_reactor_should_create_subscription_with_neither_routing_key()
-    {
-        // Arrange
-        var ledger = PassLedger();
-        var configuration = BuildConfiguration();
-        var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
-
-        // Act
-        await generator.GenerateAsync(configuration);
-
-        // Assert
-        var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
+        var content = await File.ReadAllTextAsync(OutputPath(_testDirectory, variant, TEMPLATE_NAME));
         Assert.DoesNotContain("deadLetterRoutingKey:", content);
         Assert.DoesNotContain("invalidMessageRoutingKey:", content);
     }
 
-    [Fact]
-    public async Task When_generating_no_channels_reject_proactor_should_create_subscription_with_neither_routing_key()
+    [Theory]
+    [InlineData(REACTOR, "Reject(")]
+    [InlineData(PROACTOR, "RejectAsync(")]
+    public async Task When_generating_no_channels_reject_should_reject_with_delivery_error_and_assert_true(
+        string variant, string rejectCall)
     {
         // Arrange
-        var ledger = PassLedger();
-        var configuration = BuildConfiguration();
+        var ledger = PassLedger(LEDGER_KEY, FR_COLUMN);
+        var configuration = BuildConfiguration(_testDirectory, LEDGER_KEY);
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
 
         // Act
         await generator.GenerateAsync(configuration);
 
         // Assert
-        var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.DoesNotContain("deadLetterRoutingKey:", content);
-        Assert.DoesNotContain("invalidMessageRoutingKey:", content);
-    }
-
-    [Fact]
-    public async Task When_generating_no_channels_reject_reactor_should_reject_with_delivery_error_and_assert_true()
-    {
-        // Arrange
-        var ledger = PassLedger();
-        var configuration = BuildConfiguration();
-        var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
-
-        // Act
-        await generator.GenerateAsync(configuration);
-
-        // Assert
-        var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("Reject(", content);
+        var content = await File.ReadAllTextAsync(OutputPath(_testDirectory, variant, TEMPLATE_NAME));
+        Assert.Contains(rejectCall, content);
         Assert.Contains("DeliveryError", content);
         Assert.Contains("Assert.True(rejected", content);
     }
 
-    [Fact]
-    public async Task When_generating_no_channels_reject_proactor_should_reject_async_with_delivery_error_and_assert_true()
+    [Theory]
+    [InlineData(REACTOR)]
+    [InlineData(PROACTOR)]
+    public async Task When_generating_no_channels_reject_should_poll_for_the_following_message_inside_a_bounded_retry_loop(
+        string variant)
     {
         // Arrange
-        var ledger = PassLedger();
-        var configuration = BuildConfiguration();
+        var ledger = PassLedger(LEDGER_KEY, FR_COLUMN);
+        var configuration = BuildConfiguration(_testDirectory, LEDGER_KEY);
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
 
         // Act
         await generator.GenerateAsync(configuration);
 
         // Assert
-        var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("RejectAsync(", content);
-        Assert.Contains("DeliveryError", content);
-        Assert.Contains("Assert.True(rejected", content);
-    }
-
-    [Fact]
-    public async Task When_generating_no_channels_reject_reactor_should_poll_for_the_following_message_inside_a_bounded_retry_loop()
-    {
-        // Arrange
-        var ledger = PassLedger();
-        var configuration = BuildConfiguration();
-        var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
-
-        // Act
-        await generator.GenerateAsync(configuration);
-
-        // Assert
-        var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
+        var content = await File.ReadAllTextAsync(OutputPath(_testDirectory, variant, TEMPLATE_NAME));
         Assert.Contains("Stopwatch", content);
         Assert.Contains("TimeSpan.FromSeconds(30)", content);
         Assert.Contains("500", content);
     }
 
-    [Fact]
-    public async Task When_generating_no_channels_reject_proactor_should_poll_for_the_following_message_inside_a_bounded_retry_loop()
+    [Theory]
+    [InlineData(REACTOR)]
+    [InlineData(PROACTOR)]
+    public async Task When_generating_no_channels_reject_should_tell_the_following_message_from_the_rejected_one(
+        string variant)
     {
         // Arrange
-        var ledger = PassLedger();
-        var configuration = BuildConfiguration();
+        var ledger = PassLedger(LEDGER_KEY, FR_COLUMN);
+        var configuration = BuildConfiguration(_testDirectory, LEDGER_KEY);
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
 
         // Act
         await generator.GenerateAsync(configuration);
 
         // Assert
-        var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(30)", content);
-        Assert.Contains("500", content);
-    }
-
-    [Fact]
-    public async Task When_generating_no_channels_reject_reactor_should_tell_the_following_message_from_the_rejected_one()
-    {
-        // Arrange
-        var ledger = PassLedger();
-        var configuration = BuildConfiguration();
-        var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
-
-        // Act
-        await generator.GenerateAsync(configuration);
-
-        // Assert
-        var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
+        var content = await File.ReadAllTextAsync(OutputPath(_testDirectory, variant, TEMPLATE_NAME));
         Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, "SetMessageId(Id.Random())"));
         Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, ".SetBody("));
 
@@ -199,39 +143,21 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
         Assert.Contains("Assert.NotEqual(rejectedMessage.Header.MessageId, next.Header.MessageId)", content);
     }
 
-    [Fact]
-    public async Task When_generating_no_channels_reject_proactor_should_tell_the_following_message_from_the_rejected_one()
+    [Theory]
+    [InlineData(REACTOR)]
+    [InlineData(PROACTOR)]
+    public async Task When_ledger_is_pass_should_emit_fact_without_skip(string variant)
     {
         // Arrange
-        var ledger = PassLedger();
-        var configuration = BuildConfiguration();
+        var ledger = PassLedger(LEDGER_KEY, FR_COLUMN);
+        var configuration = BuildConfiguration(_testDirectory, LEDGER_KEY);
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
 
         // Act
         await generator.GenerateAsync(configuration);
 
         // Assert
-        var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, "SetMessageId(Id.Random())"));
-        Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, ".SetBody("));
-
-        Assert.Contains("_messageAssertion.Assert(theOtherMessage, receivedOther)", content);
-        Assert.Contains("Assert.NotEqual(rejectedMessage.Header.MessageId, next.Header.MessageId)", content);
-    }
-
-    [Fact]
-    public async Task When_ledger_is_pass_reactor_should_emit_fact_without_skip()
-    {
-        // Arrange
-        var ledger = PassLedger();
-        var configuration = BuildConfiguration();
-        var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
-
-        // Act
-        await generator.GenerateAsync(configuration);
-
-        // Assert
-        var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
+        var content = await File.ReadAllTextAsync(OutputPath(_testDirectory, variant, TEMPLATE_NAME));
         Assert.Contains("[Fact]", content);
         Assert.DoesNotContain("Skip =", content);
     }
@@ -245,32 +171,15 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
             {
                 [(LEDGER_KEY, FR_COLUMN)] = "Deferred -> #9999 (sign-off: @iancooper)"
             });
-        var configuration = BuildConfiguration();
+        var configuration = BuildConfiguration(_testDirectory, LEDGER_KEY);
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
 
         // Act
         await generator.GenerateAsync(configuration);
 
         // Assert
-        var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
+        var content = await File.ReadAllTextAsync(OutputPath(_testDirectory, REACTOR, TEMPLATE_NAME));
         Assert.Contains("Skip = \"Deferred: #9999", content);
-    }
-
-    [Fact]
-    public async Task When_ledger_is_pass_proactor_should_emit_fact_without_skip()
-    {
-        // Arrange
-        var ledger = PassLedger();
-        var configuration = BuildConfiguration();
-        var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
-
-        // Act
-        await generator.GenerateAsync(configuration);
-
-        // Assert
-        var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("[Fact]", content);
-        Assert.DoesNotContain("Skip =", content);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -287,40 +196,6 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
 
         return count;
     }
-
-    private static InMemoryConformanceLedger PassLedger() =>
-        new(new Dictionary<(string, string), string>
-        {
-            [(LEDGER_KEY, FR_COLUMN)] = "Pass"
-        });
-
-    private TestConfiguration BuildConfiguration() =>
-        new()
-        {
-            Namespace = "MyApp.Tests",
-            DestinationFolder = _testDirectory,
-            MessageBuilder = "TestMessageBuilder",
-            MessageAssertion = "TestMessageAssertion",
-            MessagingGateway = new MessagingGatewayConfiguration
-            {
-                Prefix = "Test",
-                Namespace = "MyApp.Tests",
-                MessageGatewayProvider = "TestProvider",
-                Publication = "Publication",
-                Subscription = "Subscription",
-                LedgerKey = LEDGER_KEY,
-            }
-        };
-
-    private string ReactorOutputPath(TestConfiguration configuration) =>
-        Path.Combine(
-            _testDirectory, "MessagingGateway", "Test", "Generated", "Reactor",
-            $"{TEMPLATE_NAME}.cs");
-
-    private string ProactorOutputPath(TestConfiguration configuration) =>
-        Path.Combine(
-            _testDirectory, "MessagingGateway", "Test", "Generated", "Proactor",
-            $"{TEMPLATE_NAME}.cs");
 
     public void Dispose()
     {

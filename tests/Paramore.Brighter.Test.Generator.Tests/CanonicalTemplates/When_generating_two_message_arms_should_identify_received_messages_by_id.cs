@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Test.Generator.Configuration;
 using Xunit;
+using static Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates.CanonicalTemplateSetup;
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -45,18 +45,20 @@ public class TwoMessageArmsIdentifyReceivedMessagesByIdTests : IDisposable
         _logger = factory.CreateLogger<Generators.MessagingGatewayGenerator>();
     }
 
-    [Fact]
-    public async Task When_generating_nack_reactor_should_identify_received_messages_by_id()
+    [Theory]
+    [InlineData(REACTOR)]
+    [InlineData(PROACTOR)]
+    public async Task When_generating_nack_should_identify_received_messages_by_id(string variant)
     {
         // Arrange
-        var configuration = BuildConfiguration();
-        var generator = new Generators.MessagingGatewayGenerator(_logger, PassLedger());
+        var configuration = BuildConfiguration(_testDirectory, LEDGER_KEY);
+        var generator = new Generators.MessagingGatewayGenerator(_logger, NackAndNoChannelsPassLedger());
 
         // Act
         await generator.GenerateAsync(configuration);
 
         // Assert
-        var content = await File.ReadAllTextAsync(OutputPath("Reactor", NACK_TEMPLATE));
+        var content = await File.ReadAllTextAsync(OutputPath(_testDirectory, variant, NACK_TEMPLATE));
         Assert.Contains(IDENTIFIES_BY_ID, content);
         Assert.DoesNotContain(NACKED_PAIRED_POSITIONALLY, content);
         Assert.DoesNotContain(FOLLOWING_PAIRED_POSITIONALLY, content);
@@ -64,88 +66,32 @@ public class TwoMessageArmsIdentifyReceivedMessagesByIdTests : IDisposable
         Assert.Contains(SINGLE_MESSAGE_ASSERTION, content);
     }
 
-    [Fact]
-    public async Task When_generating_nack_proactor_should_identify_received_messages_by_id()
+    [Theory]
+    [InlineData(REACTOR)]
+    [InlineData(PROACTOR)]
+    public async Task When_generating_no_channels_reject_should_identify_received_messages_by_id(string variant)
     {
         // Arrange
-        var configuration = BuildConfiguration();
-        var generator = new Generators.MessagingGatewayGenerator(_logger, PassLedger());
+        var configuration = BuildConfiguration(_testDirectory, LEDGER_KEY);
+        var generator = new Generators.MessagingGatewayGenerator(_logger, NackAndNoChannelsPassLedger());
 
         // Act
         await generator.GenerateAsync(configuration);
 
         // Assert
-        var content = await File.ReadAllTextAsync(OutputPath("Proactor", NACK_TEMPLATE));
-        Assert.Contains(IDENTIFIES_BY_ID, content);
-        Assert.DoesNotContain(NACKED_PAIRED_POSITIONALLY, content);
-        Assert.DoesNotContain(FOLLOWING_PAIRED_POSITIONALLY, content);
-
-        Assert.Contains(SINGLE_MESSAGE_ASSERTION, content);
-    }
-
-    [Fact]
-    public async Task When_generating_no_channels_reject_reactor_should_identify_received_messages_by_id()
-    {
-        // Arrange
-        var configuration = BuildConfiguration();
-        var generator = new Generators.MessagingGatewayGenerator(_logger, PassLedger());
-
-        // Act
-        await generator.GenerateAsync(configuration);
-
-        // Assert
-        var content = await File.ReadAllTextAsync(OutputPath("Reactor", NO_CHANNELS_TEMPLATE));
-        Assert.Contains(IDENTIFIES_BY_ID, content);
-        Assert.DoesNotContain(FOLLOWING_PAIRED_POSITIONALLY, content);
-    }
-
-    [Fact]
-    public async Task When_generating_no_channels_reject_proactor_should_identify_received_messages_by_id()
-    {
-        // Arrange
-        var configuration = BuildConfiguration();
-        var generator = new Generators.MessagingGatewayGenerator(_logger, PassLedger());
-
-        // Act
-        await generator.GenerateAsync(configuration);
-
-        // Assert
-        var content = await File.ReadAllTextAsync(OutputPath("Proactor", NO_CHANNELS_TEMPLATE));
+        var content = await File.ReadAllTextAsync(OutputPath(_testDirectory, variant, NO_CHANNELS_TEMPLATE));
         Assert.Contains(IDENTIFIES_BY_ID, content);
         Assert.DoesNotContain(FOLLOWING_PAIRED_POSITIONALLY, content);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private static InMemoryConformanceLedger PassLedger() =>
+    private static InMemoryConformanceLedger NackAndNoChannelsPassLedger() =>
         new(new Dictionary<(string, string), string>
         {
             [(LEDGER_KEY, "FR-16")] = "Pass",
             [(LEDGER_KEY, "FR-7")] = "Pass"
         });
-
-    private TestConfiguration BuildConfiguration() =>
-        new()
-        {
-            Namespace = "MyApp.Tests",
-            DestinationFolder = _testDirectory,
-            MessageBuilder = "TestMessageBuilder",
-            MessageAssertion = "TestMessageAssertion",
-            MessagingGateway = new MessagingGatewayConfiguration
-            {
-                Prefix = "Test",
-                Namespace = "MyApp.Tests",
-                MessageGatewayProvider = "TestProvider",
-                Publication = "Publication",
-                Subscription = "Subscription",
-                LedgerKey = LEDGER_KEY,
-            }
-        };
-
-    private string OutputPath(string variant, string templateName) =>
-        Path.Combine(
-            _testDirectory, "MessagingGateway", "Test", "Generated", variant,
-            $"{templateName}.cs");
 
     public void Dispose()
     {
