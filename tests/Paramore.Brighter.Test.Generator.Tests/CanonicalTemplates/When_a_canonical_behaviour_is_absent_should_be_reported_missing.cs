@@ -6,42 +6,32 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
 /// <summary>
-/// Canary for the generate-everywhere presence gate.
-///
-/// The gate that scans the real tree can only ever report what is absent from it, and the tree is
-/// currently complete — so a green gate is equally consistent with "every canonical behaviour is
-/// present" and with "the gate does not look for that behaviour at all". These facts settle which,
-/// by handing the presence check a directory that is deliberately missing one canonical file and
-/// requiring it to say so.
-///
-/// The canonical set is taken from the generator's own
-/// <see cref="Paramore.Brighter.Test.Generator.CanonicalBehaviours.TEMPLATE_FR_COLUMNS"/>, which is
-/// what "canonical" means: a behaviour the generator emits for every wired configuration. A gate
-/// that checks a subset of it is blind in exactly the part it omits.
+/// Canary for the generate-everywhere presence gate. A gate scanning a complete tree is green whether or not it
+/// looks for a behaviour, so these facts hand the presence check a directory missing one file of the canonical
+/// set (the generator's <see cref="Paramore.Brighter.Test.Generator.CanonicalBehaviours.TEMPLATE_FR_COLUMNS"/>)
+/// and require it to say so; and a complete directory, which it must not report.
 /// </summary>
 public class CanonicalBehaviourPresenceCanaryTests
 {
-    // Judged against the requeue-too-many-times behaviour (FR-23 in the conformance ledger), the
-    // canonical behaviour most recently added to the generator's set.
+    // The canonical behaviour most recently added to the generator's set.
     private const string REQUEUE_TOO_MANY_TIMES =
         "When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue";
 
-    // Judged against the plain requeue behaviour (FR-22 in the conformance ledger). Used as the
-    // control: a behaviour the gate has always known about.
+    // The control: a behaviour the gate has always known about.
     private const string PLAIN_REQUEUE =
         "When_requeuing_a_failed_message_should_be_redelivered";
 
     [Fact]
     public void When_the_requeue_too_many_times_file_is_absent_should_be_reported_missing()
     {
-        // Arrange — a generated directory holding every canonical file but that one
+        // Arrange
         using var generated = new GeneratedDirectoryOmitting(REQUEUE_TOO_MANY_TIMES);
 
         // Act
         var missing = GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
             .FindMissingCanonicalFiles([generated.Path], "Reactor");
 
-        // Assert — the gate must notice the behaviour it was never told to look for
+        // Assert
         Assert.Single(missing);
         Assert.Contains(REQUEUE_TOO_MANY_TIMES, missing[0]);
     }
@@ -49,7 +39,7 @@ public class CanonicalBehaviourPresenceCanaryTests
     [Fact]
     public void When_the_plain_requeue_file_is_absent_should_be_reported_missing()
     {
-        // Arrange — the control: a behaviour the gate has always checked
+        // Arrange
         using var generated = new GeneratedDirectoryOmitting(PLAIN_REQUEUE);
 
         // Act
@@ -64,22 +54,18 @@ public class CanonicalBehaviourPresenceCanaryTests
     [Fact]
     public void When_every_canonical_file_is_present_should_report_nothing_missing()
     {
-        // Arrange — omit nothing
+        // Arrange
         using var generated = new GeneratedDirectoryOmitting(omitted: null);
 
         // Act
         var missing = GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
             .FindMissingCanonicalFiles([generated.Path], "Reactor");
 
-        // Assert — a check that reports a complete directory as incomplete would make the other
-        // two facts pass for the wrong reason
+        // Assert
         Assert.Empty(missing);
     }
 
-    /// <summary>
-    /// A temporary Generated/Reactor-shaped directory holding one empty file per canonical
-    /// behaviour, less the one named. Only the file names matter to a presence check.
-    /// </summary>
+    // The files are empty: only their names matter to a presence check.
     private sealed class GeneratedDirectoryOmitting : System.IDisposable
     {
         public string Path { get; }

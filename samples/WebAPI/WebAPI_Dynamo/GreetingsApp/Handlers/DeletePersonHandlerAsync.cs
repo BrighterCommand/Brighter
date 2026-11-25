@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Amazon.DynamoDBv2.DataModel;
 using GreetingsApp.Requests;
 using Paramore.Brighter;
-using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.DynamoDb.V4;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
 

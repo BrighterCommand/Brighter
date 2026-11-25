@@ -6,7 +6,7 @@ using GreetingsEntities;
 using GreetingsApp.Policies;
 using GreetingsApp.Requests;
 using GreetingsApp.Responses;
-using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.DynamoDb.V4;
 using Paramore.Darker;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
