@@ -561,7 +561,7 @@ To safeguard the project we ask you to sign a Contributor License Agreement. The
 
 The process of signing works through GitHub.
 
-To get started, <a href="https://www.clahub.com/agreements/iancooper/Paramore">sign the Contributor License Agreement</a>.
+To get started, <a href="https://cla-assistant.io/BrighterCommand/Brighter">sign the Contributor License Agreement</a>.
 
 ## Support for Agentic Coding
 
