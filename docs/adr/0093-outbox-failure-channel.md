@@ -596,7 +596,7 @@ Each store applies the bound where its order needs it:
 | Firestore | Newest first | In memory, reading further pages until the page is full |
 | DynamoDB, DynamoDB.V4 | Within a page or a shard | The scan: in the same `Where` as the tripped-topic filter. The query for one topic: in the key condition |
 
-Firestore filters in memory, because that keeps the sweep's query free of a composite `OR` filter. Topics have different ages, so a page of the newest messages can hold only expired ones while an unexpired message of another topic waits further back. Firestore therefore keeps reading further pages until it has a full page of unexpired messages or reaches the end. D-22 accepts those extra reads, and the change to P-7 records them.
+Firestore filters in memory, because that keeps the sweep's query free of a composite `OR` filter. Topics have different ages, so a page of the newest messages can hold only expired ones while an unexpired message of another topic waits further back. Firestore therefore keeps reading further pages until it has a full page of unexpired messages or reaches the end. D-22 names extra reads as a cost on DynamoDB only, so the change to P-7 records these.
 
 DynamoDB's scan filters in the same `Where` that applies the tripped-topic filter. `ScanOutstandingIndexSegmentForMessages` already keeps scanning while no topic is excluded, a pagination token remains and the segment holds fewer messages than the page size. So the loop scans past expired messages until the page is full or the scan ends. With tripped topics it reads one scan page per segment and returns what is left, as it does today. Expired messages then take up room in that scan page. While the scan passes the backlog, a sweep can send fewer than its batch size, or nothing. The scan resumes from its saved position on the next sweep. FR-18's third bullet therefore holds on DynamoDB only while no topic is tripped. D-22 accepts extra reads, not a short page, so this departs from FR-18.
 
@@ -666,7 +666,7 @@ The mediator closes the registry after its guarded `CloseAll`. A close is `TryCo
 | P-3 | Confirmed: drop the oldest |
 | P-4 | Confirmed: at most one `Warning` per 60 seconds of the mediator's `TimeProvider` |
 | P-5 | Confirmed. A second reader competes and is not rejected |
-| P-7 | Changed in part. Two `args` keys carry the bounds. The archiver passes `"Topic"` to every store, and only DynamoDB and MongoDb use it. Firestore applies the topic from `OnlyExpiredArgsKey`, and filters a sweep's page in memory |
+| P-7 | Changed in part. Two `args` keys carry the bounds. The archiver passes `"Topic"` to every store, and only DynamoDB and MongoDb use it. Firestore applies the topic from `OnlyExpiredArgsKey`, and filters a sweep's page in memory, reading further pages until the page is full |
 | P-8 | Confirmed: `paramore.brighter.ExpiredAt` in the header bag |
 | P-9 | Confirmed: three trailing optional parameters on `OutboxArchiver` |
 | Age clock | Each store's own clock. No cutoff computed by the caller |
@@ -801,8 +801,8 @@ Further tests pin decisions of this ADR:
 | Risk | Mitigation |
 | --- | --- |
 | A Firestore composite index is missing, so the archiver's query fails | The release notes and the Docs page name the index. The archiver's run fails and logs, as today, and the sweep is unaffected |
-| While fewer than a page of unexpired messages wait, every Firestore sweep reads the whole expired backlog, one read per document, until the archiver drains it | D-22 accepts the extra reads. The archiver drains the backlog at its batch size |
-| A DynamoDB sweep reads past an expired backlog each time its scan passes the backlog. With a tripped topic, its page can hold fewer messages than the batch size | D-22 accepts the extra reads. The scan resumes from its saved position, and the archiver drains the backlog at its batch size |
+| While fewer than a page of unexpired messages wait, every Firestore sweep reads the whole expired backlog, one read per document, until the archiver drains it | The change to P-7 records the extra reads. The archiver drains the backlog at its batch size |
+| A DynamoDB sweep reads past an expired backlog each time its scan passes the backlog. With a tripped topic, its page can hold fewer messages than the batch size | D-22 accepts the extra reads, and the short page departs from FR-18, as the table of open items records. The scan resumes from its saved position, and the archiver drains the backlog at its batch size |
 | A store TTL shorter than the max age deletes an undispatched message before the archiver sees it, so no `Expired` is raised | The documentation advises a TTL longer than the largest max age on DynamoDB, Firestore and MongoDb |
 | The archiver deletes undispatched rows and contends with the sweep | The batch size bounds each run, the delete is by id, and the sweep no longer reads those rows |
 | An expired backlog after a long outage takes many runs to leave | The documentation states the rate, about 400 a minute at the defaults, and how to raise the batch size |
