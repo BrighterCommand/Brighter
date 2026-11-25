@@ -28,8 +28,7 @@ public class CanonicalBehaviourPresenceCanaryTests
         using var generated = new GeneratedDirectoryOmitting(REQUEUE_TOO_MANY_TIMES);
 
         // Act
-        var missing = GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
-            .FindMissingCanonicalFiles([generated.Path], "Reactor");
+        var missing = CanonicalSuitePresence.FindMissingCanonicalFiles([generated.Path], "Reactor");
 
         // Assert
         Assert.Single(missing);
@@ -43,8 +42,7 @@ public class CanonicalBehaviourPresenceCanaryTests
         using var generated = new GeneratedDirectoryOmitting(PLAIN_REQUEUE);
 
         // Act
-        var missing = GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
-            .FindMissingCanonicalFiles([generated.Path], "Reactor");
+        var missing = CanonicalSuitePresence.FindMissingCanonicalFiles([generated.Path], "Reactor");
 
         // Assert
         Assert.Single(missing);
@@ -58,8 +56,7 @@ public class CanonicalBehaviourPresenceCanaryTests
         using var generated = new GeneratedDirectoryOmitting(omitted: null);
 
         // Act
-        var missing = GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
-            .FindMissingCanonicalFiles([generated.Path], "Reactor");
+        var missing = CanonicalSuitePresence.FindMissingCanonicalFiles([generated.Path], "Reactor");
 
         // Assert
         Assert.Empty(missing);

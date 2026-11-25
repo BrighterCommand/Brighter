@@ -17,12 +17,6 @@ namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 /// </summary>
 public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
 {
-    // Taken from the generator's own map, so "the full canonical suite" means the same here as there.
-    private static IReadOnlyDictionary<string, string> TEMPLATE_FR_COLUMNS
-        => CanonicalBehaviours.TEMPLATE_FR_COLUMNS;
-
-    private static IEnumerable<string> CANONICAL_TEMPLATE_NAMES => TEMPLATE_FR_COLUMNS.Keys;
-
     // A regression guard: wiring a new configuration changes it.
     private const int EXPECTED_WIRED_CONFIGURATION_COUNT = 27;
 
@@ -43,34 +37,6 @@ public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
         _proactorGeneratedDirs = FindGeneratedVariantDirs(testsRoot, "Proactor");
     }
 
-    /// <summary>
-    /// Reports, for each supplied generated directory, the canonical files that are absent from it.
-    /// This is the presence check both variant gates apply; it is exposed so that a canary test can
-    /// establish that the check actually notices an absent canonical behaviour, which a gate that
-    /// scans the real tree can never demonstrate while the tree is correct.
-    /// </summary>
-    /// <param name="generatedDirs">The Generated/Reactor or Generated/Proactor directories to scan.</param>
-    /// <param name="variant">The variant name used to label each reported path.</param>
-    /// <returns>One entry per absent canonical file, empty when every directory holds the full suite.</returns>
-    public static IReadOnlyList<string> FindMissingCanonicalFiles(
-        IEnumerable<string> generatedDirs,
-        string variant)
-    {
-        var missing = new List<string>();
-
-        foreach (var dir in generatedDirs)
-        {
-            foreach (var templateName in CANONICAL_TEMPLATE_NAMES)
-            {
-                var filePath = Path.Combine(dir, $"{templateName}.cs");
-                if (!File.Exists(filePath))
-                    missing.Add($"  {variant}: {filePath}");
-            }
-        }
-
-        return missing;
-    }
-
     [Fact]
     public void When_generating_everywhere_should_find_all_wired_configurations()
     {
@@ -83,7 +49,7 @@ public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
     public void When_generating_everywhere_all_wired_reactor_directories_should_contain_canonical_suite()
     {
         // Assert
-        var missing = FindMissingCanonicalFiles(_reactorGeneratedDirs, "Reactor");
+        var missing = CanonicalSuitePresence.FindMissingCanonicalFiles(_reactorGeneratedDirs, "Reactor");
 
         Assert.True(missing.Count == 0,
             $"Canonical Reactor files absent after regeneration — run ./generate-test.sh and rebuild:\n" +
@@ -94,7 +60,7 @@ public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
     public void When_generating_everywhere_all_wired_proactor_directories_should_contain_canonical_suite()
     {
         // Assert
-        var missing = FindMissingCanonicalFiles(_proactorGeneratedDirs, "Proactor");
+        var missing = CanonicalSuitePresence.FindMissingCanonicalFiles(_proactorGeneratedDirs, "Proactor");
 
         Assert.True(missing.Count == 0,
             $"Canonical Proactor files absent after regeneration — run ./generate-test.sh and rebuild:\n" +
@@ -125,7 +91,7 @@ public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
         {
             var ledgerKey = LedgerKeyForGeneratedDir(dir);
 
-            foreach (var (templateName, frColumn) in TEMPLATE_FR_COLUMNS)
+            foreach (var (templateName, frColumn) in CanonicalBehaviours.TEMPLATE_FR_COLUMNS)
             {
                 var filePath = Path.Combine(dir, $"{templateName}.cs");
                 if (!File.Exists(filePath))
