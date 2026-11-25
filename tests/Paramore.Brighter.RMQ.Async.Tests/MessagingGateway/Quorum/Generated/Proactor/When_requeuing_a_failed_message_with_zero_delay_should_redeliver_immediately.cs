@@ -10,6 +10,10 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Quorum.Proactor;
 
+/// <summary>
+/// A zero delay is not special-cased: the message is back within 5 s, timed from RequeueAsync returning,
+/// because the call's own duration is the cost of asking the broker, not a delay on the message.
+/// </summary>
 [Trait("Category", "RMQ")]
 [Collection("Quorum")]
 public class WhenRequeuingAFailedMessageWithZeroDelayShouldRedeliverImmediatelyAsync : IAsyncLifetime
@@ -60,22 +64,16 @@ public class WhenRequeuingAFailedMessageWithZeroDelayShouldRedeliverImmediatelyA
 
         await _producer.SendAsync(message);
 
-        // Act — receive the message and requeue it with an explicit TimeSpan.Zero
+        // Act
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         var requeued = await _channel.RequeueAsync(received, TimeSpan.Zero);
         Assert.True(requeued);
 
-        // The window opens when RequeueAsync RETURNS. The call's own duration is a round trip to
-        // the broker to issue the instruction — the cost of asking, not a delay applied to the
-        // message — so charging it to the budget would measure network latency rather than the
-        // gateway's treatment of TimeSpan.Zero.
         var stopwatch = Stopwatch.StartNew();
 
-        // Assert — poll every 500 ms, giving up after 30 s. TimeSpan.Zero must not be
-        // special-cased: the message arrives on the first iteration, and the time from the
-        // RequeueAsync call returning to receipt must be less than 5 s.
+        // Assert
         var redelivered = new Message();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))
         {
@@ -89,8 +87,13 @@ public class WhenRequeuingAFailedMessageWithZeroDelayShouldRedeliverImmediatelyA
         Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
         Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5),
             $"Expected redelivery within 5 s of RequeueAsync(M, TimeSpan.Zero) returning; elapsed: {stopwatch.Elapsed}");
-        // R-1 vs R-23 (ADR 0077): the redelivered count must be >= the sent count; normalise
-        // it back so the transport's equality assertion can still compare the rest of the header.
+        AssertIsRedeliveryOf(message, redelivered);
+    }
+
+    // HandledCount may rise on redelivery (ADR 0077, Conformance oracle change for the redelivery
+    // arms), so it is normalised to let the shared assertion compare the rest of the header.
+    private void AssertIsRedeliveryOf(Message message, Message redelivered)
+    {
         Assert.True(redelivered.Header.HandledCount >= message.Header.HandledCount,
             $"Redelivered HandledCount {redelivered.Header.HandledCount} must be >= sent {message.Header.HandledCount} (R-1)");
         redelivered.Header.HandledCount = message.Header.HandledCount;

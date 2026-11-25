@@ -41,6 +41,49 @@ public abstract class BaseGenerator(ILogger logger)
     private readonly Parser _parser = new();
 
     /// <summary>
+    /// Generates the test files for each suite described by the configuration.
+    /// </summary>
+    /// <param name="configuration">The suite settings and destination folder.</param>
+    /// <returns>A task that completes when all suites have been rendered.</returns>
+    public async Task GenerateAsync(TestConfiguration configuration)
+    {
+        PrepareGeneration();
+        foreach (var suite in Suites(configuration))
+        {
+            await GenerateAsync(configuration, suite.Prefix, suite.TemplateFolderName,
+                suite.Model, suite.Ignore, suite.PrepareModel);
+        }
+    }
+
+    /// <summary>
+    /// Lists the files that <see cref="GenerateAsync(TestConfiguration)"/> would write.
+    /// </summary>
+    /// <param name="configuration">The suite settings and destination folder.</param>
+    /// <returns>The template and destination paths in generation order.</returns>
+    public IReadOnlyList<PlannedFile> Plan(TestConfiguration configuration)
+    {
+        var planned = new List<PlannedFile>();
+        foreach (var suite in Suites(configuration))
+        {
+            planned.AddRange(Plan(configuration, suite.Prefix, suite.TemplateFolderName, suite.Ignore));
+        }
+
+        return planned;
+    }
+
+    /// <summary>
+    /// Describes the suites used for both generation and planning.
+    /// </summary>
+    /// <param name="configuration">The configuration from which to select suites.</param>
+    /// <returns>The suites in generation order.</returns>
+    protected abstract IReadOnlyList<GenerationSuite> Suites(TestConfiguration configuration);
+
+    /// <summary>
+    /// Prepares resources needed for rendering before generation begins.
+    /// </summary>
+    protected virtual void PrepareGeneration() { }
+
+    /// <summary>
     /// Generates test files by rendering all Liquid templates in the specified template folder into the destination directory.
     /// </summary>
     /// <param name="configuration">The root test configuration containing the destination folder and shared settings.</param>
@@ -91,6 +134,8 @@ public abstract class BaseGenerator(ILogger logger)
     /// <remarks>
     /// <see cref="GenerateAsync(TestConfiguration,string,string,object,Func{string,bool},Action{string,object})"/>
     /// renders exactly this list, so an audit can ask what the generator owns without running it.
+    /// The <paramref name="ignore"/> predicate is handed the file name, not the path: predicates
+    /// match substrings, so a checkout under a folder named for one would silently drop templates.
     /// </remarks>
     /// <param name="configuration">The root test configuration containing the destination folder and shared settings.</param>
     /// <param name="prefix">A relative path prefix appended to <see cref="TestConfiguration.DestinationFolder"/> for the output directory.</param>
@@ -115,11 +160,6 @@ public abstract class BaseGenerator(ILogger logger)
         {
             var file = new FileInfo(fileName);
 
-            // The predicate is handed the file's name, not the absolute path Directory.GetFiles
-            // returns. Every predicate is a substring match, and the generator and the audit run
-            // from different bin directories, so passing the whole path would let a checkout
-            // located under a directory named for one of those substrings silently drop templates
-            // in one of the two - which is the drift the generated-tree audit exists to catch.
             if (ignore(file.Name))
             {
                 logger.LogInformation("Skipping {FileName}", file.Name);

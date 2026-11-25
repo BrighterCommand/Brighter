@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
 
@@ -40,53 +39,8 @@ namespace Paramore.Brighter.Test.Generator.Generators;
 public class GatewayConformanceGenerator(ILogger<GatewayConformanceGenerator> logger)
     : BaseGenerator(logger)
 {
-    /// <summary>
-    /// Generates the gateway conformance test file for <see cref="TestConfiguration.GatewayConformance"/>,
-    /// if configured.
-    /// </summary>
-    /// <param name="configuration">The root test configuration containing the gateway conformance settings and destination folder.</param>
-    public async Task GenerateAsync(TestConfiguration configuration)
-    {
-        foreach (var suite in Suites(configuration))
-        {
-            await GenerateAsync(
-                configuration,
-                suite.Prefix,
-                suite.TemplateFolderName,
-                suite.Model,
-                suite.Ignore
-            );
-        }
-    }
-
-    /// <summary>
-    /// Computes the file <see cref="GenerateAsync(TestConfiguration)"/> would write for
-    /// <paramref name="configuration"/>, without writing it.
-    /// </summary>
-    /// <param name="configuration">The root test configuration containing the gateway conformance settings and destination folder.</param>
-    /// <returns>The gateway conformance test file this configuration owns, or none if not configured.</returns>
-    public IReadOnlyList<PlannedFile> Plan(TestConfiguration configuration)
-    {
-        var planned = new List<PlannedFile>();
-        foreach (var suite in Suites(configuration))
-        {
-            planned.AddRange(Plan(configuration, suite.Prefix, suite.TemplateFolderName, suite.Ignore));
-        }
-
-        return planned;
-    }
-
-    /// <summary>
-    /// Describes every rendering this generator performs for <paramref name="configuration"/>: one
-    /// sweep per project, not per gateway variant, so there is at most one suite regardless of how
-    /// many <see cref="MessagingGatewayConfiguration"/> variants the project also configures.
-    /// </summary>
-    /// <remarks>
-    /// Both <see cref="GenerateAsync(TestConfiguration)"/> and <see cref="Plan(TestConfiguration)"/>
-    /// walk this list, so the file the generator writes and the file it claims to own are one
-    /// description rather than two that can drift apart.
-    /// </remarks>
-    private IReadOnlyList<GenerationSuite> Suites(TestConfiguration configuration)
+    /// <inheritdoc />
+    protected override IReadOnlyList<GenerationSuite> Suites(TestConfiguration configuration)
     {
         if (configuration.GatewayConformance == null)
         {

@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -47,6 +48,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
 {
     private readonly IServiceBusSenderProvider _serviceBusSenderProvider;
+    private readonly ConcurrentDictionary<string, IServiceBusSenderWrapper> _senders = new();
+    //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange: the
+    //container and ProducerRegistry's finalizer may both try to close the cached senders, and they must
+    //do it once
+    private int _disposed;
     private readonly InstrumentationOptions _options;
     private AzureServiceBusPublication _publication;
     protected bool TopicCreated;
@@ -95,17 +101,57 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
     }
         
     /// <summary>
-    /// Dispose of the producer
+    /// Dispose of the producer, closing the senders held for reuse
     /// </summary>
-    public void Dispose() { }
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
+        //reachable from ProducerRegistry's finalizer: with no sender cached there is nothing to close, so
+        //skip the blocking wait for the async closes rather than block a finalizer thread on nothing
+        if (_senders.IsEmpty) return;
+
+        BrighterAsyncContext.Run(CloseCachedSendersAsync);
+    }
         
     /// <summary>
-    /// Dispose of the producer
+    /// Dispose of the producer, closing the senders held for reuse
     /// </summary>
     /// <returns></returns>
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        return new ValueTask(Task.CompletedTask);
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
+        await CloseCachedSendersAsync();
+    }
+
+    /// <summary>
+    /// Close and remove every cached sender, whether or not closing one of them fails: a close that
+    /// throws must not strand the senders after it, and must not escape into the caller, which may be a
+    /// finalizer
+    /// </summary>
+    private async Task CloseCachedSendersAsync()
+    {
+        //TryRemove first, so a sender cannot be closed twice and a concurrent send cannot add one that
+        //nothing will ever close
+        foreach (var topic in _senders.Keys)
+        {
+            if (!_senders.TryRemove(topic, out var sender)) continue;
+
+            await CloseSenderQuietlyAsync(sender, topic);
+        }
+    }
+
+    private async Task CloseSenderQuietlyAsync(IServiceBusSenderWrapper sender, string topic)
+    {
+        try
+        {
+            await sender.CloseAsync();
+        }
+        catch (Exception e)
+        {
+            Log.FailedToCloseCachedSender(Logger, e, topic);
+        }
     }
 
     /// <summary>
@@ -145,19 +191,12 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
         var azureServiceBusMessageBatches =
             new AzureServiceBusMessageBatches(serviceBusSenderWrapper, topic);
 
-        try
-        {
-            foreach (Message message in messages)
-                await azureServiceBusMessageBatches.AddMessageToBatchAsync(message, _publication.TimeToLive, cancellationToken);
+        foreach (Message message in messages)
+            await azureServiceBusMessageBatches.AddMessageToBatchAsync(message, _publication.TimeToLive, cancellationToken);
 
-            Log.SendingMessagesInBatches(Logger, topic, azureServiceBusMessageBatches.Batches.Count(), _bulkSendBatchSize);
+        Log.SendingMessagesInBatches(Logger, topic, azureServiceBusMessageBatches.Batches.Count(), _bulkSendBatchSize);
 
-            return azureServiceBusMessageBatches.Batches;
-        }
-        finally
-        {
-            await serviceBusSenderWrapper.CloseAsync();
-        }
+        return azureServiceBusMessageBatches.Batches;
     }
 
     /// <inheritdoc/>
@@ -170,24 +209,17 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
 
         Log.SendingBatch(Logger, messageCount, topic);
         
-        try
+        var sendTask = batch switch
         {
-            var sendTask = batch switch
-            {
-                AzureServiceBusSingleMessageBatch singleMessageBatch => serviceBusSenderWrapper.SendAsync(
-                    singleMessageBatch.Content, cancellationToken),
-                AzureServiceBusMessageBatch serviceBusMessageBatch => serviceBusSenderWrapper.SendAsync(
-                    serviceBusMessageBatch.Content, cancellationToken),
-                _ => throw new NotImplementedException(
-                    $"{nameof(SendAsync)} only supports ${typeof(AzureServiceBusSingleMessageBatch)} or ${typeof(AzureServiceBusMessageBatch)}")
-            };
+            AzureServiceBusSingleMessageBatch singleMessageBatch => serviceBusSenderWrapper.SendAsync(
+                singleMessageBatch.Content, cancellationToken),
+            AzureServiceBusMessageBatch serviceBusMessageBatch => serviceBusSenderWrapper.SendAsync(
+                serviceBusMessageBatch.Content, cancellationToken),
+            _ => throw new NotImplementedException(
+                $"{nameof(SendAsync)} only supports ${typeof(AzureServiceBusSingleMessageBatch)} or ${typeof(AzureServiceBusMessageBatch)}")
+        };
             
-            await sendTask;
-        }
-        finally
-        {
-            await serviceBusSenderWrapper.CloseAsync();
-        }
+        await sendTask;
     }
 
     /// <summary>
@@ -238,16 +270,28 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
             Log.FailedToPublishMessage(Logger, e, message.Header.Topic, message.Id.Value);
             throw new ChannelFailureException("Error talking to the broker, see inner exception for details", e);
         }
-        finally
-        {
-            await serviceBusSenderWrapper.CloseAsync();
-        }
     }
 
     private async Task<IServiceBusSenderWrapper> GetSenderAsync(string topic)
     {
+        if (_senders.TryGetValue(topic, out var cachedSender))
+        {
+            if (!cachedSender.IsClosed)
+                return cachedSender;
+
+            //a sender reaches a terminal state without the producer closing it, most often because the
+            //ServiceBusClient it came from was disposed: the cache must not pin a dead handle, so drop it
+            //and build a new one below, which is what a sender-per-send did before the cache
+            if (_senders.TryRemove(topic, out var closedSender))
+                await CloseSenderQuietlyAsync(closedSender, topic);
+        }
+
+        if (Volatile.Read(ref _disposed) != 0)
+            throw new ObjectDisposedException(nameof(AzureServiceBusMessageProducer));
+
         await EnsureChannelExistsAsync(topic);
 
+        IServiceBusSenderWrapper createdSender;
         try
         {
             RetryPolicy policy = Policy
@@ -260,13 +304,31 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
                     }
                 );
 
-            return policy.Execute(() => _serviceBusSenderProvider.Get(topic));
+            createdSender = policy.Execute(() => _serviceBusSenderProvider.Get(topic));
         }
         catch (Exception e)
         {
             Log.FailedToConnectAborting(Logger, e, topic);
             throw;
         }
+
+        var sender = _senders.GetOrAdd(topic, createdSender);
+        if (!ReferenceEquals(sender, createdSender))
+            //the sender we created lost the race: close ours, but a failure here must not fail a send that
+            //already has a usable cached sender
+            await CloseSenderQuietlyAsync(createdSender, topic);
+
+        if (Volatile.Read(ref _disposed) != 0)
+        {
+            //disposed while we were creating a sender: its cache entry was added after the close pass ran,
+            //so nothing else will ever close it
+            if (_senders.TryRemove(topic, out var strandedSender))
+                await CloseSenderQuietlyAsync(strandedSender, topic);
+
+            throw new ObjectDisposedException(nameof(AzureServiceBusMessageProducer));
+        }
+
+        return sender;
     }
 
     protected abstract Task EnsureChannelExistsAsync(string channelName);
@@ -299,5 +361,8 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
 
         [LoggerMessage(LogLevel.Error, "Failed to connect to topic {Topic}, aborting.")]
         public static partial void FailedToConnectAborting(ILogger logger, Exception e, string topic);
+
+        [LoggerMessage(LogLevel.Warning, "Failed to close the cached sender for topic {Topic}")]
+        public static partial void FailedToCloseCachedSender(ILogger logger, Exception e, string topic);
     }
 }

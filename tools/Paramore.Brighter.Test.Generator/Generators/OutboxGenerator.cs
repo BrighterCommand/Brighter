@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
 
@@ -40,52 +39,8 @@ namespace Paramore.Brighter.Test.Generator.Generators;
 /// <param name="logger">The logger instance used for diagnostic output during generation.</param>
 public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(logger)
 {
-    /// <summary>
-    /// Generates outbox test files for the configured outbox(es) in the provided <paramref name="configuration"/>.
-    /// Uses <see cref="TestConfiguration.Outbox"/> for a single outbox or <see cref="TestConfiguration.Outboxes"/> for multiple.
-    /// </summary>
-    /// <param name="configuration">The root test configuration containing outbox settings and destination folder.</param>
-    public async Task GenerateAsync(TestConfiguration configuration)
-    {
-        foreach (var suite in Suites(configuration))
-        {
-            await GenerateAsync(
-                configuration,
-                suite.Prefix,
-                suite.TemplateFolderName,
-                suite.Model,
-                suite.Ignore
-            );
-        }
-    }
-
-    /// <summary>
-    /// Computes every file <see cref="GenerateAsync(TestConfiguration)"/> would write for
-    /// <paramref name="configuration"/>, without writing any of them.
-    /// </summary>
-    /// <param name="configuration">The root test configuration containing outbox settings and destination folder.</param>
-    /// <returns>The outbox test files this configuration owns.</returns>
-    public IReadOnlyList<PlannedFile> Plan(TestConfiguration configuration)
-    {
-        var planned = new List<PlannedFile>();
-        foreach (var suite in Suites(configuration))
-        {
-            planned.AddRange(Plan(configuration, suite.Prefix, suite.TemplateFolderName, suite.Ignore));
-        }
-
-        return planned;
-    }
-
-    /// <summary>
-    /// Describes every rendering this generator performs for <paramref name="configuration"/>:
-    /// the Sync, Async, Causation, OutstandingCount and optional TopicCounting suites of each configured outbox.
-    /// </summary>
-    /// <remarks>
-    /// Both <see cref="GenerateAsync(TestConfiguration)"/> and <see cref="Plan(TestConfiguration)"/>
-    /// walk this list, so the files the generator writes and the files it claims to own are one
-    /// description rather than two that can drift apart.
-    /// </remarks>
-    private IReadOnlyList<GenerationSuite> Suites(TestConfiguration configuration)
+    /// <inheritdoc />
+    protected override IReadOnlyList<GenerationSuite> Suites(TestConfiguration configuration)
     {
         var suites = new List<GenerationSuite>();
 
@@ -106,13 +61,12 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
                     ? key
                     : outboxConfiguration.Prefix;
 
-                // Templates build a namespace suffix from the model's prefix, which is dot-qualified
-                // where the destination folder name is not.
+                var namespaceSuffix = $".{folderName}";
                 suites.AddRange(SuitesFor(
                     configuration,
                     outboxConfiguration,
                     folderName: folderName,
-                    modelPrefix: $".{folderName}"));
+                    modelPrefix: namespaceSuffix));
             }
         }
         else
@@ -123,20 +77,6 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
         return suites;
     }
 
-    /// <summary>
-    /// The suites rendered for a single outbox, including its optional topic-counting capability.
-    /// </summary>
-    /// <param name="configuration">The root configuration the model inherits unset values from.</param>
-    /// <param name="outboxConfiguration">The outbox whose suites are described.</param>
-    /// <param name="folderName">The destination folder name for this outbox.</param>
-    /// <param name="modelPrefix">The prefix the templates should read from the model.</param>
-    /// <returns>The suites for the outbox.</returns>
-    /// <remarks>
-    /// All suites share one copy of the configuration, carrying the prefix the templates need
-    /// and the values inherited from the root. The caller's own configuration object is left alone,
-    /// so describing the work does not perform part of it - and because the inheritance happens
-    /// here, the model a plan reasons about is the model a generation renders.
-    /// </remarks>
     private static IEnumerable<GenerationSuite> SuitesFor(
         TestConfiguration configuration,
         OutboxConfiguration outboxConfiguration, string folderName, string modelPrefix)
@@ -171,12 +111,6 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
         }
     }
 
-    /// <summary>
-    /// Determines whether a test template should be skipped based on the outbox's feature support.
-    /// </summary>
-    /// <param name="outboxConfiguration">The outbox configuration describing supported features.</param>
-    /// <param name="fileName">The template file name to evaluate.</param>
-    /// <returns><c>true</c> if the template should be skipped; otherwise, <c>false</c>.</returns>
     private static bool SkipTest(OutboxConfiguration outboxConfiguration, string fileName)
     {
         if (

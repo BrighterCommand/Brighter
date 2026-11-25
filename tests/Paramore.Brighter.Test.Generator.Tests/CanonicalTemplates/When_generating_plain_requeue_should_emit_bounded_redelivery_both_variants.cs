@@ -9,12 +9,8 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
 /// <summary>
-/// Verifies that the canonical plain-requeue templates emit both a Reactor and a
-/// Proactor variant that call Requeue/RequeueAsync with no positive delay, assert the return
-/// is true, and assert redelivery inside a bounded receive-retry loop (500 ms poll, 30 s
-/// ceiling). The [Fact] conditional Skip pattern must be present so the
-/// ledger-driven mechanism (prior task) drives the Deferred marker without the template
-/// hard-coding any marker itself.
+/// Pins the plain requeue templates, both variants: Requeue/RequeueAsync with no delay returns true,
+/// redelivery is polled in a bounded loop, and the Skip is supplied by the ledger.
 /// </summary>
 public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants : IDisposable
 {
@@ -47,7 +43,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reactor file exists at the expected path
+        // Assert
         var reactorPath = ReactorOutputPath(configuration);
         Assert.True(File.Exists(reactorPath),
             $"Reactor canonical plain-requeue file not found at {reactorPath}");
@@ -64,7 +60,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Proactor file exists at the expected path
+        // Assert
         var proactorPath = ProactorOutputPath(configuration);
         Assert.True(File.Exists(proactorPath),
             $"Proactor canonical plain-requeue file not found at {proactorPath}");
@@ -81,7 +77,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Requeue is called without a positive delay argument
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Requeue(received)", content);
         Assert.DoesNotContain("TimeSpan.FromSeconds", content.Replace("TimeSpan.FromSeconds(30)", string.Empty));
@@ -98,7 +94,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — the return value of Requeue is captured and asserted true
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Assert.True(", content);
     }
@@ -114,7 +110,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — a bounded retry loop with wall-clock ceiling is present
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Stopwatch", content);
         Assert.Contains("TimeSpan.FromSeconds(30)", content);
@@ -132,7 +128,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RequeueAsync is called without a positive delay argument
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("RequeueAsync(received)", content);
     }
@@ -148,7 +144,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — the return value of RequeueAsync is captured and asserted true
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("Assert.True(", content);
     }
@@ -164,7 +160,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — a bounded retry loop with wall-clock ceiling is present
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("Stopwatch", content);
         Assert.Contains("TimeSpan.FromSeconds(30)", content);
@@ -174,7 +170,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
     [Fact]
     public async Task When_ledger_is_pass_reactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
@@ -182,7 +178,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact] present; Skip absent (the conditional pattern renders nothing when Skip is empty)
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("[Fact]", content);
         Assert.DoesNotContain("Skip =", content);
@@ -191,7 +187,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
     [Fact]
     public async Task When_ledger_is_deferred_reactor_should_emit_skip_on_fact()
     {
-        // Arrange — ledger cell is Deferred; the template must conditionally emit Skip
+        // Arrange
         var ledger = new InMemoryConformanceLedger(
             new Dictionary<(string, string), string>
             {
@@ -203,7 +199,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact, Skip = "Deferred: #1234 ..."] is emitted
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Skip = \"Deferred: #1234", content);
     }
@@ -211,7 +207,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
     [Fact]
     public async Task When_ledger_is_pass_proactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);

@@ -9,16 +9,9 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
 /// <summary>
-/// Verifies that the canonical delivery-error reject templates emit both a Reactor and a
-/// Proactor variant that:
-///   - name the file When_rejecting_message_with_delivery_error_should_send_to_dlq;
-///   - create the subscription with a deadLetterRoutingKey named argument;
-///   - call _channel.Reject with a DeliveryError MessageRejectionReason;
-///   - poll for DLQ arrival inside the bounded retry loop (Stopwatch, 500 ms, 60 s);
-///   - assert the original-topic metadata key equals the data topic;
-///   - assert the rejection-reason metadata key is present;
-///   - emit the conditional ledger-driven Skip so the Deferred marker is supplied by the
-///     conformance ledger, not hard-coded in the template.
+/// Pins the delivery-error reject templates, both variants: a subscription with a dead-letter routing key,
+/// Reject with DeliveryError, DLQ arrival polled in a bounded loop, the original-topic and rejection-reason
+/// metadata asserted, and a Skip supplied by the ledger.
 /// </summary>
 public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants : IDisposable
 {
@@ -53,7 +46,7 @@ public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reactor file exists at the mandated path
+        // Assert
         var reactorPath = ReactorOutputPath(configuration);
         Assert.True(File.Exists(reactorPath),
             $"Reactor canonical delivery-error reject file not found at {reactorPath}");
@@ -70,7 +63,7 @@ public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Proactor file exists at the mandated path
+        // Assert
         var proactorPath = ProactorOutputPath(configuration);
         Assert.True(File.Exists(proactorPath),
             $"Proactor canonical delivery-error reject file not found at {proactorPath}");
@@ -87,7 +80,7 @@ public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — subscription must name deadLetterRoutingKey explicitly
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("deadLetterRoutingKey:", content);
     }
@@ -103,7 +96,7 @@ public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — subscription must name deadLetterRoutingKey explicitly
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("deadLetterRoutingKey:", content);
     }
@@ -119,7 +112,7 @@ public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reject is called with DeliveryError
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Reject(", content);
         Assert.Contains("DeliveryError", content);
@@ -136,7 +129,7 @@ public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RejectAsync is called with DeliveryError
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("RejectAsync(", content);
         Assert.Contains("DeliveryError", content);
@@ -153,7 +146,7 @@ public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — DLQ arrival polled inside the bounded retry loop
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueue", content);
         Assert.Contains("Stopwatch", content);
@@ -172,7 +165,7 @@ public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — DLQ arrival polled inside the bounded retry loop
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueueAsync", content);
         Assert.Contains("Stopwatch", content);
@@ -191,7 +184,7 @@ public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — original-topic key assertion via per-transport key names
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("keys.OriginalTopic", content);
         Assert.Contains("_publication.Topic!.Value", content);
@@ -208,7 +201,7 @@ public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — original-topic key assertion via per-transport key names
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("keys.OriginalTopic", content);
         Assert.Contains("_publication.Topic!.Value", content);
@@ -225,7 +218,7 @@ public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — rejection-reason entry is asserted present
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("keys.RejectionReason", content);
     }
@@ -241,7 +234,7 @@ public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — rejection-reason entry is asserted present
+        // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("keys.RejectionReason", content);
     }
@@ -249,7 +242,7 @@ public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants :
     [Fact]
     public async Task When_ledger_is_pass_reactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
@@ -257,7 +250,7 @@ public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact] present; Skip absent (conditional pattern renders nothing when Skip is empty)
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("[Fact]", content);
         Assert.DoesNotContain("Skip =", content);
@@ -266,7 +259,7 @@ public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants :
     [Fact]
     public async Task When_ledger_is_deferred_reactor_should_emit_skip_on_fact()
     {
-        // Arrange — ledger cell is Deferred; the template must conditionally emit Skip
+        // Arrange
         var ledger = new InMemoryConformanceLedger(
             new Dictionary<(string, string), string>
             {
@@ -278,7 +271,7 @@ public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact, Skip = "Deferred: #5678 ..."] is emitted
+        // Assert
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Skip = \"Deferred: #5678", content);
     }
@@ -286,7 +279,7 @@ public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants :
     [Fact]
     public async Task When_ledger_is_pass_proactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);

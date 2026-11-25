@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
 using System.Text;
@@ -55,7 +56,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor
 
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
             Assert.Equal("MT_EVENT", sentMessage.ApplicationProperties["MessageType"]);
-            Assert.Equal(1, _topicClient.ClosedCount);
+            Assert.Equal(0, _topicClient.ClosedCount);
         }
 
         [Theory]
@@ -80,7 +81,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor
 
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
             Assert.Equal("MT_COMMAND", sentMessage.ApplicationProperties["MessageType"]);
-            Assert.Equal(1, _topicClient.ClosedCount);
+            Assert.Equal(0, _topicClient.ClosedCount);
         }
 
         [Theory]
@@ -107,7 +108,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public async Task When_a_message_is_send_and_an_exception_occurs_close_is_still_called(bool useQueues)
+        public async Task When_a_message_fails_to_send_the_sender_is_kept_for_reuse_and_closed_on_dispose(bool useQueues)
         {
             _nameSpaceManagerWrapper.ResetState();
             _nameSpaceManagerWrapper.Topics.Add("topic", []);
@@ -115,10 +116,10 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor
 
             _topicClient.SendException = new Exception("Failed");
 
+            var producer = useQueues ? _queueProducer : _producer;
+
             try
             {
-                var producer = useQueues ? _queueProducer : _producer;
-                
                 await producer.SendAsync(new Message(
                     new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_NONE), 
                     new MessageBody("Message", new ContentType(MediaTypeNames.Application.Json))));
@@ -127,6 +128,12 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor
             {
                 // ignored
             }
+
+            _topicClient.SendException = null;
+            Assert.Equal(0, _topicClient.ClosedCount);
+            Assert.Equal(1, _topicClientProvider.CreationCount);
+
+            await producer.DisposeAsync();
 
             Assert.Equal(1, _topicClient.ClosedCount);
         }
@@ -153,7 +160,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor
 
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
             Assert.Equal("MT_EVENT", sentMessage.ApplicationProperties["MessageType"]);
-            Assert.Equal(1, _topicClient.ClosedCount);
+            Assert.Equal(0, _topicClient.ClosedCount);
         }
 
         [Theory]
@@ -177,7 +184,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor
 
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
             Assert.Equal("MT_COMMAND", sentMessage.ApplicationProperties["MessageType"]);
-            Assert.Equal(1, _topicClient.ClosedCount);
+            Assert.Equal(0, _topicClient.ClosedCount);
         }
 
         [Theory]
@@ -200,7 +207,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor
             Assert.Equal(1, _nameSpaceManagerWrapper.CreateCount);
             
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
-            Assert.Equal(1, _topicClient.ClosedCount);
+            Assert.Equal(0, _topicClient.ClosedCount);
         }
 
         [Theory]
@@ -296,5 +303,146 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor
                     new MessageBody(messageBody, new ContentType(MediaTypeNames.Application.Json))))
             );
         }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task When_sending_several_messages_to_one_entity_the_producer_reuses_one_sender(bool useQueues)
+        {
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", []);
+            _nameSpaceManagerWrapper.Topics.Add("other-topic", []);
+            _nameSpaceManagerWrapper.Queues.Add("topic");
+            _nameSpaceManagerWrapper.Queues.Add("other-topic");
+
+            var producer = useQueues ? _queueProducer : _producer;
+
+            for (var i = 0; i < 3; i++)
+                await producer.SendAsync(new Message(
+                    new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_EVENT),
+                    new MessageBody("Message", new ContentType(MediaTypeNames.Application.Json))));
+
+            Assert.Equal(1, _topicClientProvider.CreationCount);
+
+            await producer.SendAsync(new Message(
+                new MessageHeader(Id.Random(), new RoutingKey("other-topic"), MessageType.MT_EVENT),
+                new MessageBody("Message", new ContentType(MediaTypeNames.Application.Json))));
+
+            Assert.Equal(4, _topicClient.SentMessages.Count);
+            Assert.Equal(2, _topicClientProvider.CreationCount);
+            Assert.Equal(0, _topicClient.ClosedCount);
+        }
+
+        [Fact]
+        public async Task When_closing_a_cached_sender_fails_on_dispose_the_other_senders_still_close()
+        {
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", []);
+            _nameSpaceManagerWrapper.Topics.Add("other-topic", []);
+
+            var failingSender = new FakeServiceBusSenderWrapper { CloseException = new Exception("close failed") };
+            var healthySender = new FakeServiceBusSenderWrapper();
+            _topicClientProvider.SenderFactory = topic => topic == "topic" ? failingSender : healthySender;
+
+            await _producer.SendAsync(CreateMessage("topic"));
+            await _producer.SendAsync(CreateMessage("other-topic"));
+
+            await _producer.DisposeAsync();
+
+            Assert.Equal(1, failingSender.CloseAttempts);
+            Assert.Equal(0, failingSender.ClosedCount);
+            Assert.Equal(1, healthySender.ClosedCount);
+
+            await _producer.DisposeAsync();
+
+            Assert.Equal(1, failingSender.CloseAttempts);
+            Assert.Equal(1, healthySender.ClosedCount);
+        }
+
+        [Fact]
+        public async Task When_sending_after_the_producer_is_disposed_it_throws_and_caches_nothing()
+        {
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", []);
+
+            await _producer.SendAsync(CreateMessage("topic"));
+
+            await _producer.DisposeAsync();
+
+            Assert.Equal(1, _topicClient.ClosedCount);
+            Assert.Equal(1, _topicClientProvider.CreationCount);
+
+            await Assert.ThrowsAsync<ObjectDisposedException>(() => _producer.SendAsync(CreateMessage("topic")));
+
+            Assert.Equal(1, _topicClientProvider.CreationCount);
+            Assert.Equal(1, _topicClient.ClosedCount);
+        }
+
+        [Fact]
+        public async Task When_the_sender_created_by_the_losing_caller_fails_to_close_the_send_still_succeeds()
+        {
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", []);
+
+            var cachedSender = new FakeServiceBusSenderWrapper();
+            var loserSender = new FakeServiceBusSenderWrapper { CloseException = new Exception("close failed") };
+            var created = 0;
+
+            // While the first caller sits between its cache miss and its GetOrAdd, run a second send to the
+            // same entity to completion, so the second sender is the one cached and the first must lose.
+            _topicClientProvider.SenderFactory = _ =>
+            {
+                if (++created == 1)
+                {
+                    _producer.SendAsync(CreateMessage("topic")).GetAwaiter().GetResult();
+                    return loserSender;
+                }
+
+                return cachedSender;
+            };
+
+            await _producer.SendAsync(CreateMessage("topic"));
+
+            Assert.Equal(2, created);
+            Assert.Equal(1, loserSender.CloseAttempts);
+            Assert.Equal(0, loserSender.ClosedCount);
+            Assert.Equal(2, cachedSender.SentMessages.Count);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task When_the_cached_sender_is_closed_a_send_replaces_it(bool useQueues)
+        {
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", []);
+            _nameSpaceManagerWrapper.Queues.Add("topic");
+
+            var producer = useQueues ? _queueProducer : _producer;
+            var senders = new List<FakeServiceBusSenderWrapper>();
+            _topicClientProvider.SenderFactory = _ =>
+            {
+                var created = new FakeServiceBusSenderWrapper();
+                senders.Add(created);
+                return created;
+            };
+
+            await producer.SendAsync(CreateMessage("topic"));
+
+            //the send link behind a sender can close with the client it came from, and nothing in the
+            //producer closes it: without a look at IsClosed every later send would fail on that handle
+            await senders[0].CloseAsync();
+
+            await producer.SendAsync(CreateMessage("topic"));
+
+            Assert.Equal(2, senders.Count);
+            Assert.Single(senders[0].SentMessages);
+            Assert.Single(senders[1].SentMessages);
+            Assert.False(senders[1].IsClosed);
+        }
+
+        private static Message CreateMessage(string topic) => new(
+            new MessageHeader(Id.Random(), new RoutingKey(topic), MessageType.MT_EVENT),
+            new MessageBody("Message", new ContentType(MediaTypeNames.Application.Json)));
     }
 }
