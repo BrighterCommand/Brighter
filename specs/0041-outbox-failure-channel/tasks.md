@@ -12,7 +12,7 @@
 - Each TEST + IMPLEMENT task is one slice of behaviour, and each slice holds more than one test.
 - Each test in a slice is written and seen failing one at a time, through its own `/tdd:test-first`. Only then is the production code for that test written.
 - The test files of a slice are listed in the order they are written. Each one fails before its own production code exists.
-- A few slice tests may be green on arrival, because an earlier test's code in the same slice already covers them. Each such test is named in its slice (tasks 5, 7, 19, 20, 21 and 34), is pinned by a named RED mutation as in the CHARACTERISE rules below, and is committed with its slice.
+- A few slice tests may be green on arrival, because an earlier test's code in the same slice already covers them. Each such test is named in its slice (tasks 5, 7, 19, 20 and 21), is pinned by a named RED mutation as in the CHARACTERISE rules below, and is committed with its slice.
 - Generated store tests are the other exception. A template cannot be written through `/tdd:test-first`. Its generated tests are seen failing on every store in the GENERATE task, and each store slice then makes them pass.
 
 **Points this list follows from ADR 0093-outbox-failure-channel.** Q-6 and Q-8 are still marked Open there. The list follows the ADR's reading of both.
@@ -54,9 +54,12 @@ A CHARACTERISE test is never rewritten to fail, and never marked "already comple
 - `PROJECT`: work outside the code that a later task needs.
 - `DOC`: documentation.
 
+**Left to code review.** Two ADR points have no test of their own: the `ArgumentNullException` of the registry constructor and of the DI step for a null argument. Both are one-line guard clauses. The rule that `Attach` is atomic is tested in task 8, except that task 17 stores the clock after the checks, which is left to code review. The rule that an unattached registry still warns about drops, with `TimeProvider.System`, is tested in task 31.
+
 **Paths.**
 - New Core tests go in `tests/Paramore.Brighter.Core.Tests/OutboxNotifications` (raising and delivery), `tests/Paramore.Brighter.Core.Tests/OutboxMaxAge` (sweep and `InMemoryOutbox` queries), and the existing `tests/Paramore.Brighter.Core.Tests/Archiving`.
 - New DI tests go in `tests/Paramore.Brighter.Extensions.AspNetCore.Tests/OutboxNotifications`.
+- The hand-written test of task 24 goes in `tests/Paramore.Brighter.Extensions.Tests/Outbox`.
 - Generated store tests are cited by their parent folder. They land in the folders where each store's generated outbox tests already live, for example `Sqlite.Tests/Outbox/Binary/Generated`, `DynamoDB.Tests/Outbox/Generated` and `Gcp.Tests/Outbox/Firestore/Generated`.
 
 ---
@@ -137,12 +140,11 @@ ADR: step 4; Key Components `OutboxNotificationKind`, `OutboxNotification`, `Out
       - probe each producer by (topic, type), then by topic alone, comparing by reference;
       - throw when neither probe finds the producer;
       - keep the keys in a dictionary, so lookups do not depend on the producer registry later.
-    - Add the internal `ChannelFor`, keyed by a reference-equality comparer of its own, because netstandard2.0 lacks `ReferenceEqualityComparer`.
     - Add `Dispose`, which closes every channel.
     - Add `OutboxNotification` as `(Id, Topic, Kind, Exception, OccurredAt)`.
 
 - [ ] **CHARACTERISE: 6 — Born-green tests for the options and registry**
-  - Depends on: 4
+  - Depends on: 5
   - 1 test. It goes through its own `/tdd:test-first`, its own RED mutation and its own approval gate, as the CHARACTERISE rules in the header say. The task ends in one `test:` commit.
   - **6.1 — A capacity of 1 is accepted**
     - Test location: "tests/Paramore.Brighter.Core.Tests/OutboxNotifications"
@@ -163,14 +165,14 @@ ADR: steps 5 and 6; raise-site table (13 rows); test groups "Each site raises on
        - **USE COMMAND**: `/tdd:test-first when an async send fails should notify once with the failure`
     2. `When_an_async_send_fails_on_one_of_two_publications_should_notify_only_on_that_publications_channel.cs` (FR-14)
        - **USE COMMAND**: `/tdd:test-first when an async send fails on one of two publications should notify only on that publication's channel`
-  - Test 2 is expected green on arrival, because test 1's code already raises on the channel of the failing producer, through task 5's `ChannelFor`. Pin it with the RED mutation "give every producer the first channel" and confirm test 2 fails on the `orders` channel receiving the `invoices` failure, then revert it and stop at the gate.
+  - Test 2 is expected green on arrival, because test 1's code already raises on the channel of the failing producer, through `ChannelFor`. Pin it with the RED mutation "give every producer the first channel" and confirm test 2 fails on the `orders` channel receiving the `invoices` failure, then revert it and stop at the gate.
   - Test should verify:
     - With `FakeTimeProvider` at 12:00:00, `ClearOutboxAsync(["m1"])` returns. There is exactly one notification: (`m1`, `orders`, `SendFailed`, `E`, 12:00:00).
     - With publications on `orders` and `invoices`, a failure on `invoices` reaches only that channel.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Add the trailing optional `OutboxNotificationRegistry? notifications = null` after `outboxMeter` on the mediator's constructor, and a field beside `_outboxMeter`.
-    - Add the internal `Attach(IAmAProducerRegistry, TimeProvider)` the ADR names, and call it from the mediator's constructor. In this task it only binds the mediator's `TimeProvider`. Task 8 adds its checks and fixes its place before `ConfigureCallbacks`.
+    - Add the registry's internal `ChannelFor`, keyed by a reference-equality comparer of its own, because netstandard2.0 lacks `ReferenceEqualityComparer`, and find the failing producer's channel through it.
     - Add the internal `OutboxNotificationChannel.Raise`.
     - At the `DispatchAsync` send site, raise from the exception that `TryExecuteWithResiliencePipelineAsync` returns. The raise goes directly after the helper returns, and before the untrack and `TripTopic` (raise-site row 4). The site first checks that it has a channel.
 - [ ] **TEST + IMPLEMENT: 8 — A registry attaches to exactly one mediator over its own producer registry**
@@ -183,9 +185,10 @@ ADR: steps 5 and 6; raise-site table (13 rows); test groups "Each site raises on
        - **USE COMMAND**: `/tdd:test-first when a registry built from another producer registry is attached should throw`
   - Test should verify:
     - The second mediator's constructor throws `ConfigurationException`. The shared producer, a new double `HandlerCountingConfirmingProducer` that counts the handlers added to its confirmation event, still holds exactly one handler, the first mediator's.
-    - A mediator given a registry built over a different producer registry throws from its constructor.
+    - A mediator given a registry built over a different producer registry throws from its constructor, and the same registry then attaches to a mediator over its own producer registry, so the failed attach changed no state.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
+    - Add the internal `Attach(IAmAProducerRegistry)` to the registry. Task 17 adds the `TimeProvider` parameter the ADR names.
     - Make `Attach` throw on a second call without changing any state.
     - Make `Attach` check that every producer of the mediator's registry has a channel.
     - Call `Attach` in the mediator's constructor before `ConfigureCallbacks`.
@@ -198,15 +201,15 @@ ADR: steps 5 and 6; raise-site table (13 rows); test groups "Each site raises on
        - **USE COMMAND**: `/tdd:test-first when a sync send fails should notify send failed`
     2. `When_a_confirming_sync_send_fails_should_notify_send_failed_with_the_exception.cs` (AC-6; new double `SyncConfirmingProducer`, which can throw from `Send`)
        - **USE COMMAND**: `/tdd:test-first when a confirming sync send fails should notify send failed with the exception`
-    3. `When_a_bulk_send_fails_should_notify_once_per_id_with_the_same_exception.cs` (AC-7)
+    3. `When_a_bulk_send_fails_should_notify_once_per_id_with_the_same_exception.cs` (AC-7; new double `NonConfirmingBulkProducerAsync`, a bulk producer without publish confirmation. Its `CreateBatchesAsync` returns one batch of the messages it is given, through a factory the constructor may replace, and its `SendAsync(batch)` throws the scripted exception)
        - **USE COMMAND**: `/tdd:test-first when a bulk send fails should notify once per id with the same exception`
   - Test should verify:
     - One `SendFailed` for `m1` on the sync paths. For AC-6 it carries the producer's exception.
     - Three notifications for `m1`, `m2` and `m3` on `orders`, each with the same exception object.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Raise at `Dispatch`'s send (raise-site row 2), and at the confirming send directly after the helper returns and before the untrack (row 1).
-    - In `BulkDispatchAsync`, inside `if (!sent)` and before the untrack loop and `TripTopic`, raise one notification per `batch.Ids()` with `batch.RoutingKey` and the same exception (row 6). Do this through one small mediator method. Task 17 wraps it in its own guard.
+    - Switch `Dispatch`'s send and the confirming send to `TryExecuteWithResiliencePipeline`. Raise directly after the first returns an exception (raise-site row 2), and directly after the second, before the untrack (row 1).
+    - In `BulkDispatchAsync`, switch the batch send to `TryExecuteWithResiliencePipelineAsync`. When it returns an exception, and before the untrack loop and `TripTopic`, raise one notification per `batch.Ids()` with `batch.RoutingKey` and that exception (row 6). Do this through one small mediator method. Task 17 wraps it in its own guard.
 
 - [ ] **TEST + IMPLEMENT: 10 — A failed mark dispatched notifies on the sync, async and bulk paths**
   - Depends on: 9
@@ -221,8 +224,8 @@ ADR: steps 5 and 6; raise-site table (13 rows); test groups "Each site raises on
   - Test should verify: one `MarkDispatchedFailed` with `E` per message, and each message is still undispatched.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Raise directly after the mark helper returns an exception in `Dispatch` (row 3) and `DispatchAsync` (row 5).
-    - Raise in `BulkDispatchAsync` per id, with the stored topic (row 7).
+    - Switch the mark call in `Dispatch` and `DispatchAsync` to `TryExecuteWithResiliencePipeline(Async)`, and raise directly after it returns an exception (rows 3 and 5).
+    - Switch the per-id mark in `BulkDispatchAsync` to `TryExecuteWithResiliencePipelineAsync`, and raise per id with the stored topic when it returns an exception (row 7).
 
 - [ ] **TEST + IMPLEMENT: 11 — A failed confirmation notifies, unless its kind is not chosen**
   - Depends on: 9
@@ -389,14 +392,14 @@ ADR: test groups "Nothing else raises", "Behaviour unchanged", "Success raises n
       - `When_a_confirming_producer_never_raises_a_result_should_raise_nothing.cs` — mutation: raise `ConfirmationFailed` after a confirming send returns.
       - `When_in_memory_producer_reports_success_to_a_sync_only_outbox_should_raise_nothing.cs` (reuse `SyncOnlyOutboxWrapper`) — mutation: raise `MarkDispatchedFailed` when the async outbox is absent.
       - `When_a_clear_has_no_outbox_pipeline_should_throw_the_lookup_exception_and_raise_nothing.cs` — mutation: move `GetPipeline` inside the helper's `try`.
-      - `When_the_logger_throws_inside_the_send_helpers_catch_should_propagate_and_raise_nothing.cs` (join the log collection; `CapturingLoggerProvider.ThrowOnce`) — mutation: raise from a `finally` in the helper.
+      - `When_the_logger_throws_inside_the_send_helpers_catch_should_propagate_and_raise_nothing.cs` (join the log collection; `CapturingLoggerProvider.ThrowOnce`) — mutation: catch the logger's exception at the `DispatchAsync` send site and raise `SendFailed` from it.
     - **USE COMMAND**: `/tdd:test-first when every message of a clear succeeds should raise nothing` (and the matching phrase per file)
     - Test should verify: in each case, no notification and the same caller-visible outcome as today.
     - 🔁 Characterisation — green on first run: none of these paths reaches a raise site. Confirm each mutation fails its own test on the count.
     - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
   - **14.5 — The breaker and the meter see the same calls with and without the feature**
     - Test location: "tests/Paramore.Brighter.Core.Tests/OutboxNotifications"
-    - Test file: `When_the_same_failures_run_with_and_without_notifications_should_make_identical_breaker_and_meter_calls.cs` (AC-20, first part; reuse `SpyOutboxMeter`; new double `CountingOutboxCircuitBreaker`, in `OutboxNotifications/TestDoubles`, that records each call with its topic; join the log collection)
+    - Test file: `When_the_same_failures_run_with_and_without_notifications_should_make_identical_breaker_and_meter_calls.cs` (AC-20, first part; reuse `SpyOutboxMeter` and `NonConfirmingBulkProducerAsync` from task 9 for the failed batch; new double `CountingOutboxCircuitBreaker`, in `OutboxNotifications/TestDoubles`, that records each call with its topic; join the log collection)
     - **USE COMMAND**: `/tdd:test-first when the same failures run with and without notifications should make identical breaker and meter calls`
     - Test should verify:
       - The `TripTopic` and meter calls are identical over a failed sync send, a failed async send, a failed batch, a failed confirmation, a failed mark and a success.
@@ -405,7 +408,7 @@ ADR: test groups "Nothing else raises", "Behaviour unchanged", "Success raises n
     - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
   - **14.6 — A breaker that throws runs after the raise, and a catch does not raise twice**
     - Test location: "tests/Paramore.Brighter.Core.Tests/OutboxNotifications"
-    - Test files (AC-21; reuse `ThrowingOutboxCircuitBreaker` from `Confirmation/TestDoubles`):
+    - Test files (AC-21; reuse `ThrowingOutboxCircuitBreaker` from `Confirmation/TestDoubles`, and `NonConfirmingBulkProducerAsync` from task 9 for the bulk file):
       - `When_trip_topic_throws_after_an_async_send_fails_should_propagate_and_still_notify.cs` — mutation: move the raise after `TripTopic`.
       - `When_trip_topic_throws_after_a_bulk_send_fails_should_propagate_and_notify_once_per_id.cs` — mutation: move the raise after `TripTopic`.
       - `When_trip_topic_throws_after_an_async_confirmation_fails_should_notify_once.cs` — mutation: drop the `result.Success` guard in the catch.
@@ -431,7 +434,7 @@ ADR: test groups "Nothing else raises", "Behaviour unchanged", "Success raises n
       - `When_failures_run_against_in_memory_outbox_should_notify_without_extra_outbox_calls.cs`
       - `When_failures_run_against_an_async_only_outbox_should_notify_without_extra_outbox_calls.cs`
       - `When_failures_run_against_a_sync_only_outbox_should_notify_without_extra_outbox_calls.cs`
-    - **USE COMMAND**: `/tdd:test-first when failures run against an async only outbox should notify without extra outbox calls` (and the matching phrase per file)
+    - **USE COMMAND**: `/tdd:test-first when failures run against in memory outbox should notify without extra outbox calls` (and the matching phrase per file)
     - Test should verify: the notifications match for the paths each shape supports, and each outbox receives the same calls as with the feature off.
     - 🔁 Characterisation — green on first run: a raise reads only what the site already holds. RED mutation: read the message by id from the outbox inside the raise. Confirm each test fails on the recorded calls.
     - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
@@ -474,7 +477,7 @@ ADR: steps 5 (close) and 7; sections "How the drop warning stays limited" and "H
     - Make `DroppedCount` read through `Interlocked.Read`.
 
 - [ ] **TEST + IMPLEMENT: 17 — Drops are warned about at most once a minute, and a fault in the feature never reaches the publish path**
-  - Depends on: 16
+  - Depends on: 8, 14, 16
   - Test location: "tests/Paramore.Brighter.Core.Tests/OutboxNotifications" (every file joins `[Collection(StaleMessageLoggingCollection.Name)]`)
   - Test files, in order:
     1. `When_drops_continue_across_the_log_interval_should_warn_once_per_interval.cs` (AC-24; `FakeTimeProvider` at T, T + 59 s and T + 60 s)
@@ -483,16 +486,17 @@ ADR: steps 5 (close) and 7; sections "How the drop warning stays limited" and "H
        - **USE COMMAND**: `/tdd:test-first when the drop warning logger throws should return from each clear and keep accepting notifications`
     3. `When_raising_a_notification_faults_should_log_only_the_exception_type.cs` (AC-39, first part; the fault is inside `Raise`: `CapturingLoggerProvider.ThrowOnce` makes the drop warning throw on a channel of capacity 1, as in test 2, and the test reads the entry `Raise`'s catch writes. Test 2's code may swallow the fault without logging it, so this test is RED on that entry)
        - **USE COMMAND**: `/tdd:test-first when raising a notification faults should log only the exception type`
-    4. `When_a_batch_throws_while_its_ids_are_read_should_log_only_the_exception_type_and_return.cs` (AC-39, batch guard; new double `ThrowingIdsBatch`, whose `Ids()` throws on its first enumeration only and returns its ids after that, given to a producer that does not confirm, so the first enumeration is the guard's and the untrack loop after it still reads the ids. A producer that does not confirm fails the send without reading `batch.Ids()`. With no guard yet, the fault escapes `BulkDispatchAsync`, so this test is RED on the call returning until this task adds the guard)
+    4. `When_a_batch_throws_while_its_ids_are_read_should_log_only_the_exception_type_and_return.cs` (AC-39, batch guard; new double `ThrowingIdsBatch`, whose `Ids()` throws on its first enumeration only and returns its ids after that, returned by the batch factory of task 9's `NonConfirmingBulkProducerAsync`, with `CountingOutboxCircuitBreaker` from 14.5 recording the trips, so the first enumeration is the guard's and the untrack loop after it still reads the ids. A producer that does not confirm fails the send without reading `batch.Ids()`. With no guard yet, the fault escapes `BulkDispatchAsync`, so this test is RED on the call returning until this task adds the guard)
        - **USE COMMAND**: `/tdd:test-first when a batch throws while its ids are read should log only the exception type and return`
   - Test should verify:
     - Exactly two `Warning` entries, at T and T + 60 s, each naming the key and the dropped count at that time. No such entry when nothing drops.
     - Each clear returns as with the feature off, and a later notification is read.
     - A fault entry names the exception type, has a null `Exception`, and contains no message body.
-    - In test 4 the batch call returns, and `TripTopic` still runs for the batch's topic.
+    - In test 4 the batch call returns, and the counting breaker records a `TripTopic` call for the batch's topic.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Add `LoggerMessage` entries in `OutboxNotificationChannel`, with the logger from `ApplicationLogging.CreateLogger<OutboxNotificationChannel>()`.
+    - Add the `TimeProvider` parameter to `Attach`, which hands the mediator's clock to every channel for the interval and the drop warnings. Test 1 needs it. Store the clock only after both checks of task 8 pass, so a rejected second mediator leaves the first one's clock in place. A channel's clock field is null until `Attach`. Task 31 adds the default.
     - Make the `itemDropped` delegate compare the `TimeProvider` ticks with the next permitted time and claim the slot with `Interlocked.CompareExchange`. The interval is 60 s and the first drop always logs.
     - Catch every exception in `Raise` and swallow it, which is all test 2 needs. Test 3 then makes the catch log the exception type only.
     - Wrap the batch-raise method that task 9 added in its own guard, which catches every exception and logs the exception type only.
@@ -564,7 +568,7 @@ ADR: steps 5 (close) and 7; sections "How the drop warning stays limited" and "H
     - Test location: "tests/Paramore.Brighter.Core.Tests/OutboxNotifications"
     - Test file: `When_a_thousand_clears_fail_with_a_blocked_subscriber_should_all_return_within_thirty_seconds.cs` (AC-28)
     - **USE COMMAND**: `/tdd:test-first when a thousand clears fail with a blocked subscriber should all return within thirty seconds`
-    - Test should verify: all 1,000 return within 30 s of wall-clock time, and `DroppedCount` is at least 998.
+    - Test should verify: with the channel at capacity 1, as AC-28 says, all 1,000 return within 30 s of wall-clock time, and `DroppedCount` is at least 998.
     - 🔁 Characterisation — green on first run: drop-oldest never waits. RED mutation: use `BoundedChannelFullMode.Wait` with a blocking `WriteAsync(...).AsTask().Wait()`. Confirm the test fails on its time bound.
     - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
   - **18.10 — Subscriber code never runs on the raising thread**
@@ -722,8 +726,8 @@ ADR: steps 8, 9 and 10; Key Components `Publication.MaxAge` and `OutboxMaxAges`;
     - Test location: "tests/Paramore.Brighter.Core.Tests/OutboxMaxAge"
     - Test file: `When_a_max_age_of_zero_is_set_should_make_identical_breaker_and_meter_calls.cs` (AC-20, last part; join the log collection)
     - **USE COMMAND**: `/tdd:test-first when a max age of zero is set should make identical breaker and meter calls`
-    - Test should verify: the same comparison as task 14.5, with a zero age on `orders`.
-    - 🔁 Characterisation — green on first run: only positive ages count. RED mutation: count any age with `HasValue`. Confirm the test fails on the breaker and meter calls of the zero-age run differing from those of a run with no max age.
+    - Test should verify: the breaker and meter comparison of task 14.5, with a zero age on `orders`. The five runs of 14.5 that can be swept (async send, batch, confirmation, mark and success) run as sweeps with a `minimumAge` of zero: the batch run as a bulk sweep, the others as non-bulk sweeps. The failed sync send stays an explicit `ClearOutbox`, because there is no sync sweep and a max age never applies to an explicit clear (22.6). The outbox is an `InMemoryOutbox` on the same `FakeTimeProvider` as the mediator, and each message carries an explicit `MessageHeader.TimeStamp` one second before its now, because the header defaults to `UtcNow`.
+    - 🔁 Characterisation — green on first run: only positive ages count. RED mutation: count any age with `HasValue`. The sweeps then skip the stamped messages as expired. Confirm the test fails on the breaker and meter calls of the zero-age run differing from those of a run with no max age.
     - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
 
 ## Phase 7: Store queries
@@ -836,7 +840,7 @@ ADR: step 14; Key Component `Message.ExpiredAtHeaderName`; section "Fallback cha
   - Depends on: 3, 21
   - Test location: "tests/Paramore.Brighter.Core.Tests/Archiving"
   - Test files, in order:
-    1. `When_archiving_with_a_max_age_async_should_move_expired_messages_marked_as_expired.cs` (AC-49, async; new double `RecordingArchiveProvider`)
+    1. `When_archiving_with_a_max_age_async_should_move_expired_messages_marked_as_expired.cs` (AC-49, async; reuse `InMemoryArchiveProvider`, which keeps each archived `Message`, bag included, in `ArchivedMessages`)
        - **USE COMMAND**: `/tdd:test-first when archiving with a max age async should move expired messages marked as expired`
     2. `When_archiving_with_a_max_age_should_move_expired_messages_marked_as_expired.cs` (AC-49, sync)
        - **USE COMMAND**: `/tdd:test-first when archiving with a max age should move expired messages marked as expired`
@@ -849,13 +853,13 @@ ADR: step 14; Key Component `Message.ExpiredAtHeaderName`; section "Fallback cha
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Add `Message.ExpiredAtHeaderName`.
-    - Add three trailing optional parameters after `instrumentationOptions`: `IAmAProducerRegistry? producerRegistry`, `OutboxNotificationRegistry? notifications` and `TimeProvider? timeProvider`. The ages come from the producer registry's publications.
+    - Add two trailing optional parameters after `instrumentationOptions`: `IAmAProducerRegistry? producerRegistry` and `TimeProvider? timeProvider`. The ages come from the producer registry's publications. Task 31 adds `notifications` between them, so the tests of both tasks pass these parameters by name.
     - Add the expired pass after the dispatched pass. Per topic it queries with `OnlyExpiredArgsKey`, `dispatchedSince` zero, page 1 and `"Topic"` = `topic.Value`, then sets the bag entry and archives each message.
     - Write the first test's code to trust the page. The in-memory check of stored topic and age is the third test's code.
     - Delete the archived ids in one call.
 
 - [ ] **TEST + IMPLEMENT: 31 — The archiver raises `Expired` on the channel that sent the message, with a fallback**
-  - Depends on: 1, 30
+  - Depends on: 1, 17, 30
   - Test location: "tests/Paramore.Brighter.Core.Tests/Archiving"
   - Test files, in order:
     1. `When_archiving_an_expired_message_async_should_raise_expired_on_its_publications_channel.cs` (AC-49 notification, FR-20)
@@ -866,14 +870,19 @@ ADR: step 14; Key Component `Message.ExpiredAtHeaderName`; section "Fallback cha
        - **USE COMMAND**: `/tdd:test-first when archiving an expired message of a typed publication should raise expired on that type's channel`
     4. `When_an_expired_messages_key_has_no_publication_should_raise_on_the_publication_with_the_applied_age.cs` (fallback rule)
        - **USE COMMAND**: `/tdd:test-first when an expired message's key has no publication should raise on the publication with the applied age`
+    5. `When_an_unattached_registry_drops_expired_notifications_should_still_warn.cs` (ADR: drop warnings use `TimeProvider.System` before `Attach`; join the log collection; the async archiver over a registry that no mediator has attached, capacity 1, two expired messages. With no clock on the channel, the drop delegate faults inside `Raise`, whose catch logs the exception type only, so this test is RED on the drop warning)
+       - **USE COMMAND**: `/tdd:test-first when an unattached registry drops expired notifications should still warn`
   - Test should verify:
     - The only notification is (`m1`, `orders`, `Expired`, null, 12:30:00), from the archiver's `TimeProvider`.
     - A typed message reaches `A`'s channel.
     - A message whose key matches no publication reaches the first publication, in ordinal `topic:type` order, on its stored topic whose own age equals the applied age.
+    - With an unattached registry, the second `Expired` drops the first, and one drop `Warning` names the key and a dropped count of 1.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
+    - Add the optional `OutboxNotificationRegistry? notifications` parameter between `producerRegistry` and `timeProvider`, as the ADR's constructor orders them, and store it.
     - Raise after each message the provider accepts.
     - Route by (`Message.ProducerLookupTopic()`, `MessageHeader.Type`) first, then by the fallback. Otherwise raise nothing.
+    - Start each channel with `TimeProvider.System`, which `Attach` replaces. Test 5 needs it.
 
 - [ ] **TEST + IMPLEMENT: 32 — The archiver bounds each run and rotates its starting topic**
   - Depends on: 31
@@ -910,7 +919,7 @@ ADR: step 14; Key Component `Message.ExpiredAtHeaderName`; section "Fallback cha
     - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
   - **33.3 — `Expired` is raised for each accepted message, even if a later one fails**
     - Test location: "tests/Paramore.Brighter.Core.Tests/Archiving"
-    - Test file: `When_the_archive_provider_fails_on_the_second_message_should_raise_expired_for_the_first_in_both_runs.cs` (AC-51; extend `RecordingArchiveProvider` with a failure script)
+    - Test file: `When_the_archive_provider_fails_on_the_second_message_should_raise_expired_for_the_first_in_both_runs.cs` (AC-51; new double `ScriptedFailingArchiveProvider`, which keeps each message it accepts in a list, throws on a chosen message until the test turns the failure off, and accepts a message it already holds. `InMemoryArchiveProvider` does not fit, because its dictionary throws when the second run archives the first message again)
     - **USE COMMAND**: `/tdd:test-first when the archive provider fails on the second message should raise expired for the first in both runs`
     - Test should verify: `Expired` for the first in both runs and for the second once, and neither is in the outbox after the second run.
     - 🔁 Characterisation — green on first run: the raise follows each accepted archive. RED mutation: raise after the delete. Confirm the test fails on the first run's notifications.
@@ -931,7 +940,7 @@ ADR: step 14; Key Component `Message.ExpiredAtHeaderName`; section "Fallback cha
     - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
   - **33.6 — A sweep racing the archiver notifies `Expired`, then `MarkDispatchedFailed`**
     - Test location: "tests/Paramore.Brighter.Core.Tests/Archiving"
-    - Test file: `When_the_archiver_moves_a_message_while_its_send_waits_should_raise_expired_then_mark_dispatched_failed.cs` (AC-53; reuse `FailingOutbox`, `GatedAsyncOutbox` or a gated producer)
+    - Test file: `When_the_archiver_moves_a_message_while_its_send_waits_should_raise_expired_then_mark_dispatched_failed.cs` (AC-53; reuse `FailingOutbox`, set to throw `E` from `MarkDispatchedAsync` as DynamoDB and Firestore do for a missing row, because `InMemoryOutbox` does not throw; new double `GatedProducerAsync`, whose `SendAsync` waits until the test releases it and then succeeds, which `TokenWaitingProducerAsync` cannot do)
     - **USE COMMAND**: `/tdd:test-first when the archiver moves a message while its send waits should raise expired then mark dispatched failed`
     - Test should verify: `Expired` then `MarkDispatchedFailed`, both for `m1`, and the producer received `m1`.
     - 🔁 Characterisation — green on first run: the mark site raises on any returned exception. RED mutation: skip the mark-site raise when the outbox no longer holds the id. Confirm the test fails on the second notification.
@@ -966,7 +975,7 @@ ADR: steps 15 and 16; Key Component `UseOutboxNotifications` and the `OutboxNoti
        - **USE COMMAND**: `/tdd:test-first when the step is called twice should keep the first options`
     4. `When_another_registry_implementation_is_registered_should_make_the_helper_throw.cs`
        - **USE COMMAND**: `/tdd:test-first when another registry implementation is registered should make the helper throw`
-  - Test 3 is expected green on arrival, because test 1's code already registers with `TryAdd`. Pin it with the RED mutation "register with `AddSingleton` instead of `TryAdd`" and confirm test 3 fails on the second call's capacity winning, then revert it and stop at the gate.
+  - Test 3 is RED on arrival, because test 1's code registers with `AddSingleton`, so the second call's capacity wins.
   - Test should verify:
     - A `BackgroundService` reader receives one notification after `PostAsync` fails.
     - A capacity of 0 throws `ConfigurationException` from the step, and nothing is registered.
@@ -974,7 +983,7 @@ ADR: steps 15 and 16; Key Component `UseOutboxNotifications` and the `OutboxNoti
     - `OutboxNotifications(provider)` throws `ConfigurationException` when another `IAmAnOutboxNotificationRegistry` is registered.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Add `UseOutboxNotifications(this IBrighterBuilder, Action<OutboxNotificationOptions>? = null)` beside `TransformFactory`. It validates first, then registers only the interface, with `TryAdd`, as a singleton factory over `IAmAProducerRegistry`.
+    - Add `UseOutboxNotifications(this IBrighterBuilder, Action<OutboxNotificationOptions>? = null)` beside `TransformFactory`. It validates first, then registers only the interface, with `AddSingleton`, as a singleton factory over `IAmAProducerRegistry`. Test 3's code switches the registration to `TryAdd`.
     - Add the public helper `OutboxNotifications(IServiceProvider)`. It returns the concrete registry or null, and throws for another implementation.
     - Pass the registry after the `OutboxMeter(serviceProvider)` argument in `BuildOutBoxProducerMediator`.
 
@@ -1215,10 +1224,10 @@ ADR: step 17; NFR-11; AC-40
 | 1 `Message.ProducerLookupTopic()` | 1 (used by 31) |
 | 2 `TryExecute` helpers | 2 |
 | 3 Archiver dispatched-pass extract | 3 |
-| 4 Types, validation, keys, lookups, reads, close | 4, 5, 15, 16 |
-| 5 Mediator parameter, `Attach` before `ConfigureCallbacks`, captured channels, `Close` in `finally` | 7, 8, 11, 15 |
+| 4 Types, validation, keys, lookups, reads, close | 4, 5, 7, 15, 16 |
+| 5 Mediator parameter, `Attach` before `ConfigureCallbacks`, captured channels, `Close` in `finally` | 7, 8, 11, 15, 17 |
 | 6 Raise at send, mark and confirmation sites | 7, 9, 10, 11, 12 |
-| 7 `itemDropped` count and rate-limited warning | 16, 17 |
+| 7 `itemDropped` count and rate-limited warning | 16, 17, 31 |
 | 8 `Publication.MaxAge` and `OutboxMaxAges` | 19 |
 | 9 Sweep copies `args` and adds the exclude key | 20, 22.7 |
 | 10 `InMemoryOutbox` reads both keys on `TimeStamp` | 20, 21 |
@@ -1295,7 +1304,7 @@ Reading notes:
 | --- | --- |
 | `OutboxNotificationKind`, `OutboxNotificationOptions` | 4, 6.1, 11, 18.2, 33.8 |
 | `OutboxNotification` | 5, 7, 18.3 |
-| `IAmAnOutboxNotificationRegistry`, `OutboxNotificationRegistry` | 5, 8, 13.9, 13.10, 15 |
+| `IAmAnOutboxNotificationRegistry`, `OutboxNotificationRegistry` | 5, 7, 8, 13.9, 13.10, 15, 17, 31 |
 | `IAmAnOutboxNotificationChannel`, `OutboxNotificationChannel` | 5, 15, 16, 17 |
 | `UseOutboxNotifications`, `OutboxNotifications(IServiceProvider)` | 34, 36.4 |
 | `Publication.MaxAge`, `OutboxMaxAges` | 19, 20, 21 |
@@ -1333,7 +1342,7 @@ No other ADR amendment is needed. Every decision maps to a task.
 
 The rest of the list:
 - 3 STRUCTURAL;
-- 7 CHARACTERISE, one per phase that has born-green tests (6, 13, 14, 18, 22, 33 and 36), holding 56 items. Six more tests that may be green on arrival (task 5 test 2, task 7 test 2, task 19 test 3, task 20 test 2, task 21 test 4 and task 34 test 3) stay in their slices;
+- 7 CHARACTERISE, one per phase that has born-green tests (6, 13, 14, 18, 22, 33 and 36), holding 56 items. Five more tests that may be green on arrival (task 5 test 2, task 7 test 2, task 19 test 3, task 20 test 2 and task 21 test 4) stay in their slices;
 - 1 GENERATE;
 - 1 PROJECT;
 - 1 DOC.
