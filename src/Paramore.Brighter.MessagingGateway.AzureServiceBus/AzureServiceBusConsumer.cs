@@ -48,6 +48,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
     protected readonly AzureServiceBusSubscription Subscription;
     protected readonly string Topic;
     private readonly IAmAMessageScheduler? _requeueScheduler;
+    private readonly bool _ownsRequeueScheduler;
     private int _retryDelayWarningLogged;
     protected readonly IAdministrationClientWrapper AdministrationClientWrapper;
     private readonly int _batchSize;
@@ -61,10 +62,13 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
     /// <param name="subscription">The ASB subscription details</param>
     /// <param name="requeueScheduler">The selected queue retry scheduler; null for direct topic subscriptions.</param>
     /// <param name="administrationClientWrapper">The admin client for ASB</param>
+    /// <param name="ownsRequeueScheduler">Whether the consumer should dispose the scheduler it was
+    /// given; true only when the consumer created it rather than receiving a shared one.</param>
     protected AzureServiceBusConsumer(
         AzureServiceBusSubscription subscription, 
         IAmAMessageScheduler? requeueScheduler,
-        IAdministrationClientWrapper administrationClientWrapper
+        IAdministrationClientWrapper administrationClientWrapper,
+        bool ownsRequeueScheduler = false
     )
     {
         Subscription = subscription;
@@ -72,6 +76,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         _batchSize = subscription.BufferSize;
         SubscriptionConfiguration = subscription.Configuration ?? new AzureServiceBusSubscriptionConfiguration();
         _requeueScheduler = requeueScheduler;
+        _ownsRequeueScheduler = ownsRequeueScheduler;
         AdministrationClientWrapper = administrationClientWrapper;
         _azureServiceBusMesssageCreator = new AzureServiceBusMessageCreator(subscription);
     }
@@ -82,12 +87,21 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
     public void Dispose()
     {
         ServiceBusReceiver?.Close();
+        if (_ownsRequeueScheduler) (_requeueScheduler as IDisposable)?.Dispose();
         GC.SuppressFinalize(this);
     }
         
     public async ValueTask DisposeAsync()
     {
         if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
+        if (_ownsRequeueScheduler)
+        {
+            //the consumer owns only the scheduler it created, so its disposal is the scheduler's last use
+            if (_requeueScheduler is IAsyncDisposable asyncScheduler)
+                await asyncScheduler.DisposeAsync();
+            else
+                (_requeueScheduler as IDisposable)?.Dispose();
+        }
         GC.SuppressFinalize(this);
     }
 

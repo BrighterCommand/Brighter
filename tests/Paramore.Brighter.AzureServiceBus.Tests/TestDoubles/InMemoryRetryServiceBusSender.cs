@@ -35,6 +35,8 @@ public class InMemoryRetryServiceBusSender(InMemoryRetryServiceBusClient client,
 {
     public bool Disposed { get; private set; }
 
+    public int CloseCount { get; private set; }
+
     public override Task<long> ScheduleMessageAsync(ServiceBusMessage message, DateTimeOffset scheduledEnqueueTime,
         CancellationToken cancellationToken = default)
     {
@@ -48,12 +50,14 @@ public class InMemoryRetryServiceBusSender(InMemoryRetryServiceBusClient client,
     public override Task CloseAsync(CancellationToken cancellationToken = default)
     {
         Disposed = true;
+        CloseCount++;
         return Task.CompletedTask;
     }
 
     public override ValueTask DisposeAsync()
     {
         Disposed = true;
+        CloseCount++;
         return default;
     }
 }

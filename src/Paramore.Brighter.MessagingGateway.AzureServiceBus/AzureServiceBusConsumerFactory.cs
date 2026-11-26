@@ -115,6 +115,7 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
         if (usesQueue && !AzureServiceBusQueuePath.IsValid(sub.Configuration.ForwardTo ?? sub.RoutingKey.Value))
             throw new ConfigurationException("Retries require a physical queue name, not a subscription or subqueue path.");
 
+        var ownsScheduler = _publication.RequeueScheduler == RequeueSchedulerMode.Native;
         IAmAMessageScheduler? scheduler = _publication.RequeueScheduler switch
         {
             RequeueSchedulerMode.Native => usesQueue ? new AzureServiceBusRequeueScheduler(_clientProvider, instrumentationOptions: _instrumentationOptions) : null,
@@ -137,9 +138,9 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
         var receiverProvider = new ServiceBusReceiverProvider(_clientProvider, sub.Configuration.MaxAutoLockRenewalDuration,
             sub.Configuration.PrefetchCount);
         if (sub.Configuration.ForwardTo is not null)
-            return new AzureServiceBusForwardingConsumer(sub, scheduler!, administration, receiverProvider);
+            return new AzureServiceBusForwardingConsumer(sub, scheduler!, administration, receiverProvider, ownsScheduler);
         if (sub.Configuration.UseServiceBusQueue)
-            return new AzureServiceBusQueueConsumer(sub, scheduler!, administration, receiverProvider);
+            return new AzureServiceBusQueueConsumer(sub, scheduler!, administration, receiverProvider, ownsScheduler);
         return new AzureServiceBusTopicConsumer(sub, administration, receiverProvider);
     }
 }

@@ -35,8 +35,9 @@ internal sealed class AzureServiceBusForwardingConsumer(
     AzureServiceBusSubscription subscription,
     IAmAMessageScheduler requeueScheduler,
     IAdministrationClientWrapper administrationClientWrapper,
-    IServiceBusReceiverProvider receiverProvider)
-    : AzureServiceBusConsumer(subscription, requeueScheduler, administrationClientWrapper)
+    IServiceBusReceiverProvider receiverProvider,
+    bool ownsRequeueScheduler)
+    : AzureServiceBusConsumer(subscription, requeueScheduler, administrationClientWrapper, ownsRequeueScheduler)
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusForwardingConsumer>();
     private readonly string _queueName = subscription.Configuration.ForwardTo!;
