@@ -166,6 +166,33 @@ public static class MySqlBoxProvisioningExtensions
         return options;
     }
 
+    /// <summary>
+    /// Register provisioning of the MySQL tripped topics table that distributed circuit-breaker
+    /// instances share. Pass the same table name to <c>MySqlTrippedTopicStore</c>.
+    /// </summary>
+    /// <param name="options">The box provisioning options.</param>
+    /// <param name="configuration">Supplies the connection string, and the schema when <paramref name="schemaName"/> is null.</param>
+    /// <param name="tableName">The name of the trip table, at most 43 characters so that the index name <c>idx_{tableName}_EndedAt_TripTime</c> fits MySQL's 64-character limit.</param>
+    /// <param name="schemaName">The schema (database) holding the trip table, or null to use the configuration's schema.</param>
+    public static BoxProvisioningOptions AddMySqlTrippedTopics(
+        this BoxProvisioningOptions options,
+        IAmARelationalDatabaseConfiguration configuration,
+        string tableName = "BrighterTrippedTopics",
+        string? schemaName = null)
+    {
+        options.Add(services =>
+        {
+            RegisterSharedRoleImpls(services);
+            services.AddSingleton<IAmABoxProvisioner>(sp =>
+                TrippedTopicsProvisioner.Create(tableName, schemaName, configuration, effectiveSchema =>
+                    new MySqlBoxMigrationRunner(
+                        new MySqlTrippedTopicsMigrationCatalog(tableName, effectiveSchema),
+                        configuration, options.MigrationLockTimeout,
+                        tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope)));
+        });
+        return options;
+    }
+
     // Shared by the outbox and inbox registrations; TryAdd makes calling both safe.
     private static void RegisterSharedRoleImpls(IServiceCollection services)
     {

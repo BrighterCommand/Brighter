@@ -20,6 +20,12 @@ Date: 2026-10-16
 
 Accepted
 
+Amended by ADR 0089 (`0089-distributed-outbox-circuit-breaker.md`):
+
+- The `tripped_topics` row's "applies when" becomes "the sweeper is active, or the sweeper is running and the breaker shares trips".
+- The invariant "an inactive sweeper never touches the breaker" holds only for breakers that do not share trips, and covers reading the breaker, not looking it up. The check looks the breaker up on every running sweeper, so a lookup that throws reports `tripped_topics_unreadable` whether or not the sweeper is active.
+- The condition table gains `tripped_topics_store_unavailable`, an investigate condition that applies while the breaker shares trips and is in its fallback state.
+
 ## Context
 
 ADR 0085 gives the outbox sweeper one shared record of its state, and gauges that read that record. An orchestrator still cannot act on the sweeper's health. Brighter's only health check reports a single Degraded status, and a host maps that status to one probe. A hung sweep needs a restart. Failed sweeps and circuit-broken topics need an operator to look, and a restart or a readiness failure does not help them. Brighter needs sweeper health checks that tell an orchestrator which response each condition needs, using only standard .NET health-check concepts.

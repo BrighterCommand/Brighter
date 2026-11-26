@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading;
@@ -67,6 +68,10 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
     /// Initialises the base. Derived classes forward their 5-arg ctor plus the per-derivation
     /// <see cref="BoxProvisioning.BoxType"/> value to this ctor.
     /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="boxType"/> is neither <see cref="BoxProvisioning.BoxType.Outbox"/> nor
+    /// <see cref="BoxProvisioning.BoxType.Inbox"/>, the only tables this provisioner knows how to name and provision.
+    /// </exception>
     protected SqlBoxProvisioner(
         IAmAVersionDetectingMigrationHelper<TConnection, TTransaction> detectionHelper,
         IAmABoxMigrationCatalog catalog,
@@ -80,8 +85,15 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         _payloadValidator = payloadValidator;
         _configuration = configuration;
         _migrationRunner = migrationRunner;
-        BoxType = boxType;
+        BoxType = RequireOutboxOrInbox(boxType);
     }
+
+    private static BoxType RequireOutboxOrInbox(BoxType boxType) => boxType switch
+    {
+        BoxType.Outbox or BoxType.Inbox => boxType,
+        _ => throw new ArgumentOutOfRangeException(
+            nameof(boxType), boxType, "SqlBoxProvisioner provisions an outbox or an inbox table only")
+    };
 
     /// <inheritdoc />
     public BoxType BoxType { get; }

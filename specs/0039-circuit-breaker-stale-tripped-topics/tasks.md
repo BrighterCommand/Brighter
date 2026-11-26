@@ -15,8 +15,9 @@ Conventions:
 - Production code in a `TEST + IMPLEMENT` task is limited to what that task's test requires. Behaviour that a later test specifies is added by that later task, not early.
 - One deliberate exception to the rule above: a multi-topic store write applies its topics in ordinal topic order (T2.57-T2.59a, the SQL stores; the in-memory store of T2.8 holds one lock and needs no order), because the ADR forbids any other order (deadlock avoidance) and no single-write contract test can fail on it. T2.60 pins that order for the SQL stores with a named 🔁 RED mutation and the real-database deadlock tests.
 - STRUCTURAL tasks: the named suites must be green before and after.
+- `tasks.md` is amended during implementation when a refactoring or a review shows the task list is wrong; the owner approves each amendment (2026-11-07, after the Phase 2h smells review), and the commit that makes it says so.
 - Commit shape for a behavioural task: a `feat:` (or `test:`) commit for the code, then a separate `docs:` commit that ticks the box in this file.
-- Production SQL stores are tested only against real databases (MsSql, PostgreSql, MySql). Those tests reuse the core store contract suite from Phase 2b.
+- Production SQL stores are tested only against real databases (MsSql, PostgreSql, MySql). Each store has its own test files with the assertions written out, one file per case, and no abstract test class shares them: the in-memory store's are in `Core.Tests` (Phase 2b), and each SQL test project repeats the same cases against its database, using a setup-only base class that creates and drops the trip table.
 
 ## Dependency and phase overview
 
@@ -30,8 +31,8 @@ Phase 2 (starts only after T1.15 has merged)
   -> 2c T2.9..T2.24 incl. T2.16a (breaker view, coalesced writes, announcements, elapsed time)
   -> 2d T2.25..T2.38 (T2.37 retired) incl. T2.28a, T2.30a, T2.30b (timeouts, fallback, recovery, failure telemetry)
   -> 2e T2.39..T2.48 incl. T2.39a, T2.39c, T2.39d, T2.43a (mediator uses async role)
-  -> 2f T2.49..T2.51 (sweeper refresh) -> 2g T2.52..T2.56 (health signals)
-  -> 2h T2.57..T2.60 (SQL stores incl. T2.57a/b..T2.59a/b and T2.60a-c, real DBs) -> 2i T2.61..T2.65 (provisioning)
+  -> 2f T2.49..T2.51 (sweeper refresh) -> 2g T2.52..T2.56 incl. T2.55a, T2.56a, T2.56b (health signals)
+  -> 2h T2.57..T2.60 (SQL stores incl. T2.57a/b..T2.59a/b, the shared base T2.59c..T2.59e and T2.60a-c, real DBs; T2.60d-k split the read into EndExpiredAsync and ReadLiveAsync, before T2.60) -> 2i T2.61..T2.65 (provisioning)
   -> 2j T2.66..T2.67 (real-DB acceptance) -> 2k T2.68..T2.69 (dependency guard, verification)
   -> 2l T2.70..T2.72 (ADR notes, release notes, Docs list)
 ```
@@ -270,7 +271,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T1.7
   - References: `docs/adr/0089-distributed-outbox-circuit-breaker.md` (*Amends*).
 
-- [ ] **PROJECT: T1.15 - Phase 1 PR boundary: run Core.Tests Sweeping/Metrics/CircuitBreaker suites + AC-31 + AC-38 check, merge as own PR before starting Phase 2**
+- [x] **PROJECT: T1.15 - Phase 1 PR boundary: run Core.Tests Sweeping/Metrics/CircuitBreaker suites + AC-31 + AC-38 check, merge as own PR before starting Phase 2**
   - Run `tests/Paramore.Brighter.Core.Tests` filtered to `CircuitBreaker`, `Sweeping`, `Observability/Metrics` and `Confirmation`. All must be green.
   - AC-31: `ListedTopicsCircuitBreaker` and `ThrowingOutboxCircuitBreaker` are unchanged and compile, and every existing `new InMemoryOutboxCircuitBreaker(...)` call compiles unchanged. The only changed assertion is the Reset template (T1.7).
   - AC-38: compare `dotnet list package --include-transitive` for `src/Paramore.Brighter` with the previous release. No new package.
@@ -286,7 +287,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2a - Thread a trip batch through dispatch
 
-- [ ] **STRUCTURAL: T2.1 - Add an optional trip-batch parameter to the dispatch methods, passing null everywhere**
+- [x] **STRUCTURAL: T2.1 - Add an optional trip-batch parameter to the dispatch methods, passing null everywhere**
   - **USE COMMAND**: `/refactor:tidy-first add a trailing IAmATripBatch? trips parameter to DispatchAsync and BulkDispatchAsync, pass null from every caller, route TripTopic through the batch when present, and add empty role interfaces`
   - Change:
     - `OutboxProducerMediator.cs`: give `DispatchAsync` (`:1257`) and `BulkDispatchAsync` (`:1152`) a trailing `IAmATripBatch? trips` parameter.
@@ -300,15 +301,15 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2b - Options and the trip-store contract
 
-- [ ] **PROJECT: T2.2 - Make the store contract suite reusable by core and by the SQL test projects**
-  - Put the abstract store contract suites in `tests/Paramore.Brighter.Base.Test/CircuitBreaker/`, following the pattern of `Outbox/OutboxTest.cs`. There are two: `TrippedTopicStoreWriteContractTest` (T2.4, T2.5, T2.8) and `TrippedTopicStoreEndedContractTest` (T2.6, T2.7). Each store has one concrete runner per suite. Add a `ProjectReference` from `Paramore.Brighter.Core.Tests` to `Paramore.Brighter.Base.Test`. The MSSQL, PostgresSQL and MySQL test projects already reference Base.Test.
+- [x] **PROJECT: T2.2 - Give the SQL test projects what the trip store tests need**
+  - Each store's tests are plain test files, one case per file with its assertions written out. The in-memory store's are in `tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed`, and T2.57-T2.59b repeat the same cases in the MSSQL, PostgresSQL and MySQL test projects. There is no abstract contract class (owner decision, 2026-11-07: obvious tests over shared ones). Each SQL test project has a setup-only base class, added by its first store task, that creates the trip table from `GetDDL` and drops it after each test.
   - Add what T2.66 and T2.67 need and these projects lack, with versions in `Directory.Packages.props`: `Microsoft.Extensions.TimeProvider.Testing` to `Paramore.Brighter.MSSQL.Tests` and `Paramore.Brighter.MySQL.Tests` (PostgresSQL.Tests has it), and the OpenTelemetry packages the telemetry assertions use (`OpenTelemetry`, `OpenTelemetry.Exporter.InMemory`) to `Paramore.Brighter.MySQL.Tests`. Add the same two OpenTelemetry packages to `Paramore.Brighter.MSSQL.Tests` and `Paramore.Brighter.PostgresSQL.Tests` if they are missing.
-  - Build the test solution to confirm the new reference causes no type or package conflicts.
-  - Covers: ADR step 7 ("write this contract suite so that the SQL stores can reuse it"), ADR step 15.
+  - Build the test solution to confirm the new package references cause no conflicts.
+  - Covers: ADR step 7 (the SQL stores run the same cases as the in-memory store), ADR step 15.
   - Depends on: T2.1
-  - References: `tests/Paramore.Brighter.Base.Test/Paramore.Brighter.Base.Test.csproj`. `tests/Paramore.Brighter.Base.Test/Outbox/OutboxTest.cs`. `tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj`.
+  - References: `tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj`.
 
-- [ ] **TEST + IMPLEMENT: T2.3 - The options expose the distributed defaults: C = 50 s, leeway zero, store timeout 2 s**
+- [x] **TEST + IMPLEMENT: T2.3 - The options expose the distributed defaults: C = 50 s, leeway zero, store timeout 2 s**
   - **USE COMMAND**: `/tdd:test-first when outbox circuit breaker options are created should default cooldown duration to fifty seconds, clock skew leeway to zero and store timeout to two seconds`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker"
   - Test file: `When_outbox_circuit_breaker_options_are_created_should_default_the_distributed_durations.cs`
@@ -322,10 +323,10 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.1
   - References: `src/Paramore.Brighter/CircuitBreaker/OutboxCircuitBreakerOptions.cs`. ADR 0089 options table and *Why 2 seconds for the store timeout*.
 
-- [ ] **TEST + IMPLEMENT: T2.4 - The trip store keeps the later stamp and returns the prior one**
+- [x] **TEST + IMPLEMENT: T2.4 - The trip store keeps the later stamp and returns the prior one**
   - **USE COMMAND**: `/tdd:test-first when a trip is written to the store should keep the later stamp and return the prior stamp`
-  - Test location: "tests/Paramore.Brighter.Base.Test/CircuitBreaker" (abstract contract) with a concrete `InMemoryTrippedTopicStore` runner in "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
-  - Test file: `TrippedTopicStoreWriteContractTest.cs` (method `When_a_trip_is_written_should_keep_the_later_stamp_and_return_the_prior`), runner `When_the_in_memory_trip_store_runs_the_write_contract_should_pass.cs`
+  - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
+  - Test file: `When_a_trip_is_written_should_keep_the_later_stamp_and_return_the_prior.cs`
   - Test should verify:
     - First write: `PriorTripTime` is null, `StoredTripTime` equals the written stamp, `LeftEnded` is false.
     - A later write returns the old stamp as prior and stores the later stamp.
@@ -338,24 +339,24 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.2, T2.3
   - References: ADR 0089 *`IAmATrippedTopicStore`* and *The trip table and the SQL stores*.
 
-- [ ] **CHARACTERISE: T2.5 - A microsecond-truncated stamp reads back equal**
+- [x] **CHARACTERISE: T2.5 - A microsecond-truncated stamp reads back equal**
   - **USE COMMAND**: `/tdd:test-first when a stamp truncated to whole microseconds is written should read back equal`
-  - Test location: "tests/Paramore.Brighter.Base.Test/CircuitBreaker"
-  - Test file: `TrippedTopicStoreWriteContractTest.cs` (method `When_a_microsecond_stamp_is_written_should_read_back_equal`)
+  - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
+  - Test file: `When_a_microsecond_stamp_is_written_should_read_back_equal.cs`
   - Test should verify:
     - A stamp with sub-microsecond ticks, truncated as the breaker takes it, comes back from `ReadAsync` and `WriteAsync` exactly equal (`TripTime`, `StoredTripTime`).
   - 🔁 RED mutation: round the stamp to whole milliseconds in `InMemoryTrippedTopicStore.WriteAsync`. The test must fail on the equality assertion. Revert.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Nothing. The in-memory store stores the value unchanged, so this test only pins the contract the SQL stores must meet (T2.57-T2.59b). The shared stamp-truncation helper is added by T2.10.
+    - Nothing. The in-memory store stores the value unchanged, so this test only pins the behaviour the SQL stores must meet (T2.57-T2.59b). The shared stamp-truncation helper is added by T2.10.
   - Covers: NFR-6 (stamp stored unchanged). ADR *Terms*: Stamp. ADR step 7.
   - Depends on: T2.4
   - References: ADR 0089 *Terms*.
 
-- [ ] **TEST + IMPLEMENT: T2.6 - A read marks ended rows and gives each one to exactly one caller, never deleting**
+- [x] **TEST + IMPLEMENT: T2.6 - A read marks ended rows and gives each one to exactly one caller, never deleting**
   - **USE COMMAND**: `/tdd:test-first when many readers read an ended row concurrently should return it as ended to exactly one caller`
-  - Test location: "tests/Paramore.Brighter.Base.Test/CircuitBreaker"
-  - Test file: `TrippedTopicStoreEndedContractTest.cs` (method `When_readers_race_over_an_ended_row_should_return_it_to_exactly_one`), runner `When_the_in_memory_trip_store_runs_the_ended_contract_should_pass.cs`
+  - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
+  - Test file: `When_trips_have_run_out_should_end_each_row_and_return_it_to_exactly_one_caller.cs`
   - Test should verify:
     - Over 1,000 repetitions of parallel `ReadAsync(now, tripLength)`, a row stamped at or before `now - tripLength` appears in `Ended` for exactly one caller and in no caller's `Live`.
     - A row stamped after the cutoff stays in `Live`.
@@ -366,10 +367,10 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.4
   - References: ADR 0089 *How a read ends trips*. Alternative 15 (no `DELETE`).
 
-- [ ] **TEST + IMPLEMENT: T2.7 - A write over an ended row revives it only with a later stamp**
+- [x] **TEST + IMPLEMENT: T2.7 - A write over an ended row revives it only with a later stamp**
   - **USE COMMAND**: `/tdd:test-first when a trip is written over an ended row should revive it only with a later stamp and otherwise leave it ended`
-  - Test location: "tests/Paramore.Brighter.Base.Test/CircuitBreaker"
-  - Test file: `TrippedTopicStoreEndedContractTest.cs` (method `When_a_trip_is_written_over_an_ended_row_should_revive_only_with_a_later_stamp`), run by the runner T2.6 created
+  - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
+  - Test file: `When_a_trip_is_written_over_an_ended_row_should_revive_only_with_a_later_stamp.cs`
   - Test should verify:
     - A row marked ended by `ReadAsync` (T2.6), then written with an equal or earlier stamp: `LeftEnded` is true, prior is null, and the row is not in `Live`.
     - Written with a later stamp: `LeftEnded` is false, prior is null, and the row is in `Live` with the new stamp, so the marked row was never deleted.
@@ -380,10 +381,10 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.6
   - References: ADR 0089 *How a read ends trips* (re-trip race paragraph).
 
-- [ ] **TEST + IMPLEMENT: T2.8 - A store write rejects duplicate topics and is all-or-nothing**
+- [x] **TEST + IMPLEMENT: T2.8 - A store write rejects duplicate topics and is all-or-nothing**
   - **USE COMMAND**: `/tdd:test-first when a write contains the same topic twice should reject it with argument exception and change nothing`
-  - Test location: "tests/Paramore.Brighter.Base.Test/CircuitBreaker"
-  - Test file: `TrippedTopicStoreWriteContractTest.cs` (method `When_a_write_repeats_a_topic_should_reject_it_and_change_nothing`)
+  - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
+  - Test file: `When_a_write_repeats_a_topic_should_reject_it_and_change_nothing.cs`
   - Test should verify:
     - `WriteAsync([orders, invoices, orders])` throws `ArgumentException`, and no topic is stored.
     - A valid multi-topic write returns one result per topic.
@@ -396,7 +397,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2c - Distributed breaker view and coalesced writes
 
-- [ ] **TEST + IMPLEMENT: T2.9 - The distributed breaker validates C, the leeway and the store timeout at construction**
+- [x] **TEST + IMPLEMENT: T2.9 - The distributed breaker validates C, the leeway and the store timeout at construction**
   - **USE COMMAND**: `/tdd:test-first when the distributed breaker is built with an out of range duration should throw argument out of range`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_the_distributed_breaker_is_built_with_an_out_of_range_duration_should_throw.cs`
@@ -413,7 +414,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.3, T2.4
   - References: ADR 0089 *`DistributedOutboxCircuitBreaker`* and the options table.
 
-- [ ] **TEST + IMPLEMENT: T2.10 - A sync trip updates the view at once and never waits on the store**
+- [x] **TEST + IMPLEMENT: T2.10 - A sync trip updates the view at once and never waits on the store**
   - **USE COMMAND**: `/tdd:test-first when a synchronous callback trips a topic while the store blocks should return at once and list the topic`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_synchronous_trip_happens_while_the_store_blocks_should_return_at_once_and_list_the_topic.cs`
@@ -432,7 +433,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.9
   - References: ADR 0089 *`DistributedOutboxCircuitBreaker`* member table.
 
-- [ ] **TEST + IMPLEMENT: T2.11 - A burst of callbacks keeps at most one pending and one in-flight write per topic**
+- [x] **TEST + IMPLEMENT: T2.11 - A burst of callbacks keeps at most one pending and one in-flight write per topic**
   - **USE COMMAND**: `/tdd:test-first when ten thousand callbacks trip a topic while its write is in flight should keep one pending write holding the latest stamp and write it afterwards`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_many_callbacks_trip_a_topic_during_an_in_flight_write_should_keep_one_pending_write.cs`
@@ -448,7 +449,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.10
   - References: `src/Paramore.Brighter/OutboxProducerMediator.cs:946,:1040`. `tests/Paramore.Brighter.Core.Tests/Confirmation/When_concurrent_same_topic_confirmations_fail_should_not_lose_trips.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.12 - A trip batch writes each distinct topic once, in one store operation**
+- [x] **TEST + IMPLEMENT: T2.12 - A trip batch writes each distinct topic once, in one store operation**
   - **USE COMMAND**: `/tdd:test-first when a trip batch collects many failures should write each distinct topic once in one store operation`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_trip_batch_collects_many_failures_should_write_each_topic_once.cs`
@@ -465,7 +466,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.10
   - References: ADR 0089 *`IAmAnOutboxCircuitBreakerAsync` and `IAmATripBatch`* and *Why one batched write*.
 
-- [ ] **CHARACTERISE: T2.13 - A batch trip shows in the view at once, and reaches the store only at the end of the call**
+- [x] **CHARACTERISE: T2.13 - A batch trip shows in the view at once, and reaches the store only at the end of the call**
   - **USE COMMAND**: `/tdd:test-first when a topic is tripped mid batch should list it at once and write it to the store only when the batch is written`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_topic_is_tripped_mid_batch_should_list_it_at_once_and_write_it_at_the_end.cs`
@@ -480,7 +481,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.12
   - References: ADR 0089 Phase 2 sequence diagram.
 
-- [ ] **TEST + IMPLEMENT: T2.14 - Writes landing out of order keep the later stamp, announce a ReTrip, and the writer's view takes the stored stamp**
+- [x] **TEST + IMPLEMENT: T2.14 - Writes landing out of order keep the later stamp, announce a ReTrip, and the writer's view takes the stored stamp**
   - **USE COMMAND**: `/tdd:test-first when an earlier stamped write lands after a later one should keep the later stamp, announce a retrip and move the writer's view to the stored stamp`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_an_earlier_stamped_write_lands_after_a_later_one_should_keep_the_later_stamp.cs`
@@ -496,7 +497,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.12
   - References: ADR 0089 *How a write is announced*.
 
-- [ ] **TEST + IMPLEMENT: T2.15 - A write whose stamp has already run out is not issued and is dropped silently**
+- [x] **TEST + IMPLEMENT: T2.15 - A write whose stamp has already run out is not issued and is dropped silently**
   - **USE COMMAND**: `/tdd:test-first when a write's stamp is a trip length or more before the writer's clock should not issue it and drop the topic silently`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_write_stamp_has_already_run_out_should_not_write_and_drop_the_topic_silently.cs`
@@ -510,7 +511,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.14
   - References: ADR 0089 *How a write is announced*, row 1.
 
-- [ ] **TEST + IMPLEMENT: T2.16 - A write over an ended but unmarked row announces Reset then Trip, by the writer only**
+- [x] **TEST + IMPLEMENT: T2.16 - A write over an ended but unmarked row announces Reset then Trip, by the writer only**
   - **USE COMMAND**: `/tdd:test-first when a later write lands over an ended but unmarked row should have the writer announce one reset then one trip`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_later_write_lands_over_an_ended_unmarked_row_should_announce_reset_then_trip.cs`
@@ -525,7 +526,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.14
   - References: ADR 0089 *How a write is announced*, rows 4 and 6 and the paragraph after the table.
 
-- [ ] **TEST + IMPLEMENT: T2.16a - A write started by a synchronous or callback trip is announced and reconciled like a batch write**
+- [x] **TEST + IMPLEMENT: T2.16a - A write started by a synchronous or callback trip is announced and reconciled like a batch write**
   - **USE COMMAND**: `/tdd:test-first when a synchronous trip's write completes should announce it by the stored prior stamp, take the stored stamp and drop a stamp that has run out`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_synchronous_trip_write_completes_should_announce_and_reconcile_like_a_batch_write.cs`
@@ -542,7 +543,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.16, T2.11
   - References: ADR 0089 *How a write is announced*. `src/Paramore.Brighter/OutboxProducerMediator.cs:946,:1040`.
 
-- [ ] **TEST + IMPLEMENT: T2.17 - Distributed breaker spans carry the cooldown duration, and the counter attributes are unchanged**
+- [x] **TEST + IMPLEMENT: T2.17 - Distributed breaker spans carry the cooldown duration, and the counter attributes are unchanged**
   - **USE COMMAND**: `/tdd:test-first when the distributed breaker announces a transition should tag its span with the cooldown duration and keep the counter attributes unchanged`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_the_distributed_breaker_announces_a_trip_should_tag_the_span_with_the_cooldown_duration.cs`
@@ -559,7 +560,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.14
   - References: `src/Paramore.Brighter/Observability/CircuitBreakerSpanInfo.cs`, `BrighterSemanticConventions.cs`, `BrighterTracer.cs`. `docs/adr/0058-outbox-circuit-breaker-trip-logging.md`.
 
-- [ ] **CHARACTERISE: T2.18 - Concurrent first trips on two instances list the topic once, with one Trip and one ReTrip**
+- [x] **CHARACTERISE: T2.18 - Concurrent first trips on two instances list the topic once, with one Trip and one ReTrip**
   - **USE COMMAND**: `/tdd:test-first when two instances trip the same untripped topic at the same moment should list it once with exactly one trip and one retrip`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_two_instances_trip_a_topic_at_the_same_moment_should_announce_one_trip_and_one_retrip.cs`
@@ -574,7 +575,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.14
   - References: ADR 0089 *Testing strategy*.
 
-- [ ] **TEST + IMPLEMENT: T2.19 - A re-trip on another instance restarts the cooldown everywhere**
+- [x] **TEST + IMPLEMENT: T2.19 - A re-trip on another instance restarts the cooldown everywhere**
   - **USE COMMAND**: `/tdd:test-first when another instance re-trips a topic should restart its cooldown on every instance`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_another_instance_re_trips_a_topic_should_restart_the_cooldown_everywhere.cs`
@@ -588,7 +589,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.14
   - References: ADR 0089 Phase 2 invariants.
 
-- [ ] **TEST + IMPLEMENT: T2.20 - A distributed trip ends by elapsed time whichever instance reads, with one Reset**
+- [x] **TEST + IMPLEMENT: T2.20 - A distributed trip ends by elapsed time whichever instance reads, with one Reset**
   - **USE COMMAND**: `/tdd:test-first when instances alternate holding the lock should end a distributed trip at exactly the cooldown duration with one reset`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_instances_alternate_the_lock_should_end_the_trip_at_the_cooldown_duration_with_one_reset.cs`
@@ -605,7 +606,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.19, T2.6
   - References: ADR 0089 *How a read ends trips*.
 
-- [ ] **CHARACTERISE: T2.21 - The number of sweeps and instances does not change the cooldown**
+- [x] **CHARACTERISE: T2.21 - The number of sweeps and instances does not change the cooldown**
   - **USE COMMAND**: `/tdd:test-first when three instances with offset ticks sweep should exclude the topic from every sweep before the cooldown duration`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_three_instances_with_offset_ticks_sweep_should_exclude_the_topic_until_the_cooldown_duration.cs`
@@ -620,7 +621,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.20
   - References: requirements FR-4 example.
 
-- [ ] **CHARACTERISE: T2.22 - An instance that had lock_unavailable neither holds back nor keeps a trip**
+- [x] **CHARACTERISE: T2.22 - An instance that had lock_unavailable neither holds back nor keeps a trip**
   - **USE COMMAND**: `/tdd:test-first when an instance obtains the lock after a long lock unavailable spell should include the topic whose trip ended`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_an_instance_obtains_the_lock_after_lock_unavailable_should_include_the_ended_topic.cs`
@@ -636,7 +637,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.20
   - References: ADR 0089 Phase 2 invariants.
 
-- [ ] **CHARACTERISE: T2.23 - Trips survive a restart, are listed after the first read, and still end by C**
+- [x] **CHARACTERISE: T2.23 - Trips survive a restart, are listed after the first read, and still end by C**
   - **USE COMMAND**: `/tdd:test-first when every breaker is recreated over a durable store should list a live trip after the first read and drop an ended one`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_breakers_are_recreated_over_the_store_should_list_live_trips_after_the_first_read.cs`
@@ -653,7 +654,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.20
   - References: ADR 0089 *Testing strategy* (AC-12).
 
-- [ ] **CHARACTERISE: T2.24 - The clock skew leeway bounds the trip across skewed clocks**
+- [x] **CHARACTERISE: T2.24 - The clock skew leeway bounds the trip across skewed clocks**
   - **USE COMMAND**: `/tdd:test-first when instance clocks differ by a skew covered by the leeway should list the topic until the cooldown and drop it by the cooldown plus twice the skew`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_instance_clocks_are_skewed_within_the_leeway_should_bound_the_trip.cs`
@@ -671,7 +672,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2d - Store failure, timeouts and fallback
 
-- [ ] **TEST + IMPLEMENT: T2.25 - Every store operation is bounded by the store timeout and counts as a failure on timeout**
+- [x] **TEST + IMPLEMENT: T2.25 - Every store operation is bounded by the store timeout and counts as a failure on timeout**
   - **USE COMMAND**: `/tdd:test-first when the store never completes should give up after the store timeout and use the fallback view`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_the_store_never_completes_should_give_up_after_the_store_timeout.cs`
@@ -690,7 +691,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.12, T2.19
   - References: ADR 0089 *`IAmATrippedTopicStore`*, paragraph after the table.
 
-- [ ] **TEST + IMPLEMENT: T2.26 - Abandoned store calls are guarded, so a hung store cannot pile up calls or disable refresh**
+- [x] **TEST + IMPLEMENT: T2.26 - Abandoned store calls are guarded, so a hung store cannot pile up calls or disable refresh**
   - **USE COMMAND**: `/tdd:test-first when a store call is abandoned after the timeout should hold its in flight guard until it completes or four store timeouts pass then release it with a warning`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_store_call_is_abandoned_should_hold_its_guard_until_four_store_timeouts.cs`
@@ -706,7 +707,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.25
   - References: ADR 0089 *How the remaining small points are settled*: "No overlapping calls".
 
-- [ ] **TEST + IMPLEMENT: T2.27 - A failed read falls back to the instance's own view, with a Warning and no exception**
+- [x] **TEST + IMPLEMENT: T2.27 - A failed read falls back to the instance's own view, with a Warning and no exception**
   - **USE COMMAND**: `/tdd:test-first when the store throws on read should return the fallback view, log a warning and not throw`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_the_store_throws_on_read_should_return_the_fallback_view_and_log_a_warning.cs`
@@ -721,7 +722,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.25
   - References: ADR 0089 *Store failure and the health signals*, ladder row 4.
 
-- [ ] **TEST + IMPLEMENT: T2.28 - A failed write leaves the trip unshared and never aborts the batch**
+- [x] **TEST + IMPLEMENT: T2.28 - A failed write leaves the trip unshared and never aborts the batch**
   - **USE COMMAND**: `/tdd:test-first when the store throws on write during a batch should keep dispatching the batch and keep the trip as unshared`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_the_store_throws_on_write_during_a_batch_should_keep_dispatching_and_keep_the_trip_unshared.cs`
@@ -738,7 +739,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.25, T2.16a
   - References: `tests/Paramore.Brighter.Core.Tests/Sweeping/TestDoubles/SweepableOutbox.cs`. ADR *How a write is announced*, row 2.
 
-- [ ] **CHARACTERISE: T2.28a - A store disposed under a write at host shutdown logs a Warning and throws nothing**
+- [x] **CHARACTERISE: T2.28a - A store disposed under a write at host shutdown logs a Warning and throws nothing**
   - **USE COMMAND**: `/tdd:test-first when the store is disposed under an in flight write should log a warning, throw nothing and keep the trip unshared`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_the_store_is_disposed_under_a_write_should_log_a_warning_and_throw_nothing.cs`
@@ -752,7 +753,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.28
   - References: ADR 0089 *`DistributedOutboxCircuitBreaker`*, paragraph after the member table.
 
-- [ ] **TEST + IMPLEMENT: T2.29 - A failed refresh keeps the fallback view, and no trip outlives C**
+- [x] **TEST + IMPLEMENT: T2.29 - A failed refresh keeps the fallback view, and no trip outlives C**
   - **USE COMMAND**: `/tdd:test-first when every refresh fails should keep the fallback view and still drop the trip at the cooldown duration`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_every_refresh_fails_should_keep_the_fallback_view_and_drop_the_trip_at_the_cooldown.cs`
@@ -769,7 +770,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.26
   - References: ADR 0089 *Refresh on every running sweeper*.
 
-- [ ] **TEST + IMPLEMENT: T2.30 - A read failure sets the fallback state, and recovery merges per topic**
+- [x] **TEST + IMPLEMENT: T2.30 - A read failure sets the fallback state, and recovery merges per topic**
   - **USE COMMAND**: `/tdd:test-first when reads fail and then recover should report fallback until a read succeeds and merge the store's trips with the local ones`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_reads_and_writes_fail_and_recover_should_follow_the_fallback_rules.cs`
@@ -783,7 +784,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.27, T2.28
   - References: ADR 0089 *Store failure and the health signals* (the paragraph after the ladder and the bullets).
 
-- [ ] **TEST + IMPLEMENT: T2.30a - An unshared trip keeps the fallback state through successful reads until a write of its topic succeeds or it ends**
+- [x] **TEST + IMPLEMENT: T2.30a - An unshared trip keeps the fallback state through successful reads until a write of its topic succeeds or it ends**
   - **USE COMMAND**: `/tdd:test-first when reads succeed and writes fail should stay in fallback until a write of the topic succeeds or the trip ends`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_reads_succeed_and_writes_fail_should_stay_in_fallback_until_a_write_succeeds.cs`
@@ -797,7 +798,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.30, T2.28
   - References: ADR 0089 *Store failure and the health signals*, the paragraph after the ladder.
 
-- [ ] **CHARACTERISE: T2.30b - Writes that succeed do not end a read failure**
+- [x] **CHARACTERISE: T2.30b - Writes that succeed do not end a read failure**
   - **USE COMMAND**: `/tdd:test-first when writes succeed and reads fail should stay in fallback until a read succeeds`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_writes_succeed_and_reads_fail_should_stay_in_fallback_until_a_read_succeeds.cs`
@@ -811,7 +812,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.30a
   - References: ADR 0089 *Store failure and the health signals*.
 
-- [ ] **TEST + IMPLEMENT: T2.31 - A slow, stale read never undoes a newer read or drops a trip just written**
+- [x] **TEST + IMPLEMENT: T2.31 - A slow, stale read never undoes a newer read or drops a trip just written**
   - **USE COMMAND**: `/tdd:test-first when a slow refresh completes after a newer sweep read should discard its live rows but still announce its ended rows`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_slow_refresh_completes_after_a_newer_read_should_discard_its_live_rows.cs`
@@ -826,7 +827,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.30, T2.29
   - References: ADR 0089 bullets *Stale reads*, *Ended rows are always announced*, *Recently written trips*.
 
-- [ ] **TEST + IMPLEMENT: T2.32 - Unshared trips are written after recovery**
+- [x] **TEST + IMPLEMENT: T2.32 - Unshared trips are written after recovery**
   - **USE COMMAND**: `/tdd:test-first when a read succeeds while unshared trips remain should write them in the background without the sweep awaiting it`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_read_succeeds_with_unshared_trips_should_write_them_in_the_background.cs`
@@ -842,7 +843,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.30a, T2.16a
   - References: ADR 0089 *How the remaining small points are settled*: "Recovery writes".
 
-- [ ] **TEST + IMPLEMENT: T2.33 - Telemetry under failure: at most one Reset per instance per unshared trip, and no second announcement**
+- [x] **TEST + IMPLEMENT: T2.33 - Telemetry under failure: at most one Reset per instance per unshared trip, and no second announcement**
   - **USE COMMAND**: `/tdd:test-first when two instances hold the same unshared trip and it ends should each announce one reset from the first announcing call`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_two_instances_hold_an_unshared_trip_and_it_ends_should_each_announce_one_reset.cs`
@@ -858,7 +859,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.30a, T2.29
   - References: ADR 0089 *How a write is announced*, row 7. *`DistributedOutboxCircuitBreaker`* member table.
 
-- [ ] **CHARACTERISE: T2.34 - A breaker started during an outage leaves out only its own trips, then uses the store's**
+- [x] **CHARACTERISE: T2.34 - A breaker started during an outage leaves out only its own trips, then uses the store's**
   - **USE COMMAND**: `/tdd:test-first when a breaker starts while the store cannot be read should exclude only its own trips and use the store's trips once a read succeeds`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_breaker_starts_during_a_store_outage_should_exclude_only_its_own_trips.cs`
@@ -873,7 +874,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.30
   - References: ADR 0089 ladder rows 7-8.
 
-- [ ] **CHARACTERISE: T2.35 - TrippedTopics and StoreStatus never wait on a blocked store**
+- [x] **CHARACTERISE: T2.35 - TrippedTopics and StoreStatus never wait on a blocked store**
   - **USE COMMAND**: `/tdd:test-first when the store blocks indefinitely should return tripped topics and store status within a second from the fallback view`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_the_store_blocks_indefinitely_should_return_tripped_topics_and_store_status_at_once.cs`
@@ -887,7 +888,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.30
   - References: ADR 0089 Phase 2 invariant: "No read waits on the store from a health signal".
 
-- [ ] **CHARACTERISE: T2.36 - A trip that races the read ending the topic is never lost (distributed)**
+- [x] **CHARACTERISE: T2.36 - A trip that races the read ending the topic is never lost (distributed)**
   - **USE COMMAND**: `/tdd:test-first when a distributed trip races the read that ends the topic should leave the topic tripped with its cooldown restarted at the trip`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_distributed_trip_races_the_ending_read_should_restart_the_cooldown_at_the_trip.cs`
@@ -902,7 +903,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.31
   - References: ADR 0089 *How a read ends trips* (re-trip race).
 
-- [ ] **CHARACTERISE: T2.38 - A failed write on a request-only instance or a callback is logged, and the message stays**
+- [x] **CHARACTERISE: T2.38 - A failed write on a request-only instance or a callback is logged, and the message stays**
   - **USE COMMAND**: `/tdd:test-first when a request only instance cannot write a trip should log a warning, throw nothing and leave the message outstanding`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_request_only_instance_cannot_write_a_trip_should_log_a_warning_and_keep_the_message.cs`
@@ -920,7 +921,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2e - The mediator uses the async role
 
-- [ ] **TEST + IMPLEMENT: T2.39 - A sweep reads tripped topics asynchronously and writes one batch before it returns**
+- [x] **TEST + IMPLEMENT: T2.39 - A sweep reads tripped topics asynchronously and writes one batch before it returns**
   - **USE COMMAND**: `/tdd:test-first when a sweep runs with a breaker that implements the async role should read tripped topics asynchronously and write one trip batch before returning`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_sweep_runs_with_an_async_breaker_should_read_asynchronously_and_write_one_batch.cs`
@@ -938,7 +939,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.1, T2.12, T2.20
   - References: `src/Paramore.Brighter/OutboxProducerMediator.cs:740-791`.
 
-- [ ] **CHARACTERISE: T2.39c - A trip lost with its process is retried by the next sweep**
+- [x] **CHARACTERISE: T2.39c - A trip lost with its process is retried by the next sweep**
   - **USE COMMAND**: `/tdd:test-first when a batch is discarded without being written should leave the store without the topic and let the next sweep trip it again`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_trip_batch_is_discarded_without_a_write_should_let_the_next_sweep_trip_it_again.cs`
@@ -953,7 +954,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39
   - References: ADR 0089 step 10.
 
-- [ ] **CHARACTERISE: T2.39d - After the cooldown duration a sweep through the mediator includes the topic again**
+- [x] **CHARACTERISE: T2.39d - After the cooldown duration a sweep through the mediator includes the topic again**
   - **USE COMMAND**: `/tdd:test-first when the cooldown duration has passed a sweep through the mediator should include the tripped topic again`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_the_cooldown_duration_has_passed_a_sweep_should_include_the_topic_again.cs`
@@ -968,7 +969,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39
   - References: `src/Paramore.Brighter/OutboxProducerMediator.cs:763`.
 
-- [ ] **CHARACTERISE: T2.40 - A sweep whose store read fails uses the fallback view and completes**
+- [x] **CHARACTERISE: T2.40 - A sweep whose store read fails uses the fallback view and completes**
   - **USE COMMAND**: `/tdd:test-first when the trip store cannot be read during a sweep should sweep with the fallback view and end completed`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_trip_store_cannot_be_read_during_a_sweep_should_use_the_fallback_view_and_complete.cs`
@@ -984,7 +985,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39, T2.34
   - References: `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxSweeper.cs`. `tests/Paramore.Brighter.Core.Tests/Sweeping/TestDoubles/SweepableOutbox.cs`.
 
-- [ ] **CHARACTERISE: T2.39a - A bulk sweep trips through the batch and writes once**
+- [x] **CHARACTERISE: T2.39a - A bulk sweep trips through the batch and writes once**
   - **USE COMMAND**: `/tdd:test-first when a bulk sweep runs with a breaker that implements the async role should trip through the batch and make one store write`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_bulk_sweep_runs_with_an_async_breaker_should_trip_through_the_batch_and_write_once.cs`
@@ -999,7 +1000,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39
   - References: `src/Paramore.Brighter/OutboxProducerMediator.cs:776,:1152,:1240`.
 
-- [ ] **CHARACTERISE: T2.41 - The batch is written before the lock is released, and when dispatch throws**
+- [x] **CHARACTERISE: T2.41 - The batch is written before the lock is released, and when dispatch throws**
   - **USE COMMAND**: `/tdd:test-first when a sweep trips a topic should write the trip before the sweeper releases the lock even when dispatch throws`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_sweep_trips_a_topic_should_write_it_before_the_lock_is_released.cs`
@@ -1015,7 +1016,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39
   - References: `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxSweeper.cs` (lock released in `finally`). `tests/Paramore.Brighter.Core.Tests/Sweeping/TestDoubles/CountingDistributedLock.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.42 - A third-party async breaker whose batch throws is contained**
+- [x] **TEST + IMPLEMENT: T2.42 - A third-party async breaker whose batch throws is contained**
   - **USE COMMAND**: `/tdd:test-first when a third party async breaker throws from begin trip batch or write should log a warning, keep the dispatch exception and release the semaphore`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_third_party_trip_batch_throws_should_contain_it_and_release_the_semaphore.cs`
@@ -1029,7 +1030,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.41
   - References: `src/Paramore.Brighter/OutboxProducerMediator.cs:791`.
 
-- [ ] **TEST + IMPLEMENT: T2.43 - One write for a whole ClearOutbox call**
+- [x] **TEST + IMPLEMENT: T2.43 - One write for a whole ClearOutbox call**
   - **USE COMMAND**: `/tdd:test-first when clear outbox async dispatches many failing messages for one topic should make one store write before returning`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_clear_outbox_dispatches_many_failing_messages_should_make_one_store_write.cs`
@@ -1042,21 +1043,22 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39
   - References: `src/Paramore.Brighter/OutboxProducerMediator.cs:447-498`. `tests/Paramore.Brighter.Core.Tests/CommandProcessors/Clear/`.
 
-- [ ] **TEST + IMPLEMENT: T2.43a - A third-party async breaker whose batch throws cannot escape a ClearOutbox or Post call**
+- [x] **CHARACTERISE: T2.43a - A third-party async breaker whose batch throws cannot escape a ClearOutbox or Post call**
   - **USE COMMAND**: `/tdd:test-first when a third party async breaker throws from begin trip batch or write during clear outbox should log a warning and throw nothing out of post async`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_third_party_trip_batch_throws_during_clear_outbox_should_throw_nothing_out_of_post_async.cs`
   - Test should verify:
     - A third-party async breaker whose `BeginTripBatch` throws: `PostAsync` and `ClearOutboxAsync` log a Warning, trip through sync `TripTopic` and throw nothing.
     - One whose `WriteAsync` throws: the call logs a Warning and throws nothing. When `ClearOutboxAsync` is called directly and a producer double throws a non-send exception during dispatch, that dispatch exception propagates and is not replaced by the batch's.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - 🔁 RED mutations (one per helper; the behaviour already exists because T2.42 and T2.43 reuse the containment helpers in `ClearOutboxAsync`): remove the try/catch in `BeginTripBatchOrNull`, so the begin-throws test fails on its "throws nothing out of `PostAsync`/`ClearOutboxAsync`" assertion; restore it, then remove the try/catch in `WriteTripsOrWarnAsync`, so the write-throws test fails on the same assertion. Revert each.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before committing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Wrap the `BeginTripBatch` and `WriteAsync` that T2.43 added to `ClearOutboxAsync` in the same try/catch with a Warning as T2.42, falling back to sync `TripTopic` when the begin fails.
+    - Nothing. `BeginTripBatchOrNull` and `WriteTripsOrWarnAsync` already contain a third-party batch's throw, with a Warning, for both `PostAsync` and `ClearOutboxAsync`.
   - Covers: NFR-9 ("a Post / ClearOutbox call"). ADR step 10 (containment).
   - Depends on: T2.43, T2.42
   - References: `src/Paramore.Brighter/OutboxProducerMediator.cs:447-498`.
 
-- [ ] **CHARACTERISE: T2.44 - A request-path trip waits for its write and affects another instance's sweep**
+- [x] **CHARACTERISE: T2.44 - A request-path trip waits for its write and affects another instance's sweep**
   - **USE COMMAND**: `/tdd:test-first when post async on a request only instance fails to publish should wait for the store write and another instance's sweep should exclude the topic`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_post_async_fails_to_publish_should_wait_for_the_write_and_exclude_the_topic_elsewhere.cs`
@@ -1071,7 +1073,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.43, T2.25
   - References: `tests/Paramore.Brighter.Core.Tests/CommandProcessors/Post/`.
 
-- [ ] **CHARACTERISE: T2.45 - Messages later in a dispatch call are still attempted after a trip**
+- [x] **CHARACTERISE: T2.45 - Messages later in a dispatch call are still attempted after a trip**
   - **USE COMMAND**: `/tdd:test-first when the first message of a batch trips its topic should still attempt the later messages for that topic`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_the_first_message_trips_its_topic_should_still_attempt_later_messages_for_it.cs`
@@ -1085,7 +1087,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39
   - References: `src/Paramore.Brighter/OutboxProducerMediator.cs:1257-1313`.
 
-- [ ] **CHARACTERISE: T2.46 - A tripped topic does not hold back other topics, with either breaker**
+- [x] **CHARACTERISE: T2.46 - A tripped topic does not hold back other topics, with either breaker**
   - **USE COMMAND**: `/tdd:test-first when one topic is tripped should sweep a full batch of other topics with either breaker`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_one_topic_is_tripped_should_sweep_a_full_batch_of_other_topics.cs`
@@ -1100,7 +1102,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39
   - References: `tests/Paramore.Brighter.Core.Tests/Sweeping/TestDoubles/SweepableOutbox.cs`. `docs/adr/0028-support-circuit-breaking-of-topics.md`.
 
-- [ ] **CHARACTERISE: T2.47 - Store reads per sweep and per refresh are a fixed number**
+- [x] **CHARACTERISE: T2.47 - Store reads per sweep and per refresh are a fixed number**
   - **USE COMMAND**: `/tdd:test-first when sweeps run with ten and with ten thousand outstanding messages should make the same fixed number of store reads and no writes`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_sweeps_run_with_many_outstanding_messages_should_make_a_fixed_number_of_store_reads.cs`
@@ -1115,9 +1117,9 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39, T2.29
   - References: ADR 0089 *Testing strategy* (counting double).
 
-- [ ] **CHARACTERISE: T2.48 - Breaker registration stays opt in**
+- [x] **CHARACTERISE: T2.48 - Breaker registration stays opt in**
   - **USE COMMAND**: `/tdd:test-first when no circuit breaker is registered and a publish fails should exclude no topic from later sweeps`
-  - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
+  - Test location: "tests/Paramore.Brighter.Extensions.Tests" (a real mediator is built there, as in `When_setting_the_options_registry_should_apply_the_pipeline_to_outbox_sends.cs`; `Core.Tests` cannot build one)
   - Test file: `When_no_circuit_breaker_is_registered_and_a_publish_fails_should_exclude_no_topic.cs`
   - Test should verify:
     - With no `IAmAnOutboxCircuitBreaker` registered, a failed publish leaves later sweeps with no tripped topics.
@@ -1132,7 +1134,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2f - Sweeper-driven refresh
 
-- [ ] **TEST + IMPLEMENT: T2.49 - Every running sweeper refreshes the view on each tick, whatever the lock outcome**
+- [x] **TEST + IMPLEMENT: T2.49 - Every running sweeper refreshes the view on each tick, whatever the lock outcome**
   - **USE COMMAND**: `/tdd:test-first when every sweep is lock unavailable should still refresh the shared breaker's view each tick`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_every_sweep_is_lock_unavailable_should_still_refresh_the_shared_breakers_view.cs`
@@ -1150,7 +1152,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.29
   - References: `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxSweeper.cs:75-95,:164-187,:286-290`. `tests/Paramore.Brighter.Core.Tests/Sweeping/TestDoubles/HeldDistributedLock.cs`. `src/Paramore.Brighter.Outbox.Hosting/HostedServiceCollectionExtensions.cs:54`.
 
-- [ ] **TEST + IMPLEMENT: T2.50 - An overrun timer refreshes the view while a sweep is held**
+- [x] **TEST + IMPLEMENT: T2.50 - An overrun timer refreshes the view while a sweep is held**
   - **USE COMMAND**: `/tdd:test-first when a sweep overruns the timer interval should refresh the shared breaker's view from the overrun timer`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_sweep_overruns_the_timer_interval_should_refresh_the_view_from_the_overrun_timer.cs`
@@ -1166,7 +1168,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.49
   - References: `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxSweeper.cs:183,:224`. `tests/Paramore.Brighter.Core.Tests/Sweeping/TestDoubles/GatedOutboxProducerMediator.cs`.
 
-- [ ] **CHARACTERISE: T2.51 - A sweeper with an in-memory or no breaker creates no refresh timer**
+- [x] **CHARACTERISE: T2.51 - A sweeper with an in-memory or no breaker creates no refresh timer**
   - **USE COMMAND**: `/tdd:test-first when the sweeper's breaker does not share trips should create no overrun timer and request no refresh`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_sweepers_breaker_does_not_share_trips_should_create_no_overrun_timer.cs`
@@ -1182,7 +1184,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2g - Health signals for a shared breaker
 
-- [ ] **TEST + IMPLEMENT: T2.52 - The tripped-topics gauge reports the shared view on every running sweeper**
+- [x] **TEST + IMPLEMENT: T2.52 - The tripped-topics gauge reports the shared view on every running sweeper**
   - **USE COMMAND**: `/tdd:test-first when the breaker shares trips should report the tripped topics gauge on an inactive running sweeper`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/Metrics"
   - Test file: `When_the_breaker_shares_trips_should_report_the_tripped_topics_gauge_on_an_inactive_sweeper.cs`
@@ -1197,7 +1199,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.49
   - References: `src/Paramore.Brighter/Observability/SweeperMeter.cs:123-130`. `tests/Paramore.Brighter.Core.Tests/Observability/Metrics/When_the_sweeper_is_not_active_should_report_zero_tripped_topics.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.53 - The investigate check reports shared trips on every running sweeper**
+- [x] **TEST + IMPLEMENT: T2.53 - The investigate check reports shared trips on every running sweeper**
   - **USE COMMAND**: `/tdd:test-first when the breaker shares trips should report the tripped topics condition on an inactive running sweeper`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_breaker_shares_trips_should_report_tripped_topics_on_an_inactive_sweeper.cs`
@@ -1211,7 +1213,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.52
   - References: `src/Paramore.Brighter.Outbox.Hosting/HealthChecks/OutboxSweeperInvestigateHealthCheck.cs:104-117`.
 
-- [ ] **CHARACTERISE: T2.54 - Gating is unchanged for in-memory and third-party breakers**
+- [x] **CHARACTERISE: T2.54 - Gating is unchanged for in-memory and third-party breakers**
   - **USE COMMAND**: `/tdd:test-first when an in memory breaker has a trip on an inactive sweeper should report zero and healthy as before`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_an_in_memory_breaker_has_a_trip_on_an_inactive_sweeper_should_report_zero_and_healthy.cs`
@@ -1226,7 +1228,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.53
   - References: `tests/Paramore.Brighter.Core.Tests/Sweeping/When_the_sweeper_is_not_active_should_not_report_tripped_topics.cs`, `When_a_third_party_circuit_breaker_reports_tripped_topics_should_report_them.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.55 - The investigate check reports the store-unavailable condition with exception_type**
+- [x] **TEST + IMPLEMENT: T2.55 - The investigate check reports the store-unavailable condition with exception_type**
   - **USE COMMAND**: `/tdd:test-first when the shared breaker is using its fallback view should report tripped topics store unavailable with the exception type`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_shared_breaker_is_using_its_fallback_view_should_report_store_unavailable.cs`
@@ -1242,7 +1244,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.53, T2.30a
   - References: `src/Paramore.Brighter.Outbox.Hosting/HealthChecks/OutboxSweeperInvestigateHealthCheck.cs:49-55`. `docs/adr/0088-shared-remedy-check-data-and-condition.md`.
 
-- [ ] **CHARACTERISE: T2.55a - The store-unavailable condition clears with the fallback state and is not reported before a read fails**
+- [x] **CHARACTERISE: T2.55a - The store-unavailable condition clears with the fallback state and is not reported before a read fails**
   - **USE COMMAND**: `/tdd:test-first when the fallback state ends should stop reporting the store unavailable condition and not report it before any read has failed`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_fallback_state_ends_should_stop_reporting_store_unavailable.cs`
@@ -1257,7 +1259,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.55
   - References: `src/Paramore.Brighter.Outbox.Hosting/HealthChecks/OutboxSweeperInvestigateHealthCheck.cs:104-117`.
 
-- [ ] **CHARACTERISE: T2.56 - Health signals follow the fallback view and never block**
+- [x] **CHARACTERISE: T2.56 - Health signals follow the fallback view and never block**
   - **USE COMMAND**: `/tdd:test-first when the trip store blocks indefinitely should observe the gauge and run the check within a second from the fallback view`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_trip_store_blocks_indefinitely_should_complete_the_gauge_and_check_within_a_second.cs`
@@ -1271,14 +1273,46 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.55a, T2.35
   - References: `tests/Paramore.Brighter.Core.Tests/Sweeping/When_the_sweep_is_blocked_indefinitely_should_complete_both_health_checks_within_a_second.cs`.
 
+- [x] **CHARACTERISE: T2.56a - A breaker lookup that throws on an inactive running sweeper reports tripped_topics_unreadable**
+  - **USE COMMAND**: `/tdd:test-first when the breaker lookup throws on an inactive sweeper should report tripped topics unreadable`
+  - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
+  - Test file: `When_the_breaker_lookup_throws_on_an_inactive_sweeper_should_report_tripped_topics_unreadable.cs`
+  - Test should verify:
+    - The sweeper is running and inactive (last sweep `lock_unavailable`) and the breaker lookup delegate throws `InvalidOperationException`: the check is Degraded with `tripped_topics_unreadable`, remedy kind investigate, and the failure is logged at Error.
+    - The same inactive sweeper's gauge, with a lookup that throws: it records 0 and logs the gauge fault once.
+    - The sweeper is stopped and the lookup delegate throws: the check is Healthy, and a delegate that counts its calls shows the lookup is never called.
+  - 🔁 RED mutation (inactive bullets): return no tripped-topics condition for an inactive sweeper before calling the lookup (the pre-T2.53 `IsActive` gate), in the check and in `SweeperMeter.ObserveTrippedTopics`. The test must fail on the "check is Degraded" assertion and on the "logs the gauge fault" assertion. Revert.
+  - 🔁 RED mutation (stopped bullet): remove the check's `if (snapshot.IsStopped) return [];` early return. Assert the call count before the status, so the test fails on "the lookup is never called". Revert.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - Nothing. T2.52 and T2.53 call the lookup on any running sweeper, because the ladder needs to know whether the breaker shares trips. Owner decision (2026-11-05): a lookup that throws on an inactive sweeper is reported as on the active one.
+  - Covers: FR-8.3 (the owner-decision exception for the lookup). ADR 0089 *Health signals* and its *Amends* notes for ADRs 0085 and 0086.
+  - Depends on: T2.53
+  - References: `src/Paramore.Brighter.Outbox.Hosting/HealthChecks/OutboxSweeperInvestigateHealthCheck.cs` (`TrippedTopicsConditionOrNone`). `src/Paramore.Brighter/Observability/SweeperMeter.cs` (`ObserveTrippedTopics`). `tests/Paramore.Brighter.Core.Tests/Sweeping/When_reading_tripped_topics_throws_should_report_tripped_topics_unreadable.cs`.
+
+- [x] **TEST + IMPLEMENT: T2.56b - Unreadable tripped topics do not hide the store-unavailable condition**
+  - **USE COMMAND**: `/tdd:test-first when reading tripped topics throws on a shared breaker in its fallback state should report unreadable and store unavailable`
+  - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
+  - Test file: `When_reading_tripped_topics_throws_on_a_shared_breaker_in_fallback_should_report_unreadable_and_store_unavailable.cs`
+  - Test should verify:
+    - RED: a shared breaker whose `TrippedTopics` throws and whose `StoreStatus` is `(IsUsingFallback: true, LastFailure: "timeout")`, on a running sweeper with three failed sweeps: the check is Degraded with `consecutive_failed_sweeps`, `tripped_topics_unreadable`, then `tripped_topics_store_unavailable` (`exception_type` = `timeout`), in that order.
+    - Guard, expected green on arrival: the same breaker with `IsUsingFallback: false` reports `tripped_topics_unreadable` only.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - Add `ThrowingSharedOutboxCircuitBreaker` in `tests/Paramore.Brighter.Core.Tests/Sweeping/TestDoubles` (one class per file): implements `IAmAnOutboxCircuitBreaker` and `IAmASharedOutboxCircuitBreaker`, `TrippedTopics` throws, `StoreStatus` returns the status it is given.
+    - In `TrippedTopicsConditionOrNone`, read the topic names and `StoreStatus` separately, so a throw from `TrippedTopics` adds `tripped_topics_unreadable` and the store condition is still evaluated. A throw from the lookup still reports `tripped_topics_unreadable` alone.
+  - Covers: FR-8.4, AC-28. ADR 0089 *health conditions* ("reports every condition that applies", in the order `consecutive_failed_sweeps`, `tripped_topics` or `tripped_topics_unreadable`, then `tripped_topics_store_unavailable`).
+  - Depends on: T2.55, T2.56a
+  - References: `src/Paramore.Brighter.Outbox.Hosting/HealthChecks/OutboxSweeperInvestigateHealthCheck.cs` (`TrippedTopicsConditionOrNone`). `tests/Paramore.Brighter.Core.Tests/Sweeping/TestDoubles/ThrowingOutboxCircuitBreaker.cs`.
+
 ### Phase 2h - SQL trip stores on real databases
 
-- [ ] **TEST + IMPLEMENT: T2.57 - The MsSql trip store passes the write contract against SQL Server**
-  - **USE COMMAND**: `/tdd:test-first when the mssql trip store runs the write contract against a real database should pass every write contract case`
+- [x] **TEST + IMPLEMENT: T2.57 - The MsSql trip store passes the write cases against SQL Server**
+  - **USE COMMAND**: `/tdd:test-first when the mssql trip store is written to against a real database should keep the later stamp, read microsecond stamps back equal and reject a repeated topic`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker"
-  - Test file: `When_the_mssql_trip_store_runs_the_write_contract_should_pass.cs`
+  - Test files: `When_a_trip_is_written_should_keep_the_later_stamp_and_return_the_prior.cs`, `When_a_microsecond_stamp_is_written_should_read_back_equal.cs` and `When_a_write_repeats_a_topic_should_reject_it_and_change_nothing.cs`, plus a setup-only base class `MsSqlTrippedTopicStoreTestBase.cs` that creates the table from `GetDDL` and drops it after each test
   - Test should verify:
-    - Every `TrippedTopicStoreWriteContractTest` case (T2.4, T2.5, T2.8) passes on a real SQL Server.
+    - The three cases of T2.4, T2.5 and T2.8, each its own test file, pass on a real SQL Server.
     - `GetDDL(table, schema)` creates the table and the secondary index, and the test creates its table from it.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
@@ -1290,13 +1324,13 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.8, T2.5, T2.2
   - References: `src/Paramore.Brighter.Outbox.MsSql/SqlOutboxBuilder.cs` (`GetDDL` pattern). `tests/Paramore.Brighter.MSSQL.Tests/MsSqlTestHelper.cs`. ADR 0089 *The trip table and the SQL stores*.
 
-- [ ] **TEST + IMPLEMENT: T2.57a - The MsSql trip store marks ended rows and gives each to one caller**
-  - **USE COMMAND**: `/tdd:test-first when the mssql trip store runs the ended contract against a real database should mark ended rows for exactly one caller`
+- [x] **TEST + IMPLEMENT: T2.57a - The MsSql trip store marks ended rows and gives each to one caller**
+  - **USE COMMAND**: `/tdd:test-first when the mssql trip store ends trips against a real database should mark ended rows for exactly one caller and never delete one`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker"
-  - Test file: `When_the_mssql_trip_store_runs_the_ended_contract_should_pass.cs`
+  - Test files: `When_readers_race_over_an_expired_row_should_end_it_for_exactly_one_caller.cs`, `When_a_trip_is_written_over_an_ended_row_should_revive_only_with_a_later_stamp.cs` and `When_expired_trips_are_ended_should_mark_the_row_and_never_delete_it.cs`
   - Test should verify:
-    - Every `TrippedTopicStoreEndedContractTest` case (T2.6, T2.7) passes on a real SQL Server: a read marks ended rows and returns each to exactly one caller across 1,000 parallel repetitions, and a write over an ended row revives it only with a later stamp.
-    - The store never deletes a row.
+    - The two cases of T2.6 and T2.7, each its own test file, pass on a real SQL Server: a read marks ended rows and returns each to exactly one caller across 1,000 parallel repetitions, and a write over an ended row revives it only with a later stamp.
+    - A read that ends a trip marks the row and never deletes it: afterwards the table still holds the row with the ended marker set (its own test).
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - `UPDATE ... SET EndedAt = @now OUTPUT INSERTED.Topic, INSERTED.TripTime WHERE EndedAt IS NULL AND TripTime <= @cutoff`, then the unmarked `SELECT`, in one batch.
@@ -1304,10 +1338,10 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.57, T2.6, T2.7
   - References: `src/Paramore.Brighter.Outbox.MsSql/SqlOutboxBuilder.cs` (`GetDDL` pattern). `tests/Paramore.Brighter.MSSQL.Tests/MsSqlTestHelper.cs`. ADR 0089 *The trip table and the SQL stores*.
 
-- [ ] **TEST + IMPLEMENT: T2.57b - The MsSql trip store purges only old ended rows and rounds its command timeout**
+- [x] **TEST + IMPLEMENT: T2.57b - The MsSql trip store purges only old ended rows and rounds its command timeout**
   - **USE COMMAND**: `/tdd:test-first when the mssql trip store is configured should round its command timeout up to whole seconds and offer a purge that deletes only old ended rows`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker"
-  - Test file: `When_the_mssql_trip_store_is_configured_should_round_the_command_timeout_and_offer_a_purge.cs`
+  - Test files: `When_the_mssql_trip_store_has_a_command_timeout_should_round_it_up_to_whole_seconds_with_a_minimum_of_one.cs`, `When_the_mssql_purge_runs_should_delete_only_marked_rows_older_than_the_cutoff.cs` and `When_the_mssql_trip_store_runs_should_issue_no_delete_command.cs` (a characterisation test, green on arrival; 🔁 RED mutation: add a `DELETE` to the store's read, and it must fail on the no-`DELETE` assertion), plus the recording test doubles `RecordingConnectionProvider`, `RecordingDbConnection`, `RecordingDbCommand` and `RecordedCommand` in the project's `TestDoubles`
   - Test should verify:
     - `commandTimeout` is rounded up to whole seconds with a minimum of 1, observed on the executed command through a recording connection provider (a test double this task adds that wraps `DbConnection` and `DbCommand` and records `CommandTimeout`).
     - `GetPurgeSql` returns a parameterised `DELETE` with the parameter `@EndedBefore`. Run on a real SQL Server under a connection that may delete, with a bound cutoff, it removes only marked rows whose `EndedAt` is earlier than the cutoff, and never an unmarked row.
@@ -1320,12 +1354,12 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.57a
   - References: `src/Paramore.Brighter.Outbox.MsSql/SqlOutboxBuilder.cs` (`GetDDL` pattern). `tests/Paramore.Brighter.MSSQL.Tests/MsSqlTestHelper.cs`. ADR 0089 *The trip table and the SQL stores*.
 
-- [ ] **TEST + IMPLEMENT: T2.58 - The PostgreSql trip store passes the write contract against PostgreSQL**
-  - **USE COMMAND**: `/tdd:test-first when the postgresql trip store runs the write contract against a real database should pass every write contract case`
+- [x] **TEST + IMPLEMENT: T2.58 - The PostgreSql trip store passes the write cases against PostgreSQL**
+  - **USE COMMAND**: `/tdd:test-first when the postgresql trip store is written to against a real database should keep the later stamp, read microsecond stamps back equal and reject a repeated topic`
   - Test location: "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker"
-  - Test file: `When_the_postgresql_trip_store_runs_the_write_contract_should_pass.cs`
+  - Test files: `When_a_trip_is_written_should_keep_the_later_stamp_and_return_the_prior.cs`, `When_a_microsecond_stamp_is_written_should_read_back_equal.cs` and `When_a_write_repeats_a_topic_should_reject_it_and_change_nothing.cs`, plus a setup-only base class `PostgreSqlTrippedTopicStoreTestBase.cs` that creates the table from `GetDDL` and drops it after each test
   - Test should verify:
-    - Every `TrippedTopicStoreWriteContractTest` case (T2.4, T2.5, T2.8) passes on a real PostgreSQL, with lower-case column names.
+    - The three cases of T2.4, T2.5 and T2.8, each its own test file, pass on a real PostgreSQL, with lower-case column names.
     - `GetDDL(table, schema)` creates the table and the secondary index, and the test creates its table from it.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
@@ -1337,13 +1371,13 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.8, T2.5, T2.2
   - References: `src/Paramore.Brighter.Outbox.PostgreSql/PostgreSqlOutboxBuilder.cs`. `tests/Paramore.Brighter.PostgresSQL.Tests/PostgresSqlTestHelper.cs`. ADR 0089 *The trip table and the SQL stores*.
 
-- [ ] **TEST + IMPLEMENT: T2.58a - The PostgreSql trip store marks ended rows and gives each to one caller**
-  - **USE COMMAND**: `/tdd:test-first when the postgresql trip store runs the ended contract against a real database should mark ended rows for exactly one caller`
+- [x] **TEST + IMPLEMENT: T2.58a - The PostgreSql trip store marks ended rows and gives each to one caller**
+  - **USE COMMAND**: `/tdd:test-first when the postgresql trip store ends trips against a real database should mark ended rows for exactly one caller and never delete one`
   - Test location: "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker"
-  - Test file: `When_the_postgresql_trip_store_runs_the_ended_contract_should_pass.cs`
+  - Test files: `When_readers_race_over_an_expired_row_should_end_it_for_exactly_one_caller.cs`, `When_a_trip_is_written_over_an_ended_row_should_revive_only_with_a_later_stamp.cs` and `When_expired_trips_are_ended_should_mark_the_row_and_never_delete_it.cs`
   - Test should verify:
-    - Every `TrippedTopicStoreEndedContractTest` case (T2.6, T2.7) passes on a real PostgreSQL: a read marks ended rows and returns each to exactly one caller across 1,000 parallel repetitions, and a write over an ended row revives it only with a later stamp.
-    - The store never deletes a row.
+    - The two cases of T2.6 and T2.7, each its own test file, pass on a real PostgreSQL: a read marks ended rows and returns each to exactly one caller across 1,000 parallel repetitions, and a write over an ended row revives it only with a later stamp.
+    - A read that ends a trip marks the row and never deletes it: afterwards the table still holds the row with the ended marker set (its own test).
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - `UPDATE ... SET ended_at = @now WHERE ended_at IS NULL AND trip_time <= @cutoff RETURNING ...`, then the unmarked `SELECT`, in one batch.
@@ -1351,10 +1385,10 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.58, T2.6, T2.7
   - References: `src/Paramore.Brighter.Outbox.PostgreSql/PostgreSqlOutboxBuilder.cs`. `tests/Paramore.Brighter.PostgresSQL.Tests/PostgresSqlTestHelper.cs`. ADR 0089 *The trip table and the SQL stores*.
 
-- [ ] **TEST + IMPLEMENT: T2.58b - The PostgreSql trip store purges only old ended rows and rounds its command timeout**
+- [x] **TEST + IMPLEMENT: T2.58b - The PostgreSql trip store purges only old ended rows and rounds its command timeout**
   - **USE COMMAND**: `/tdd:test-first when the postgresql trip store is configured should round its command timeout up to whole seconds and offer a purge that deletes only old ended rows`
   - Test location: "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker"
-  - Test file: `When_the_postgresql_trip_store_is_configured_should_round_the_command_timeout_and_offer_a_purge.cs`
+  - Test files: `When_the_postgresql_trip_store_has_a_command_timeout_should_round_it_up_to_whole_seconds_with_a_minimum_of_one.cs`, `When_the_postgresql_purge_runs_should_delete_only_marked_rows_older_than_the_cutoff.cs` and `When_the_postgresql_trip_store_runs_should_issue_no_delete_command.cs` (a characterisation test, green on arrival; 🔁 RED mutation: add a `DELETE` to the store's read, and it must fail on the no-`DELETE` assertion), plus the recording test doubles `RecordingConnectionProvider`, `RecordingDbConnection`, `RecordingDbCommand` and `RecordedCommand` in the project's `TestDoubles`
   - Test should verify:
     - `commandTimeout` is rounded up to whole seconds with a minimum of 1, observed on the executed command through a recording connection provider (a test double this task adds that wraps `DbConnection` and `DbCommand` and records `CommandTimeout`).
     - `GetPurgeSql` returns a parameterised `DELETE` with the parameter `@EndedBefore`. Run on a real PostgreSQL under a connection that may delete, with a bound cutoff, it removes only marked rows whose `EndedAt` is earlier than the cutoff, and never an unmarked row.
@@ -1367,12 +1401,12 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.58a
   - References: `src/Paramore.Brighter.Outbox.PostgreSql/PostgreSqlOutboxBuilder.cs`. `tests/Paramore.Brighter.PostgresSQL.Tests/PostgresSqlTestHelper.cs`. ADR 0089 *The trip table and the SQL stores*.
 
-- [ ] **TEST + IMPLEMENT: T2.59 - The MySql trip store passes the write contract against MySQL**
-  - **USE COMMAND**: `/tdd:test-first when the mysql trip store runs the write contract against a real database should pass every write contract case`
+- [x] **TEST + IMPLEMENT: T2.59 - The MySql trip store passes the write cases against MySQL**
+  - **USE COMMAND**: `/tdd:test-first when the mysql trip store is written to against a real database should keep the later stamp, read microsecond stamps back equal and reject a repeated topic`
   - Test location: "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
-  - Test file: `When_the_mysql_trip_store_runs_the_write_contract_should_pass.cs`
+  - Test files: `When_a_trip_is_written_should_keep_the_later_stamp_and_return_the_prior.cs`, `When_a_microsecond_stamp_is_written_should_read_back_equal.cs` and `When_a_write_repeats_a_topic_should_reject_it_and_change_nothing.cs`, plus a setup-only base class `MySqlTrippedTopicStoreTestBase.cs` that creates the table from `GetDDL` and drops it after each test
   - Test should verify:
-    - Every `TrippedTopicStoreWriteContractTest` case (T2.4, T2.5, T2.8) passes on a real MySQL, with `DATETIME(6)` UTC stamps round-tripping exactly.
+    - The three cases of T2.4, T2.5 and T2.8, each its own test file, pass on a real MySQL, with `DATETIME(6)` UTC stamps round-tripping exactly.
     - `GetDDL(table, schema)` creates the table and the secondary index, and the test creates its table from it.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
@@ -1384,13 +1418,13 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.8, T2.5, T2.2
   - References: `src/Paramore.Brighter.Outbox.MySql/MySqlOutboxBuilder.cs`. ADR 0089 *The trip table and the SQL stores*.
 
-- [ ] **TEST + IMPLEMENT: T2.59a - The MySql trip store marks ended rows and gives each to one caller**
-  - **USE COMMAND**: `/tdd:test-first when the mysql trip store runs the ended contract against a real database should mark ended rows for exactly one caller`
+- [x] **TEST + IMPLEMENT: T2.59a - The MySql trip store marks ended rows and gives each to one caller**
+  - **USE COMMAND**: `/tdd:test-first when the mysql trip store ends trips against a real database should mark ended rows for exactly one caller and never delete one`
   - Test location: "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
-  - Test file: `When_the_mysql_trip_store_runs_the_ended_contract_should_pass.cs`
+  - Test files: `When_readers_race_over_an_expired_row_should_end_it_for_exactly_one_caller.cs`, `When_a_trip_is_written_over_an_ended_row_should_revive_only_with_a_later_stamp.cs` and `When_expired_trips_are_ended_should_mark_the_row_and_never_delete_it.cs`
   - Test should verify:
-    - Every `TrippedTopicStoreEndedContractTest` case (T2.6, T2.7) passes on a real MySQL: a read marks ended rows and returns each to exactly one caller across 1,000 parallel repetitions, and a write over an ended row revives it only with a later stamp.
-    - The store never deletes a row.
+    - The two cases of T2.6 and T2.7, each its own test file, pass on a real MySQL: a read marks ended rows and returns each to exactly one caller across 1,000 parallel repetitions, and a write over an ended row revives it only with a later stamp.
+    - A read that ends a trip marks the row and never deletes it: afterwards the table still holds the row with the ended marker set (its own test).
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Run the read as an explicit `REPEATABLE READ` transaction: `SELECT ... FOR UPDATE`, the marking `UPDATE` with the same predicate, then the unmarked `SELECT`.
@@ -1398,10 +1432,10 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.59, T2.6, T2.7
   - References: `src/Paramore.Brighter.Outbox.MySql/MySqlOutboxBuilder.cs`. ADR 0089 *The trip table and the SQL stores*.
 
-- [ ] **TEST + IMPLEMENT: T2.59b - The MySql trip store purges only old ended rows and rounds its command timeout**
+- [x] **TEST + IMPLEMENT: T2.59b - The MySql trip store purges only old ended rows and rounds its command timeout**
   - **USE COMMAND**: `/tdd:test-first when the mysql trip store is configured should round its command timeout up to whole seconds and offer a purge that deletes only old ended rows`
   - Test location: "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
-  - Test file: `When_the_mysql_trip_store_is_configured_should_round_the_command_timeout_and_offer_a_purge.cs`
+  - Test files: `When_the_mysql_trip_store_has_a_command_timeout_should_round_it_up_to_whole_seconds_with_a_minimum_of_one.cs`, `When_the_mysql_purge_runs_should_delete_only_marked_rows_older_than_the_cutoff.cs` and `When_the_mysql_trip_store_runs_should_issue_no_delete_command.cs` (a characterisation test, green on arrival; 🔁 RED mutation: add a `DELETE` to the store's read, and it must fail on the no-`DELETE` assertion), plus the recording test doubles `RecordingConnectionProvider`, `RecordingDbConnection`, `RecordingDbCommand` and `RecordedCommand` in the project's `TestDoubles`
   - Test should verify:
     - `commandTimeout` is rounded up to whole seconds with a minimum of 1, observed on the executed command through a recording connection provider (a test double this task adds that wraps `DbConnection` and `DbCommand` and records `CommandTimeout`).
     - `GetPurgeSql` returns a parameterised `DELETE` with the parameter `@EndedBefore`. Run on a real MySQL under a connection that may delete, with a bound cutoff, it removes only marked rows whose `EndedAt` is earlier than the cutoff, and never an unmarked row.
@@ -1414,7 +1448,54 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.59a
   - References: `src/Paramore.Brighter.Outbox.MySql/MySqlOutboxBuilder.cs`. ADR 0089 *The trip table and the SQL stores*.
 
-- [ ] **TEST + IMPLEMENT: T2.60a - The MsSql trip store retries a deadlock once against SQL Server**
+- [x] **DOC: T2.59c - Amend ADR 0089 for the shared base class `RelationDatabaseTrippedTopicStore`**
+  - Amend ADR 0089 (*Key Components*, *The roles, and what each is responsible for*, *Where the pieces live*, *Where each type is touched* and the FR-7.4 line of *Scope*) to say that the three SQL trip stores derive from a public abstract class `RelationDatabaseTrippedTopicStore` in `Paramore.Brighter`, modelled on `RelationDatabaseOutbox`. Add an amendment note to its Status section, as ADRs 0028, 0085 and 0086 do for this spec.
+    - **The base holds** what the three stores repeat: the constructor arguments (connection provider, table name, optional command timeout), the rule that a write names each topic once and applies topics in ordinal order, the command timeout rounded up to whole seconds with a minimum of one, command and parameter creation, row-to-`TopicTrip`/`TripWriteResult` mapping, and (from T2.60a) the retry-once-on-deadlock template `RunWithDeadlockRetryAsync` with a protected virtual `IsDeadlock(Exception)` that returns false.
+    - **Each derived store keeps** its dialect: the SQL text and quoting, `GetDDL`, `GetPurgeSql`, the shape of its write and read (one batch on MsSql, one `INSERT ... RETURNING` on PostgreSql, an upsert plus `SELECT` and a `REPEATABLE READ` read on MySql), its `IsDeadlock` predicate, and connection and transaction handling, because core targets `netstandard2.0` and cannot assume async disposal.
+    - The stores' public constructors, `GetDDL` and `GetPurgeSql` do not change. The base class is new public API in an unreleased package, additive, and needs no `InternalsVisibleTo`.
+  - Covers: FR-7.4, NFR-7, NFR-9 (one retry template). ADR step 13.
+  - Depends on: T2.59b
+  - References: `docs/adr/0089-distributed-outbox-circuit-breaker.md`. `src/Paramore.Brighter/RelationDatabaseOutbox.cs` (the pattern).
+
+- [x] **TEST + IMPLEMENT: T2.59c1 - The SQL trip stores default a null command timeout to 2 seconds**
+  - **USE COMMAND**: `/tdd:test-first when a sql trip store is built with no command timeout should run its commands with the default store timeout of 2 seconds`
+  - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker", "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker" and "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
+  - Test files: one per project, `When_the_{backend}_trip_store_has_no_command_timeout_should_default_it_to_two_seconds.cs`, using the project's recording connection provider
+  - Test should verify:
+    - A store built with `commandTimeout` null runs every command it issues with a `CommandTimeout` of 2 seconds, observed through the recording connection provider.
+    - A store built with an explicit `commandTimeout` is unchanged: it still rounds up to whole seconds with a minimum of 1.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - In each of the three stores, use `commandTimeout ?? TimeSpan.FromSeconds(2)` before the whole-second rounding, so a command always carries a timeout. Change no SQL. Done before T2.59d so the extraction moves no behaviour.
+  - Covers: FR-7.4, NFR-3 (command timeout). ADR 0089 *Key Components* (the store constructor row: `commandTimeout` defaults to 2 seconds, the default `StoreTimeout`).
+  - Depends on: T2.59c
+  - Added 2026-11-07 with the owner's approval of this amendment, after the Phase 2h smells review found ADR 0089 and the three stores disagree.
+  - References: `src/Paramore.Brighter.Outbox.MsSql/MsSqlTrippedTopicStore.cs`, `src/Paramore.Brighter.Outbox.PostgreSql/PostgreSqlTrippedTopicStore.cs`, `src/Paramore.Brighter.Outbox.MySql/MySqlTrippedTopicStore.cs`.
+
+- [x] **STRUCTURAL: T2.59d - Extract `RelationDatabaseTrippedTopicStore` from the three SQL trip stores**
+  - **USE COMMAND**: `/refactor:tidy-first extract a RelationDatabaseTrippedTopicStore base class in core, following RelationDatabaseOutbox, and derive MsSqlTrippedTopicStore, PostgreSqlTrippedTopicStore and MySqlTrippedTopicStore from it to remove Duplicated Code`
+  - Change:
+    - Add `public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore` in `src/Paramore.Brighter/CircuitBreaker/`, with the responsibilities T2.59c lists, as protected members. Each store's public constructor, `GetDDL` and `GetPurgeSql` keep their signatures.
+    - Move `InOrdinalTopicOrder`, `WholeSecondsAtLeastOne`, `CreateCommand`, `AddParameter` and the row mapping out of the three stores into the base. Leave each store's SQL, quoting, and write and read shape where they are.
+    - Do not add the deadlock retry here (T2.60a adds it) and change no SQL.
+    - The base compiles for `netstandard2.0`: no `await using`, `DisposeAsync` or `BeginTransactionAsync` in core. A store that wants them keeps that code.
+  - Green before and after: every `*TrippedTopicStore*` test in `Paramore.Brighter.MSSQL.Tests` (net10.0 and net9.0), `Paramore.Brighter.PostgresSQL.Tests` and `Paramore.Brighter.MySQL.Tests`, and `Paramore.Brighter.Core.Tests/CircuitBreaker`. Build `Paramore.Brighter`, `Outbox.MsSql`, `Outbox.PostgreSql` and `Outbox.MySql` for every target framework.
+  - Covers: ADR step 13. Smells review of 2026-11-07, finding 1.
+  - Depends on: T2.59c1
+  - References: `src/Paramore.Brighter.Outbox.MsSql/MsSqlTrippedTopicStore.cs`, `src/Paramore.Brighter.Outbox.PostgreSql/PostgreSqlTrippedTopicStore.cs`, `src/Paramore.Brighter.Outbox.MySql/MySqlTrippedTopicStore.cs`. `src/Paramore.Brighter/RelationDatabaseOutbox.cs`.
+
+- [x] **STRUCTURAL: T2.59e - Share the SQL trip store tests' setup and recording doubles through `Base.Test`**
+  - **USE COMMAND**: `/refactor:tidy-first move the Recording test doubles into Paramore.Brighter.Base.Test and give the three trip store test setup bases a shared RelationDatabaseTrippedTopicStoreTestBase, following RelationDatabaseOutboxTest`
+  - Change:
+    - Move `RecordedCommand`, `RecordingConnectionProvider`, `RecordingDbCommand` and `RecordingDbConnection` from the three `TestDoubles` folders into one set in `tests/Paramore.Brighter.Base.Test/CircuitBreaker/`. Delete the copies.
+    - Add `RelationDatabaseTrippedTopicStoreTestBase` there: the table name, the `IAsyncLifetime` that runs the DDL and drops the table, and the `Store` property, with abstract members for the connection provider, the DDL, the drop statement and the store's construction. Each project's `…TrippedTopicStoreTestBase` shrinks to those four members.
+    - The test cases stay one per file in each project with their assertions written out. Only setup and doubles are shared.
+  - Green before and after: every `*TrippedTopicStore*` test in the three SQL test projects.
+  - Covers: smells review of 2026-11-07, findings 1 and 3.
+  - Depends on: T2.59d
+  - References: `tests/Paramore.Brighter.Base.Test/Outbox/RelationDatabaseOutboxTest.cs` (the pattern). The three `TestDoubles` folders and `*TrippedTopicStoreTestBase.cs` files.
+
+- [x] **TEST + IMPLEMENT: T2.60a - The MsSql trip store retries a deadlock once against SQL Server**
   - **USE COMMAND**: `/tdd:test-first when the mssql trip store write is chosen as a deadlock victim on a real database should retry once and succeed`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker"
   - Test file: `When_the_mssql_trip_store_is_chosen_as_a_deadlock_victim_should_retry_once_and_succeed.cs`
@@ -1427,12 +1508,12 @@ Phase 2 (starts only after T1.15 has merged)
     - Only the retry-once case is tested. A second deadlock cannot be provoked on demand on a real database, so that the helper retries exactly once and never loops is checked in review, not by a test.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Wrap the store's write and read transactions in a retry-once on SQL Server error 1205. Use no test-only seam and no `InternalsVisibleTo`; the test drives a real database.
+    - Add `RunWithDeadlockRetryAsync` to `RelationDatabaseTrippedTopicStore`, which retries its operation once and never loops, with a protected virtual `IsDeadlock(Exception)` that returns false. Wrap the write and the read of every store in it. `MsSqlTrippedTopicStore` overrides `IsDeadlock` for SQL Server error 1205, so only MsSql retries until T2.60b and T2.60c. Use no test-only seam and no `InternalsVisibleTo`; the test drives a real database.
   - Covers: NFR-9. ADR risk "Two instances' batches deadlock".
-  - Depends on: T2.57b
-  - References: `src/Paramore.Brighter.Outbox.MsSql/`. ADR 0089 *Risks and Mitigations*.
+  - Depends on: T2.57b, T2.59e
+  - References: `src/Paramore.Brighter/CircuitBreaker/RelationDatabaseTrippedTopicStore.cs`, `src/Paramore.Brighter.Outbox.MsSql/`. ADR 0089 *Risks and Mitigations*.
 
-- [ ] **TEST + IMPLEMENT: T2.60b - The PostgreSql trip store retries a deadlock once against PostgreSQL**
+- [x] **TEST + IMPLEMENT: T2.60b - The PostgreSql trip store retries a deadlock once against PostgreSQL**
   - **USE COMMAND**: `/tdd:test-first when the postgresql trip store write is chosen as a deadlock victim on a real database should retry once and succeed`
   - Test location: "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker"
   - Test file: `When_the_postgresql_trip_store_is_chosen_as_a_deadlock_victim_should_retry_once_and_succeed.cs`
@@ -1444,12 +1525,12 @@ Phase 2 (starts only after T1.15 has merged)
     - Only the retry-once case is tested. A second deadlock cannot be provoked on demand on a real database, so that the helper retries exactly once and never loops is checked in review, not by a test.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Wrap the store's write and read transactions in a retry-once on SQLSTATE 40P01. Use no test-only seam and no `InternalsVisibleTo`; the test drives a real database.
+    - Override `IsDeadlock` in `PostgreSqlTrippedTopicStore` for SQLSTATE 40P01. The retry template and the wrapping of the write and read are the base class's, from T2.60a. Use no test-only seam and no `InternalsVisibleTo`; the test drives a real database.
   - Covers: NFR-9. ADR risk "Two instances' batches deadlock".
-  - Depends on: T2.58b
+  - Depends on: T2.58b, T2.60a
   - References: `src/Paramore.Brighter.Outbox.PostgreSql/`. ADR 0089 *Risks and Mitigations*.
 
-- [ ] **TEST + IMPLEMENT: T2.60c - The MySql trip store retries a deadlock once against MySQL**
+- [x] **TEST + IMPLEMENT: T2.60c - The MySql trip store retries a deadlock once against MySQL**
   - **USE COMMAND**: `/tdd:test-first when the mysql trip store write is chosen as a deadlock victim on a real database should retry once and succeed`
   - Test location: "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
   - Test file: `When_the_mysql_trip_store_is_chosen_as_a_deadlock_victim_should_retry_once_and_succeed.cs`
@@ -1461,29 +1542,135 @@ Phase 2 (starts only after T1.15 has merged)
     - Only the retry-once case is tested. A second deadlock cannot be provoked on demand on a real database, so that the helper retries exactly once and never loops is checked in review, not by a test.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Wrap the store's write and read transactions in a retry-once on ER_LOCK_DEADLOCK (1213). Use no test-only seam and no `InternalsVisibleTo`; the test drives a real database.
+    - Override `IsDeadlock` in `MySqlTrippedTopicStore` for ER_LOCK_DEADLOCK (1213). The retry template and the wrapping of the write and read are the base class's, from T2.60a. Use no test-only seam and no `InternalsVisibleTo`; the test drives a real database.
   - Covers: NFR-9. ADR risk "Two instances' batches deadlock".
-  - Depends on: T2.59b
+  - Depends on: T2.59b, T2.60a
   - References: `src/Paramore.Brighter.Outbox.MySql/`. ADR 0089 *Risks and Mitigations*.
 
-- [ ] **CHARACTERISE: T2.60 - Overlapping batch writes and reads do not deadlock on any backend**
-  - **USE COMMAND**: `/tdd:test-first when overlapping trip batches and reads run concurrently against the database should complete without a deadlock failure`
-  - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker", "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker", "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
-  - Test file: `When_overlapping_trip_batches_run_concurrently_should_not_deadlock.cs` (one per backend)
+- [x] **DOC: T2.60d - Amend ADR 0089 to split the store read into `EndExpiredAsync` and `ReadLiveAsync`**
+  - Done 2026-11-09 with the owner's approval of the amendment to the approved design, found by the Phase 2h review: `ReadOnceAsync` updates rows, so a "read" hides its side effect from its callers (command-query separation).
+  - ADR 0089 now says: `IAmATrippedTopicStore` has `EndExpiredAsync(now, tripLength)`, the one atomic claim, which marks expired unmarked rows ended and returns exactly those to one caller, and `ReadLiveAsync(now, tripLength)`, which returns the unmarked rows stamped after `now - tripLength` and changes nothing. `TrippedTopicStoreRead` is gone. A read is the two calls, `EndExpiredAsync` first, under one `StoreTimeout`, so a sweep's worst case does not change. The breaker announces the rows `EndExpiredAsync` returned even when `ReadLiveAsync` then fails. `ReadLiveAsync` needs `SELECT` only. Alternative 16 records the first design and why it was replaced.
+  - Covers: FR-4.4 (wording), ADR 0089 *How a read ends trips*, *`IAmATrippedTopicStore`*, *The trip table and the SQL stores*, alternative 16.
+  - References: `docs/adr/0089-distributed-outbox-circuit-breaker.md`.
+
+- [x] **DOC: T2.60e - Reword FR-4.4 in the requirements for the split read**
+  - In `requirements.md`, FR-4.4 and any sentence that says "one read operation" marks rows, say that the operation that marks ended entries is separate from the read of live entries, which changes nothing. No requirement changes: one announcer per Reset, mark and never delete, and `UPDATE` without `DELETE` permission all stand.
+  - Covers: FR-4.4.
+  - Depends on: T2.60d
+  - References: `specs/0039-circuit-breaker-stale-tripped-topics/requirements.md`.
+
+- [x] **TEST + IMPLEMENT: T2.60f - The store contract gains `EndExpiredAsync` and `ReadLiveAsync`, in core and the in-memory store**
+  - **USE COMMAND**: `/tdd:test-first when the in-memory trip store ends expired trips and reads live trips should return each ended row to exactly one caller and change nothing on a live read`
+  - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
+  - Test files, one case each: `When_trips_have_run_out_should_end_each_row_and_return_it_to_exactly_one_caller.cs` (over 1,000 repetitions of parallel `EndExpiredAsync(now, tripLength)`), `When_a_live_read_runs_should_change_nothing.cs` (repeated `ReadLiveAsync` returns the same rows, and a later `EndExpiredAsync` still returns each expired row), `When_a_row_has_run_out_but_is_not_ended_should_not_be_live.cs`
   - Test should verify:
-    - Parallel batches over overlapping topic sets, submitted in different orders, plus concurrent reads, repeated many times, all complete.
+    - `EndExpiredAsync` marks each unmarked row stamped at or before `now - tripLength` ended with `EndedAt = now` and returns it to exactly one caller. It returns nothing for a row that is already ended or still live.
+    - `ReadLiveAsync` returns only unmarked rows stamped after `now - tripLength`, and changes nothing.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - Add both members to `IAmATrippedTopicStore` beside `ReadAsync`, which stays until T2.60k. Implement them in `InMemoryTrippedTopicStore` under its one lock.
+    - In `RelationDatabaseTrippedTopicStore`, add public `EndExpiredAsync` and `ReadLiveAsync` that run protected abstract `EndExpiredOnceAsync` and `ReadLiveOnceAsync` through the deadlock retry, as `ReadAsync` does. Each SQL store implements them as `throw new NotImplementedException()` until T2.60g, T2.60h and T2.60i replace them.
+    - Every test double that implements `IAmATrippedTopicStore` (the `*TrippedTopicStore.cs` files under `Core.Tests` `TestDoubles`) gains both members, forwarding to its inner store, so the project still builds.
+  - Covers: FR-4.4, NFR-5. ADR 0089 *`IAmATrippedTopicStore`*.
+  - Depends on: T2.60d
+  - References: `src/Paramore.Brighter/CircuitBreaker/IAmATrippedTopicStore.cs`, `InMemoryTrippedTopicStore.cs`, `RelationDatabaseTrippedTopicStore.cs`.
+
+- [x] **TEST + IMPLEMENT: T2.60g - The MsSql trip store ends expired trips and reads live trips against SQL Server**
+  - **USE COMMAND**: `/tdd:test-first when the mssql trip store ends expired trips and reads live trips against a real database should return each ended row to exactly one caller, never delete, and change nothing on a live read`
+  - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker"
+  - Test files, one case each: `When_readers_race_over_an_expired_row_should_end_it_for_exactly_one_caller.cs` (1,000 parallel repetitions), `When_a_live_read_runs_should_change_nothing_and_not_return_an_expired_row.cs`, `When_the_mssql_trip_store_end_expired_is_chosen_as_a_deadlock_victim_should_retry_once_and_succeed.cs`
+  - Test should verify:
+    - The cases of T2.60f against a real SQL Server, and that a command issued by either call carries the store's command timeout.
+    - An `EndExpiredAsync` deadlocked with a held row is retried once and succeeds (the existing read-deadlock test of T2.60a, aimed at the new call).
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - `EndExpiredOnceAsync`: one `UPDATE ... SET EndedAt = @now OUTPUT INSERTED.Topic, INSERTED.TripTime WHERE EndedAt IS NULL AND TripTime <= @cutoff`. `ReadLiveOnceAsync`: `SELECT Topic, TripTime ... WHERE EndedAt IS NULL AND TripTime > @cutoff`.
+  - Covers: FR-4.4, NFR-5, NFR-9. ADR 0089 *The trip table and the SQL stores*.
+  - Depends on: T2.60f, T2.60a
+  - References: `src/Paramore.Brighter.Outbox.MsSql/MsSqlTrippedTopicStore.cs`.
+
+- [x] **TEST + IMPLEMENT: T2.60h - The PostgreSql trip store ends expired trips and reads live trips against PostgreSQL**
+  - **USE COMMAND**: `/tdd:test-first when the postgresql trip store ends expired trips and reads live trips against a real database should return each ended row to exactly one caller, never delete, and change nothing on a live read`
+  - Test location: "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker"
+  - Test files: the three cases of T2.60g, named for PostgreSQL.
+  - Test should verify: the same as T2.60g on a real PostgreSQL.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - `EndExpiredOnceAsync`: one `UPDATE ... SET ended_at = @now WHERE ended_at IS NULL AND trip_time <= @cutoff RETURNING topic, trip_time`. `ReadLiveOnceAsync`: `SELECT topic, trip_time ... WHERE ended_at IS NULL AND trip_time > @cutoff`.
+  - Covers: FR-4.4, NFR-5, NFR-9. ADR 0089 *The trip table and the SQL stores*.
+  - Depends on: T2.60f, T2.60b
+  - References: `src/Paramore.Brighter.Outbox.PostgreSql/PostgreSqlTrippedTopicStore.cs`.
+
+- [x] **TEST + IMPLEMENT: T2.60i - The MySql trip store ends expired trips and reads live trips against MySQL**
+  - **USE COMMAND**: `/tdd:test-first when the mysql trip store ends expired trips and reads live trips against a real database should return each ended row to exactly one caller, never delete, and change nothing on a live read`
+  - Test location: "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
+  - Test files: the three cases of T2.60g, named for MySQL.
+  - Test should verify: the same as T2.60g on a real MySQL.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - `EndExpiredOnceAsync`: one transaction at `REPEATABLE READ`, set explicitly: `SELECT ... WHERE EndedAt IS NULL AND TripTime <= @cutoff FOR UPDATE`, then the `UPDATE` with the same predicate. `ReadLiveOnceAsync`: `SELECT Topic, TripTime ... WHERE EndedAt IS NULL AND TripTime > @cutoff`, with no transaction.
+  - Covers: FR-4.4, NFR-5, NFR-9. ADR 0089 *The trip table and the SQL stores*.
+  - Depends on: T2.60f, T2.60c
+  - References: `src/Paramore.Brighter.Outbox.MySql/MySqlTrippedTopicStore.cs`.
+
+- [x] **TEST + IMPLEMENT: T2.60j - The distributed breaker ends expired trips then reads live trips under one store timeout**
+  - **USE COMMAND**: `/tdd:test-first when the distributed breaker reads the store should end expired trips then read live trips under one store timeout and announce the ended rows even when the live read fails`
+  - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
+  - Test files, one case each: `When_the_live_read_fails_after_trips_were_ended_should_still_announce_the_resets_and_enter_fallback.cs`, `When_ending_expired_trips_fails_should_not_read_live_trips_and_enter_fallback.cs`, `When_the_two_read_calls_together_take_longer_than_one_store_timeout_should_abandon_the_read_at_the_timeout.cs`
+  - Test should verify:
+    - A read calls `EndExpiredAsync`, then `ReadLiveAsync`, with one token and one wait for `StoreTimeout` around both.
+    - When `EndExpiredAsync` returned rows and `ReadLiveAsync` then fails or times out, each returned row still announces its Reset and leaves the view, and the breaker records the read failure.
+    - When `EndExpiredAsync` fails, `ReadLiveAsync` is not called and the breaker records the failure.
+    - Every existing breaker test about reads still passes with its double aimed at the calls the breaker now makes.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - In `MergeStoreIntoViewAsync`, make the one store call the pair of calls. Keep the read's sequence number, the stale-read rule and `EndRowsFrom` for the rows `EndExpiredAsync` returned.
+  - Covers: FR-4.4, NFR-3. ADR 0089 *How a read ends trips*, *Refresh on every running sweeper*.
+  - Depends on: T2.60f
+  - References: `src/Paramore.Brighter/CircuitBreaker/DistributedOutboxCircuitBreaker.cs`.
+
+- [x] **STRUCTURAL: T2.60k - Remove `ReadAsync` and `TrippedTopicStoreRead` now that nothing calls them**
+  - **USE COMMAND**: `/refactor:tidy-first remove ReadAsync and TrippedTopicStoreRead from IAmATrippedTopicStore, the in-memory store, RelationDatabaseTrippedTopicStore and the three SQL trip stores, and aim the tests and test doubles that used them at EndExpiredAsync and ReadLiveAsync`
+  - Change:
+    - Delete `ReadAsync`, `TrippedTopicStoreRead` and each store's `ReadOnceAsync`. Aim every test, helper and double that called `ReadAsync` at `ReadLiveAsync`, or at `EndExpiredAsync` where the test is about ending. That covers the T2.6 and T2.7 contract tests, the three SQL test bases' read-back, the three read-deadlock tests of T2.60a to T2.60c, and the failure and hang injection in the `Core.Tests` doubles.
+    - Change no behaviour.
+  - Green before and after: every `*TrippedTopicStore*` test in the three SQL test projects and `Paramore.Brighter.Core.Tests/CircuitBreaker` and `Sweeping`. Build `Paramore.Brighter` and the three `Outbox.*` projects for every target framework.
+  - Covers: ADR 0089 alternative 16.
+  - Depends on: T2.60g, T2.60h, T2.60i, T2.60j
+  - References: `src/Paramore.Brighter/CircuitBreaker/`, the three `*TrippedTopicStore.cs` files, `tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed/TestDoubles/`.
+
+- [x] **CHARACTERISE: T2.60 - Overlapping batch writes and reads do not deadlock on MsSql and PostgreSql**
+  - **USE COMMAND**: `/tdd:test-first when overlapping trip batches and reads run concurrently against the database should complete without a deadlock failure`
+  - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker", "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker"
+  - Test file: `When_overlapping_trip_batches_run_concurrently_should_not_deadlock.cs` (one per backend; the MySql one is written by T2.60k1, because it was red on arrival: see the owner-approved amendment under T2.60k1)
+  - Test should verify:
+    - Parallel batches over overlapping topic sets, submitted in different orders, plus concurrent `EndExpiredAsync` and `ReadLiveAsync` calls, repeated many times, all complete.
     - The stored stamps equal the latest written per topic.
   - 🔁 RED mutation: write topics in the order the batch supplies them, with no ordinal sort, and make the deadlock retry call the operation only once, so the retry from T2.60a-T2.60c cannot absorb the deadlock, in one store (MsSql first, then the others). The test submits overlapping topic sets in different orders for a fixed 200 repetitions and must fail on the "all complete" assertion. Revert.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Nothing. T2.57-T2.59a write topics in ordinal order inside one transaction. This test pins it on each real database.
   - Covers: NFR-5, NFR-9. ADR risk "Two instances' batches deadlock".
-  - Depends on: T2.60a, T2.60b, T2.60c, T2.57a, T2.58a, T2.59a
+  - Depends on: T2.60a, T2.60b, T2.60c, T2.60k, T2.57a, T2.58a, T2.59a
   - References: ADR 0089 *Risks and Mitigations*.
+
+- [x] **TEST + IMPLEMENT: T2.60k1 - MySql EndExpiredAsync locks by primary key so overlapping batches and ends do not deadlock**
+  - *Added 2026-11-10 with the owner's approval, from the MySql run of T2.60: the overlap test was red on arrival, with `Deadlock found when trying to get lock` reaching the caller after the one retry, on every run. Writers alone and writers with `ReadLiveAsync` pass; writers with `EndExpiredAsync` always deadlock. The cause is the `REPEATABLE READ` `SELECT ... WHERE EndedAt IS NULL AND TripTime <= @cutoff FOR UPDATE`, which takes gap locks over the `(EndedAt, TripTime)` index range that the writers' inserts need. The old combined read had the same shape; the existing tests deadlock only against a held row. `READ COMMITTED` was tried and rejected: it does not remove the deadlock and breaks the race tests.*
+  - **USE COMMAND**: `/tdd:test-first when overlapping trip batches and ends run concurrently against MySQL should complete without a deadlock failure`
+  - Test location: "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
+  - Test file: `When_overlapping_trip_batches_run_concurrently_should_not_deadlock.cs`, the MySql version of the T2.60 test: 200 repetitions of four parallel batches over six topics in alternating orders, with concurrent `EndExpiredAsync` and `ReadLiveAsync`, then each topic holds the latest written stamp.
+  - Test should verify: every call completes with no deadlock failure, and the stored stamps equal the latest written per topic. The test is red before the change and stays as the pinning test after it.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - Keep the explicit `REPEATABLE READ` transaction in `EndExpiredOnceAsync`. A plain `SELECT` finds the candidate topics (`WHERE EndedAt IS NULL AND TripTime <= @cutoff`). Then lock them by primary key in ordinal topic order, the order writers use: `SELECT ... WHERE Topic IN (...) AND EndedAt IS NULL AND TripTime <= @cutoff ORDER BY Topic FOR UPDATE`, which re-checks the predicate under the lock, and `UPDATE` exactly the rows that query returned, by `Topic`. Return those rows. Exactly-once holds because the re-check runs under the row lock.
+    - Reword the MySql cell of the *End expired* row in ADR 0089 *The trip table and the SQL stores* to match.
+  - Covers: NFR-5, NFR-9, FR-4.4. ADR risk "Two instances' batches deadlock".
+  - Depends on: T2.60, T2.60g, T2.60i, T2.60k
+  - References: `src/Paramore.Brighter.Outbox.MySql/MySqlTrippedTopicStore.cs`, `docs/adr/0089-*.md`.
 
 ### Phase 2i - Provisioning the trip table
 
-- [ ] **TEST + IMPLEMENT: T2.61 - BoxType gains TrippedTopics, ordered after outboxes and before inboxes**
+- [x] **TEST + IMPLEMENT: T2.61 - BoxType gains TrippedTopics, ordered after outboxes and before inboxes**
   - **USE COMMAND**: `/tdd:test-first when box provisioning runs a trip table provisioner should run it after outboxes and before inboxes`
   - Test location: "tests/Paramore.Brighter.Core.Tests/BoxProvisioning"
   - Test file: `When_box_provisioning_hosted_service_starts_it_should_provision_tripped_topics_after_outbox_before_inbox.cs`
@@ -1497,7 +1684,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.1
   - References: `src/Paramore.Brighter.BoxProvisioning/BoxType.cs:29-41`. `src/Paramore.Brighter.BoxProvisioning/BoxProvisioningHostedService.cs:111-118`. `tests/Paramore.Brighter.Core.Tests/BoxProvisioning/When_box_provisioning_hosted_service_starts_it_should_provision_outbox_before_inbox.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.62 - TrippedTopicsProvisioner runs the backend migration runner for the trip table**
+- [x] **TEST + IMPLEMENT: T2.62 - TrippedTopicsProvisioner runs the backend migration runner for the trip table**
   - **USE COMMAND**: `/tdd:test-first when the tripped topics provisioner runs should guard the identifiers and run the backend migration runner for the trip table`
   - Test location: "tests/Paramore.Brighter.Core.Tests/BoxProvisioning"
   - Test file: `When_the_tripped_topics_provisioner_runs_it_should_invoke_the_migration_runner_for_the_trip_table.cs`
@@ -1511,7 +1698,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.61
   - References: `src/Paramore.Brighter.BoxProvisioning.Spanner/SpannerOutboxProvisioner.cs`. `docs/adr/0058-box-provisioning-rdd-role-interfaces.md`. `tests/Paramore.Brighter.Core.Tests/BoxProvisioning/TestDoubles/`.
 
-- [ ] **TEST + IMPLEMENT: T2.63 - MsSql trip-table provisioning: fresh install, re-run and hand-created table**
+- [x] **TEST + IMPLEMENT: T2.63 - MsSql trip-table provisioning: fresh install, re-run and hand-created table**
   - **USE COMMAND**: `/tdd:test-first when the mssql trip table provisioner runs on a fresh database should create the trip table and be idempotent on re-run`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning"
   - Test file: `When_mssql_tripped_topics_provisioner_runs_on_fresh_database_it_should_create_the_trip_table.cs`
@@ -1529,7 +1716,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.62, T2.57
   - References: `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlOutboxMigrationCatalog.cs:97`, `MsSqlBoxProvisioningExtensions.cs:17`, `MsSqlBoxDetectionHelper.cs:199-204`. `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/When_mssql_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.64 - PostgreSql trip-table provisioning: fresh install, re-run and hand-created table**
+- [x] **TEST + IMPLEMENT: T2.64 - PostgreSql trip-table provisioning: fresh install, re-run and hand-created table**
   - **USE COMMAND**: `/tdd:test-first when the postgresql trip table provisioner runs on a fresh database should create the trip table and be idempotent on re-run`
   - Test location: "tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning"
   - Test file: `When_postgresql_tripped_topics_provisioner_runs_on_fresh_database_it_should_create_the_trip_table.cs`
@@ -1543,7 +1730,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.62, T2.58
   - References: `src/Paramore.Brighter.BoxProvisioning.PostgreSql/PostgreSqlBoxDetectionHelper.cs:245-247`, `PostgreSqlOutboxMigrationCatalog.cs`, `PostgreSqlBoxProvisioningExtensions.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.65 - MySql trip-table provisioning: fresh install, re-run and hand-created table**
+- [x] **TEST + IMPLEMENT: T2.65 - MySql trip-table provisioning: fresh install, re-run and hand-created table**
   - **USE COMMAND**: `/tdd:test-first when the mysql trip table provisioner runs on a fresh database should create the trip table and be idempotent on re-run`
   - Test location: "tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning"
   - Test file: `When_mysql_tripped_topics_provisioner_runs_on_fresh_database_it_should_create_the_trip_table.cs`
@@ -1559,7 +1746,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2j - Real-database acceptance
 
-- [ ] **CHARACTERISE: T2.66 - On each real database, a trip is shared between breakers, ends by C and survives a restart**
+- [x] **CHARACTERISE: T2.66 - On each real database, a trip is shared between breakers, ends by C and survives a restart**
   - **USE COMMAND**: `/tdd:test-first when two distributed breakers share a real database trip table should share a trip, end it by the cooldown duration and keep it across a restart`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker", "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker", "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
   - Test file: `When_two_breakers_share_a_trip_table_should_share_end_and_survive_restart.cs` (one per backend)
@@ -1576,7 +1763,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.63, T2.64, T2.65, T2.57a, T2.58a, T2.59a, T2.23
   - References: ADR 0089 *Testing strategy*.
 
-- [ ] **CHARACTERISE: T2.67 - Concurrent first trips announce one Trip and one ReTrip on each real database**
+- [x] **CHARACTERISE: T2.67 - Concurrent first trips announce one Trip and one ReTrip on each real database**
   - **USE COMMAND**: `/tdd:test-first when two breakers trip the same topic concurrently against a real database should announce exactly one trip and one retrip`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker", "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker", "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
   - Test file: `When_two_breakers_trip_a_topic_concurrently_against_the_database_should_announce_one_trip_and_one_retrip.cs` (one per backend)
@@ -1592,7 +1779,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2k - Dependency guard and Phase 2 verification
 
-- [ ] **CHARACTERISE: T2.68 - A core-only project gains no new package**
+- [!] **CHARACTERISE: T2.68 - A core-only project gains no new package** (DROPPED 2026-11-18, owner approved: the package-graph test is orthogonal to this work and was fragile; the test and `ExpectedCorePackages.txt` are removed, and AC-38 is dropped from requirements.md)
   - **USE COMMAND**: `/tdd:test-first when a project references only paramore brighter should have no new package in its dependency graph`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Architecture"
   - Test file: `When_a_project_references_only_core_should_have_no_new_package_dependency.cs`
@@ -1606,7 +1793,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.59b
   - References: `tests/Paramore.Brighter.Core.Tests/Architecture/When_the_solution_is_built_it_should_declare_no_container_types_in_core.cs`. `src/Directory.Build.props`.
 
-- [ ] **PROJECT: T2.69 - Phase 2 verification: compatibility, full suites and database parity**
+- [x] **PROJECT: T2.69 - Phase 2 verification: compatibility, full suites and database parity**
   - Build the solution. Run `Core.Tests` (`CircuitBreaker`, `Sweeping`, `Observability/Metrics`, `Confirmation`, `CommandProcessors`, `BoxProvisioning`, `Architecture`) and the MSSQL, PostgresSQL and MySQL test projects against real databases (`/test-infra:run-tests`).
   - AC-31: `ListedTopicsCircuitBreaker` and `ThrowingOutboxCircuitBreaker` are unchanged, `IAmAnOutboxCircuitBreaker` is unchanged, and every existing Sweeping and Metrics test passes unchanged.
   - Confirm the unchanged list in ADR 0089 *Where each type is touched* (`OutboxSweeperState`, `RemedyCondition`, the counter attributes, the sync `Dispatch()` path, the control-bus breakers).
@@ -1617,19 +1804,19 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2l - Decision records, release notes and Docs list
 
-- [ ] **DOC: T2.70 - Add amendment notes to ADRs 0028, 0058, 0085 and 0086**
+- [x] **DOC: T2.70 - Add amendment notes to ADRs 0028, 0058, 0085 and 0086**
   - Add or extend a short amendment note in the Status section of each ADR that points to ADR 0089 and names the parts that change:
     - `docs/adr/0028-support-circuit-breaking-of-topics.md`: extend the T1.14a note to all three replaced decisions.
     - `docs/adr/0058-outbox-circuit-breaker-trip-logging.md`: extend the T1.14a note with the distributed announcer rules and the `circuit_breaker.cooldown_duration` span attribute.
-    - `docs/adr/0085-track-outbox-sweeper-state-and-publish-gauges.md`: no `IsActive` gating for shared breakers. Not `0085-gcp-purge-server-boundary.md`.
-    - `docs/adr/0086-sweeper-remedy-health-checks.md`: the new `tripped_topics` applies-when rule and `tripped_topics_store_unavailable`.
+    - `docs/adr/0085-track-outbox-sweeper-state-and-publish-gauges.md`: no `IsActive` gating for shared breakers, and the breaker lookup runs on every running sweeper (a throwing lookup records 0 and logs the fault on an inactive sweeper too). Not `0085-gcp-purge-server-boundary.md`.
+    - `docs/adr/0086-sweeper-remedy-health-checks.md`: the new `tripped_topics` applies-when rule, `tripped_topics_store_unavailable`, and the breaker lookup on every running sweeper (a throwing lookup reports `tripped_topics_unreadable` on an inactive sweeper too).
   - Update frontmatter with `/adr:write_adr_metadata` where relevant.
   - Confirm that ADR 0089 is Accepted and that ADR 0088 needs no amendment.
   - Covers: FR-9.1, AC-34 (ADR part). OQ-11. ADR step 16. Amendments to 0028/0058/0085/0086.
   - Depends on: T2.69
   - References: `docs/adr/0089-distributed-outbox-circuit-breaker.md` (*Amends*).
 
-- [ ] **DOC: T2.71 - Complete the FR-9.2 release notes in the existing marked section**
+- [x] **DOC: T2.71 - Complete the FR-9.2 release notes in the existing marked section**
   - Check the `<!-- spec: 0039-circuit-breaker-stale-tripped-topics -->` section under `## Master` in `release_notes.md` (from commit 7f650ff19, possibly narrowed in T1.14). Adjust it with `/spec:write_release_notes`, without rewriting it blindly, so that it names:
     - the new breaker, `IAmAnOutboxCircuitBreakerAsync`, `IAmATripBatch`, `IAmASharedOutboxCircuitBreaker`, and the options `CooldownDuration`, `ClockSkewLeeway` and `StoreTimeout`;
     - the D default and its effect on existing users (FR-7.2);
@@ -1641,7 +1828,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.70
   - References: `release_notes.md:3-17`.
 
-- [ ] **DOC: T2.72 - List the BrighterCommand/Docs changes in the PR description**
+- [x] **DOC: T2.72 - List the BrighterCommand/Docs changes in the PR description**
   - In the Phase 2 PR description, list the pages to change in BrighterCommand/Docs (writing them is tracked separately):
     - Circuit-breaker page: register `DistributedOutboxCircuitBreaker` (and `InMemoryOutboxCircuitBreaker`) as a singleton shared with the mediator (FR-7.3). The clock assumption: hosts run NTP, and `ClockSkewLeeway` covers residual skew. The table name passed to the store must match the one passed to `Add{Backend}TrippedTopics`. Set the store's `commandTimeout` equal to `StoreTimeout`, and keep `StoreTimeout` at or under half of `TimerInterval`. The purge script (`GetPurgeSql`, with the `@EndedBefore` cutoff the operator binds) runs under a separate account with `DELETE` permission, so the application account needs only `SELECT`, `INSERT` and `UPDATE`.
     - Telemetry page: with the distributed breaker every instance reports the deployment-wide count, so alert on `max` across instances, not `sum`. Counts agree within `TimerInterval` + `StoreTimeout` (FR-8.7). The new span attribute. The difference in announcement rate between breakers.
@@ -1650,6 +1837,30 @@ Phase 2 (starts only after T1.15 has merged)
   - Covers: FR-9.3, FR-7.3, FR-8.7, AC-35. ADR step 16.
   - Depends on: T2.71
   - References: ADR 0089 *Constructing and registering the pieces* and *Why 2 seconds for the store timeout*.
+
+### Phase 2m - Refactoring
+
+*Scheduled by `/refactor:smells` against Phase 2i (`524b5410a..HEAD`) on 2026-11-11.*
+
+- [x] **DOC: T2.73 - Decide how BoxType is handled so a new box type cannot fall into the inbox branch**
+  - Smell: Repeated Switches — `SqlBoxProvisioner.cs:90` (`BoxType == BoxType.Outbox ? OutBoxTableName : InBoxTableName` maps every other box type to the inbox table name), `BoxProvisioningHostedService.OrderingOrdinal`, and the `DiscriminatorFor` switch in each backend's detection helper.
+  - Refactoring: Replace Conditional with Polymorphism, or Decompose Conditional so `SqlBoxProvisioner` fails loudly on a box type it does not handle. Both change a public signature or behaviour, so this is a decision, not a tidy.
+  - Decide which, and write an ADR if the polymorphic route is chosen. A loud failure in `SqlBoxProvisioner` is a behaviour change and goes through `/tdd:test-first`.
+  - Depends on: T2.62
+
+- [x] **DOC: T2.74 - Amend ADR 0089 so the store contract takes a `TripWindow` in place of `(now, tripLength)`**
+  - Smell: Data Clumps (Phase 2h smells review, finding 2). `IAmATrippedTopicStore.EndExpiredAsync` and `ReadLiveAsync` take `(DateTimeOffset now, TimeSpan tripLength)`, and every store derives `now - tripLength` itself. The types are unreleased, so the public signature can change now.
+  - Amend the contract block (`EndExpiredAsync(TripWindow window, CancellationToken)` and `ReadLiveAsync(TripWindow window, CancellationToken)`), the two operation-table rows, and the read description. A `TripWindow` is a public `readonly record struct TripWindow(DateTimeOffset Now, TimeSpan TripLength)` in `Paramore.Brighter.CircuitBreaker` with a computed `Cutoff` (`Now - TripLength`).
+  - Add an amendment note to the ADR's Status section, with the owner's approval, as for the `ReadAsync` split.
+  - Commit as `docs:`.
+  - Depends on: T2.73
+
+- [x] **STRUCTURAL: T2.75 - Replace `(now, tripLength)` with `TripWindow` across the trip store contract**
+  - Run with `/refactor:tidy-first introduce a TripWindow value for the (now, tripLength) pair of the trip store contract, so each store reads window.Cutoff instead of subtracting`.
+  - Change the interface, `InMemoryTrippedTopicStore`, `RelationDatabaseTrippedTopicStore` (including the protected `EndExpiredOnceAsync` and `ReadLiveOnceAsync`), the MsSql, PostgreSql and MySql stores, `DistributedOutboxCircuitBreaker.ExpiredThenLiveRead` (one window per read, built from the time provider and trip length), and every test double and test that calls the store.
+  - Behaviour is unchanged and no new test is written. Validate with the full `Core.Tests` suite on both TFMs and the MSSQL, PostgreSQL and MySQL suites. Build every target of the touched `src` projects, including netstandard2.0.
+  - Commit as `refactor:`.
+  - Depends on: T2.74
 
 ---
 
@@ -1706,8 +1917,8 @@ Phase 2 (starts only after T1.15 has merged)
 | FR-8 | T2.52 |
 | FR-8.1 | T2.52 |
 | FR-8.2 | T2.53 |
-| FR-8.3 | T2.54 |
-| FR-8.4 | T2.30, T2.30a, T2.30b, T2.55, T2.55a |
+| FR-8.3 | T2.54, T2.56a |
+| FR-8.4 | T2.30, T2.30a, T2.30b, T2.55, T2.55a, T2.56b |
 | FR-8.5 | T2.56 |
 | FR-8.6 | T1.7, T2.16, T2.16a, T2.17, T2.33 |
 | FR-8.7 | T2.72 |
@@ -1721,7 +1932,7 @@ Phase 2 (starts only after T1.15 has merged)
 | NFR-4 | T2.31, T2.35, T2.49, T2.56 |
 | NFR-5 | T1.1, T1.10, T1.11, T2.6, T2.7, T2.18, T2.31, T2.36, T2.57a, T2.58a, T2.59a, T2.60, T2.67 |
 | NFR-6 | T1.4, T2.5, T2.10, T2.14, T2.24 |
-| NFR-7 | T1.15, T2.57, T2.58, T2.59, T2.68 |
+| NFR-7 | T1.15, T2.57, T2.58, T2.59 |
 | NFR-8 | T1.1, T1.10, T1.11, T2.10, T2.36 |
 | NFR-9 | T2.25, T2.26, T2.27, T2.28, T2.28a, T2.38, T2.40, T2.41, T2.42, T2.43a, T2.60a-T2.60c, T2.69 |
 | AC-1 | T1.4 |
@@ -1751,7 +1962,7 @@ Phase 2 (starts only after T1.15 has merged)
 | AC-25 | T2.48 |
 | AC-26 | T2.52, T2.53 |
 | AC-27 | T2.54 |
-| AC-28 | T2.55 |
+| AC-28 | T2.55, T2.56b |
 | AC-29 | T2.35, T2.56 |
 | AC-30 | T2.10, T2.11, T2.39 |
 | AC-31 | T1.15, T2.69 |
@@ -1761,7 +1972,6 @@ Phase 2 (starts only after T1.15 has merged)
 | AC-35 | T2.72 |
 | AC-36 | T2.12, T2.39a, T2.47 |
 | AC-37 | T1.11, T2.36 |
-| AC-38 | T1.15, T2.68 |
 | AC-39 | T2.41 |
 | AC-40 | T2.13, T2.45 |
 | AC-41 | T2.43 |
@@ -1788,6 +1998,7 @@ Every requirement and acceptance criterion maps to at least one task.
 | `DistributedOutboxCircuitBreaker` members, lock off I/O, not `IDisposable`, span `CooldownDuration` attribute | T2.9, T2.10, T2.33, T2.17 |
 | Timeout through `CreateCancellationTokenSource` and `WaitAsync`; abandoned task observed | T2.25, T2.26 |
 | Trip table schema, SQL operations, ordinal order, deadlock retry, `GetDDL`, `GetPurgeSql`, no `DELETE` | T2.57-T2.59b, T2.60, T2.60a-T2.60c |
+| Split read (`EndExpiredAsync`, `ReadLiveAsync`), one `StoreTimeout`, ended rows announced when the live read fails, alternative 16 | T2.60d-T2.60k |
 | Provisioning (`BoxType.TrippedTopics`, ordering, `TrippedTopicsProvisioner`, catalogs, extensions, `DiscriminatorFor`) | T2.61-T2.65 |
 | Constructing and registering (no extension; same table name; `commandTimeout` = `StoreTimeout`) | T2.48, T2.57b, T2.72 |
 | OQ-1 store | T2.57-T2.59b, T2.61 |
@@ -1815,15 +2026,15 @@ Every requirement and acceptance criterion maps to at least one task.
 | Step 9 | T2.25-T2.36, T2.38 (T2.28a, T2.30a, T2.30b included), T2.39c (AC-43) |
 | Step 10 | T2.39-T2.48, T2.39a, T2.39c, T2.39d, T2.43a |
 | Step 11 | T2.49-T2.51 |
-| Step 12 | T2.52-T2.56 (T2.55a included) |
-| Step 13 | T2.57-T2.59b |
+| Step 12 | T2.52-T2.56 (T2.55a, T2.56a, T2.56b included) |
+| Step 13 | T2.57-T2.59e, T2.74, T2.75 |
 | Step 14 | T2.61-T2.65 |
 | Step 15 | T2.57-T2.60c, T2.63-T2.67 |
 | Step 16 | T1.14a, T2.70, T2.71, T2.72 |
 | Amend ADR 0028 | T1.14a, T2.70 (notes); behaviour in T1.4, T2.20 |
 | Amend ADR 0058 | T1.7, T1.14a, T2.17, T2.33, T2.70 |
-| Amend ADR 0085 | T2.49, T2.52, T2.70 |
-| Amend ADR 0086 | T2.53, T2.55, T2.70 |
+| Amend ADR 0085 | T2.49, T2.52, T2.56a, T2.70 |
+| Amend ADR 0086 | T2.53, T2.55, T2.56a, T2.70 |
 | ADR 0088 not amended | T2.55, T2.70 (confirmation) |
 | Risks and Mitigations table | T2.26 (cancellation), T2.60, T2.60a-T2.60c (deadlock), T2.67 (double insert), T2.31 (stale refresh), T2.50 (late timer), T2.63 (DDL drift), T2.72 (singleton, NTP) |
 
@@ -1835,7 +2046,8 @@ AC-12 to AC-15 and AC-19 part 1 are verified at breaker level (T2.20-T2.23, T2.2
 
 No task lacks a trace to a requirement or an ADR decision. Several tasks trace to the ADR rather than to a single FR, and are kept on purpose:
 
-- **T2.2** (Core.Tests references Base.Test): needed for ADR step 7's reusable contract suite. It follows the existing `Paramore.Brighter.Base.Test/Outbox/OutboxTest.cs` pattern.
+- **T2.2** (test project package references for T2.66 and T2.67): the SQL test projects need them to assert the breaker's telemetry.
+- **T2.59c-T2.59e**: the shared `RelationDatabaseTrippedTopicStore` and test setup, found by the Phase 2h smells review. They carry no new requirement; they remove the duplication across the three SQL stores and put the deadlock retry in one place (T2.60a).
 - **T2.26, T2.28a, T2.31, T2.60, T2.60a-T2.60c**: risk mitigations named in ADR 0089 *Risks and Mitigations* and *How the remaining small points are settled*.
 - **T2.17**: the `circuit_breaker.cooldown_duration` span attribute is an ADR 0058 extension that ADR 0089 decides. It is not in the requirements.
 

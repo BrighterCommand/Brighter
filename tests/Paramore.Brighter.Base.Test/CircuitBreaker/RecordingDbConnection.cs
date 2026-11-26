@@ -1,0 +1,55 @@
+#region Licence
+/* The MIT License (MIT)
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+#endregion
+
+using System.Collections.Generic;
+using System.Data;
+using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Paramore.Brighter.Base.Test.CircuitBreaker;
+
+public class RecordingDbConnection(DbConnection inner, List<RecordedCommand> executed) : DbConnection
+{
+    [AllowNull]
+    public override string ConnectionString { get => inner.ConnectionString; set => inner.ConnectionString = value; }
+    public override string Database => inner.Database;
+    public override string DataSource => inner.DataSource;
+    public override string ServerVersion => inner.ServerVersion;
+    public override ConnectionState State => inner.State;
+
+    public override void ChangeDatabase(string databaseName) => inner.ChangeDatabase(databaseName);
+    public override void Close() => inner.Close();
+    public override void Open() => inner.Open();
+    public override Task OpenAsync(CancellationToken cancellationToken) => inner.OpenAsync(cancellationToken);
+
+    protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel) => inner.BeginTransaction(isolationLevel);
+    protected override DbCommand CreateDbCommand() => new RecordingDbCommand(inner.CreateCommand(), this, executed);
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) inner.Dispose();
+        base.Dispose(disposing);
+    }
+}

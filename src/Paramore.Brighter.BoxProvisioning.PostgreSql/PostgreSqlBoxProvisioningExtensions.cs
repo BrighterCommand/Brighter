@@ -143,6 +143,33 @@ public static class PostgreSqlBoxProvisioningExtensions
         return options;
     }
 
+    /// <summary>
+    /// Register provisioning of the PostgreSQL tripped topics table that distributed circuit-breaker
+    /// instances share. Pass the same table name to <c>PostgreSqlTrippedTopicStore</c>.
+    /// </summary>
+    /// <param name="options">The box provisioning options.</param>
+    /// <param name="configuration">Supplies the connection string, and the schema when <paramref name="schemaName"/> is null.</param>
+    /// <param name="tableName">The name of the trip table, at most 40 characters so that the index name <c>idx_{tableName}_ended_at_trip_time</c> fits PostgreSQL's 63-character limit.</param>
+    /// <param name="schemaName">The schema holding the trip table, or null to use the configuration's schema.</param>
+    public static BoxProvisioningOptions AddPostgreSqlTrippedTopics(
+        this BoxProvisioningOptions options,
+        IAmARelationalDatabaseConfiguration configuration,
+        string tableName = "BrighterTrippedTopics",
+        string? schemaName = null)
+    {
+        options.Add(services =>
+        {
+            RegisterSharedRoleImpls(services);
+            services.AddSingleton<IAmABoxProvisioner>(sp =>
+                TrippedTopicsProvisioner.Create(tableName, schemaName, configuration, effectiveSchema =>
+                    new PostgreSqlBoxMigrationRunner(
+                        new PostgreSqlTrippedTopicsMigrationCatalog(tableName, effectiveSchema),
+                        configuration, options.MigrationLockTimeout,
+                        tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope)));
+        });
+        return options;
+    }
+
     // Shared by the outbox and inbox registrations; TryAdd makes calling both safe.
     private static void RegisterSharedRoleImpls(IServiceCollection services)
     {

@@ -45,7 +45,7 @@ namespace Paramore.Brighter.BoxProvisioning;
 public static class Identifiers
 {
     private static readonly Regex s_safeIdentifier = new(
-        "^[A-Za-z][A-Za-z0-9_]*$",
+        "^[A-Za-z][A-Za-z0-9_]*\\z",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     /// <summary>

@@ -56,6 +56,8 @@ work starts producing tests you would not have approved.
 
 Follow the structured specification workflow: Requirements → ADR Design → Adversarial Review (multiple rounds) → Task Breakdown → Implementation. Never skip review rounds or assume approval - wait for explicit user approval before proceeding to the next phase.
 
+An approved `tasks.md` (`.tasks-approved` present) may be amended during implementation when the owner approves the specific change, for example because a refactoring or a smells review showed the task list is wrong. Draft the amendment, get approval, and say in the commit that the owner approved it. Never amend it unprompted, and never from an unattended `/spec:ralph-implement` run, which marks a wrong task `[!]` instead.
+
 ## Change Scope
 
 Do NOT change defaults or make changes beyond what was explicitly requested. When fixing or modifying code, restrict changes to exactly what the user asked for — no additional "improvements" or default value changes.

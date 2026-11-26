@@ -48,11 +48,14 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
     /// <summary>The name of the condition reported while consecutive sweeps have failed.</summary>
     public const string ConsecutiveFailedSweeps = "consecutive_failed_sweeps";
 
-    /// <summary>The name of the condition reported while an active sweeper has circuit-broken topics.</summary>
+    /// <summary>The name of the condition reported while the sweeper has circuit-broken topics: on the active sweeper, or on any running sweeper when the circuit breaker shares its trips.</summary>
     public const string TrippedTopics = "tripped_topics";
 
     /// <summary>The name of the condition reported when the tripped topics could not be read.</summary>
     public const string TrippedTopicsUnreadable = "tripped_topics_unreadable";
+
+    /// <summary>The name of the condition reported while a shared circuit breaker is using its own view because the shared store failed.</summary>
+    public const string TrippedTopicsStoreUnavailable = "tripped_topics_store_unavailable";
 
     private const int MaxNamedTopics = 10;
 
@@ -93,7 +96,7 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         if (snapshot.ConsecutiveFailedSweeps >= _failureThreshold)
             conditions.Add(FailedSweepsCondition(snapshot.ConsecutiveFailedSweeps));
 
-        conditions.AddRange(TrippedTopicsConditionOrNone(snapshot));
+        conditions.AddRange(CircuitBreakerConditions(snapshot));
 
         if (conditions.Count == 0)
             return Task.FromResult(Healthy($"No outbox sweeper condition needs investigation: fewer than {_failureThreshold} consecutive failed sweeps."));
@@ -101,20 +104,53 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         return Task.FromResult(Degraded(conditions));
     }
 
-    private RemedyCondition[] TrippedTopicsConditionOrNone(OutboxSweeperSnapshot snapshot)
+    private RemedyCondition[] CircuitBreakerConditions(OutboxSweeperSnapshot snapshot)
     {
-        if (!snapshot.IsActive) return [];
+        if (snapshot.IsStopped) return [];
 
         try
         {
-            var names = TrippedTopicNames();
+            return ConditionsOfTheBreakerInUse(snapshot);
+        }
+        catch (Exception e)
+        {
+            return Unreadable(e);
+        }
+    }
+
+    private RemedyCondition[] ConditionsOfTheBreakerInUse(OutboxSweeperSnapshot snapshot)
+    {
+        var breaker = _findCircuitBreaker?.Invoke();
+        if (breaker is null) return [];
+
+        if (!snapshot.ReadsTrippedTopicsFrom(breaker)) return [];
+
+        return [..TrippedTopicsConditionOrUnreadable(breaker), ..StoreUnavailableConditionOrNone(breaker as IAmASharedOutboxCircuitBreaker)];
+    }
+
+    private static RemedyCondition[] TrippedTopicsConditionOrUnreadable(IAmAnOutboxCircuitBreaker breaker)
+    {
+        try
+        {
+            var names = TrippedTopicNames(breaker);
             return names.Length > 0 ? [TrippedTopicsCondition(names)] : [];
         }
         catch (Exception e)
         {
-            Log.TrippedTopicsUnreadable(s_logger, e);
-            return [TrippedTopicsUnreadableCondition(e)];
+            return Unreadable(e);
         }
+    }
+
+    private static RemedyCondition[] Unreadable(Exception e)
+    {
+        Log.TrippedTopicsUnreadable(s_logger, e);
+        return [TrippedTopicsUnreadableCondition(e)];
+    }
+
+    private static RemedyCondition[] StoreUnavailableConditionOrNone(IAmASharedOutboxCircuitBreaker? shared)
+    {
+        var status = shared?.StoreStatus;
+        return status is { IsUsingFallback: true } ? [TrippedTopicsStoreUnavailableCondition(status.Value.LastFailure)] : [];
     }
 
     private static HealthCheckResult Healthy(string description) => HealthCheckResult.Healthy(description, RemedyCheckConvention.Data(RemedyKind.Investigate));
@@ -125,13 +161,8 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         return new HealthCheckResult(HealthStatus.Degraded, RemedyCheckConvention.Describe(conditions), null, data);
     }
 
-    private string[] TrippedTopicNames()
-    {
-        var tripped = _findCircuitBreaker?.Invoke()?.TrippedTopics;
-        if (tripped is null) return Array.Empty<string>();
-
-        return tripped.Select(topic => topic.Value).OrderBy(name => name, StringComparer.Ordinal).ToArray();
-    }
+    private static string[] TrippedTopicNames(IAmAnOutboxCircuitBreaker breaker) =>
+        breaker.TrippedTopics.Select(topic => topic.Value).OrderBy(name => name, StringComparer.Ordinal).ToArray();
 
     private RemedyCondition FailedSweepsCondition(int failed)
     {
@@ -167,6 +198,14 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         var values = new Dictionary<string, object> { ["exception_type"] = type };
         var description = $"The tripped topics could not be read from the circuit breaker ({type}).";
         return new RemedyCondition(TrippedTopicsUnreadable, description, values);
+    }
+
+    private static RemedyCondition TrippedTopicsStoreUnavailableCondition(string? lastFailure)
+    {
+        var type = lastFailure ?? "unknown";
+        var values = new Dictionary<string, object> { ["exception_type"] = type };
+        var description = $"The tripped topics could not be read from or written to the shared store ({type}); this instance is using its own view.";
+        return new RemedyCondition(TrippedTopicsStoreUnavailable, description, values);
     }
 
     private static partial class Log

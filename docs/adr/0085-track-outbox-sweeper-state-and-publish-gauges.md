@@ -5,7 +5,7 @@ status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-10-16
-summary: "TimedOutboxSweeper writes to a lock-guarded, allocation-free OutboxSweeperState record in core that UseOutboxSweeper registers as a singleton and the sweeper receives through its constructor. The existing SweeperMeter reads the record to publish attribute-free observable gauges for sweep running time and tripped topics, reading the DI-registered IAmAnOutboxCircuitBreaker only while the sweeper is active, so no new interface or gauge class is added."
+summary: "TimedOutboxSweeper writes to a lock-guarded, allocation-free OutboxSweeperState record in core that UseOutboxSweeper registers as a singleton and the sweeper receives through its constructor. The existing SweeperMeter reads the record to publish attribute-free observable gauges for sweep running time and tripped topics, reading the DI-registered IAmAnOutboxCircuitBreaker only while the sweeper is active (ADR 0089 amends this: on every running sweeper when the breaker shares trips), so no new interface or gauge class is added."
 tags:
   - "observability"
   - "metrics"
@@ -20,6 +20,12 @@ Date: 2026-10-16
 ## Status
 
 Accepted
+
+Amended by ADR 0089 (`0089-distributed-outbox-circuit-breaker.md`):
+
+- The decision to read the DI-registered `IAmAnOutboxCircuitBreaker` only while the sweeper is active now holds only for breakers that do not implement `IAmASharedOutboxCircuitBreaker`. For a shared breaker, the `tripped_topics` gauge reads the breaker on every running sweeper.
+- The gauge looks the breaker up on every running sweeper, for any breaker. A lookup that throws records 0 and logs the fault whether or not the sweeper is active.
+- The statement that `TimedOutboxSweeper`'s schedule and lock protocol stay unchanged still holds. The sweeper gains one optional constructor parameter and starts refreshes.
 
 ## Context
 

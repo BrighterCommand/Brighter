@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+
 namespace Paramore.Brighter.Observability;
 
 /// <summary>
@@ -39,4 +41,11 @@ namespace Paramore.Brighter.Observability;
 public record CircuitBreakerSpanInfo(
     CircuitBreakerSpanOperation Operation,
     RoutingKey Topic,
-    int CooldownCount);
+    int CooldownCount)
+{
+    /// <summary>
+    /// The cooldown duration of a distributed circuit breaker, recorded on the span in seconds.
+    /// Null for a breaker that counts cooldown cycles, which records no such attribute.
+    /// </summary>
+    public TimeSpan? CooldownDuration { get; init; }
+}
