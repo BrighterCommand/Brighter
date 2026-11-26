@@ -12,8 +12,8 @@
 - Each TEST + IMPLEMENT task is one slice of behaviour, and each slice holds more than one test.
 - Each test in a slice is written and seen failing one at a time, through its own `/tdd:test-first`. Only then is the production code for that test written.
 - The test files of a slice are listed in the order they are written. Each one fails before its own production code exists.
-- A few slice tests may be green on arrival, because an earlier test's code in the same slice already covers them. Each such test is named in its slice (tasks 5, 7, 17, 19, 20 and 21), is pinned by a named RED mutation as in the CHARACTERISE rules below, and is committed with its slice.
-- Generated store tests are the other exception. A template cannot be written through `/tdd:test-first`. Its generated tests are seen failing on every store in the GENERATE task, and each store slice then makes them pass. Until a store's new generated max-age tests pass, every full-suite run leaves them out, because they are known to fail. Task 25 counts each of its four dialects as done once that dialect's tests pass. Every other test must pass.
+- A few slice tests may be green on arrival, because an earlier test's code in the same slice already covers them. Each such test is named in its slice (tasks 5, 7, 17, 19, 20, 21 and 31), is pinned by a named RED mutation as in the CHARACTERISE rules below, and is committed with its slice. `.agent_instructions/testing.md` gives a `test:`-only commit to a test that earlier work already makes green, and this list reads "alone" there as "without production code", as in the CHARACTERISE tasks. A slice test is made green by code of the same slice, so it goes in that slice's commit, whose message names the test's mutation.
+- Generated store tests are the other exception. A template cannot be written through `/tdd:test-first`. Its generated tests are seen failing on every store in the GENERATE task, and each store slice then makes them pass. Until a store's new generated max-age tests pass, every full-suite run leaves them out, because they are known to fail. The run filters them by name, with `--filter "FullyQualifiedName!~It_Should_Exclude_Expired_Messages&FullyQualifiedName!~It_Should_Return_Only_A_Topics_Expired_Messages"` on the projects of the stores not yet done. `Paramore.Brighter.Gcp.Tests` holds Spanner and Firestore, so once Spanner is done and until Firestore is, it runs with `--filter "(FullyQualifiedName!~It_Should_Exclude_Expired_Messages|FullyQualifiedName!~Outbox.Firestore)&(FullyQualifiedName!~It_Should_Return_Only_A_Topics_Expired_Messages|FullyQualifiedName!~Outbox.Firestore)"`. Task 25 counts each of its four dialects as done once that dialect's tests pass. Every other test must pass.
 
 **Points this list follows from ADR 0093-outbox-failure-channel.** Q-6 and Q-8 are still marked Open there. The list follows the ADR's reading of both.
 - Only three failure kinds raise: `SendFailed`, `ConfirmationFailed` and `MarkDispatchedFailed` (Q-6). `Expired` comes only from the archiver.
@@ -404,7 +404,7 @@ ADR: test groups "Nothing else raises", "Behaviour unchanged", "Success raises n
       - `When_a_call_fails_on_a_non_confirming_producer_should_raise_nothing.cs` — mutation: switch `CallViaExternalBus` to the `TryExecute` helper and raise.
       - `When_a_confirming_producer_never_raises_a_result_should_raise_nothing.cs` — mutation: raise `ConfirmationFailed` after a confirming send returns.
       - `When_in_memory_producer_reports_success_to_a_sync_only_outbox_should_raise_nothing.cs` (reuse `SyncOnlyOutboxWrapper`) — mutation: raise `MarkDispatchedFailed` when the async outbox is absent.
-      - `When_a_clear_has_no_outbox_pipeline_should_throw_the_lookup_exception_and_raise_nothing.cs` — mutation: move `GetPipeline` inside the helper's `try`.
+      - `When_a_clear_has_no_outbox_pipeline_should_throw_the_lookup_exception_and_raise_nothing.cs` — mutation: catch the pipeline lookup exception, raise `SendFailed` with it for the message being sent on the channel of the registry's first key, then rethrow it. The exception still escapes, so the test fails on the count. The test has one publication and reads that channel.
       - `When_the_logger_throws_inside_the_send_helpers_catch_should_propagate_and_raise_nothing.cs` (join the log collection; `CapturingLoggerProvider.ThrowOnce`) — mutation: catch the logger's exception at the `DispatchAsync` send site and raise `SendFailed` from it.
     - **USE COMMAND**: `/tdd:test-first when every message of a clear succeeds should raise nothing` (and the matching phrase per file)
     - Test should verify: in each case, no notification and the same caller-visible outcome as today.
@@ -775,6 +775,8 @@ ADR: steps 11, 12 and 13; Key Component `IRelationalDatabaseOutboxExpiryQueries`
   - Cases each template holds:
     - Two topics of different ages. An expired backlog on one must not hide the other's unexpired message from a page (AC-56).
     - A huge age.
+    - In the only-expired template, two topics under `OnlyExpiredArgsKey` throw `ArgumentException` (ADR, `OnlyExpiredArgsKey` row).
+    - In the exclude template, with `"Topic"`, every topic seeded for the case has a max age shorter than the minimum age, and its messages are older than the minimum age. The page holds none of the case's messages, and nothing throws. On DynamoDB the cutoff is then not earlier than now minus the minimum age, so the store must answer without a query (ADR, DynamoDB per-topic path).
     - An expired message whose partition key hashes to a negative shard at the default three shards.
     - The only-expired template passes `"Topic"` as the archiver does. The exclude template has a case with `"Topic"`, so DynamoDB and MongoDb run their per-topic path.
     - Stamps are relative to the time the test runs, with the criteria's intervals.
@@ -805,7 +807,8 @@ ADR: steps 11, 12 and 13; Key Component `IRelationalDatabaseOutboxExpiryQueries`
       - take the cutoff from `DateTimeOffset.UtcNow`, as `CreatePagedOutstandingParameters` does;
       - create the cutoff with `CreateSqlParameter(name, DbType.DateTimeOffset, cutoff)` and the topic with `DbType.String`;
       - a cutoff before `EarliestTimestamp` adds no fragment for exclude and gives an empty page for only-expired;
-      - with no fragments the command gains no clause.
+      - with no fragments the command gains no clause;
+      - throw `ArgumentException` when `OnlyExpiredArgsKey` holds more than one topic, after the role check.
     - Throw `NotSupportedException` without the role, as `GetOutstandingMessageCountsByTopicAsync` does. Check the role at the top of `OutstandingMessages` and `OutstandingMessagesAsync`, before `ReadFromStore`, so the stub's connection provider and `CreateSqlParameter` are never called. Check it only when `args` carries either expiry key (the ADR's "given a bound"), so callers without a key are unchanged.
     - Implement the role in `SqliteQueries`.
 
@@ -833,8 +836,10 @@ ADR: steps 11, 12 and 13; Key Component `IRelationalDatabaseOutboxExpiryQueries`
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Read both keys beside the `"Topic"` read in `OutstandingMessagesAsync` of each `DynamoDbOutbox`.
-    - On the per-topic path (`OutstandingMessagesForTopicAsync`), put the bound in the key condition: a `BETWEEN` beside `KeyTopicOutstandingCreatedTimeExpression`, with the upper bound one tick below the cutoff so it stays strict.
+    - On the per-topic path (`OutstandingMessagesForTopicAsync`), put the bound in the key condition: a `BETWEEN` beside `KeyTopicOutstandingCreatedTimeExpression`, from the cutoff to one tick below now minus the minimum age, so the upper bound stays strict. With `OnlyExpiredArgsKey` the upper bound is one tick below the cutoff.
     - With `OnlyExpiredArgsKey`, read the shards from `-(NumberOfShards - 1)`.
+    - Throw `ArgumentException` when `OnlyExpiredArgsKey` holds more than one topic.
+    - With `ExcludeExpiredArgsKey` on the per-topic path, when the cutoff is not earlier than now minus the minimum age, return an empty page for the topic without a query.
     - On the scan (`ScanOutstandingIndexSegmentForMessages`), apply the bound in the same `Where` as the tripped-topic filter. The short page while a topic is tripped is the accepted departure from FR-18.
 
 - [ ] **TEST + IMPLEMENT: 27 — MongoDb applies both bounds**
@@ -843,7 +848,7 @@ ADR: steps 11, 12 and 13; Key Component `IRelationalDatabaseOutboxExpiryQueries`
   - Test files: the generated files from task 23 in `tests/Paramore.Brighter.MongoDb.Tests/Outbox/Generated` (AC-50, AC-56). GENERATED — no `/tdd:test-first`; RED was seen in task 23.
   - Test should verify: every generated test passes, sync and async.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
-  - Implementation should: read both keys beside the `"Topic"` read in `OutstandingMessages` and `OutstandingMessagesAsync` of `MongoDbOutbox`, and add the bound to the server-side filter.
+  - Implementation should: read both keys beside the `"Topic"` read in `OutstandingMessages` and `OutstandingMessagesAsync` of `MongoDbOutbox`, add the bound to the server-side filter, and throw `ArgumentException` when `OnlyExpiredArgsKey` holds more than one topic.
 
 - [ ] **PROJECT: 28 — Create the Firestore composite index in the CI's GCP project**
   - Depends on: 23
@@ -858,7 +863,7 @@ ADR: steps 11, 12 and 13; Key Component `IRelationalDatabaseOutboxExpiryQueries`
   - Test should verify: every generated test passes.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - In `FirestoreOutbox.OutstandingMessagesAsync`, query by topic and stamp for `OnlyExpiredArgsKey`.
+    - In `FirestoreOutbox.OutstandingMessagesAsync`, query by topic and stamp for `OnlyExpiredArgsKey`, and throw `ArgumentException` when it holds more than one topic.
     - For `ExcludeExpiredArgsKey`, filter the page in memory and read further pages until it is full or the store is exhausted (P-7 as changed).
 
 ## Phase 8: The archiver moves expired messages and raises `Expired`
@@ -900,16 +905,21 @@ ADR: step 14; Key Component `Message.ExpiredAtHeaderName`; section "Fallback cha
        - **USE COMMAND**: `/tdd:test-first when an expired message's key has no publication should raise on the publication with the applied age`
     5. `When_an_unattached_registry_drops_expired_notifications_should_still_warn.cs` (ADR: drop warnings use `TimeProvider.System` before `Attach`; join the log collection; the async archiver over a registry that no mediator has attached, capacity 1, two expired messages. With no clock on the channel, the drop delegate faults inside `Raise`, whose catch logs the exception type only, so this test is RED on the drop warning)
        - **USE COMMAND**: `/tdd:test-first when an unattached registry drops expired notifications should still warn`
+    6. `When_the_archivers_producer_registry_has_no_publication_for_an_expired_message_should_raise_nothing.cs` (ADR: with another producer registry, step 2 finds no channel; the notification registry built from a producer registry whose only publication is on `payments`, the archiver given another whose only publication on `orders` sets the age; the test reads every channel from `Keys`)
+       - **USE COMMAND**: `/tdd:test-first when the archiver's producer registry has no publication for an expired message should raise nothing`
+  - Test 3 may be green on arrival, because test 1's code looks the channel up by topic and type. Pin it with the RED mutation "look the channel up with an empty type, the key `orders:`, and raise nothing when that key has no publication" and confirm test 3 fails on `A`'s channel receiving nothing, then revert it and stop at the gate.
+  - Test 6 may be green on arrival, because test 4's code already raises nothing when the fallback finds no channel. Pin it with the RED mutation "when neither step finds a channel, raise on the channel of the registry's first key" and confirm test 6 fails on the count, then revert it and stop at the gate.
   - Test should verify:
     - The only notification is (`m1`, `orders`, `Expired`, null, 12:30:00), from the archiver's `TimeProvider`.
     - A typed message reaches `A`'s channel.
     - A message whose key matches no publication reaches the first publication, in ordinal `topic:type` order, on its stored topic whose own age equals the applied age.
     - With an unattached registry, the second `Expired` drops the first, and one drop `Warning` names the key and a dropped count of 1.
+    - With another producer registry, `m1` is moved and no notification is raised on any channel.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Add the optional `OutboxNotificationRegistry? notifications` parameter between `producerRegistry` and `timeProvider`, as the ADR's constructor orders them, and store it.
     - Raise after each message the provider accepts.
-    - Route by (`Message.ProducerLookupTopic()`, `MessageHeader.Type`) first, then by the fallback. Otherwise raise nothing.
+    - Route by (`Message.ProducerLookupTopic()`, `MessageHeader.Type`) first, then by the fallback, which test 4 needs. When neither finds a channel, raise nothing.
     - Start each channel with `TimeProvider.System`, which `Attach` replaces. Test 5 needs it.
 
 - [ ] **TEST + IMPLEMENT: 32 — The archiver bounds each run and rotates its starting topic**
@@ -1005,7 +1015,7 @@ ADR: steps 15 and 16; Key Component `UseOutboxNotifications` and the `OutboxNoti
        - **USE COMMAND**: `/tdd:test-first when the step is called twice should keep the first options`
     4. `When_another_registry_implementation_is_registered_should_make_the_helper_throw.cs`
        - **USE COMMAND**: `/tdd:test-first when another registry implementation is registered should make the helper throw`
-  - Test 3 is RED on arrival, because test 1's code registers with `AddSingleton`, so the second call's capacity wins.
+  - Test 2 is RED on arrival, because test 1's code registers without validating. Test 3 is RED on arrival, because test 1's code registers with `AddSingleton`, so the second call's capacity wins.
   - Test should verify:
     - A `BackgroundService` reader receives one notification after `PostAsync` fails.
     - A capacity of 0 throws `ConfigurationException` from the step, and nothing is registered.
@@ -1013,7 +1023,7 @@ ADR: steps 15 and 16; Key Component `UseOutboxNotifications` and the `OutboxNoti
     - `OutboxNotifications(provider)` throws `ConfigurationException` when another `IAmAnOutboxNotificationRegistry` is registered.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Add `UseOutboxNotifications(this IBrighterBuilder, Action<OutboxNotificationOptions>? = null)` beside `TransformFactory`. It validates first, then registers only the interface, with `AddSingleton`, as a singleton factory over `IAmAProducerRegistry`. Test 3's code switches the registration to `TryAdd`.
+    - Add `UseOutboxNotifications(this IBrighterBuilder, Action<OutboxNotificationOptions>? = null)` beside `TransformFactory`. It registers only the interface, with `AddSingleton`, as a singleton factory over `IAmAProducerRegistry`. Test 2's code validates the options before anything is registered. Test 3's code switches the registration to `TryAdd`.
     - Add the public helper `OutboxNotifications(IServiceProvider)`. It returns the concrete registry or null, and throws for another implementation.
     - In `BuildOutBoxProducerMediator`, replace the `null` that task 7 passes after `OutboxMeter(serviceProvider)` with the registry.
 
@@ -1078,7 +1088,7 @@ ADR: steps 15 and 16; Key Component `UseOutboxNotifications` and the `OutboxNoti
     - Test file: `When_a_sweep_succeeds_on_the_di_path_should_raise_nothing.cs` (AC-44, DI path; a theory over `useBulk`)
     - **USE COMMAND**: `/tdd:test-first when a sweep succeeds on the di path should raise nothing`
     - Test should verify: no notification.
-    - 🔁 Characterisation — green on first run: the sites raise only on an exception. RED mutation: invert the check at the async send site. Confirm the test fails on the count.
+    - 🔁 Characterisation — green on first run: the sites raise only on an exception. RED mutation: at the async send site and at the bulk send site, raise when the helper returns no exception, with a null exception. Confirm both rows fail on the count.
     - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
   - **36.7 — Disposing the container ends a hosted reader and throws nothing (risk)**
     - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests/OutboxNotifications"
@@ -1311,7 +1321,7 @@ Reading notes:
 | Max age on the sweep | 20, 22.1, 22.2, 22.3, 22.4, 22.5, 22.6, 33.1 |
 | Archiver | 30-32, 33.1, 33.2, 33.3, 33.4, 33.5, 33.6, 33.7, 33.8 |
 | Store queries | 23-29 |
-| Content and documents | 18.3, 17, 37 |
+| Content and documents | 18.3 (a notification holds no message), 17, 37 |
 
 **Further tests**
 
@@ -1338,7 +1348,7 @@ Reading notes:
 | `IAmAnOutboxNotificationRegistry`, `OutboxNotificationRegistry` | 5, 7, 8, 13.9, 13.10, 15, 17, 31 |
 | `IAmAnOutboxNotificationChannel`, `OutboxNotificationChannel` | 5, 15, 16, 17 |
 | `UseOutboxNotifications`, `OutboxNotifications(IServiceProvider)` | 34, 36.4 |
-| `Publication.MaxAge`, `OutboxMaxAges` | 19, 20, 21 |
+| `Publication.MaxAge`, `OutboxMaxAges` | 19, 20, 21, 23-27, 29 |
 | `IRelationalDatabaseOutboxExpiryQueries` | 24, 25 |
 | `Message.ExpiredAtHeaderName` | 30 |
 
@@ -1363,7 +1373,7 @@ These tasks go beyond the criteria, each as risk mitigation:
 - 36.8, NFR-8 baseline: NFR-8 maps to no AC. This makes C-2's ban on interface members executable.
 - 22.8, causation replay keeps its stamp: pins the release-notes behaviour line on `InMemoryOutbox`, which implements causation tracking.
 - 28, PROJECT for the Firestore index: needs the maintainer, as C-4 notes.
-- 5 (constructor probe, test 4), 11 (kind filter, test 3), 13.11 (shared producer), 17 (atomic clock, test 5), 18.13 (competing readers), 20 (stamp not write time; no registry, test 3), 21 (four query edge cases), 24 (`NotSupportedException`), 33.4 (Expired not chosen, second file): each pins an ADR decision with no AC of its own.
+- 5 (constructor probe, test 4), 11 (kind filter, test 3), 13.11 (shared producer), 17 (atomic clock, test 5), 18.13 (competing readers), 20 (stamp not write time; no registry, test 3), 21 (four query edge cases), 23 (several topics throw; a max age shorter than the minimum age), 24 (`NotSupportedException`), 26 (an empty page without a query), 31 (another producer registry, test 6), 33.4 (Expired not chosen, second file): each pins an ADR decision with no AC of its own.
 
 No other ADR amendment is needed. Every decision maps to a task.
 
@@ -1373,7 +1383,7 @@ No other ADR amendment is needed. Every decision maps to a task.
 
 The rest of the list:
 - 3 STRUCTURAL;
-- 7 CHARACTERISE, one per phase that has born-green tests (6, 13, 14, 18, 22, 33 and 36), holding 58 items. Seven more tests that may be green on arrival (task 5 test 2, task 7 test 2, task 17 test 5, task 19 test 3, task 20 tests 2 and 3, and task 21 test 4) stay in their slices;
+- 7 CHARACTERISE, one per phase that has born-green tests (6, 13, 14, 18, 22, 33 and 36), holding 58 items. Nine more tests that may be green on arrival (task 5 test 2, task 7 test 2, task 17 test 5, task 19 test 3, task 20 tests 2 and 3, task 21 test 4, and task 31 tests 3 and 6) stay in their slices;
 - 1 GENERATE;
 - 1 PROJECT;
 - 1 DOC.
