@@ -133,7 +133,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         public int ConnectionRetryCount { get; set; }
 
         /// <summary>
-        /// The time in milliseconds to wait before retrying to connect again
+        /// The base time in milliseconds for the exponential back-off between connection attempts.
+        /// The first retry waits twice this value, the second four times, and so on.
         /// </summary>
         public int RetryWaitInMilliseconds { get; set; }
 
