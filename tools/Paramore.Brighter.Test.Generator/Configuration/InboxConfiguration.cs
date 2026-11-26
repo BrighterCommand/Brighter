@@ -1,0 +1,114 @@
+#region Licence
+
+/* The MIT License (MIT)
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+#endregion
+
+namespace Paramore.Brighter.Test.Generator.Configuration;
+
+/// <summary>
+/// Represents the configuration for generating inbox tests.
+/// </summary>
+public class InboxConfiguration
+{
+    /// <summary>
+    /// Gets or sets the prefix to use for the generated test class names.
+    /// </summary>
+    public string Prefix { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the inbox provider implementation to test for the synchronous variant.
+    /// If null or empty, the synchronous test suite is not generated.
+    /// </summary>
+    public string? InboxProvider { get; set; }
+
+    /// <summary>
+    /// Gets or sets the inbox provider implementation to test for the asynchronous variant.
+    /// If null or empty, the asynchronous test suite is not generated.
+    /// </summary>
+    public string? InboxProviderAsync { get; set; }
+
+    /// <summary>
+    /// Gets or sets the namespace for the generated inbox test code. If null, uses the parent configuration's namespace.
+    /// </summary>
+    public string? Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the test category to apply to generated test classes.
+    /// </summary>
+    public string? Category { get; set; }
+
+    /// <summary>
+    /// Gets or sets the xUnit collection name to apply to generated test classes.
+    /// </summary>
+    public string? CollectionName { get; set; }
+
+    /// <summary>
+    /// Returns a copy of this configuration carrying <paramref name="prefix"/>.
+    /// </summary>
+    /// <param name="prefix">The prefix the copy should carry.</param>
+    /// <returns>A copy; this instance is unchanged.</returns>
+    /// <remarks>
+    /// <para>
+    /// Templates read <see cref="Prefix"/> to build a namespace suffix, and the value they need is
+    /// not always the one the configuration file declares. Handing each rendering its own copy keeps
+    /// that difference out of the caller's object, so planning what would be generated can be asked
+    /// as a question rather than performed as an edit.
+    /// </para>
+    /// <para>
+    /// The copy is a <see cref="object.MemberwiseClone"/>, which is a deep copy only because every
+    /// property here is a string or a value type. A property holding a list or a dictionary would be
+    /// shared with the caller's object, and the purity this method exists for would be lost without
+    /// anything failing to compile.
+    /// </para>
+    /// </remarks>
+    internal InboxConfiguration WithPrefix(string prefix)
+    {
+        var copy = (InboxConfiguration)MemberwiseClone();
+        copy.Prefix = prefix;
+        return copy;
+    }
+
+    /// <summary>
+    /// Returns a copy of this configuration with values it does not set taken from the root
+    /// <paramref name="configuration"/>.
+    /// </summary>
+    /// <param name="configuration">The root configuration to inherit unset values from.</param>
+    /// <returns>A copy; this instance is unchanged.</returns>
+    /// <remarks>
+    /// Applied where the model a rendering reads is built, so that describing the work and
+    /// performing it see the same model. Applying it on only one of those paths is how the
+    /// generator's expected set and its output would come to disagree - which is the drift the
+    /// generated-tree audit exists to catch, and so the last place it should be reintroduced.
+    /// </remarks>
+    internal InboxConfiguration WithDefaultsFrom(TestConfiguration configuration)
+    {
+        var copy = (InboxConfiguration)MemberwiseClone();
+
+        if (string.IsNullOrEmpty(copy.Namespace))
+        {
+            copy.Namespace = configuration.Namespace;
+        }
+
+        return copy;
+    }
+}

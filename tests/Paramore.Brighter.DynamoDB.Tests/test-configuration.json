@@ -1,5 +1,12 @@
 {
   "Namespace": "Paramore.Brighter.DynamoDB.Tests",
+  "Inbox": {
+    "InboxProvider": "DynamoDBInboxProvider",
+    "InboxProviderAsync": "DynamoDBInboxProvider",
+    "Category": "DynamoDB",
+    "CollectionName": "DynamoDBInbox",
+    "Prefix": "DynamoDB"
+  },
   "Outbox": {
     "Transaction": "Amazon.DynamoDBv2.Model.TransactWriteItemsRequest",
     "OutboxProvider": "Paramore.Brighter.DynamoDB.Tests.Outbox.DynamoDBOutboxProvider",

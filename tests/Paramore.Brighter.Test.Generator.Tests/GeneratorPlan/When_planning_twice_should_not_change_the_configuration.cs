@@ -40,43 +40,64 @@ namespace Paramore.Brighter.Test.Generator.Tests.GeneratorPlan;
 /// </summary>
 public class GenerationPlanPurityTests
 {
-    private static TestConfiguration MultipleGatewaysAndOutboxes() => new()
+    private static TestConfiguration MultipleGatewaysAndOutboxesAndInboxes() => new()
     {
         Namespace = "Sample.Tests",
         DestinationFolder = "/sample",
         MessagingGateways = new() { ["Sample"] = new MessagingGatewayConfiguration() },
         Outboxes = new() { ["Sample"] = new OutboxConfiguration() },
+        Inboxes = new() { ["Sample"] = new InboxConfiguration { InboxProvider = "TestInbox" } },
     };
 
     [Fact]
     public void When_planning_twice_should_not_change_the_configuration()
     {
-        // Arrange — the multiple-gateway and multiple-outbox forms, whose model prefix is
-        // dot-qualified while their destination folder name is not
-        var configuration = MultipleGatewaysAndOutboxes();
+        // Arrange — the multiple-gateway, multiple-outbox and multiple-inbox forms, whose model
+        // prefix is dot-qualified while their destination folder name is not
+        var configuration = MultipleGatewaysAndOutboxesAndInboxes();
 
         // Act
         new Generators.MessagingGatewayGenerator(
             NullLogger<Generators.MessagingGatewayGenerator>.Instance).Plan(configuration);
         new Generators.OutboxGenerator(
             NullLogger<Generators.OutboxGenerator>.Instance).Plan(configuration);
+        new Generators.InboxGenerator(
+            NullLogger<Generators.InboxGenerator>.Instance).Plan(configuration);
 
         // Assert — the caller's own configuration objects still say what the file said
         Assert.Equal(string.Empty, configuration.MessagingGateways!["Sample"].Prefix);
         Assert.Equal(string.Empty, configuration.Outboxes!["Sample"].Prefix);
+        Assert.Equal(string.Empty, configuration.Inboxes!["Sample"].Prefix);
     }
 
     [Fact]
     public void When_planning_twice_should_produce_the_same_files_both_times()
     {
         // Arrange
-        var configuration = MultipleGatewaysAndOutboxes();
+        var configuration = MultipleGatewaysAndOutboxesAndInboxes();
         var gatewayGenerator = new Generators.MessagingGatewayGenerator(
             NullLogger<Generators.MessagingGatewayGenerator>.Instance);
 
         // Act
         var first = gatewayGenerator.Plan(configuration).Select(file => file.DestinationPath).ToArray();
         var second = gatewayGenerator.Plan(configuration).Select(file => file.DestinationPath).ToArray();
+
+        // Assert — and non-vacuously: a plan of nothing would satisfy equality trivially
+        Assert.NotEmpty(first);
+        Assert.Equal(first, second);
+    }
+
+    [Fact]
+    public void When_planning_an_inbox_twice_should_produce_the_same_files_both_times()
+    {
+        // Arrange
+        var configuration = MultipleGatewaysAndOutboxesAndInboxes();
+        var inboxGenerator = new Generators.InboxGenerator(
+            NullLogger<Generators.InboxGenerator>.Instance);
+
+        // Act
+        var first = inboxGenerator.Plan(configuration).Select(file => file.DestinationPath).ToArray();
+        var second = inboxGenerator.Plan(configuration).Select(file => file.DestinationPath).ToArray();
 
         // Assert — and non-vacuously: a plan of nothing would satisfy equality trivially
         Assert.NotEmpty(first);
