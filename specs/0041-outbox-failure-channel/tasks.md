@@ -945,8 +945,9 @@ ADR: step 14; Key Component `Message.ExpiredAtHeaderName`; section "Fallback cha
     - Test location: "tests/Paramore.Brighter.Core.Tests/Archiving"
     - Test file: `When_no_positive_max_age_is_set_should_archive_as_today_and_let_the_sweep_send.cs` (AC-45; a theory over none, zero and -1 minute; reuse the public `CountingOutbox` in `tests/Paramore.Brighter.Core.Tests/Observability/TestDoubles`, which counts the outbox calls)
     - **USE COMMAND**: `/tdd:test-first when no positive max age is set should archive as today and let the sweep send`
+    - Setup: `m1` carries a `MessageHeader.TimeStamp` one second before the fake now, and the outbox, the archiver and the sweep share one `FakeTimeProvider`, so an age of zero would make `m1` expired.
     - Test should verify: `m1` stays, the `OutstandingMessages` and `MarkDispatched` counts match a run with no `MaxAge` set, the sweep sends `m1`, and no `Expired` is raised.
-    - 🔁 Characterisation — green on first run: `OutboxMaxAges.From` drops zero and negative ages, so the expired pass has no topic to query. RED mutation: keep zero and negative ages as entries in `OutboxMaxAges.From`. Confirm the zero and -1 rows fail on `m1` being moved. The "none" row stays green under this mutation, because it has no age to keep.
+    - 🔁 Characterisation — green on first run: `OutboxMaxAges.From` drops zero and negative ages, so the expired pass has no topic to query. RED mutation: keep zero and negative ages as entries in `OutboxMaxAges.From`. Confirm the zero and -1 rows fail on `m1` being moved. The "none" row has no age to keep, so it gets its own RED mutation, applied after the first is reverted: in `OutboxMaxAges.From`, give a topic whose publication has no `MaxAge` an entry with an age of zero. Confirm the "none" row fails on `m1` being moved.
     - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
   - **33.2 — The archiver judges by stored topic**
     - Test location: "tests/Paramore.Brighter.Core.Tests/Archiving"
@@ -1015,16 +1016,16 @@ ADR: steps 15 and 16; Key Component `UseOutboxNotifications` and the `OutboxNoti
        - **USE COMMAND**: `/tdd:test-first when the step is called twice should keep the first options`
     4. `When_another_registry_implementation_is_registered_should_make_the_helper_throw.cs`
        - **USE COMMAND**: `/tdd:test-first when another registry implementation is registered should make the helper throw`
-  - Test 2 is RED on arrival, because test 1's code registers without validating. Test 3 is RED on arrival, because test 1's code registers with `AddSingleton`, so the second call's capacity wins.
+  - Test 2 is RED on arrival, because test 1's code registers without validating. Test 3 is RED on arrival, because test 1's code registers with `AddSingleton`, so the second call's capacity wins. Test 4 is RED on arrival, because test 1's code makes the helper return null for another implementation.
   - Test should verify:
     - A `BackgroundService` reader receives one notification after `PostAsync` fails.
     - A capacity of 0 throws `ConfigurationException` from the step, and nothing is registered.
     - A second call's capacity is ignored.
-    - `OutboxNotifications(provider)` throws `ConfigurationException` when another `IAmAnOutboxNotificationRegistry` is registered.
+    - `OutboxNotifications(provider)` throws `ConfigurationException` naming the other implementation when another `IAmAnOutboxNotificationRegistry` is registered.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Add `UseOutboxNotifications(this IBrighterBuilder, Action<OutboxNotificationOptions>? = null)` beside `TransformFactory`. It registers only the interface, with `AddSingleton`, as a singleton factory over `IAmAProducerRegistry`. Test 2's code validates the options before anything is registered. Test 3's code switches the registration to `TryAdd`.
-    - Add the public helper `OutboxNotifications(IServiceProvider)`. It returns the concrete registry or null, and throws for another implementation.
+    - Add the public helper `OutboxNotifications(IServiceProvider)`. Test 1's code returns the registered `IAmAnOutboxNotificationRegistry` cast with `as` to the concrete registry, so it gives null when none is registered or another implementation is. Test 4's code throws `ConfigurationException` naming the other implementation.
     - In `BuildOutBoxProducerMediator`, replace the `null` that task 7 passes after `OutboxMeter(serviceProvider)` with the registry.
 
 - [ ] **TEST + IMPLEMENT: 35 — A max age without an archiver is warned about, and the archiver is wired to the registry**
