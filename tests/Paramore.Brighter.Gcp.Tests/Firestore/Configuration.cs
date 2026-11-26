@@ -34,6 +34,11 @@ public static class Configuration
         };
     }
     
+    public static FirestoreConfiguration CreateOutstandingCountOutbox()
+    {
+        return CreateOutbox(OutstandingCountCollection);
+    }
+
     public static FirestoreConfiguration CreateLocking(string collection)
     {
         return new FirestoreConfiguration(GatewayFactory.GetProjectId(), DatabaseName)
@@ -63,5 +68,6 @@ public static class Configuration
     private const string DatabaseName = "brighter-firestore-database";
     private const string InboxCollection = "inbox";
     private const string OutboxCollection = "outbox";
+    private const string OutstandingCountCollection = "outbox_outstanding_count";
     private const string LockingCollection = "locking";
 }
