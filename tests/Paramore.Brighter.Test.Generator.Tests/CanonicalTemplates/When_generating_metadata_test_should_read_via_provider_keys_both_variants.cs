@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using static Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates.CanonicalTemplateSetup;
+using static Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates.GeneratedPollLoops;
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -165,9 +166,9 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Assert
         var content = await File.ReadAllTextAsync(OutputPath(_testDirectory, variant, TEMPLATE_NAME));
         Assert.Contains(deadLetterQueueRead, content);
-        Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(60)", content);
-        Assert.Contains("500", content);
+        var pollLoops = GeneratedPollLoops.In(content);
+        Assert.NotEmpty(pollLoops);
+        Assert.All(pollLoops, loop => Assert.Equal(RejectionArrival, loop));
     }
 
     [Theory]
