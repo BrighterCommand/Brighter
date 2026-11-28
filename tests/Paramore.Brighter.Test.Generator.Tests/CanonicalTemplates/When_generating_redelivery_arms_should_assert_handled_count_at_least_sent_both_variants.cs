@@ -19,10 +19,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Test.Generator.Configuration;
 using Xunit;
+using static Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates.CanonicalTemplateSetup;
+using static Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates.GeneratedMessageAssertions;
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -50,17 +52,8 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
     private const string POSTING_TEMPLATE =
         "When_posting_a_message_via_the_messaging_gateway_should_be_received";
 
-    private const string HANDLED_COUNT_GE_CHECK =
-        "Assert.True(redelivered.Header.HandledCount >= message.Header.HandledCount";
-
-    private const string HANDLED_COUNT_ASSIGNMENT =
-        "redelivered.Header.HandledCount = message.Header.HandledCount;";
-
-    private const string MESSAGE_ASSERTION_CALL =
-        "_messageAssertion.Assert(message, redelivered)";
-
-    private const string FIRST_RECEIVE_ASSERTION_CALL =
-        "_messageAssertion.Assert(message, received)";
+    private static readonly string[] REDELIVERY_STEPS =
+        { CHECK_COUNT_AT_LEAST_SENT, COPY_SENT_COUNT, MESSAGE_ASSERTION };
 
     private readonly string _testDirectory;
     private readonly ILogger<Generators.MessagingGatewayGenerator> _logger;
@@ -76,257 +69,144 @@ public class WhenGeneratingRedeliveryArmsShouldAssertHandledCountAtLeastSentBoth
         _logger = factory.CreateLogger<Generators.MessagingGatewayGenerator>();
     }
 
-    [Fact]
-    public async Task When_generating_plain_requeue_reactor_should_assert_redelivered_handled_count_is_at_least_sent_count()
+    [Theory]
+    [InlineData(REACTOR)]
+    [InlineData(PROACTOR)]
+    public async Task When_generating_plain_requeue_should_assert_redelivered_handled_count_is_at_least_sent_count(
+        string variant)
     {
         // Arrange
-        var ledger = PassLedger("FR-22");
-        var configuration = BuildConfiguration();
+        var ledger = PassLedger(LEDGER_KEY, "FR-22");
+        var configuration = BuildConfiguration(_testDirectory, LEDGER_KEY);
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
 
         // Act
         await generator.GenerateAsync(configuration);
 
         // Assert
-        var content = await File.ReadAllTextAsync(TemplatePath("Reactor", PLAIN_REQUEUE_TEMPLATE));
-        AssertRedeliveryArmShape(content, "Reactor plain-requeue");
+        var content = await File.ReadAllTextAsync(OutputPath(_testDirectory, variant, PLAIN_REQUEUE_TEMPLATE));
+        AssertRedeliveryArmShape(content, $"{variant} plain-requeue");
     }
 
-    [Fact]
-    public async Task When_generating_plain_requeue_proactor_should_assert_redelivered_handled_count_is_at_least_sent_count()
+    [Theory]
+    [InlineData(REACTOR)]
+    [InlineData(PROACTOR)]
+    public async Task When_generating_zero_delay_requeue_should_assert_redelivered_handled_count_is_at_least_sent_count(
+        string variant)
     {
         // Arrange
-        var ledger = PassLedger("FR-22");
-        var configuration = BuildConfiguration();
+        var ledger = PassLedger(LEDGER_KEY, "FR-15");
+        var configuration = BuildConfiguration(_testDirectory, LEDGER_KEY);
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
 
         // Act
         await generator.GenerateAsync(configuration);
 
         // Assert
-        var content = await File.ReadAllTextAsync(TemplatePath("Proactor", PLAIN_REQUEUE_TEMPLATE));
-        AssertRedeliveryArmShape(content, "Proactor plain-requeue");
+        var content = await File.ReadAllTextAsync(OutputPath(_testDirectory, variant, ZERO_DELAY_TEMPLATE));
+        AssertRedeliveryArmShape(content, $"{variant} zero-delay requeue");
     }
 
-    [Fact]
-    public async Task When_generating_zero_delay_requeue_reactor_should_assert_redelivered_handled_count_is_at_least_sent_count()
+    [Theory]
+    [InlineData(REACTOR)]
+    [InlineData(PROACTOR)]
+    public async Task When_generating_delay_requeue_should_assert_redelivered_handled_count_is_at_least_sent_count(
+        string variant)
     {
         // Arrange
-        var ledger = PassLedger("FR-15");
-        var configuration = BuildConfiguration();
+        var ledger = PassLedger(LEDGER_KEY, "FR-2");
+        var configuration = BuildConfiguration(_testDirectory, LEDGER_KEY);
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
 
         // Act
         await generator.GenerateAsync(configuration);
 
         // Assert
-        var content = await File.ReadAllTextAsync(TemplatePath("Reactor", ZERO_DELAY_TEMPLATE));
-        AssertRedeliveryArmShape(content, "Reactor zero-delay requeue");
+        var content = await File.ReadAllTextAsync(OutputPath(_testDirectory, variant, DELAY_TEMPLATE));
+        AssertRedeliveryArmShape(content, $"{variant} delayed requeue");
     }
 
-    [Fact]
-    public async Task When_generating_zero_delay_requeue_proactor_should_assert_redelivered_handled_count_is_at_least_sent_count()
+    [Theory]
+    [InlineData(REACTOR)]
+    [InlineData(PROACTOR)]
+    public async Task When_generating_nack_should_assert_redelivered_handled_count_is_at_least_sent_count(
+        string variant)
     {
         // Arrange
-        var ledger = PassLedger("FR-15");
-        var configuration = BuildConfiguration();
+        var ledger = PassLedger(LEDGER_KEY, "FR-16");
+        var configuration = BuildConfiguration(_testDirectory, LEDGER_KEY);
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
 
         // Act
         await generator.GenerateAsync(configuration);
 
         // Assert
-        var content = await File.ReadAllTextAsync(TemplatePath("Proactor", ZERO_DELAY_TEMPLATE));
-        AssertRedeliveryArmShape(content, "Proactor zero-delay requeue");
+        var content = await File.ReadAllTextAsync(OutputPath(_testDirectory, variant, NACK_TEMPLATE));
+        AssertRedeliveryArmShape(content, $"{variant} nack redelivery");
     }
 
-    [Fact]
-    public async Task When_generating_delay_requeue_reactor_should_assert_redelivered_handled_count_is_at_least_sent_count()
-    {
-        // Arrange
-        var ledger = PassLedger("FR-2");
-        var configuration = BuildConfiguration();
-        var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
-
-        // Act
-        await generator.GenerateAsync(configuration);
-
-        // Assert
-        var content = await File.ReadAllTextAsync(TemplatePath("Reactor", DELAY_TEMPLATE));
-        AssertRedeliveryArmShape(content, "Reactor delayed requeue");
-    }
-
-    [Fact]
-    public async Task When_generating_delay_requeue_proactor_should_assert_redelivered_handled_count_is_at_least_sent_count()
-    {
-        // Arrange
-        var ledger = PassLedger("FR-2");
-        var configuration = BuildConfiguration();
-        var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
-
-        // Act
-        await generator.GenerateAsync(configuration);
-
-        // Assert
-        var content = await File.ReadAllTextAsync(TemplatePath("Proactor", DELAY_TEMPLATE));
-        AssertRedeliveryArmShape(content, "Proactor delayed requeue");
-    }
-
-    [Fact]
-    public async Task When_generating_nack_reactor_should_assert_redelivered_handled_count_is_at_least_sent_count()
-    {
-        // Arrange
-        var ledger = PassLedger("FR-16");
-        var configuration = BuildConfiguration();
-        var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
-
-        // Act
-        await generator.GenerateAsync(configuration);
-
-        // Assert
-        var content = await File.ReadAllTextAsync(TemplatePath("Reactor", NACK_TEMPLATE));
-        AssertRedeliveryArmShape(content, "Reactor nack redelivery");
-    }
-
-    [Fact]
-    public async Task When_generating_nack_proactor_should_assert_redelivered_handled_count_is_at_least_sent_count()
-    {
-        // Arrange
-        var ledger = PassLedger("FR-16");
-        var configuration = BuildConfiguration();
-        var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
-
-        // Act
-        await generator.GenerateAsync(configuration);
-
-        // Assert
-        var content = await File.ReadAllTextAsync(TemplatePath("Proactor", NACK_TEMPLATE));
-        AssertRedeliveryArmShape(content, "Proactor nack redelivery");
-    }
-
-    [Fact]
-    public async Task When_generating_posting_reactor_should_not_add_handled_count_ge_check_to_first_receive()
+    [Theory]
+    [InlineData(REACTOR)]
+    [InlineData(PROACTOR)]
+    public async Task When_generating_posting_should_not_add_handled_count_ge_check_to_first_receive(string variant)
     {
         // Arrange
         var ledger = new InMemoryConformanceLedger(new Dictionary<(string, string), string>());
-        var configuration = BuildConfiguration();
+        var configuration = BuildConfiguration(_testDirectory, LEDGER_KEY);
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
 
         // Act
         await generator.GenerateAsync(configuration);
 
         // Assert
-        var content = await File.ReadAllTextAsync(TemplatePath("Reactor", POSTING_TEMPLATE));
-        Assert.DoesNotContain(HANDLED_COUNT_GE_CHECK, content);
-        Assert.DoesNotContain(HANDLED_COUNT_ASSIGNMENT, content);
+        var content = await File.ReadAllTextAsync(OutputPath(_testDirectory, variant, POSTING_TEMPLATE));
+        var arms = GeneratedMessageAssertions.StepsIn(content);
+        Assert.All(arms, steps =>
+        {
+            Assert.DoesNotContain(CHECK_COUNT_AT_LEAST_SENT, steps);
+            Assert.DoesNotContain(COPY_SENT_COUNT, steps);
+        });
     }
 
-    [Fact]
-    public async Task When_generating_posting_proactor_should_not_add_handled_count_ge_check_to_first_receive()
+    [Theory]
+    [InlineData(REACTOR)]
+    [InlineData(PROACTOR)]
+    public async Task When_generating_posting_should_still_call_equality_assertion_on_first_received_message(
+        string variant)
     {
         // Arrange
         var ledger = new InMemoryConformanceLedger(new Dictionary<(string, string), string>());
-        var configuration = BuildConfiguration();
+        var configuration = BuildConfiguration(_testDirectory, LEDGER_KEY);
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
 
         // Act
         await generator.GenerateAsync(configuration);
 
         // Assert
-        var content = await File.ReadAllTextAsync(TemplatePath("Proactor", POSTING_TEMPLATE));
-        Assert.DoesNotContain(HANDLED_COUNT_GE_CHECK, content);
-        Assert.DoesNotContain(HANDLED_COUNT_ASSIGNMENT, content);
-    }
-
-    [Fact]
-    public async Task When_generating_posting_reactor_should_still_call_equality_assertion_on_first_received_message()
-    {
-        // Arrange
-        var ledger = new InMemoryConformanceLedger(new Dictionary<(string, string), string>());
-        var configuration = BuildConfiguration();
-        var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
-
-        // Act
-        await generator.GenerateAsync(configuration);
-
-        // Assert
-        var content = await File.ReadAllTextAsync(TemplatePath("Reactor", POSTING_TEMPLATE));
-        AssertFirstReceiveIntact(content, "Reactor posting");
-    }
-
-    [Fact]
-    public async Task When_generating_posting_proactor_should_still_call_equality_assertion_on_first_received_message()
-    {
-        // Arrange
-        var ledger = new InMemoryConformanceLedger(new Dictionary<(string, string), string>());
-        var configuration = BuildConfiguration();
-        var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
-
-        // Act
-        await generator.GenerateAsync(configuration);
-
-        // Assert
-        var content = await File.ReadAllTextAsync(TemplatePath("Proactor", POSTING_TEMPLATE));
-        AssertFirstReceiveIntact(content, "Proactor posting");
+        var content = await File.ReadAllTextAsync(OutputPath(_testDirectory, variant, POSTING_TEMPLATE));
+        AssertFirstReceiveIntact(content, $"{variant} posting");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static void AssertRedeliveryArmShape(string content, string label)
     {
-        Assert.Contains(HANDLED_COUNT_GE_CHECK, content);
-        Assert.Contains(HANDLED_COUNT_ASSIGNMENT, content);
-        Assert.Contains(MESSAGE_ASSERTION_CALL, content);
-
-        var geCheckIndex = content.IndexOf(HANDLED_COUNT_GE_CHECK, StringComparison.Ordinal);
-        var assignmentIndex = content.IndexOf(HANDLED_COUNT_ASSIGNMENT, StringComparison.Ordinal);
-        var assertCallIndex = content.IndexOf(MESSAGE_ASSERTION_CALL, StringComparison.Ordinal);
+        var arms = GeneratedMessageAssertions.StepsIn(content);
 
         Assert.True(
-            geCheckIndex < assignmentIndex,
-            $"{label}: >= check (at {geCheckIndex}) must precede the HandledCount assignment (at {assignmentIndex})");
-
-        Assert.True(
-            assignmentIndex < assertCallIndex,
-            $"{label}: HandledCount assignment (at {assignmentIndex}) must precede _messageAssertion.Assert call (at {assertCallIndex})");
+            arms.Any(steps => steps.SequenceEqual(REDELIVERY_STEPS)),
+            $"{label}: expected the >= check, then the HandledCount copy, then the message assertion. Found: "
+            + string.Join(" | ", arms.Select(steps => string.Join(", ", steps))));
     }
-
-    private static InMemoryConformanceLedger PassLedger(string frColumn) =>
-        new(new Dictionary<(string, string), string>
-        {
-            [(LEDGER_KEY, frColumn)] = "Pass"
-        });
-
-    private TestConfiguration BuildConfiguration() =>
-        new()
-        {
-            Namespace = "MyApp.Tests",
-            DestinationFolder = _testDirectory,
-            MessageBuilder = "TestMessageBuilder",
-            MessageAssertion = "TestMessageAssertion",
-            MessagingGateway = new MessagingGatewayConfiguration
-            {
-                Prefix = "Test",
-                Namespace = "MyApp.Tests",
-                MessageGatewayProvider = "TestProvider",
-                Publication = "Publication",
-                Subscription = "Subscription",
-                LedgerKey = LEDGER_KEY,
-            }
-        };
 
     private static void AssertFirstReceiveIntact(string content, string label)
     {
-        Assert.Contains(FIRST_RECEIVE_ASSERTION_CALL, content);
+        // the first receive is checked with plain equality, nothing done to HandledCount before it
+        var arms = GeneratedMessageAssertions.StepsIn(content);
 
-        Assert.DoesNotContain(HANDLED_COUNT_GE_CHECK, content);
-        Assert.DoesNotContain(HANDLED_COUNT_ASSIGNMENT, content);
+        Assert.True(arms.Count > 0, $"{label}: expected a message assertion on the first received message");
+        Assert.All(arms, steps => Assert.Equal(new[] { MESSAGE_ASSERTION }, steps));
     }
-
-    private string TemplatePath(string variant, string templateName) =>
-        Path.Combine(
-            _testDirectory, "MessagingGateway", "Test", "Generated", variant,
-            $"{templateName}.cs");
 
     public void Dispose()
     {
