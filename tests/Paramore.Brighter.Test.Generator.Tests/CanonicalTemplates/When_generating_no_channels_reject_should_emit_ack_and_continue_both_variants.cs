@@ -137,8 +137,9 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
 
         // Assert
         var content = await File.ReadAllTextAsync(OutputPath(_testDirectory, variant, TEMPLATE_NAME));
-        Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, "SetMessageId(Id.Random())"));
-        Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, ".SetBody("));
+        var sent = GeneratedSentMessages.In(content);
+        Assert.Equal(DISTINCTLY_BUILT_MESSAGES, sent.Count);
+        Assert.All(sent, message => Assert.Equal(new SentMessage(message.Name, HasOwnId: true, HasOwnBody: true), message));
 
         Assert.Contains("_messageAssertion.Assert(theOtherMessage, receivedOther)", content);
         Assert.Contains("Assert.NotEqual(rejectedMessage.Header.MessageId, next.Header.MessageId)", content);
@@ -181,21 +182,6 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
         // Assert
         var content = await File.ReadAllTextAsync(OutputPath(_testDirectory, REACTOR, TEMPLATE_NAME));
         Assert.Contains("Skip = \"Deferred: #9999", content);
-    }
-
-    // ── Helpers ──────────────────────────────────────────────────────────────
-
-    private static int Occurrences(string content, string needle)
-    {
-        var count = 0;
-        for (var at = content.IndexOf(needle, StringComparison.Ordinal);
-             at >= 0;
-             at = content.IndexOf(needle, at + needle.Length, StringComparison.Ordinal))
-        {
-            count++;
-        }
-
-        return count;
     }
 
     public void Dispose()

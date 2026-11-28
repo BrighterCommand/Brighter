@@ -166,26 +166,12 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
 
         // Assert
         var content = await File.ReadAllTextAsync(OutputPath(_testDirectory, variant, TEMPLATE_NAME));
-        Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, "SetMessageId(Id.Random())"));
-        Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, ".SetBody("));
+        var sent = GeneratedSentMessages.In(content);
+        Assert.Equal(DISTINCTLY_BUILT_MESSAGES, sent.Count);
+        Assert.All(sent, message => Assert.Equal(new SentMessage(message.Name, HasOwnId: true, HasOwnBody: true), message));
 
         Assert.Contains("Assert.Contains(nackedMessage.Header.MessageId.Value, observedIds)", content);
         Assert.Contains("Assert.Contains(theOtherMessage.Header.MessageId.Value, observedIds)", content);
-    }
-
-    // ── Helpers ──────────────────────────────────────────────────────────────
-
-    private static int Occurrences(string content, string needle)
-    {
-        var count = 0;
-        for (var at = content.IndexOf(needle, StringComparison.Ordinal);
-             at >= 0;
-             at = content.IndexOf(needle, at + needle.Length, StringComparison.Ordinal))
-        {
-            count++;
-        }
-
-        return count;
     }
 
     public void Dispose()
